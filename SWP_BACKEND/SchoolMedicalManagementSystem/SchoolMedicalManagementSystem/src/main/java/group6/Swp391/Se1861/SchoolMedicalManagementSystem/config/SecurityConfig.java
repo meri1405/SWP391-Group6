@@ -1,0 +1,100 @@
+package group6.Swp391.Se1861.SchoolMedicalManagementSystem.config;
+
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.CustomOAuth2UserService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.CustomUserDetailsService;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+@Configuration
+@EnableWebSecurity
+@EnableMethodSecurity
+public class SecurityConfig {
+
+    private final CustomUserDetailsService userDetailsService;
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final JwtAuthenticationEntryPoint unauthorizedHandler;
+    private final CustomOAuth2UserService customOAuth2UserService;
+
+    public SecurityConfig(
+            CustomUserDetailsService userDetailsService,
+            JwtAuthenticationFilter jwtAuthenticationFilter,
+            JwtAuthenticationEntryPoint unauthorizedHandler,
+            CustomOAuth2UserService customOAuth2UserService) {
+        this.userDetailsService = userDetailsService;
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.unauthorizedHandler = unauthorizedHandler;
+        this.customOAuth2UserService = customOAuth2UserService;
+    }
+
+    @Bean
+    public DaoAuthenticationProvider authenticationProvider() {
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+        authProvider.setUserDetailsService(userDetailsService);
+        authProvider.setPasswordEncoder(passwordEncoder());
+        return authProvider;
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
+        return authConfig.getAuthenticationManager();
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        // Use NoOpPasswordEncoder for plain text passwords in the database
+        // WARNING: This is not secure for production, but will allow authentication to work with existing data
+        return org.springframework.security.crypto.password.NoOpPasswordEncoder.getInstance();
+
+        // Uncomment this line when you're ready to use secure password encoding
+        // return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http.cors(cors -> cors.configure(http))
+            .csrf(csrf -> csrf.disable())
+            .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth ->
+                auth.requestMatchers("/api/auth/**").permitAll()
+                    .requestMatchers("/api/public/**").permitAll()
+                    .requestMatchers("/oauth2/**").permitAll()
+                    .requestMatchers("/login/oauth2/**").permitAll()
+                    .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                    .requestMatchers("/api/manager/**").hasRole("MANAGER")
+                    .requestMatchers("/api/schoolnurse/**").hasRole("SCHOOLNURSE")
+                    .requestMatchers("/api/parent/**").hasRole("PARENT")
+                    .anyRequest().authenticated()
+            )
+            .oauth2Login(oauth2 ->
+                oauth2.authorizationEndpoint(authEndpoint ->
+                        authEndpoint.baseUri("/oauth2/authorize"))
+                    .redirectionEndpoint(redirectEndpoint ->
+                        redirectEndpoint.baseUri("/login/oauth2/code/*"))
+                    .userInfoEndpoint(userInfo ->
+                        userInfo.userService(customOAuth2UserService))
+                    .successHandler(oAuth2AuthenticationSuccessHandler())
+            );
+
+        http.authenticationProvider(authenticationProvider());
+        http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
+    }
+
+    private AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler() {
+        // Create and return the OAuth2AuthenticationSuccessHandler bean
+        return new CustomOAuth2AuthenticationSuccessHandler();
+    }
+}

@@ -1,0 +1,44 @@
+package group6.Swp391.Se1861.SchoolMedicalManagementSystem.model;
+
+import jakarta.persistence.*;
+import lombok.*;
+
+import java.time.LocalDate;
+import java.util.List;
+
+@Entity
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@ToString
+@Table(name = "MedicationRequest")
+public class MedicationRequest {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "requestDate", nullable = false)
+    private LocalDate requestDate;
+
+    @Column(name = "note", nullable = false)
+    private String note;
+
+    @Column(name = "status", nullable = false)
+    private String status;
+
+    @OneToMany(mappedBy = "medicationRequest", cascade = CascadeType.ALL)
+    private List<ItemRequest> itemRequests;
+
+    @ManyToOne
+    @JoinColumn(name = "nurseID", referencedColumnName = "userID")
+    private User nurse;
+
+    @ManyToOne
+    @JoinColumn(name = "studentID", referencedColumnName = "studentID")
+    private Student student;
+
+    @ManyToOne
+    @JoinColumn(name = "parentID", referencedColumnName = "userID")
+    private User parent;
+}

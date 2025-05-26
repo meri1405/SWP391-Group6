@@ -1,0 +1,171 @@
+.footer {
+  background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
+  color: white;
+  padding: 30px 0 10px; /* Giảm padding từ 60px xuống 30px */
+}
+
+.footer-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 15px; /* Giảm padding từ 20px xuống 15px */
+}
+
+.footer-content {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  margin-bottom: 20px; /* Giảm margin từ 40px xuống 20px */
+}
+
+.footer-section {
+  flex: 1;
+  min-width: 200px; /* Giảm min-width từ 250px xuống 200px */
+  margin-bottom: 20px; /* Giảm margin từ 30px xuống 20px */
+  padding-right: 20px; /* Giảm padding từ 30px xuống 20px */
+}
+
+.footer-section.about {
+  flex: 2; /* Cho section about to hơn để chứa thông tin liên hệ */
+}
+
+.footer-logo {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px; /* Giảm margin từ 15px xuống 10px */
+}
+
+.footer-logo-img {
+  height: 30px;
+  margin-right: 8px;
+}
+
+.footer-section h3 {
+  margin-bottom: 15px; /* Giảm margin từ 20px xuống 15px */
+  font-size: 1.1rem; /* Giảm font-size từ 1.3rem xuống 1.1rem */
+  position: relative;
+  padding-bottom: 8px; /* Giảm padding từ 10px xuống 8px */
+}
+
+.footer-section h3::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 40px; /* Giảm width từ 50px xuống 40px */
+  height: 1px; /* Giảm height từ 2px xuống 1px */
+  background-color: #90caf9;
+}
+
+.footer-section p {
+  line-height: 1.4; /* Giảm line-height từ 1.6 xuống 1.4 */
+  margin-bottom: 10px; /* Giảm margin từ 20px xuống 10px */
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.9rem; /* Thêm font-size nhỏ hơn */
+}
+
+.social-links {
+  display: flex;
+  gap: 10px; /* Giảm gap từ 15px xuống 10px */
+  margin-top: 5px;
+}
+
+.social-links a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px; /* Giảm width từ 36px xuống 30px */
+  height: 30px; /* Giảm height từ 36px xuống 30px */
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+  transition: all 0.3s ease;
+  font-size: 0.9rem; /* Thêm font-size nhỏ hơn */
+}
+
+.social-links a:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-3px);
+}
+
+.footer-section.links ul {
+  list-style: none;
+  padding: 0;
+}
+
+.footer-section.links li {
+  margin-bottom: 8px; /* Giảm margin từ 12px xuống 8px */
+}
+
+.footer-section.links a {
+  color: rgba(255, 255, 255, 0.9);
+  text-decoration: none;
+  transition: color 0.3s ease, transform 0.3s ease;
+  display: inline-block;
+  font-size: 0.9rem; /* Thêm font-size nhỏ hơn */
+}
+
+.footer-section.links a:hover {
+  color: white;
+  transform: translateX(5px);
+}
+
+.contact-info p, .contact-info-inline p {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 8px; /* Giảm margin từ 15px xuống 8px */
+  font-size: 0.9rem; /* Thêm font-size nhỏ hơn */
+}
+
+.contact-info i, .contact-info-inline i {
+  margin-right: 8px; /* Giảm margin từ 10px xuống 8px */
+  color: #90caf9;
+  margin-top: 3px; /* Giảm margin từ 5px xuống 3px */
+  font-size: 0.85rem; /* Thêm font-size nhỏ hơn */
+}
+
+.contact-info-inline {
+  margin-bottom: 10px;
+}
+
+.footer-bottom {
+  text-align: center;
+  padding-top: 12px; /* Giảm padding từ 20px xuống 12px */
+  padding-bottom: 5px; /* Thêm padding-bottom để cân đối */
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.8rem; /* Giảm font-size từ 0.9rem xuống 0.8rem */
+}
+
+@media (max-width: 992px) {
+  .footer-content {
+    gap: 20px; /* Giảm gap từ 30px xuống 20px */
+  }
+  
+  .footer-section {
+    flex: 0 0 calc(50% - 20px); /* Điều chỉnh flex-basis */
+    padding-right: 0;
+  }
+
+  .footer-section.about {
+    flex: 0 0 100%; /* Section about chiếm toàn bộ chiều rộng trong tablet */
+  }
+  
+  .footer {
+    padding: 25px 0 8px; /* Giảm padding thêm nữa cho màn hình nhỏ hơn */
+  }
+}
+
+@media (max-width: 576px) {
+  .footer-section {
+    flex: 0 0 100%;
+    margin-bottom: 15px; /* Giảm margin */
+  }
+  
+  .footer {
+    padding: 20px 0 5px; /* Giảm padding thêm nữa cho mobile */
+  }
+  
+  .footer-bottom {
+    padding-top: 8px; /* Giảm padding thêm nữa cho mobile */
+  }
+}

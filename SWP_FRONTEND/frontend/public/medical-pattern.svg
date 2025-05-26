@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Medical Cross Pattern -->
+  <path d="M45 40H55V45H60V55H55V60H45V55H40V45H45V40Z" fill="#1976D2" fill-opacity="0.1"/>
+  
+  <!-- Heart Pattern -->
+  <path d="M20 30C20 30 25 25 30 25C35 25 40 30 40 30C40 30 45 25 50 25C55 25 60 30 60 30C60 30 65 25 70 25C75 25 80 30 80 30V40C80 40 75 45 70 45C65 45 60 40 60 40C60 40 55 45 50 45C45 45 40 40 40 40C40 40 35 45 30 45C25 45 20 40 20 40V30Z" fill="#1976D2" fill-opacity="0.05"/>
+  
+  <!-- Pulse Pattern -->
+  <path d="M10 70H20V75H30V65H40V80H50V60H60V85H70V55H80V70H90" stroke="#1976D2" stroke-opacity="0.1" stroke-width="2"/>
+</svg> 

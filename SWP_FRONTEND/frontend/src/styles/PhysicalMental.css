@@ -1,0 +1,217 @@
+.physical-mental-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  padding: 0;
+}
+
+.physical-mental-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 32px 40px;
+  border-bottom: 1px solid #e0e0e0;
+  background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+  color: white;
+  margin: 0 -24px;
+  width: calc(100% + 48px);
+  border-radius: 0;
+}
+
+.physical-mental-header h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  color: white;
+}
+
+.edit-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 10px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.edit-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.edit-btn.save {
+  background: #4caf50;
+  border-color: #4caf50;
+}
+
+.edit-btn.save:hover {
+  background: #45a049;
+}
+
+.tabs {
+  display: flex;
+  background: #f8f9fa;
+}
+
+.tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: #666;
+  border-bottom: 3px solid transparent;
+  transition: all 0.3s ease;
+}
+
+.tab:hover {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.tab.active {
+  color: #1976d2;
+  background: white;
+  border-bottom-color: #1976d2;
+  font-weight: 600;
+}
+
+.tab-content {
+  padding: 24px;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.metric-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.metric-card.full-width {
+  grid-column: 1 / -1;
+}
+
+.metric-card label {
+  font-weight: 600;
+  color: #333;
+  font-size: 14px;
+}
+
+.metric-card input,
+.metric-card select,
+.metric-card textarea {
+  padding: 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  background: white;
+}
+
+.metric-card input:focus,
+.metric-card select:focus,
+.metric-card textarea:focus {
+  outline: none;
+  border-color: #1976d2;
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+}
+
+.metric-card input:disabled,
+.metric-card select:disabled,
+.metric-card textarea:disabled {
+  background: #f5f5f5;
+  cursor: not-allowed;
+}
+
+.bmi-card .bmi-display {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 2px solid #e0e0e0;
+}
+
+.bmi-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #333;
+}
+
+.bmi-status {
+  font-size: 14px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.metric-card textarea {
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .physical-mental-header {
+    padding: 20px 8px;
+    margin: 0 -8px;
+    width: calc(100% + 16px);
+  }
+
+  .metrics-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .tab {
+    font-size: 14px;
+    padding: 12px;
+  }
+
+  .tab-content {
+    padding: 16px;
+  }
+
+  .physical-mental-header h2 {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .tabs {
+    flex-direction: column;
+  }
+
+  .tab {
+    border-bottom: 1px solid #e0e0e0;
+    border-right: none;
+  }
+
+  .tab.active {
+    border-bottom-color: #e0e0e0;
+    border-left: 3px solid #1976d2;
+  }
+}
+
+.content-body > .physical-mental-container {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}

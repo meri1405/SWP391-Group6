@@ -1,0 +1,142 @@
+.search-page {
+  padding: 120px 0 60px;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.search-page h1 {
+  font-size: 2rem;
+  color: #333;
+  margin-bottom: 20px;
+}
+
+.search-query {
+  font-size: 1.1rem;
+  color: #666;
+  margin-bottom: 30px;
+}
+
+.results-count {
+  color: #666;
+  margin-bottom: 20px;
+}
+
+.search-section {
+  margin-bottom: 40px;
+}
+
+.search-section h2 {
+  color: #1976d2;
+  font-size: 1.5rem;
+  margin-bottom: 15px;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 10px;
+}
+
+.search-results {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.search-result-item {
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.search-result-item:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.result-title {
+  display: block;
+  font-size: 1.3rem;
+  color: #1976d2;
+  text-decoration: none;
+  margin-bottom: 10px;
+  font-weight: 500;
+}
+
+.result-title:hover {
+  text-decoration: underline;
+}
+
+.result-meta {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 10px;
+  color: #777;
+  font-size: 0.9rem;
+}
+
+.result-category,
+.result-author,
+.result-date {
+  display: inline-flex;
+  align-items: center;
+}
+
+.result-category::before {
+  content: '\f07c';
+  font-family: 'Font Awesome 5 Free';
+  margin-right: 5px;
+}
+
+.result-author::before {
+  content: '\f007';
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  margin-right: 5px;
+}
+
+.result-date::before {
+  content: '\f073';
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  margin-right: 5px;
+}
+
+.result-description {
+  color: #555;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.no-results,
+.no-query {
+  text-align: center;
+  padding: 40px 0;
+  color: #666;
+}
+
+.loading-container {
+  text-align: center;
+  padding: 40px 0;
+  color: #666;
+}
+
+@media (max-width: 768px) {
+  .search-page {
+    padding: 100px 0 40px;
+  }
+  
+  .search-page h1 {
+    font-size: 1.7rem;
+  }
+  
+  .result-title {
+    font-size: 1.2rem;
+  }
+  
+  .result-meta {
+    flex-direction: column;
+    gap: 5px;
+  }
+}
