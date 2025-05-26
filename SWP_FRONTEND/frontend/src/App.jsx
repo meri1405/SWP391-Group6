@@ -22,6 +22,7 @@ import About from "./pages/About";
 import Search from "./pages/Search";
 import ParentDashboard from "./pages/ParentDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
+import SchoolNurseDashboard from "./pages/SchoolNurseDashboard";
 import "./styles/App.css";
 
 function App() {
@@ -54,6 +55,14 @@ function App() {
                 <AdminProtectedRoute>
                   <AdminDashboard />
                 </AdminProtectedRoute>
+              }
+            />
+            <Route
+              path="/nurse-dashboard"
+              element={
+                <ProtectedRoute allowedRoles={["SCHOOLNURSE"]}>
+                  <SchoolNurseDashboard />
+                </ProtectedRoute>
               }
             />
             <Route path="/admin" element={<Navigate to="/login" replace />} />
