@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -28,7 +29,7 @@ ChartJS.register(
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const [user, setUser] = useState(null);
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("dashboard");
 
   // Sample data
@@ -64,34 +65,17 @@ const AdminDashboard = () => {
   ]);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    const userData = localStorage.getItem("user");
-
-    if (!token || !userData) {
+    // Simple check - AdminProtectedRoute already verified ADMIN access
+    if (!user) {
       navigate("/login");
       return;
     }
 
-    try {
-      const parsedUser = JSON.parse(userData);
+    console.log("AdminDashboard loaded for user:", user);
+    console.log("User role:", user.roleName);
+  }, [user, navigate]);
 
-      // Check if user has ADMIN role (must be uppercase)
-      if (parsedUser.roleName !== "ADMIN") {
-        alert(
-          "Bạn không có quyền truy cập vào trang quản trị. Chỉ ADMIN mới có thể truy cập."
-        );
-        navigate("/login");
-        return;
-      }
-
-      setUser(parsedUser);
-    } catch (error) {
-      console.error("Error parsing user data:", error);
-      navigate("/login");
-    }
-  }, [navigate]);
-
-  const handleLogout = () => {
+  const handleBackToLogin = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     navigate("/login");
@@ -99,10 +83,10 @@ const AdminDashboard = () => {
 
   // Navigation items
   const navItems = [
-    { id: "dashboard", label: "Tổng quan" },
-    { id: "users", label: "Quản lý người dùng" },
-    { id: "health", label: "Hồ sơ sức khỏe" },
-    { id: "settings", label: "Cài đặt" },
+    { id: "dashboard", label: "Tổng quan", icon: "📊" },
+    { id: "users", label: "Quản lý người dùng", icon: "👥" },
+    { id: "health", label: "Hồ sơ sức khỏe", icon: "🏥" },
+    { id: "settings", label: "Cài đặt", icon: "⚙️" },
   ];
 
   // Dashboard Overview Component
@@ -161,7 +145,7 @@ const AdminDashboard = () => {
     };
 
     return (
-      <div className="dashboard-content">
+      <div className="dashboard-overview">
         <h2>Tổng quan hệ thống</h2>
 
         {/* Stats Grid */}
@@ -215,8 +199,8 @@ const AdminDashboard = () => {
 
   // User Management Component
   const UserManagement = () => (
-    <div className="dashboard-content">
-      <div className="content-header">
+    <div className="user-management">
+      <div className="section-header">
         <h2>Quản lý người dùng</h2>
         <button className="btn-primary">Thêm người dùng</button>
       </div>
@@ -273,8 +257,8 @@ const AdminDashboard = () => {
 
   // Health Records Management Component
   const HealthRecordsManagement = () => (
-    <div className="dashboard-content">
-      <div className="content-header">
+    <div className="health-records">
+      <div className="section-header">
         <h2>Quản lý hồ sơ sức khỏe</h2>
         <button className="btn-primary">Thêm hồ sơ</button>
       </div>
@@ -324,7 +308,7 @@ const AdminDashboard = () => {
 
   // Settings Component
   const SettingsManagement = () => (
-    <div className="dashboard-content">
+    <div className="settings-management">
       <h2>Cài đặt hệ thống</h2>
       <div className="settings-sections">
         <div className="settings-section">
@@ -375,6 +359,7 @@ const AdminDashboard = () => {
     }
   };
 
+  // AdminProtectedRoute already verified ADMIN access, so we can render directly
   if (!user) return null;
 
   return (
@@ -382,7 +367,7 @@ const AdminDashboard = () => {
       {/* Sidebar */}
       <div className="sidebar">
         <div className="sidebar-header">
-          <h2>Admin Panel</h2>
+          <h3>Quản Lý</h3>
         </div>
 
         <nav className="sidebar-nav">
@@ -392,144 +377,182 @@ const AdminDashboard = () => {
               className={`nav-item ${activeTab === item.id ? "active" : ""}`}
               onClick={() => setActiveTab(item.id)}
             >
+              <span className="nav-icon">{item.icon}</span>
               <span className="nav-label">{item.label}</span>
             </button>
           ))}
         </nav>
-
-        <div className="sidebar-footer">
-          <button className="logout-btn" onClick={handleLogout}>
-            <span className="nav-label">Đăng xuất</span>
-          </button>
-        </div>
       </div>
 
-      {/* Main Content */}
-      <div className="main-content">
-        <header className="main-header">
-          <h1>Quản Trị Hệ Thống</h1>
-        </header>
-
-        <main className="content-area">{renderContent()}</main>
+      {/* Dashboard Content */}
+      <div className="dashboard-content">
+        <div className="content-header">
+          <h1>Admin</h1>
+        </div>
+        <div className="content-body">{renderContent()}</div>
       </div>
 
       {/* Styles */}
       <style jsx>{`
         .admin-dashboard {
           display: flex;
-          min-height: 100vh;
+          min-height: calc(100vh - 140px);
+          margin: 90px 20px 20px 20px;
           background-color: #f8f9fa;
+          border-radius: 16px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          overflow: hidden;
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
             sans-serif;
         }
 
         .sidebar {
-          width: 280px;
-          background: #1976d2;
-          color: white;
+          width: 260px;
+          background: #0d5ec2;
+          border-right: none;
+          box-shadow: 2px 0 4px rgba(0, 0, 0, 0.06);
           display: flex;
           flex-direction: column;
-          box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+          border-radius: 16px 0 0 16px;
         }
 
         .sidebar-header {
-          padding: 2rem 1.5rem 1rem 1.5rem;
+          padding: 16px 24px;
+          border-bottom: 1px solid #1565c0;
+          background: #0d5ec2;
+          border-radius: 16px 0 0;
+          position: sticky;
+          top: 0;
+          z-index: 5;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
         }
 
-        .sidebar-header h2 {
-          margin: 0;
-          font-size: 1.5rem;
+        .sidebar-header h3 {
+          margin: 0 0 4px 0;
+          color: #fff;
+          font-size: 22px;
           font-weight: 600;
         }
 
         .sidebar-nav {
           flex: 1;
-          padding: 1rem 0;
+          padding: 16px 0;
         }
 
         .nav-item {
-          width: 100%;
-          padding: 1rem 1.5rem;
-          background: none;
-          border: none;
-          color: white;
-          text-align: left;
-          cursor: pointer;
-          transition: all 0.2s ease;
           display: flex;
           align-items: center;
-          font-size: 0.95rem;
+          width: 100%;
+          padding: 12px 16px;
+          border: none;
+          background: none;
+          color: #fff;
+          text-decoration: none;
+          transition: all 0.2s ease;
+          cursor: pointer;
+          font-size: 13px;
+          text-align: left;
         }
 
         .nav-item:hover {
-          background: rgba(255, 255, 255, 0.1);
+          background-color: #1565c0;
+          color: #fff;
         }
 
         .nav-item.active {
-          background: rgba(255, 255, 255, 0.15);
-          border-right: 3px solid white;
+          background-color: #1976d2;
+          color: #fff;
+          border-right: 3px solid #fff;
           font-weight: 500;
+        }
+
+        .nav-icon {
+          margin-right: 12px;
+          width: 20px;
+          font-size: 16px;
         }
 
         .nav-label {
           flex: 1;
         }
 
-        .sidebar-footer {
-          padding: 1rem;
-          border-top: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .logout-btn {
-          width: 100%;
-          padding: 1rem 1.5rem;
-          background: rgba(255, 255, 255, 0.1);
-          border: none;
-          color: white;
-          cursor: pointer;
-          border-radius: 8px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: all 0.2s ease;
-          font-size: 0.95rem;
-        }
-
-        .logout-btn:hover {
-          background: rgba(255, 255, 255, 0.2);
-        }
-
-        .main-content {
+        .dashboard-content {
           flex: 1;
           display: flex;
           flex-direction: column;
         }
 
-        .main-header {
+        .content-header {
           background: white;
-          padding: 1.5rem 2rem;
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-          border-bottom: 1px solid #e9ecef;
+          padding: 16px 24px;
+          border-bottom: 1px solid #e8e8e8;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+          border-radius: 0px 16px 0 0;
+          display: flex;
+          justify-content: flex-end;
+          align-items: center;
         }
 
-        .main-header h1 {
-          margin: 0;
+        .content-header h1 {
           color: #1976d2;
-          font-size: 1.8rem;
-          font-weight: 500;
+          margin: 0 0 4px 0;
+          font-size: 22px;
+          font-weight: 600;
         }
 
-        .content-area {
+        .user-info {
+          color: #666;
+          font-size: 13px;
+        }
+
+        .content-body {
           flex: 1;
-          padding: 2rem;
+          padding: 16px 20px;
           overflow-y: auto;
+          background: #f8f9fa;
         }
 
-        .dashboard-content h2 {
+        .content-body > * {
+          background: white;
+          border-radius: 12px;
+          padding: 16px;
+          margin: 8px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+          border: 1px solid #e8e8e8;
+          transition: all 0.2s ease;
+        }
+
+        .content-body > *:hover {
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          transform: translateY(-1px);
+        }
+
+        .content-body > *:last-child {
+          margin-bottom: 0;
+        }
+
+        .dashboard-overview,
+        .user-management,
+        .health-records,
+        .settings-management {
+          /* Inherits styles from content-body > * */
+        }
+
+        .dashboard-overview h2,
+        .user-management h2,
+        .health-records h2,
+        .settings-management h2 {
           margin: 0 0 2rem 0;
           color: #333;
-          font-size: 1.8rem;
+          font-size: 1.5rem;
           font-weight: 600;
+        }
+
+        .section-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 2rem;
         }
 
         .stats-grid {
@@ -542,27 +565,34 @@ const AdminDashboard = () => {
         .stat-card {
           background: white;
           padding: 2rem;
-          border-radius: 12px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+          border-radius: 8px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
           text-align: center;
-          border: 1px solid #e9ecef;
+          border-left: 4px solid #1976d2;
+          transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
 
         .stat-info h3 {
           margin: 0;
           font-size: 2rem;
           color: #1976d2;
-          font-weight: bold;
+          font-weight: 700;
         }
 
         .stat-info p {
           margin: 0.5rem 0 0 0;
           color: #666;
-          font-size: 0.9rem;
+          font-size: 0.95rem;
+          font-weight: 500;
         }
 
         .charts-section {
-          margin: 3rem 0;
+          margin: 2rem 0;
         }
 
         .chart-row {
@@ -575,9 +605,8 @@ const AdminDashboard = () => {
         .chart-container {
           background: white;
           padding: 2rem;
-          border-radius: 12px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-          border: 1px solid #e9ecef;
+          border-radius: 8px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
 
         .chart-container h3 {
@@ -585,18 +614,12 @@ const AdminDashboard = () => {
           color: #333;
           font-size: 1.2rem;
           font-weight: 600;
+          text-align: center;
         }
 
         .chart-wrapper {
           height: 300px;
           position: relative;
-        }
-
-        .content-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 2rem;
         }
 
         .btn-primary {
@@ -608,11 +631,12 @@ const AdminDashboard = () => {
           cursor: pointer;
           font-size: 0.9rem;
           font-weight: 500;
-          transition: all 0.2s ease;
+          transition: all 0.3s ease;
         }
 
         .btn-primary:hover {
           background: #1565c0;
+          transform: translateY(-1px);
         }
 
         .search-bar {
@@ -630,7 +654,7 @@ const AdminDashboard = () => {
         }
 
         .btn-search {
-          background: #6c757d;
+          background: #1976d2;
           color: white;
           border: none;
           padding: 0.75rem 1.5rem;
@@ -641,9 +665,9 @@ const AdminDashboard = () => {
 
         .table-container {
           background: white;
-          border-radius: 12px;
+          border-radius: 8px;
           overflow: hidden;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
 
         .data-table {
@@ -655,11 +679,11 @@ const AdminDashboard = () => {
         .data-table td {
           padding: 1rem;
           text-align: left;
-          border-bottom: 1px solid #e9ecef;
+          border-bottom: 1px solid #e0e0e0;
         }
 
         .data-table th {
-          background: #f8f9fa;
+          background: #f5f5f5;
           font-weight: 600;
           color: #333;
         }
@@ -672,18 +696,18 @@ const AdminDashboard = () => {
         }
 
         .status.active {
-          background: #d4edda;
-          color: #155724;
+          background: #e8f5e8;
+          color: #2e7d32;
         }
 
         .status.inactive {
-          background: #f8d7da;
-          color: #721c24;
+          background: #ffebee;
+          color: #c62828;
         }
 
         .status.completed {
-          background: #d1ecf1;
-          color: #0c5460;
+          background: #e3f2fd;
+          color: #1976d2;
         }
 
         .action-buttons {
@@ -701,17 +725,17 @@ const AdminDashboard = () => {
         }
 
         .btn-action.view {
-          background: #17a2b8;
+          background: #1976d2;
           color: white;
         }
 
         .btn-action.edit {
-          background: #ffc107;
-          color: #212529;
+          background: #ff9800;
+          color: white;
         }
 
         .btn-action.delete {
-          background: #dc3545;
+          background: #f44336;
           color: white;
         }
 
@@ -725,8 +749,8 @@ const AdminDashboard = () => {
         .settings-section {
           background: white;
           padding: 2rem;
-          border-radius: 12px;
-          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          border-radius: 8px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
 
         .settings-section h3 {
@@ -761,11 +785,76 @@ const AdminDashboard = () => {
         @media (max-width: 768px) {
           .admin-dashboard {
             flex-direction: column;
+            margin: 80px 10px 10px 10px;
+            min-height: calc(100vh - 120px);
           }
 
           .sidebar {
             width: 100%;
-            height: auto;
+            max-width: none;
+            position: relative;
+            border-radius: 0;
+          }
+
+          .sidebar-header {
+            padding: 12px 16px;
+            border-radius: 0;
+          }
+
+          .sidebar-header h3 {
+            font-size: 20px;
+          }
+
+          .sidebar-nav {
+            display: flex;
+            overflow-x: auto;
+            padding: 10px 0;
+          }
+
+          .nav-item {
+            min-width: 140px;
+            flex-direction: column;
+            text-align: center;
+            padding: 10px 5px;
+          }
+
+          .nav-icon {
+            margin-right: 0;
+            margin-bottom: 5px;
+            font-size: 18px;
+          }
+
+          .nav-label {
+            font-size: 12px;
+          }
+
+          .content-header {
+            padding: 12px 16px;
+            border-radius: 12px 12px 0 0;
+          }
+
+          .content-header h1 {
+            font-size: 20px;
+          }
+
+          .content-header p {
+            font-size: 12px;
+          }
+
+          .content-body {
+            padding: 12px 16px;
+          }
+
+          .content-body > * {
+            border-radius: 10px;
+            padding: 12px;
+            margin: 6px;
+            transition: none;
+          }
+
+          .content-body > *:hover {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            transform: none;
           }
 
           .stats-grid {

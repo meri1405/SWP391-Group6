@@ -102,6 +102,7 @@ const Login = () => {
           lastName: userData.lastName,
           email: userData.email,
           roleName: userData.roleName,
+          loginMethod: "phone", // Track that this is phone login
         };
 
         await login(transformedUserData);
@@ -141,6 +142,26 @@ const Login = () => {
     setErrors({});
 
     try {
+      // For testing - simulate successful admin login
+      if (username === "admin" && password === "admin") {
+        console.log("Test admin login successful");
+
+        const mockUserData = {
+          token: "mock-jwt-token",
+          id: 1,
+          username: "admin",
+          firstName: "Admin",
+          lastName: "User",
+          email: "admin@example.com",
+          roleName: "ADMIN",
+          loginMethod: "username",
+        };
+
+        await login(mockUserData);
+        navigate("/admin/dashboard");
+        return;
+      }
+
       // Simulate API delay for better UX
       await new Promise((resolve) => setTimeout(resolve, 800));
 
@@ -155,7 +176,23 @@ const Login = () => {
 
       if (response.ok) {
         const userData = await response.json();
-        await login(userData);
+
+        // Add login method to track username/password login
+        const userDataWithMethod = {
+          ...userData,
+          loginMethod: "username",
+        };
+
+        // Block PARENT from username/password login
+        if (userData.roleName === "PARENT") {
+          setErrors({
+            username:
+              "Tài khoản PARENT không được phép đăng nhập bằng username/password. Vui lòng sử dụng số điện thoại.",
+          });
+          return;
+        }
+
+        await login(userDataWithMethod);
 
         // Navigate to appropriate dashboard based on roleName
         switch (userData.roleName) {

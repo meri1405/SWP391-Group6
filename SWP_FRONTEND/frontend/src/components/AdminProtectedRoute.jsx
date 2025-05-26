@@ -6,6 +6,31 @@ const AdminProtectedRoute = ({ children }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  // Specifically block PARENT from accessing admin routes
+  if (user && user.roleName === "PARENT") {
+    return (
+      <div className="access-denied-container">
+        <div className="access-denied-content">
+          <div className="access-denied-icon">🚫</div>
+          <h2>Yêu cầu bị từ chối</h2>
+          <p>
+            Tài khoản <strong>PARENT</strong> không được phép đăng nhập bằng
+            username/password vào trang quản trị.
+          </p>
+          <p>
+            Chỉ có tài khoản với quyền <strong>ADMIN</strong> mới có thể truy
+            cập.
+          </p>
+          <div className="access-denied-actions">
+            <button className="btn-login" onClick={() => navigate("/login")}>
+              Quay lại trang đăng nhập
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Check if user exists and has ADMIN role (must be uppercase)
   if (!user || user.roleName !== "ADMIN") {
     return (
@@ -42,11 +67,27 @@ const AdminProtectedRoute = ({ children }) => {
             width: 100%;
           }
 
+          .access-denied-icon {
+            font-size: 4rem;
+            margin-bottom: 1.5rem;
+          }
+
           .access-denied-content h2 {
             color: #dc3545;
-            margin-bottom: 2rem;
+            margin-bottom: 1rem;
             font-size: 1.5rem;
             font-weight: 600;
+          }
+
+          .access-denied-content p {
+            color: #495057;
+            font-size: 1rem;
+            line-height: 1.6;
+            margin: 0 0 1rem 0;
+          }
+
+          .access-denied-content p:last-of-type {
+            margin-bottom: 2rem;
           }
 
           .access-denied-actions {
