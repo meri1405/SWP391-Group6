@@ -33,7 +33,7 @@ const SchoolNurseDashboard = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
 
   // Sample data for the dashboard
-  const [stats, setStats] = useState({
+  const [stats] = useState({
     totalMedicineReceived: 156,
     totalMedicalEvents: 89,
     totalVaccinations: 450,
@@ -67,7 +67,14 @@ const SchoolNurseDashboard = () => {
   const DashboardOverview = () => {
     // Chart data
     const barChartData = {
-      labels: ["Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6"],
+      labels: [
+        "Tháng 1",
+        "Tháng 2",
+        "Tháng 3",
+        "Tháng 4",
+        "Tháng 5",
+        "Tháng 6",
+      ],
       datasets: [
         {
           label: "Số lượng sự kiện y tế",
@@ -531,12 +538,18 @@ const SchoolNurseDashboard = () => {
               <span className="status active">Đang diễn ra</span>
             </div>
             <div className="campaign-info">
-              <p><strong>Thời gian:</strong> 15/03/2024 - 20/03/2024</p>
-              <p><strong>Đối tượng:</strong> Học sinh 11-12 tuổi</p>
-              <p><strong>Tiến độ:</strong> 45/100 học sinh</p>
+              <p>
+                <strong>Thời gian:</strong> 15/03/2024 - 20/03/2024
+              </p>
+              <p>
+                <strong>Đối tượng:</strong> Học sinh 11-12 tuổi
+              </p>
+              <p>
+                <strong>Tiến độ:</strong> 45/100 học sinh
+              </p>
             </div>
             <div className="progress-bar">
-              <div className="progress" style={{ width: '45%' }}></div>
+              <div className="progress" style={{ width: "45%" }}></div>
             </div>
             <div className="campaign-actions">
               <button className="btn-action view">Xem chi tiết</button>
@@ -550,9 +563,15 @@ const SchoolNurseDashboard = () => {
               <span className="status upcoming">Sắp diễn ra</span>
             </div>
             <div className="campaign-info">
-              <p><strong>Thời gian:</strong> 01/04/2024 - 05/04/2024</p>
-              <p><strong>Đối tượng:</strong> Học sinh 6-7 tuổi</p>
-              <p><strong>Số lượng:</strong> 80 học sinh</p>
+              <p>
+                <strong>Thời gian:</strong> 01/04/2024 - 05/04/2024
+              </p>
+              <p>
+                <strong>Đối tượng:</strong> Học sinh 6-7 tuổi
+              </p>
+              <p>
+                <strong>Số lượng:</strong> 80 học sinh
+              </p>
             </div>
             <div className="campaign-actions">
               <button className="btn-action view">Xem chi tiết</button>
@@ -735,13 +754,21 @@ const SchoolNurseDashboard = () => {
               <span className="status active">Đang diễn ra</span>
             </div>
             <div className="card-info">
-              <p><strong>Thời gian:</strong> 15/03/2024 - 30/03/2024</p>
-              <p><strong>Đối tượng:</strong> Toàn trường</p>
-              <p><strong>Tiến độ:</strong> 450/1200 học sinh</p>
-              <p><strong>Địa điểm:</strong> Phòng Y tế trường</p>
+              <p>
+                <strong>Thời gian:</strong> 15/03/2024 - 30/03/2024
+              </p>
+              <p>
+                <strong>Đối tượng:</strong> Toàn trường
+              </p>
+              <p>
+                <strong>Tiến độ:</strong> 450/1200 học sinh
+              </p>
+              <p>
+                <strong>Địa điểm:</strong> Phòng Y tế trường
+              </p>
             </div>
             <div className="progress-bar">
-              <div className="progress" style={{ width: '37.5%' }}></div>
+              <div className="progress" style={{ width: "37.5%" }}></div>
             </div>
             <div className="card-actions">
               <button className="btn-action view">Chi tiết</button>
@@ -756,10 +783,18 @@ const SchoolNurseDashboard = () => {
               <span className="status planned">Đã lên kế hoạch</span>
             </div>
             <div className="card-info">
-              <p><strong>Thời gian:</strong> 10/04/2024 - 15/04/2024</p>
-              <p><strong>Đối tượng:</strong> Học sinh khối 6, 7</p>
-              <p><strong>Số lượng:</strong> 400 học sinh</p>
-              <p><strong>Địa điểm:</strong> Bệnh viện Đa khoa tỉnh</p>
+              <p>
+                <strong>Thời gian:</strong> 10/04/2024 - 15/04/2024
+              </p>
+              <p>
+                <strong>Đối tượng:</strong> Học sinh khối 6, 7
+              </p>
+              <p>
+                <strong>Số lượng:</strong> 400 học sinh
+              </p>
+              <p>
+                <strong>Địa điểm:</strong> Bệnh viện Đa khoa tỉnh
+              </p>
             </div>
             <div className="card-actions">
               <button className="btn-action view">Chi tiết</button>
@@ -859,9 +894,9 @@ const SchoolNurseDashboard = () => {
           </table>
         </div>
 
-        <div className="record-details" style={{ display: 'none' }}>
+        <div className="record-details" style={{ display: "none" }}>
           <h3>Hồ sơ y tế - Nguyễn Văn A</h3>
-          
+
           <div className="record-sections">
             <div className="record-section">
               <h4>Thông tin cơ bản</h4>
@@ -1047,7 +1082,10 @@ const SchoolNurseDashboard = () => {
         <div className="blog-grid">
           <div className="blog-card">
             <div className="blog-image">
-              <img src="https://via.placeholder.com/300x200" alt="Blog thumbnail" />
+              <img
+                src="https://via.placeholder.com/300x200"
+                alt="Blog thumbnail"
+              />
               <span className="status published">Đã đăng</span>
             </div>
             <div className="blog-content">
@@ -1057,8 +1095,8 @@ const SchoolNurseDashboard = () => {
                 <span>Lượt xem: 156</span>
               </p>
               <p className="blog-excerpt">
-                Các biện pháp phòng chống dịch bệnh thường gặp trong mùa hè và cách
-                bảo vệ sức khỏe cho học sinh...
+                Các biện pháp phòng chống dịch bệnh thường gặp trong mùa hè và
+                cách bảo vệ sức khỏe cho học sinh...
               </p>
               <div className="blog-actions">
                 <button className="btn-action edit">Chỉnh sửa</button>
@@ -1070,7 +1108,10 @@ const SchoolNurseDashboard = () => {
 
           <div className="blog-card">
             <div className="blog-image">
-              <img src="https://via.placeholder.com/300x200" alt="Blog thumbnail" />
+              <img
+                src="https://via.placeholder.com/300x200"
+                alt="Blog thumbnail"
+              />
               <span className="status draft">Nháp</span>
             </div>
             <div className="blog-content">
@@ -1080,8 +1121,8 @@ const SchoolNurseDashboard = () => {
                 <span>Chưa đăng</span>
               </p>
               <p className="blog-excerpt">
-                Các kỹ năng sơ cứu cơ bản cần thiết cho giáo viên và học sinh trong
-                môi trường học đường...
+                Các kỹ năng sơ cứu cơ bản cần thiết cho giáo viên và học sinh
+                trong môi trường học đường...
               </p>
               <div className="blog-actions">
                 <button className="btn-action edit">Chỉnh sửa</button>
@@ -1164,9 +1205,7 @@ const SchoolNurseDashboard = () => {
                 </div>
                 <div className="blog-info">
                   <h4>Dinh dưỡng học đường</h4>
-                  <p>
-                    Hướng dẫn chế độ dinh dưỡng cân bằng cho học sinh...
-                  </p>
+                  <p>Hướng dẫn chế độ dinh dưỡng cân bằng cho học sinh...</p>
                   <span className="date">11/03/2024</span>
                 </div>
               </div>
@@ -1179,9 +1218,7 @@ const SchoolNurseDashboard = () => {
                 </div>
                 <div className="blog-info">
                   <h4>Tầm quan trọng của giấc ngủ</h4>
-                  <p>
-                    Vai trò của giấc ngủ đối với sự phát triển của trẻ...
-                  </p>
+                  <p>Vai trò của giấc ngủ đối với sự phát triển của trẻ...</p>
                   <span className="date">09/03/2024</span>
                 </div>
               </div>
@@ -1743,4 +1780,4 @@ const SchoolNurseDashboard = () => {
   );
 };
 
-export default SchoolNurseDashboard; 
+export default SchoolNurseDashboard;

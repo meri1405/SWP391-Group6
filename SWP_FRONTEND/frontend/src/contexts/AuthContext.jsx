@@ -1,11 +1,12 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect } from "react";
 
 const AuthContext = createContext();
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
@@ -16,45 +17,46 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     // Check for stored authentication data on app start
-    const token = localStorage.getItem('token');
-    const userData = localStorage.getItem('user');
-    
+    const token = localStorage.getItem("token");
+    const userData = localStorage.getItem("user");
+
     if (token && userData) {
       try {
         const parsedUser = JSON.parse(userData);
         setUser(parsedUser);
       } catch (error) {
-        console.error('Error parsing user data:', error);
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        console.error("Error parsing user data:", error);
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
       }
     }
     setLoading(false);
   }, []);
   const login = (authResponse) => {
-    console.log('Login called with:', authResponse);
+    console.log("Login called with:", authResponse);
     const { token, ...userInfo } = authResponse;
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(userInfo));
+    localStorage.setItem("token", token);
+    localStorage.setItem("user", JSON.stringify(userInfo));
     setUser(userInfo);
-    console.log('User set to:', userInfo);
+    console.log("User set to:", userInfo);
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
     setUser(null);
   };
 
   const isParent = () => {
-    return user?.roleName === 'PARENT';
+    return user?.roleName === "PARENT";
   };
 
   const isStaff = () => {
-    const staffRoles = ['ADMIN', 'MANAGER', 'SCHOOLNURSE'];
+    const staffRoles = ["ADMIN", "MANAGER", "SCHOOLNURSE"];
     return user && staffRoles.includes(user.roleName);
-  };  const getToken = () => {
-    return localStorage.getItem('token');
+  };
+  const getToken = () => {
+    return localStorage.getItem("token");
   };
   const value = {
     user,
@@ -64,12 +66,8 @@ export const AuthProvider = ({ children }) => {
     isStaff,
     getToken,
     loading,
-    isAuthenticated: !!user
+    isAuthenticated: !!user,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

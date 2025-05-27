@@ -1,12 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import {
-  API_ENDPOINTS,
-  apiRequest,
-  logCorsInfo,
-  isDevelopment,
-} from "../utils/api";
+import { API_ENDPOINTS, logCorsInfo, isDevelopment } from "../utils/api";
 import "../styles/Login.css";
 
 const Login = () => {

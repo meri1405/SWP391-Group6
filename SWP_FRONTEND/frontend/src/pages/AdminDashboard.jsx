@@ -64,8 +64,6 @@ const AdminDashboard = () => {
   const [selectedHealthRecord, setSelectedHealthRecord] = useState(null);
   const [healthSearchTerm, setHealthSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
-  const [showHealthDeleteConfirm, setShowHealthDeleteConfirm] = useState(false);
-  const [healthRecordToDelete, setHealthRecordToDelete] = useState(null);
 
   // Sample data
   const [stats, setStats] = useState({
@@ -170,32 +168,6 @@ const AdminDashboard = () => {
     },
   ]);
 
-  // Form state for user modal
-  const [userForm, setUserForm] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    role: "PARENT",
-    status: "Active",
-    address: "",
-  });
-
-  // Form state for health record modal
-  const [healthForm, setHealthForm] = useState({
-    studentName: "",
-    studentId: "",
-    examDate: "",
-    doctor: "",
-    height: "",
-    weight: "",
-    bloodPressure: "",
-    heartRate: "",
-    temperature: "",
-    diagnosis: "",
-    notes: "",
-    status: "Pending",
-  });
-
   // Ant Design form instances
   const [userFormInstance] = Form.useForm();
   const [healthFormInstance] = Form.useForm();
@@ -211,23 +183,9 @@ const AdminDashboard = () => {
     console.log("User role:", user.roleName);
   }, [user, navigate]);
 
-  const handleBackToLogin = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    navigate("/login");
-  };
-
   // User Management Functions
   const resetUserForm = () => {
     userFormInstance.resetFields();
-    setUserForm({
-      name: "",
-      email: "",
-      phone: "",
-      role: "PARENT",
-      status: "Active",
-      address: "",
-    });
   };
 
   const openAddUserModal = () => {
@@ -280,7 +238,7 @@ const AdminDashboard = () => {
 
       setShowUserModal(false);
       resetUserForm();
-    } catch (error) {
+    } catch {
       message.error("Vui lòng kiểm tra lại thông tin!");
     }
   };
@@ -294,20 +252,6 @@ const AdminDashboard = () => {
   // Health Records Management Functions
   const resetHealthForm = () => {
     healthFormInstance.resetFields();
-    setHealthForm({
-      studentName: "",
-      studentId: "",
-      examDate: "",
-      doctor: "",
-      height: "",
-      weight: "",
-      bloodPressure: "",
-      heartRate: "",
-      temperature: "",
-      diagnosis: "",
-      notes: "",
-      status: "Pending",
-    });
   };
 
   const openAddHealthModal = () => {
@@ -319,7 +263,6 @@ const AdminDashboard = () => {
 
   const openViewHealthModal = (record) => {
     setSelectedHealthRecord(record);
-    setHealthForm(record);
     setHealthModalMode("view");
     setShowHealthModal(true);
   };
@@ -329,14 +272,6 @@ const AdminDashboard = () => {
     setHealthModalMode("edit");
     healthFormInstance.setFieldsValue(record);
     setShowHealthModal(true);
-  };
-
-  const handleHealthFormChange = (e) => {
-    const { name, value } = e.target;
-    setHealthForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
   };
 
   const handleSaveHealthRecord = async () => {
@@ -372,7 +307,7 @@ const AdminDashboard = () => {
 
       setShowHealthModal(false);
       resetHealthForm();
-    } catch (error) {
+    } catch {
       message.error("Vui lòng kiểm tra lại thông tin!");
     }
   };
