@@ -1,6 +1,18 @@
 import React from 'react';
+import { Card, Row, Col, Statistic, Typography, Avatar, List, Badge, Space, Divider } from 'antd';
+import { 
+  UserOutlined, 
+  MedicineBoxOutlined, 
+  FileTextOutlined, 
+  CalendarOutlined,
+  HeartOutlined,
+  AlertOutlined,
+  CheckCircleOutlined,
+  ExclamationCircleOutlined
+} from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext';
-import '../../styles/Overview.css';
+
+const { Title, Text } = Typography;
 
 const Overview = () => {
   const { isParent } = useAuth();
@@ -12,36 +24,10 @@ const Overview = () => {
     class: 'Lớp 5A',
     status: 'Bình thường',
     lastCheckup: '15/05/2025',
-    bmi: '17.9 (35kg / 140cm)'
+    bmi: '17.9',
+    weight: '35kg',
+    height: '140cm'
   };
-
-  // Card data theo đúng thứ tự và nội dung của dashboard mẫu
-  const healthSummaryCards = [
-    {
-      title: 'Nguyễn Văn An',
-      subtitle: childData.class,
-      icon: 'fas fa-user-graduate',
-      color: '#1976d2'
-    },
-    {
-      title: 'Chỉ số BMI',
-      value: childData.bmi,
-      icon: 'fas fa-weight-scale',
-      color: '#2196f3'
-    },
-    {
-      title: 'Tình trạng sức khỏe',
-      value: childData.status,
-      icon: 'fas fa-file-medical',
-      color: '#4caf50'
-    },
-    {
-      title: 'Lịch khám gần nhất',
-      value: childData.lastCheckup,
-      icon: 'fas fa-calendar-check',
-      color: '#ff9800'
-    }
-  ];
 
   const recentNotifications = [
     {
@@ -50,7 +36,8 @@ const Overview = () => {
       title: 'Nhắc lịch khám sức khỏe',
       message: 'Lịch khám sức khỏe định kỳ của bé Nguyễn Văn An vào ngày 15/06/2025',
       time: '21/5/2025',
-      read: false
+      read: false,
+      icon: <AlertOutlined />
     },
     {
       id: 2,
@@ -58,54 +45,162 @@ const Overview = () => {
       title: 'Cập nhật tiêm chủng',
       message: 'Nhà trường sẽ tổ chức tiêm vắc-xin phòng cúm vào ngày 30/05/2025',
       time: '20/5/2025',
-      read: true
+      read: true,
+      icon: <ExclamationCircleOutlined />
     }
   ];
 
   return (
-    <div className="overview-container">
-      <h1 className="main-title">Tổng quan sức khỏe</h1>
+    <div>
+      <Title level={2} style={{ marginBottom: 24, color: '#1976d2' }}>
+        Tổng quan sức khỏe
+      </Title>
 
-      <div className="health-summary-section">
-        <div className="health-cards-grid">
-          {healthSummaryCards.map((card, index) => (
-            <div key={index} className="health-card" style={{ borderColor: card.color }}>
-              <div className="health-card-icon" style={{ backgroundColor: card.color }}>
-                <i className={card.icon}></i>
-              </div>
-              <div className="health-card-content">
-                <h4>{card.title}</h4>
-                {card.subtitle && <p>{card.subtitle}</p>}
-                {card.value && <p>{card.value}</p>}
+      {/* Health Summary Cards */}
+      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+        <Col xs={24} sm={12} lg={6}>
+          <Card 
+            style={{ 
+              textAlign: 'center', 
+              borderTop: '3px solid #1976d2',
+              height: '100%'
+            }}
+            bodyStyle={{ 
+              padding: '16px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            <Avatar 
+              size={48} 
+              icon={<UserOutlined />} 
+              style={{ backgroundColor: '#1976d2', marginBottom: 8 }}
+            />
+            <Title level={5} style={{ margin: '4px 0', fontSize: 16 }}>{childData.name}</Title>
+            <Text type="secondary" style={{ fontSize: 14 }}>{childData.class}</Text>
+          </Card>
+        </Col>
+        
+        <Col xs={24} sm={12} lg={6}>
+          <Card 
+            style={{ 
+              borderTop: '3px solid #2196f3',
+              height: '100%'
+            }}
+            bodyStyle={{ 
+              padding: '16px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center'
+            }}
+          >
+            <div>
+              <Text type="secondary" style={{ fontSize: 14 }}>Chỉ số BMI</Text>
+              <div style={{ display: 'flex', alignItems: 'center', marginTop: 6 }}>
+                <HeartOutlined style={{ color: '#2196f3', fontSize: 20, marginRight: 8 }} />
+                <div>
+                  <Text style={{ fontSize: 20, color: '#2196f3', fontWeight: 500 }}>{childData.bmi}</Text>
+                  <div>
+                    <Text type="secondary" style={{ fontSize: 12 }}>({childData.weight} / {childData.height})</Text>
+                  </div>
+                </div>
               </div>
             </div>
-          ))}
-        </div>
-      </div>
+          </Card>
+        </Col>
+        
+        <Col xs={24} sm={12} lg={6}>
+          <Card 
+            style={{ 
+              borderTop: '3px solid #4caf50',
+              height: '100%'
+            }}
+            bodyStyle={{ 
+              padding: '16px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center'
+            }}
+          >
+            <div>
+              <Text type="secondary" style={{ fontSize: 14 }}>Tình trạng sức khỏe</Text>
+              <div style={{ display: 'flex', alignItems: 'center', marginTop: 6 }}>
+                <CheckCircleOutlined style={{ color: '#4caf50', fontSize: 20, marginRight: 8 }} />
+                <Text style={{ fontSize: 20, color: '#4caf50', fontWeight: 500 }}>{childData.status}</Text>
+              </div>
+            </div>
+          </Card>
+        </Col>
+        
+        <Col xs={24} sm={12} lg={6}>
+          <Card 
+            style={{ 
+              borderTop: '3px solid #ff9800',
+              height: '100%'
+            }}
+            bodyStyle={{ 
+              padding: '16px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center'
+            }}
+          >
+            <div>
+              <Text type="secondary" style={{ fontSize: 14 }}>Lịch khám gần nhất</Text>
+              <div style={{ display: 'flex', alignItems: 'center', marginTop: 6 }}>
+                <CalendarOutlined style={{ color: '#ff9800', fontSize: 20, marginRight: 8 }} />
+                <Text style={{ fontSize: 20, color: '#ff9800', fontWeight: 500 }}>{childData.lastCheckup}</Text>
+              </div>
+            </div>
+          </Card>
+        </Col>
+      </Row>
 
       {/* Only show notifications section for parents */}
       {isParent() && (
-        <div className="notifications-section overview-card">
-          <div className="card-header">
-            <h3>
-              <i className="fas fa-bell"></i>
-              Thông báo gần đây
-            </h3>
-            <button className="view-all-btn">Xem tất cả</button>
-          </div>
-          <div className="notifications-list">
-            {recentNotifications.map(notification => (
-              <div key={notification.id} className={`notification-item ${!notification.read ? 'unread' : ''}`}>
-                <div className="notification-content">
-                  <h4>{notification.title}</h4>
-                  <p>{notification.message}</p>
-                  <span className="notification-time">{notification.time}</span>
-                </div>
-                {!notification.read && <div className="unread-indicator"></div>}
-              </div>
-            ))}
-          </div>
-        </div>
+        <Card 
+          title={
+            <Space>
+              <AlertOutlined />
+              <span>Thông báo gần đây</span>
+            </Space>
+          }
+          extra={
+            <Text 
+              style={{ color: '#1976d2', cursor: 'pointer' }}
+              onClick={() => console.log('View all notifications')}
+            >
+              Xem tất cả
+            </Text>
+          }
+        >
+          <List
+            dataSource={recentNotifications}
+            renderItem={(notification) => (
+              <List.Item>
+                <List.Item.Meta
+                  avatar={
+                    <Badge dot={!notification.read}>
+                      <Avatar icon={notification.icon} />
+                    </Badge>
+                  }
+                  title={notification.title}
+                  description={
+                    <div>
+                      <Text>{notification.message}</Text>
+                      <br />
+                      <Text type="secondary" style={{ fontSize: '12px' }}>
+                        {notification.time}
+                      </Text>
+                    </div>
+                  }
+                />
+              </List.Item>
+            )}
+          />
+        </Card>
       )}
     </div>
   );
