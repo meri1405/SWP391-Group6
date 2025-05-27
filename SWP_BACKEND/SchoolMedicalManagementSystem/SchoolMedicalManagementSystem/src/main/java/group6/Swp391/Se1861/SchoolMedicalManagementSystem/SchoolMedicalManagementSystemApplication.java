@@ -22,28 +22,69 @@ public class SchoolMedicalManagementSystemApplication {
 
 		@Override
 		public void run(String... args) throws Exception {
-			// Kiểm tra xem admin đã tồn tại chưa
+			// First, ensure roles exist
+			initializeRoles();
+
+			// Then, initialize admin user
+			initializeAdminUser();
+		}
+
+		private void initializeRoles() {
+			try {
+				// Check if roles already exist
+				Integer roleCount = jdbcTemplate.queryForObject(
+					"SELECT COUNT(*) FROM role", Integer.class);
+
+				if (roleCount == null || roleCount == 0) {
+					// Create roles if they don't exist
+					jdbcTemplate.update(
+						"INSERT INTO role (role_name) VALUES (?)",
+						"ADMIN"
+					);
+
+					jdbcTemplate.update(
+						"INSERT INTO role (role_name) VALUES (?)",
+						"NURSE"
+					);
+
+					jdbcTemplate.update(
+						"INSERT INTO role (role_name) VALUES (?)",
+						"PARENT"
+					);
+
+					System.out.println("Roles created successfully");
+				} else {
+					System.out.println("Roles already exist");
+				}
+			} catch (Exception e) {
+				System.err.println("Failed to initialize roles: " + e.getMessage());
+				e.printStackTrace();
+			}
+		}
+
+		private void initializeAdminUser() {
+			// Check if admin already exists
 			try {
 				Integer count = jdbcTemplate.queryForObject(
 					"SELECT COUNT(*) FROM users WHERE username = 'admin'", Integer.class);
 
 				if (count == null || count == 0) {
-					// Thêm admin mới với mật khẩu đã mã hóa (bcrypt) - mật khẩu: admin123
+					// Add new admin with encrypted password (bcrypt) - password: admin123
 					jdbcTemplate.update(
 						"INSERT INTO users (username, password, first_name, last_name, dob, gender, phone, email, address, job_title, created_date, last_modified_date, enabled, roleid) " +
 						"VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), ?, ?)",
 						"admin",
-						"$2a$10$yfIHMg.DKtWCdQh2U5dEBuhwGlmyahVIs9GGbLZ5QZcI01h5HnHhe", // mật khẩu đã mã hóa: admin123
+						"$2a$10$yfIHMg.DKtWCdQh2U5dEBuhwGlmyahVIs9GGbLZ5QZcI01h5HnHhe", // encrypted password: admin123
 						"System",
 						"Administrator",
-						"1990-01-01", // ngày sinh mặc định
-						"M", // giới tính mặc định
-						"+84123456789", // số điện thoại mặc định
+						"1990-01-01", // default DOB
+						"M", // default gender
+						"+84123456789", // default phone number
 						"admin@school.edu",
-						"School Address", // địa chỉ mặc định
+						"School Address", // default address
 						"System Administrator",
 						true, // enabled
-						1 // roleid = 1 cho admin
+						1 // roleid = 1 for admin
 					);
 					System.out.println("Admin user created successfully");
 				} else {
