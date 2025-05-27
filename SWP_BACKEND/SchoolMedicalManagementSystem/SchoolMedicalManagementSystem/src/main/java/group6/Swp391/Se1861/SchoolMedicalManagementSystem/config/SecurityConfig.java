@@ -52,12 +52,8 @@ public class SecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        // Use NoOpPasswordEncoder for plain text passwords in the database
-        // WARNING: This is not secure for production, but will allow authentication to work with existing data
-        return org.springframework.security.crypto.password.NoOpPasswordEncoder.getInstance();
-
-        // Uncomment this line when you're ready to use secure password encoding
-        // return new BCryptPasswordEncoder();
+        // Use secure BCryptPasswordEncoder for password hashing
+        return new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder();
     }
 
     @Bean

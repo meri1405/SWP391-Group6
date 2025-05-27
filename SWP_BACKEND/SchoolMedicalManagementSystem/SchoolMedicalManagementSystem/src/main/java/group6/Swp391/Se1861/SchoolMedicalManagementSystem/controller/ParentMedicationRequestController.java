@@ -6,6 +6,7 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.MedicationRequestService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -31,6 +32,21 @@ public class ParentMedicationRequestController {
 
         MedicationRequestDTO createdRequest = medicationRequestService.createMedicationRequest(medicationRequestDTO, parent);
         return ResponseEntity.ok(createdRequest);
+    }
+
+    /**
+     * Submit a medication request
+     */
+    @PostMapping("/submit")
+    public ResponseEntity<String> submitMedicationRequest(
+            @RequestBody MedicationRequestDTO medicationRequestDTO,
+            @AuthenticationPrincipal User parent) {
+
+        if (!medicationRequestDTO.isConfirm()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Medication request cannot be submitted as it is not confirmed.");
+        }
+        medicationRequestService.createMedicationRequest(medicationRequestDTO, parent);
+        return ResponseEntity.ok("Medication request submitted successfully.");
     }
 
     /**

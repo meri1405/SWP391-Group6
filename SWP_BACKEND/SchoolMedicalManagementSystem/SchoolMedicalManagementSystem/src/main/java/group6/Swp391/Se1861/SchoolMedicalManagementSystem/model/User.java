@@ -28,10 +28,10 @@ public class User implements UserDetails, OAuth2User {
     @Column(name = "userID", unique = true, nullable = false)
     private Long id;
 
-    @Column(name = "username", unique = true, nullable = false)
+    @Column(name = "username")
     private String username;
 
-    @Column(name = "password", nullable = false)
+    @Column(name = "password")
     private String password;
 
     @Column(name = "firstName", nullable = false)
@@ -46,10 +46,10 @@ public class User implements UserDetails, OAuth2User {
     @Column(name = "gender", nullable = false, length = 1)
     private String gender;
 
-    @Column(name = "phone", nullable = false)
+    @Column(name = "phone", nullable = false, unique = true)
     private String phone;
 
-    @Column(name = "email", nullable = false)
+    @Column(name = "email")
     private String email;
 
     @Column(name = "address", nullable = false)
@@ -119,5 +119,27 @@ public class User implements UserDetails, OAuth2User {
     @Override
     public String getName() {
         return String.valueOf(this.id);
+    }
+
+    @Override
+    public String getUsername() {
+        if ("PARENT".equalsIgnoreCase(this.role.getRoleName())) {
+            return null;
+        }
+        return this.username;
+    }
+
+    public String getPasswordForNonParent() {
+        if ("PARENT".equalsIgnoreCase(this.role.getRoleName())) {
+            return null;
+        }
+        return this.password;
+    }
+
+    public String getEmailForNonParent() {
+        if ("PARENT".equalsIgnoreCase(this.role.getRoleName())) {
+            return null;
+        }
+        return this.email;
     }
 }

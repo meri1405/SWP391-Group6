@@ -42,7 +42,7 @@ public class ItemRequestDTO {
     @NotNull(message = "End date is required")
     private LocalDate endDate;
 
-    @NotBlank(message = "Note is required")
+    //@NotBlank(message = "Note is required")
     @Size(max = 500, message = "Note cannot exceed 500 characters")
     private String note;
 }
