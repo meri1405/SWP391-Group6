@@ -11,6 +11,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class OtpRequest {
     @NotBlank
-    @Pattern(regexp = "^\\+?[0-9]{10,15}$", message = "Phone number must be 10-15 digits and may start with +")
+    @Pattern(regexp = "^\\+?[0-9]{10}$", message = "Phone number must be 10 digits and may start with 0")
     private String phoneNumber;
 }

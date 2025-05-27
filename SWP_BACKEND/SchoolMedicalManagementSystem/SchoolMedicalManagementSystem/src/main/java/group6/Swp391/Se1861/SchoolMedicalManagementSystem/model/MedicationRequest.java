@@ -27,6 +27,9 @@ public class MedicationRequest {
     @Column(name = "status", nullable = false)
     private String status;
 
+    @Column(name = "isConfirm", nullable = false)
+    private boolean isConfirm;
+
     @OneToMany(mappedBy = "medicationRequest", cascade = CascadeType.ALL)
     private List<ItemRequest> itemRequests;
 

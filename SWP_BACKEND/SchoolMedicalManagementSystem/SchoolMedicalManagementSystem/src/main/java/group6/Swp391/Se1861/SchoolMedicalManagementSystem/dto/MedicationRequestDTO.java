@@ -22,11 +22,13 @@ public class MedicationRequestDTO {
     @NotNull(message = "Request date is required")
     private LocalDate requestDate;
 
-    @NotBlank(message = "Note cannot be blank")
+    //@NotBlank(message = "Note cannot be blank")
     @Size(max = 500, message = "Note cannot exceed 500 characters")
     private String note;
 
     private String status = "PENDING"; // Default status for new requests
+
+    private boolean isConfirm = false; // Default confirmation status
 
     @NotNull(message = "Student ID is required")
     private Long studentId;

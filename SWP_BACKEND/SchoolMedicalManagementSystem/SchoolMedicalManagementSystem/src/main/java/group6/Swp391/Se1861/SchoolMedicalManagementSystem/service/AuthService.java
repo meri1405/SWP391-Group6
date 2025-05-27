@@ -164,4 +164,171 @@ public class AuthService {
         // or requires manual approval
         throw new BadCredentialsException("User not registered in the system. Please contact administrator.");
     }
+
+    /**
+     * Preprocesses a user before saving to ensure:
+     * 1. If roleName is PARENT, username, password, and email are set to null
+     * 2. Phone number is unique for all roles
+     * 3. Password is properly encoded for non-PARENT users
+     *
+     * @param user The user to preprocess
+     * @return The preprocessed user
+     * @throws IllegalArgumentException if phone number is already in use
+     */
+    public User preprocessUserBeforeSave(User user) {
+        // Check if phone is already in use
+        if (user.getId() == null) { // Only for new users
+            Optional<User> existingUserWithPhone = userRepository.findByPhone(user.getPhone());
+            if (existingUserWithPhone.isPresent()) {
+                throw new IllegalArgumentException("Phone number is already in use");
+            }
+        }
+
+        // If role is PARENT, nullify username, password, and email
+        if (user.getRole() != null && "PARENT".equalsIgnoreCase(user.getRole().getRoleName())) {
+            user.setUsername(null);
+            user.setPassword(null);
+            user.setEmail(null);
+        } else {
+            // For non-PARENT roles, encode the password if it's a plain text password
+            String password = user.getPassword();
+            if (password != null && !password.isEmpty() && !password.startsWith("$2a$")) {
+                // Password is not yet encoded (doesn't start with BCrypt prefix)
+                user.setPassword(encodePassword(password));
+            }
+        }
+
+        return user;
+    }
+
+    /**
+     * Saves a user after preprocessing to enforce business rules
+     *
+     * @param user The user to save
+     * @return The saved user
+     */
+    public User saveUser(User user) {
+        User preprocessedUser = preprocessUserBeforeSave(user);
+        return userRepository.save(preprocessedUser);
+    }
+
+    /**
+     * Creates a new user with specified role and validates role-specific constraints.
+     * This method should only be accessible to ADMIN users.
+     *
+     * @param user     The user to create
+     * @param roleName The name of the role to assign
+     * @return The created user
+     * @throws IllegalArgumentException if validation fails
+     */
+    public User createUserByAdmin(User user, String roleName) {
+        // Find the requested role
+        Role role = roleRepository.findByRoleName(roleName)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid role: " + roleName));
+
+        user.setRole(role);
+
+        // Apply role-specific validation and constraints
+        validateUserByRole(user, roleName);
+
+        // Encode password for non-PARENT users
+        if (!"PARENT".equalsIgnoreCase(roleName) && user.getPassword() != null) {
+            user.setPassword(encodePassword(user.getPassword()));
+        }
+
+        // Preprocess and save the user
+        return saveUser(user);
+    }
+
+    /**
+     * Validates user data based on role-specific constraints
+     *
+     * @param user     The user to validate
+     * @param roleName The role name
+     * @throws IllegalArgumentException if validation fails
+     */
+    private void validateUserByRole(User user, String roleName) {
+        // Common validations for all users
+        if (user.getPhone() == null || user.getPhone().trim().isEmpty() || !user.getPhone().matches("\\d{10}")) {
+            throw new IllegalArgumentException("Phone number is required for all users");
+        }
+
+        if (user.getFirstName() == null || user.getFirstName().trim().isEmpty()) {
+            throw new IllegalArgumentException("First name is required for all users");
+        }
+
+        if (user.getLastName() == null || user.getLastName().trim().isEmpty()) {
+            throw new IllegalArgumentException("Last name is required for all users");
+        }
+
+        if (user.getDob() == null) {
+            throw new IllegalArgumentException("Date of birth is required for all users");
+        }
+
+        if (user.getGender() == null || user.getGender().trim().isEmpty()) {
+            throw new IllegalArgumentException("Gender is required for all users");
+        }
+
+        if (user.getAddress() == null || user.getAddress().trim().isEmpty()) {
+            throw new IllegalArgumentException("Address is required for all users");
+        }
+
+        if (user.getRole() == null) {
+            throw new IllegalArgumentException("Role is required for all users");
+        }
+
+        if (user.getJobTitle() == null || user.getJobTitle().trim().isEmpty()) {
+            throw new IllegalArgumentException("Job title is required for all users");
+        }
+
+        if (!"PARENT".equalsIgnoreCase(roleName) && user.getUsername() == null) {
+            throw new IllegalArgumentException("Username is required for non-parent users");
+        }
+
+        if (!"PARENT".equalsIgnoreCase(roleName) && user.getPassword() == null) {
+            throw new IllegalArgumentException("Password is required for non-parent users");
+        }
+
+        if (!"PARENT".equalsIgnoreCase(roleName) && user.getEmail() == null) {
+            throw new IllegalArgumentException("Email is required for non-parent users");
+        }
+
+    }
+
+    /**
+     * Kiểm tra xem username đã tồn tại trong hệ thống chưa
+     *
+     * @param username Username cần kiểm tra
+     * @return true nếu username đã tồn tại, false nếu chưa
+     */
+    public boolean usernameExists(String username) {
+        return userRepository.existsByUsername(username);
+    }
+
+    /**
+     * Mã hóa password khi tạo hoặc cập nhật người dùng
+     *
+     * @param rawPassword Password gốc cần mã hóa
+     * @return Password đã được mã hóa
+     */
+    public String encodePassword(String rawPassword) {
+        if (rawPassword == null || rawPassword.trim().isEmpty()) {
+            return null;
+        }
+        return passwordEncoder.encode(rawPassword);
+    }
+
+    /**
+     * Kiểm tra xem password có khớp với password đã mã hóa hay không
+     *
+     * @param rawPassword Password gốc cần kiểm tra
+     * @param encodedPassword Password đã mã hóa trong database
+     * @return true nếu password khớp, false nếu không khớp
+     */
+    public boolean verifyPassword(String rawPassword, String encodedPassword) {
+        if (rawPassword == null || encodedPassword == null) {
+            return false;
+        }
+        return passwordEncoder.matches(rawPassword, encodedPassword);
+    }
 }
