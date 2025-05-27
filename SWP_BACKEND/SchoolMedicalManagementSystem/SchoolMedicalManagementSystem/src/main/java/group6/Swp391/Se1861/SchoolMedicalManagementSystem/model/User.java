@@ -122,7 +122,21 @@ public class User implements UserDetails, OAuth2User {
     }
 
     @Override
+    public String getPassword() {
+        // Ensure password is always returned for authentication
+        return this.password;
+    }
+
+    @Override
     public String getUsername() {
+        // Return the username as is, without checking role
+        // This ensures Spring Security can always authenticate with username
+        return this.username;
+    }
+
+    public String getUsernameForDisplay() {
+        // If you need conditional username logic for display purposes,
+        // use this method instead of overriding getUsername()
         if ("PARENT".equalsIgnoreCase(this.role.getRoleName())) {
             return null;
         }
@@ -141,5 +155,20 @@ public class User implements UserDetails, OAuth2User {
             return null;
         }
         return this.email;
+    }
+
+    @Override
+    public boolean isAccountNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        return true;
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
     }
 }
