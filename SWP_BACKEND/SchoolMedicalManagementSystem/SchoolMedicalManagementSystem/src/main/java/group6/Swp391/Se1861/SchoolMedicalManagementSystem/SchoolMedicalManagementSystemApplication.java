@@ -44,7 +44,12 @@ public class SchoolMedicalManagementSystemApplication {
 
 					jdbcTemplate.update(
 						"INSERT INTO role (role_name) VALUES (?)",
-						"NURSE"
+						"MANAGER"
+					);
+
+					jdbcTemplate.update(
+						"INSERT INTO role (role_name) VALUES (?)",
+						"SCHOOLNURSE"
 					);
 
 					jdbcTemplate.update(
@@ -74,17 +79,17 @@ public class SchoolMedicalManagementSystemApplication {
 						"INSERT INTO users (username, password, first_name, last_name, dob, gender, phone, email, address, job_title, created_date, last_modified_date, enabled, roleid) " +
 						"VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), ?, ?)",
 						"admin",
-						"$2a$10$yfIHMg.DKtWCdQh2U5dEBuhwGlmyahVIs9GGbLZ5QZcI01h5HnHhe", // encrypted password: admin123
+						"$2a$10$7AioByOIfY4xxdtvy2x4u.qoB4IIV0zYuXBVEoZYeOAYVV67Yqkuy", // BCrypt hash for admin123
 						"System",
 						"Administrator",
 						"1990-01-01", // default DOB
-						"M", // default gender
-						"+84123456789", // default phone number
-						"admin@school.edu",
-						"School Address", // default address
-						"System Administrator",
-						true, // enabled
-						1 // roleid = 1 for admin
+							"M",
+							"+84123456789",
+							"admin@school.edu",
+							"123 Main St, City, Country",
+							"System Admin",
+							true, // enabled
+							1 // Assuming roleid for ADMIN is 1
 					);
 					System.out.println("Admin user created successfully");
 				} else {
@@ -97,3 +102,5 @@ public class SchoolMedicalManagementSystemApplication {
 		}
 	}
 }
+
+
