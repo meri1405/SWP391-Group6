@@ -787,8 +787,8 @@ const AdminDashboard = () => {
             className="status-filter"
           >
             <option value="all">Tất cả trạng thái</option>
-            <option value="Pending">Đang chờ</option>
-            <option value="Completed">Hoàn thành</option>
+            <option value="Pending">Cần theo dõi</option>
+            <option value="Completed">Sức khỏe ổn định</option>
           </select>
         </div>
       </div>
@@ -824,7 +824,9 @@ const AdminDashboard = () => {
                 <td>{record.diagnosis}</td>
                 <td>
                   <span className={`status ${record.status.toLowerCase()}`}>
-                    {record.status === "Completed" ? "Hoàn thành" : "Đang chờ"}
+                    {record.status === "Completed"
+                      ? "Sức khỏe ổn định"
+                      : "Cần theo dõi"}
                   </span>
                 </td>
                 <td>
@@ -954,8 +956,8 @@ const AdminDashboard = () => {
                 }
               >
                 {selectedHealthRecord?.status === "Completed"
-                  ? "Hoàn thành"
-                  : "Đang chờ"}
+                  ? "Sức khỏe ổn định"
+                  : "Cần theo dõi"}
               </Tag>
             </Descriptions.Item>
             <Descriptions.Item label="Ngày tạo" span={1}>
@@ -1095,8 +1097,10 @@ const AdminDashboard = () => {
                 ]}
               >
                 <Select placeholder="Chọn trạng thái">
-                  <Select.Option value="Pending">Đang chờ</Select.Option>
-                  <Select.Option value="Completed">Hoàn thành</Select.Option>
+                  <Select.Option value="Pending">Cần theo dõi</Select.Option>
+                  <Select.Option value="Completed">
+                    Sức khỏe ổn định
+                  </Select.Option>
                 </Select>
               </Form.Item>
             </div>
