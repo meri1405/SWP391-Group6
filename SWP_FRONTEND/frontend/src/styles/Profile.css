@@ -272,6 +272,34 @@
   font-size: 12px;
 }
 
+/* Loading and empty states */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 0;
+  gap: 15px;
+}
+
+.loading-container p {
+  color: #666;
+  margin: 0;
+}
+
+.no-children {
+  padding: 30px;
+  text-align: center;
+  background: #f8f9fa;
+  border-radius: 8px;
+  color: #666;
+}
+
+.no-children p {
+  margin: 0;
+  font-size: 14px;
+}
+
 /* Responsive */
 @media (max-width: 1024px) {
   .profile-content {

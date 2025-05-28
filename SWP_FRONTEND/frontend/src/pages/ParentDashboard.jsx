@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Layout, Menu, Breadcrumb, Spin } from 'antd';
+import { Layout, Menu, Breadcrumb, Spin, message } from 'antd';
+import { useAuth } from '../contexts/AuthContext';
 import {
   DashboardOutlined,
   BellOutlined,
@@ -86,25 +87,24 @@ const ParentDashboard = () => {
         title: currentItem?.label || 'Tổng quan',
       },
     ];
-  };
+  };  const { user, isAuthenticated, isParent } = useAuth();
+
   useEffect(() => {
-    // Get user info from localStorage or token
-    const token = localStorage.getItem('token');
-    if (!token) {
+    // Redirect if not authenticated or not a parent
+    if (!isAuthenticated) {
       navigate('/login');
       return;
     }
+    
+    if (!isParent()) {
+      message.error('Bạn không có quyền truy cập vào trang này');
+      navigate('/');
+      return;
+    }
 
-    // Mock user info - replace with actual API call
-    setUserInfo({
-      id: 1,
-      firstName: 'Nguyễn',
-      lastName: 'Thị Lan',
-      email: 'nguyenthilan@example.com',
-      phone: '+84829079498',
-      roleName: 'PARENT'
-    });
-  }, [navigate]);
+    // Set user info from auth context
+    setUserInfo(user);
+  }, [navigate, isAuthenticated, isParent, user]);
 
   // Separate useEffect to handle URL parameter changes
   useEffect(() => {
@@ -248,7 +248,9 @@ const ParentDashboard = () => {
             }}>
               <UserOutlined style={{ fontSize: 20, color: '#1976d2' }} />
             </div>
-            <span style={{ fontWeight: 500, fontSize: 16 }}>{userInfo.firstName} {userInfo.lastName}</span>
+            <span style={{ fontWeight: 500, fontSize: 16 }}>
+              {userInfo?.firstName || ''} {userInfo?.lastName || ''}
+            </span>
           </div>
         </Header>
         <Content style={{

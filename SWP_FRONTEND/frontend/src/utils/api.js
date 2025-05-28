@@ -13,6 +13,8 @@ export const API_ENDPOINTS = {
   auth: {
     requestOtp: `${API_BASE_URL}${import.meta.env.VITE_API_AUTH_REQUEST_OTP}`,
     verifyOtp: `${API_BASE_URL}${import.meta.env.VITE_API_AUTH_VERIFY_OTP}`,
+    // OAuth2 endpoints
+    googleOAuth: `${API_BASE_URL}${import.meta.env.VITE_API_OAUTH2_GOOGLE}`,
   },
   // Add other endpoint categories as needed
 };

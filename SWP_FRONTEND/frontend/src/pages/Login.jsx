@@ -1,7 +1,7 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { API_ENDPOINTS, logCorsInfo, isDevelopment } from "../utils/api";
+import { API_ENDPOINTS, API_BASE_URL, logCorsInfo, isDevelopment } from "../utils/api";
 import "../styles/Login.css";
 
 const Login = () => {
@@ -11,6 +11,7 @@ const Login = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState({});
+  const [searchParams] = useSearchParams();
   // Separate loading states for each button
   const [loadingStates, setLoadingStates] = useState({
     phoneOtp: false,
@@ -21,6 +22,14 @@ const Login = () => {
 
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  // Check for OAuth2 error messages from URL parameters
+  useEffect(() => {
+    const error = searchParams.get("error");
+    if (error) {
+      setErrors({ google: decodeURIComponent(error) });
+    }
+  }, [searchParams]);
 
   // Helper function to set individual loading state
   const setIndividualLoading = (key, value) => {
@@ -220,21 +229,30 @@ const Login = () => {
     } finally {
       setIndividualLoading("usernameLogin", false);
     }
-  };
-
-  const handleGoogleLogin = async () => {
+  };  const handleGoogleLogin = async () => {
     setIndividualLoading("googleLogin", true);
     setErrors({});
 
     try {
-      // Simulate delay for better UX
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      if (isDevelopment) {
+        logCorsInfo(API_ENDPOINTS.auth.googleOAuth);
+      }      // Debug log to see the OAuth URL
+      console.log("=== Google OAuth Login ===");
+      console.log("API_ENDPOINTS.auth.googleOAuth:", API_ENDPOINTS.auth.googleOAuth);
+      console.log("API_BASE_URL:", API_BASE_URL);
+      
+      // Build absolute URL for OAuth
+      const oauthUrl = API_ENDPOINTS.auth.googleOAuth.startsWith('http') 
+        ? API_ENDPOINTS.auth.googleOAuth 
+        : `http://localhost:8080${API_ENDPOINTS.auth.googleOAuth}`;
+      
+      console.log("Final OAuth URL:", oauthUrl);
 
       // Redirect to Google OAuth endpoint
-      window.location.href = "/api/auth/google";
+      window.location.href = oauthUrl;
     } catch (networkError) {
       console.log("Google login error:", networkError.message);
-      setErrors({ google: "Tính năng Google login chưa được kích hoạt." });
+      setErrors({ google: "Không thể kết nối đến server OAuth2." });
       setIndividualLoading("googleLogin", false);
     }
   };
