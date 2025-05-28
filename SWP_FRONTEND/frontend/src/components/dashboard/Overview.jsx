@@ -1,5 +1,5 @@
-import React from 'react';
-import { Card, Row, Col, Statistic, Typography, Avatar, List, Badge, Space, Divider } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Card, Row, Col, Statistic, Typography, Avatar, List, Badge, Space, Divider, Spin, Empty } from 'antd';
 import { 
   UserOutlined, 
   MedicineBoxOutlined, 
@@ -11,24 +11,42 @@ import {
   ExclamationCircleOutlined
 } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext';
+import { parentApi } from '../../api/parentApi';
 
 const { Title, Text } = Typography;
 
 const Overview = () => {
-  const { isParent } = useAuth();
+  const { isParent, getToken, user } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [students, setStudents] = useState([]);
+  const [selectedStudent, setSelectedStudent] = useState(null);
   
-  // Dữ liệu cho đứa trẻ đầu tiên (Nguyễn Văn An)
-  const childData = {
-    id: 1,
-    name: 'Nguyễn Văn An',
-    class: 'Lớp 5A',
-    status: 'Bình thường',
-    lastCheckup: '15/05/2025',
-    bmi: '17.9',
-    weight: '35kg',
-    height: '140cm'
-  };
+  // Fetch students data
+  useEffect(() => {
+    const fetchStudents = async () => {
+      if (!isParent()) return;
+      
+      try {
+        setLoading(true);
+        const token = getToken();
+        const studentsData = await parentApi.getMyStudents(token);
+        setStudents(studentsData);
+        
+        // Select first student by default
+        if (studentsData && studentsData.length > 0) {
+          setSelectedStudent(studentsData[0]);
+        }
+      } catch (error) {
+        console.error('Error fetching students:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
+    fetchStudents();
+  }, [isParent, getToken]);
+
+  // Dữ liệu mẫu cho thông báo
   const recentNotifications = [
     {
       id: 1,
@@ -78,8 +96,8 @@ const Overview = () => {
               icon={<UserOutlined />} 
               style={{ backgroundColor: '#1976d2', marginBottom: 8 }}
             />
-            <Title level={5} style={{ margin: '4px 0', fontSize: 16 }}>{childData.name}</Title>
-            <Text type="secondary" style={{ fontSize: 14 }}>{childData.class}</Text>
+            <Title level={5} style={{ margin: '4px 0', fontSize: 16 }}>{selectedStudent ? selectedStudent.name : 'Chọn một học sinh'}</Title>
+            <Text type="secondary" style={{ fontSize: 14 }}>{selectedStudent ? selectedStudent.class : ''}</Text>
           </Card>
         </Col>
         
@@ -101,9 +119,9 @@ const Overview = () => {
               <div style={{ display: 'flex', alignItems: 'center', marginTop: 6 }}>
                 <HeartOutlined style={{ color: '#2196f3', fontSize: 20, marginRight: 8 }} />
                 <div>
-                  <Text style={{ fontSize: 20, color: '#2196f3', fontWeight: 500 }}>{childData.bmi}</Text>
+                  <Text style={{ fontSize: 20, color: '#2196f3', fontWeight: 500 }}>{selectedStudent ? selectedStudent.bmi : '-'}</Text>
                   <div>
-                    <Text type="secondary" style={{ fontSize: 12 }}>({childData.weight} / {childData.height})</Text>
+                    <Text type="secondary" style={{ fontSize: 12 }}>({selectedStudent ? selectedStudent.weight : '-'} / {selectedStudent ? selectedStudent.height : '-'})</Text>
                   </div>
                 </div>
               </div>
@@ -128,7 +146,7 @@ const Overview = () => {
               <Text type="secondary" style={{ fontSize: 14 }}>Tình trạng sức khỏe</Text>
               <div style={{ display: 'flex', alignItems: 'center', marginTop: 6 }}>
                 <CheckCircleOutlined style={{ color: '#4caf50', fontSize: 20, marginRight: 8 }} />
-                <Text style={{ fontSize: 20, color: '#4caf50', fontWeight: 500 }}>{childData.status}</Text>
+                <Text style={{ fontSize: 20, color: '#4caf50', fontWeight: 500 }}>{selectedStudent ? selectedStudent.status : '-'}</Text>
               </div>
             </div>
           </Card>
@@ -151,7 +169,7 @@ const Overview = () => {
               <Text type="secondary" style={{ fontSize: 14 }}>Lịch khám gần nhất</Text>
               <div style={{ display: 'flex', alignItems: 'center', marginTop: 6 }}>
                 <CalendarOutlined style={{ color: '#ff9800', fontSize: 20, marginRight: 8 }} />
-                <Text style={{ fontSize: 20, color: '#ff9800', fontWeight: 500 }}>{childData.lastCheckup}</Text>
+                <Text style={{ fontSize: 20, color: '#ff9800', fontWeight: 500 }}>{selectedStudent ? selectedStudent.lastCheckup : '-'}</Text>
               </div>
             </div>
           </Card>

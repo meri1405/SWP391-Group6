@@ -59,12 +59,10 @@ const Notifications = () => {
   });
 
   const markAsRead = (id) => {
-    // API call to mark notification as read
     console.log('Marking notification as read:', id);
   };
 
   const confirmAction = (id) => {
-    // API call to confirm action
     console.log('Confirming action for notification:', id);
   };
 

@@ -25,16 +25,19 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final JwtAuthenticationEntryPoint unauthorizedHandler;
     private final CustomOAuth2UserService customOAuth2UserService;
+    private final CustomOAuth2AuthenticationSuccessHandler oAuth2SuccessHandler;
 
     public SecurityConfig(
             CustomUserDetailsService userDetailsService,
             JwtAuthenticationFilter jwtAuthenticationFilter,
             JwtAuthenticationEntryPoint unauthorizedHandler,
-            CustomOAuth2UserService customOAuth2UserService) {
+            CustomOAuth2UserService customOAuth2UserService,
+            CustomOAuth2AuthenticationSuccessHandler oAuth2SuccessHandler) {
         this.userDetailsService = userDetailsService;
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.unauthorizedHandler = unauthorizedHandler;
         this.customOAuth2UserService = customOAuth2UserService;
+        this.oAuth2SuccessHandler = oAuth2SuccessHandler;
     }
 
     @Bean
@@ -72,25 +75,17 @@ public class SecurityConfig {
                     .requestMatchers("/api/schoolnurse/**").hasRole("SCHOOLNURSE")
                     .requestMatchers("/api/parent/**").hasRole("PARENT")
                     .anyRequest().authenticated()
-            )
-            .oauth2Login(oauth2 ->
+            )            .oauth2Login(oauth2 ->
                 oauth2.authorizationEndpoint(authEndpoint ->
                         authEndpoint.baseUri("/oauth2/authorize"))
                     .redirectionEndpoint(redirectEndpoint ->
                         redirectEndpoint.baseUri("/login/oauth2/code/*"))
                     .userInfoEndpoint(userInfo ->
                         userInfo.userService(customOAuth2UserService))
-                    .successHandler(oAuth2AuthenticationSuccessHandler())
-            );
-
-        http.authenticationProvider(authenticationProvider());
+                    .successHandler(oAuth2SuccessHandler)
+            );        http.authenticationProvider(authenticationProvider());
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
-    }
-
-    private AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler() {
-        // Create and return the OAuth2AuthenticationSuccessHandler bean
-        return new CustomOAuth2AuthenticationSuccessHandler();
     }
 }

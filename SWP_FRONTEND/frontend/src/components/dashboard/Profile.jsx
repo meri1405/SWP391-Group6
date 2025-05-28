@@ -1,21 +1,61 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { message, Spin } from 'antd';
+import { useAuth } from '../../contexts/AuthContext';
+import { parentApi } from '../../api/parentApi';
 import '../../styles/Profile.css';
 
 const Profile = ({ userInfo }) => {
   const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [students, setStudents] = useState([]);
+  const { getToken } = useAuth();
+  
   const [formData, setFormData] = useState({
     firstName: userInfo?.firstName || '',
     lastName: userInfo?.lastName || '',
     email: userInfo?.email || '',
     phone: userInfo?.phone || '',
-    address: '123 Đường ABC, Quận 1, TP.HCM',
-    jobTitle: 'Kế toán'
+    address: userInfo?.address || '123 Đường ABC, Quận 1, TP.HCM',
+    jobTitle: userInfo?.jobTitle || 'Kế toán'
   });
+
+  useEffect(() => {
+    // Update form data when userInfo changes
+    if (userInfo) {
+      setFormData({
+        firstName: userInfo.firstName || '',
+        lastName: userInfo.lastName || '',
+        email: userInfo.email || '',
+        phone: userInfo.phone || '',
+        address: userInfo.address || '123 Đường ABC, Quận 1, TP.HCM',
+        jobTitle: userInfo.jobTitle || 'Kế toán'
+      });
+    }
+  }, [userInfo]);
+
+  useEffect(() => {
+    // Fetch children data
+    const fetchStudents = async () => {
+      try {
+        setLoading(true);
+        const token = getToken();
+        const studentsData = await parentApi.getMyStudents(token);
+        setStudents(studentsData);
+      } catch (error) {
+        console.error('Error fetching students:', error);
+        message.error('Không thể tải thông tin học sinh');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStudents();
+  }, [getToken]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // API call to update profile
-    console.log('Updating profile:', formData);
+    // API call to update profile would go here
+    message.success('Cập nhật thông tin thành công');
     setIsEditing(false);
   };
 
@@ -156,35 +196,36 @@ const Profile = ({ userInfo }) => {
 
         <div className="children-info">
           <h3>Thông tin con em</h3>
-          <div className="children-list">
-            <div className="child-item">
-              <div className="child-avatar">
-                <i className="fas fa-child"></i>
-              </div>
-              <div className="child-details">
-                <h4>Nguyễn Văn An</h4>
-                <p>Lớp 5A - Sinh năm 2015</p>
-                <div className="child-actions">
-                  <button className="view-btn">Xem hồ sơ</button>
-                  <button className="edit-btn">Chỉnh sửa</button>
-                </div>
-              </div>
+          {loading ? (
+            <div className="loading-container">
+              <Spin size="large" />
+              <p>Đang tải thông tin học sinh...</p>
             </div>
-            
-            <div className="child-item">
-              <div className="child-avatar">
-                <i className="fas fa-child"></i>
-              </div>
-              <div className="child-details">
-                <h4>Nguyễn Thị Bình</h4>
-                <p>Lớp 3B - Sinh năm 2017</p>
-                <div className="child-actions">
-                  <button className="view-btn">Xem hồ sơ</button>
-                  <button className="edit-btn">Chỉnh sửa</button>
+          ) : (
+            <div className="children-list">
+              {students && students.length > 0 ? (
+                students.map((student) => (
+                  <div className="child-item" key={student.id}>
+                    <div className="child-avatar">
+                      <i className="fas fa-child"></i>
+                    </div>
+                    <div className="child-details">
+                      <h4>{student.firstName} {student.lastName}</h4>
+                      <p>Lớp {student.className || 'N/A'} - Sinh năm {student.birthYear || 'N/A'}</p>
+                      <div className="child-actions">
+                        <button className="view-btn">Xem hồ sơ</button>
+                        <button className="edit-btn">Chỉnh sửa</button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="no-children">
+                  <p>Không có thông tin học sinh</p>
                 </div>
-              </div>
+              )}
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

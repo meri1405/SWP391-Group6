@@ -22,13 +22,8 @@ public class CustomOAuth2AuthenticationSuccessHandler extends SimpleUrlAuthentic
 
     private final AuthService authService;
 
-    @Value("${app.oauth2.redirect-uri:http://localhost:3000/auth/oauth2/callback}")
+    @Value("${app.oauth2.redirect-uri:http://localhost:5173/oauth2/redirect}")
     private String frontendRedirectUri;
-
-    // Default constructor (in case needed for Spring)
-    public CustomOAuth2AuthenticationSuccessHandler() {
-        this.authService = null;
-    }
 
     @Autowired
     public CustomOAuth2AuthenticationSuccessHandler(@Lazy AuthService authService) {

@@ -10,6 +10,8 @@ import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminProtectedRoute from "./components/AdminProtectedRoute";
+import OAuth2RedirectHandler from "./components/OAuth2RedirectHandler";
+import SessionTimeoutWarning from "./components/SessionTimeoutWarning";
 import ScrollToTop from "./components/ScrollToTop";
 import ScrollToTopOnMount from "./components/ScrollToTopOnMount";
 import Home from "./pages/Home";
@@ -31,10 +33,10 @@ function App() {
       <Router>
         <div className="App">
           <Navbar />
-          <ScrollToTopOnMount />
-          <Routes>
+          <ScrollToTopOnMount />          <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/oauth2/redirect" element={<OAuth2RedirectHandler />} />
             <Route path="/blog" element={<Blog />} />
             <Route path="/blog/:id" element={<BlogDetail />} />
             <Route path="/documents" element={<Documents />} />
@@ -48,13 +50,19 @@ function App() {
                   <ParentDashboard />
                 </ProtectedRoute>
               }
-            />
-            <Route
+            />            <Route
               path="/admin/dashboard"
               element={
                 <AdminProtectedRoute>
                   <AdminDashboard />
                 </AdminProtectedRoute>
+              }
+            />            <Route
+              path="/manager-dashboard"
+              element={
+                <ProtectedRoute allowedRoles={["MANAGER"]}>
+                  <AdminDashboard />
+                </ProtectedRoute>
               }
             />
             <Route
@@ -67,9 +75,9 @@ function App() {
             />
             <Route path="/admin" element={<Navigate to="/login" replace />} />
             <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-          <Footer />
+          </Routes>          <Footer />
           <ScrollToTop />
+          <SessionTimeoutWarning />
         </div>
       </Router>
     </AuthProvider>
