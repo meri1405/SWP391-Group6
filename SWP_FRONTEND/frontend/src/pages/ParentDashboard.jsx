@@ -9,9 +9,12 @@ import {
   HeartOutlined,
   MedicineBoxOutlined,
   CalendarOutlined,
-  UserOutlined
+  UserOutlined,
+  LeftOutlined,
+  RightOutlined
 } from '@ant-design/icons';
 import Overview from '../components/dashboard/Overview';
+import '../styles/SidebarTrigger.css'
 import Notifications from '../components/dashboard/Notifications';
 import HealthHistory from '../components/dashboard/HealthHistory';
 import PhysicalMental from '../components/dashboard/PhysicalMental';
@@ -163,19 +166,19 @@ const ParentDashboard = () => {
       borderRadius: '16px',
       overflow: 'hidden',
       boxShadow: '0 4px 20px 0 rgba(0,0,0,0.08)'
-    }}>
-      <Sider
+    }}>      <Sider
         width={240}
-        collapsible
         collapsed={collapsed}
-        onCollapse={setCollapsed}
         theme="light"
+        className="parent-sidebar"
         style={{
           borderRight: '1px solid #f0f0f0',
           background: '#fff',
           zIndex: 10,
           paddingTop: 24,
+          position: 'relative'
         }}
+        trigger={null}
       >
         <div style={{
           display: 'flex',
@@ -209,8 +212,7 @@ const ParentDashboard = () => {
               Phụ huynh
             </span>
           )}
-        </div>
-        <Menu
+        </div>        <Menu
           theme="light"
           selectedKeys={[activeSection]}
           mode="inline"
@@ -218,6 +220,26 @@ const ParentDashboard = () => {
           onClick={handleMenuClick}
           style={{ border: 'none', fontWeight: 500, fontSize: 16 }}
         />
+        {/* Custom Sidebar Trigger Button - Right after menu */}
+        <div 
+          className="custom-sidebar-trigger"
+          onClick={() => setCollapsed(!collapsed)}
+          tabIndex={0}
+          role="button"
+          aria-label={collapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setCollapsed(!collapsed);
+            }
+          }}
+        >
+          {collapsed ? 
+            <RightOutlined className="icon-right" /> : 
+            <LeftOutlined className="icon-left" />
+          }
+          {!collapsed && <span className="trigger-text">Thu gọn</span>}
+        </div>
       </Sider>
       <Layout style={{ marginLeft: 0 }}>
         <Header style={{

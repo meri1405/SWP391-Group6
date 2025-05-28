@@ -32,7 +32,7 @@ public class AdminUserController {
      * Create a new user with specified role
      * Role-specific validations are applied:
      * - For all roles: phone, firstName, lastName, dob, gender, address, jobTitle are required
-     * - For ADMIN, SCHOOL_NURSE, HEALTH_STAFF, CAMPAIGN_MANAGER: username, password, email are required
+     * - For ADMIN, SCHOOLNURSE, MANAGER: username, password, email are required
      * - For PARENT: username, password, email are ignored/nullified
      * - Phone number must be unique for all users regardless of role
      */
