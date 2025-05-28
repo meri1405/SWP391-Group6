@@ -73,6 +73,27 @@
   color: #1976d2;
 }
 
+/* Custom sidebar integration for parent dashboard */
+.parent-dashboard .ant-layout-sider {
+  position: relative;
+  z-index: 10;
+}
+
+/* Ensure sidebar content doesn't interfere with trigger button */
+.parent-dashboard .ant-layout-sider .ant-menu {
+  padding-right: 8px;
+}
+
+/* Smooth transition for the main content when sidebar toggles */
+.parent-dashboard .ant-layout {
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Enhanced styling for collapsed sidebar */
+.parent-dashboard .ant-layout-sider-collapsed {
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .parent-dashboard {
