@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import {
   Chart as ChartJS,
@@ -25,14 +25,19 @@ import {
   Space,
   message,
   Popconfirm,
+  Card,
+  Divider,
 } from "antd";
 import {
   EyeOutlined,
   EditOutlined,
   DeleteOutlined,
   PlusOutlined,
+  CloseOutlined,
+  SaveOutlined,
 } from "@ant-design/icons";
 import "antd/dist/reset.css";
+import "../styles/Profile.css";
 
 ChartJS.register(
   CategoryScale,
@@ -48,6 +53,7 @@ ChartJS.register(
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("dashboard");
 
@@ -179,9 +185,16 @@ const AdminDashboard = () => {
       return;
     }
 
+    // Handle URL parameters for tab navigation
+    const urlParams = new URLSearchParams(location.search);
+    const tab = urlParams.get("tab");
+    if (tab) {
+      setActiveTab(tab);
+    }
+
     console.log("AdminDashboard loaded for user:", user);
     console.log("User role:", user.roleName);
-  }, [user, navigate]);
+  }, [user, navigate, location.search]);
 
   // User Management Functions
   const resetUserForm = () => {
@@ -346,6 +359,7 @@ const AdminDashboard = () => {
     { id: "dashboard", label: "Tổng quan", icon: "📊" },
     { id: "users", label: "Quản lý người dùng", icon: "👥" },
     { id: "health", label: "Hồ sơ sức khỏe", icon: "🏥" },
+    { id: "profile", label: "Hồ sơ cá nhân", icon: "👤" },
     { id: "settings", label: "Cài đặt", icon: "⚙️" },
   ];
 
@@ -1132,6 +1146,463 @@ const AdminDashboard = () => {
     </div>
   );
 
+  // Admin Profile Component
+  const AdminProfile = () => {
+    const [isEditing, setIsEditing] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [avatarUrl, setAvatarUrl] = useState(null);
+    const [previewVisible, setPreviewVisible] = useState(false);
+    const [previewImage, setPreviewImage] = useState("");
+
+    const [formData, setFormData] = useState({
+      firstName: user?.firstName || "",
+      lastName: user?.lastName || "",
+      email: user?.email || "",
+      phone: user?.phone || "",
+      address: user?.address || "",
+      jobTitle: user?.jobTitle || "Quản trị viên hệ thống",
+      dateOfBirth: user?.dateOfBirth || "",
+      emergencyContact: user?.emergencyContact || "",
+      department: user?.department || "Phòng IT",
+      employeeId: user?.employeeId || "ADMIN001",
+    });
+
+    const [errors, setErrors] = useState({});
+
+    const validateForm = () => {
+      const newErrors = {};
+
+      if (!formData.firstName.trim()) {
+        newErrors.firstName = "Họ không được để trống";
+      }
+
+      if (!formData.lastName.trim()) {
+        newErrors.lastName = "Tên không được để trống";
+      }
+
+      if (!formData.email.trim()) {
+        newErrors.email = "Email không được để trống";
+      } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+        newErrors.email = "Email không hợp lệ";
+      }
+
+      if (!formData.phone.trim()) {
+        newErrors.phone = "Số điện thoại không được để trống";
+      } else if (!/^[0-9]{10,11}$/.test(formData.phone.replace(/\s/g, ""))) {
+        newErrors.phone = "Số điện thoại không hợp lệ";
+      }
+
+      setErrors(newErrors);
+      return Object.keys(newErrors).length === 0;
+    };
+
+    const handleSubmit = async (e) => {
+      e.preventDefault();
+
+      if (!validateForm()) {
+        message.error("Vui lòng kiểm tra lại thông tin");
+        return;
+      }
+
+      try {
+        setLoading(true);
+        // API call to update admin profile would go here
+        // await adminApi.updateProfile(formData);
+        message.success("Cập nhật thông tin thành công");
+        setIsEditing(false);
+        setErrors({});
+      } catch (error) {
+        message.error("Có lỗi xảy ra khi cập nhật thông tin");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const handleChange = (e) => {
+      const { name, value } = e.target;
+      setFormData({
+        ...formData,
+        [name]: value,
+      });
+
+      // Clear error when user starts typing
+      if (errors[name]) {
+        setErrors({
+          ...errors,
+          [name]: "",
+        });
+      }
+    };
+
+    const handleAvatarChange = (info) => {
+      if (info.file.status === "uploading") {
+        setLoading(true);
+        return;
+      }
+      if (info.file.status === "done") {
+        setAvatarUrl(info.file.response.url);
+        setLoading(false);
+        message.success("Tải ảnh đại diện thành công");
+      }
+    };
+
+    const beforeUpload = (file) => {
+      const isJpgOrPng =
+        file.type === "image/jpeg" || file.type === "image/png";
+      if (!isJpgOrPng) {
+        message.error("Chỉ có thể tải lên file JPG/PNG!");
+      }
+      const isLt2M = file.size / 1024 / 1024 < 2;
+      if (!isLt2M) {
+        message.error("Ảnh phải nhỏ hơn 2MB!");
+      }
+      return isJpgOrPng && isLt2M;
+    };
+
+    const getBase64 = (file) => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = (error) => reject(error);
+      });
+    };
+
+    const handlePreview = async (file) => {
+      if (!file.url && !file.preview) {
+        file.preview = await getBase64(file.originFileObj);
+      }
+      setPreviewImage(file.url || file.preview);
+      setPreviewVisible(true);
+    };
+
+    return (
+      <div className="profile-container">
+        <div className="profile-header">
+          <div className="header-content">
+            <h2>👤 Hồ Sơ Cá Nhân</h2>
+            <p>Quản lý thông tin tài khoản quản trị viên</p>
+          </div>
+          <Button
+            type={isEditing ? "default" : "primary"}
+            icon={isEditing ? <CloseOutlined /> : <EditOutlined />}
+            onClick={() => setIsEditing(!isEditing)}
+            size="large"
+          >
+            {isEditing ? "Hủy" : "Chỉnh sửa"}
+          </Button>
+        </div>
+
+        <div className="profile-content">
+          <div className="profile-main-card">
+            <div className="profile-card-header">
+              <h3>Thông tin cá nhân</h3>
+            </div>
+            <div className="profile-card-body">
+              <div className="profile-avatar-section">
+                <div className="avatar-container">
+                  {avatarUrl ? (
+                    <img
+                      src={avatarUrl}
+                      alt="Avatar"
+                      className="profile-avatar-large"
+                    />
+                  ) : (
+                    <div className="profile-avatar-large default-avatar">
+                      👤
+                    </div>
+                  )}
+                </div>
+                {isEditing && (
+                  <div className="avatar-upload">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file && beforeUpload(file)) {
+                          const reader = new FileReader();
+                          reader.onload = () => setAvatarUrl(reader.result);
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                      style={{ display: "none" }}
+                      id="avatar-upload"
+                    />
+                    <label htmlFor="avatar-upload" className="upload-btn">
+                      📷 Đổi ảnh
+                    </label>
+                  </div>
+                )}
+                <div className="profile-basic-info">
+                  <h3>
+                    {formData.firstName} {formData.lastName}
+                  </h3>
+                  <div className="role-badge admin">🛡️ Quản trị viên</div>
+                </div>
+              </div>
+
+              <div className="divider"></div>
+
+              {isEditing ? (
+                <form onSubmit={handleSubmit} className="profile-form-enhanced">
+                  <div className="form-section">
+                    <h4>Thông tin cơ bản</h4>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>Họ *</label>
+                        <input
+                          type="text"
+                          name="firstName"
+                          value={formData.firstName}
+                          onChange={handleChange}
+                          className={errors.firstName ? "error" : ""}
+                          placeholder="Nhập họ"
+                        />
+                        {errors.firstName && (
+                          <span className="error-text">{errors.firstName}</span>
+                        )}
+                      </div>
+                      <div className="form-group">
+                        <label>Tên *</label>
+                        <input
+                          type="text"
+                          name="lastName"
+                          value={formData.lastName}
+                          onChange={handleChange}
+                          className={errors.lastName ? "error" : ""}
+                          placeholder="Nhập tên"
+                        />
+                        {errors.lastName && (
+                          <span className="error-text">{errors.lastName}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>Email *</label>
+                        <input
+                          type="email"
+                          name="email"
+                          value={formData.email}
+                          onChange={handleChange}
+                          className={errors.email ? "error" : ""}
+                          placeholder="admin@school.edu"
+                        />
+                        {errors.email && (
+                          <span className="error-text">{errors.email}</span>
+                        )}
+                      </div>
+                      <div className="form-group">
+                        <label>Số điện thoại *</label>
+                        <input
+                          type="tel"
+                          name="phone"
+                          value={formData.phone}
+                          onChange={handleChange}
+                          className={errors.phone ? "error" : ""}
+                          placeholder="0123456789"
+                        />
+                        {errors.phone && (
+                          <span className="error-text">{errors.phone}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>Ngày sinh</label>
+                        <input
+                          type="date"
+                          name="dateOfBirth"
+                          value={formData.dateOfBirth}
+                          onChange={handleChange}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Mã nhân viên</label>
+                        <input
+                          type="text"
+                          name="employeeId"
+                          value={formData.employeeId}
+                          onChange={handleChange}
+                          placeholder="ADMIN001"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="form-section">
+                    <h4>Thông tin công việc</h4>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>Chức vụ</label>
+                        <input
+                          type="text"
+                          name="jobTitle"
+                          value={formData.jobTitle}
+                          onChange={handleChange}
+                          placeholder="Quản trị viên hệ thống"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Phòng ban</label>
+                        <select
+                          name="department"
+                          value={formData.department}
+                          onChange={handleChange}
+                        >
+                          <option value="Phòng IT">Phòng IT</option>
+                          <option value="Phòng Y tế">Phòng Y tế</option>
+                          <option value="Phòng Giáo vụ">Phòng Giáo vụ</option>
+                          <option value="Phòng Hành chính">
+                            Phòng Hành chính
+                          </option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="form-group">
+                      <label>Địa chỉ</label>
+                      <input
+                        type="text"
+                        name="address"
+                        value={formData.address}
+                        onChange={handleChange}
+                        placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành phố"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Số điện thoại khẩn cấp</label>
+                      <input
+                        type="tel"
+                        name="emergencyContact"
+                        value={formData.emergencyContact}
+                        onChange={handleChange}
+                        placeholder="0123456789"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-actions-enhanced">
+                    <Button
+                      type="primary"
+                      htmlType="submit"
+                      icon={<SaveOutlined />}
+                      loading={loading}
+                      size="large"
+                    >
+                      Lưu thay đổi
+                    </Button>
+                    <Button onClick={() => setIsEditing(false)} size="large">
+                      Hủy
+                    </Button>
+                  </div>
+                </form>
+              ) : (
+                <div className="profile-info-enhanced">
+                  <div className="info-section">
+                    <h4>Thông tin cơ bản</h4>
+                    <div className="info-grid">
+                      <div className="info-item">
+                        <div className="info-icon">👤</div>
+                        <div>
+                          <label>Họ và tên</label>
+                          <span>
+                            {formData.firstName} {formData.lastName}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="info-item">
+                        <div className="info-icon">📧</div>
+                        <div>
+                          <label>Email</label>
+                          <span>{formData.email}</span>
+                        </div>
+                      </div>
+                      <div className="info-item">
+                        <div className="info-icon">📞</div>
+                        <div>
+                          <label>Số điện thoại</label>
+                          <span>{formData.phone}</span>
+                        </div>
+                      </div>
+                      <div className="info-item">
+                        <div className="info-icon">📅</div>
+                        <div>
+                          <label>Ngày sinh</label>
+                          <span>{formData.dateOfBirth || "Chưa cập nhật"}</span>
+                        </div>
+                      </div>
+                      <div className="info-item">
+                        <div className="info-icon">🆔</div>
+                        <div>
+                          <label>Mã nhân viên</label>
+                          <span>{formData.employeeId}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="divider"></div>
+
+                  <div className="info-section">
+                    <h4>Thông tin công việc</h4>
+                    <div className="info-grid">
+                      <div className="info-item">
+                        <div className="info-icon">💼</div>
+                        <div>
+                          <label>Chức vụ</label>
+                          <span>{formData.jobTitle}</span>
+                        </div>
+                      </div>
+                      <div className="info-item">
+                        <div className="info-icon">🏢</div>
+                        <div>
+                          <label>Phòng ban</label>
+                          <span>{formData.department}</span>
+                        </div>
+                      </div>
+                      <div className="info-item full-width">
+                        <div className="info-icon">🏠</div>
+                        <div>
+                          <label>Địa chỉ</label>
+                          <span>{formData.address || "Chưa cập nhật"}</span>
+                        </div>
+                      </div>
+                      <div className="info-item">
+                        <div className="info-icon">🚨</div>
+                        <div>
+                          <label>Số điện thoại khẩn cấp</label>
+                          <span>
+                            {formData.emergencyContact || "Chưa cập nhật"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {previewVisible && (
+          <Modal
+            visible={previewVisible}
+            title="Xem trước ảnh"
+            footer={null}
+            onCancel={() => setPreviewVisible(false)}
+          >
+            <img alt="preview" style={{ width: "100%" }} src={previewImage} />
+          </Modal>
+        )}
+      </div>
+    );
+  };
+
   // Settings Component
   const SettingsManagement = () => (
     <div className="settings-management">
@@ -1178,6 +1649,8 @@ const AdminDashboard = () => {
         return <UserManagement />;
       case "health":
         return <HealthRecordsManagement />;
+      case "profile":
+        return <AdminProfile />;
       case "settings":
         return <SettingsManagement />;
       default:
@@ -1201,7 +1674,15 @@ const AdminDashboard = () => {
             <button
               key={item.id}
               className={`nav-item ${activeTab === item.id ? "active" : ""}`}
-              onClick={() => setActiveTab(item.id)}
+              onClick={() => {
+                setActiveTab(item.id);
+                // Update URL with tab parameter
+                if (item.id === "dashboard") {
+                  navigate("/admin/dashboard");
+                } else {
+                  navigate(`/admin/dashboard?tab=${item.id}`);
+                }
+              }}
             >
               <span className="nav-icon">{item.icon}</span>
               <span className="nav-label">{item.label}</span>

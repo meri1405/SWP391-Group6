@@ -317,7 +317,11 @@ const Navbar = () => {
                     </div>
                     <div className="dropdown-divider"></div>
                     <Link
-                      to="/parent-dashboard?tab=profile"
+                      to={
+                        isParent()
+                          ? "/parent-dashboard?tab=profile"
+                          : "/admin/dashboard?tab=profile"
+                      }
                       className="dropdown-item"
                       onClick={() => setShowUserDropdown(false)}
                     >
