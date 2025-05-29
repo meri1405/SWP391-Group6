@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { Layout, Menu, Breadcrumb, Spin, message } from "antd";
 import { useAuth } from "../contexts/AuthContext";
 import {
   Chart as ChartJS,
@@ -23,21 +24,31 @@ import {
   Descriptions,
   Tag,
   Space,
-  message,
   Popconfirm,
   Card,
   Divider,
 } from "antd";
 import {
+  DashboardOutlined,
+  TeamOutlined,
+  MedicineBoxOutlined,
+  UserOutlined,
+  SettingOutlined,
   EyeOutlined,
   EditOutlined,
   DeleteOutlined,
   PlusOutlined,
   CloseOutlined,
   SaveOutlined,
+  LeftOutlined,
+  RightOutlined,
 } from "@ant-design/icons";
 import "antd/dist/reset.css";
 import "../styles/Profile.css";
+import "../styles/SidebarTrigger.css";
+import "../styles/AdminDashboard.css";
+
+const { Header, Sider, Content } = Layout;
 
 ChartJS.register(
   CategoryScale,
@@ -52,10 +63,64 @@ ChartJS.register(
 );
 
 const AdminDashboard = () => {
+  const [activeSection, setActiveSection] = useState("dashboard");
+  const [userInfo, setUserInfo] = useState(null);
+  const [collapsed, setCollapsed] = useState(false);
   const navigate = useNavigate();
-  const location = useLocation();
-  const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const [searchParams] = useSearchParams();
+
+  const menuItems = [
+    {
+      key: "dashboard",
+      icon: <DashboardOutlined />,
+      label: "Tổng quan",
+    },
+    {
+      key: "users",
+      icon: <TeamOutlined />,
+      label: "Quản lý người dùng",
+    },
+    {
+      key: "health",
+      icon: <MedicineBoxOutlined />,
+      label: "Hồ sơ sức khỏe",
+    },
+    {
+      key: "profile",
+      icon: <UserOutlined />,
+      label: "Hồ sơ cá nhân",
+    },
+    {
+      key: "settings",
+      icon: <SettingOutlined />,
+      label: "Cài đặt",
+    },
+  ];
+
+  const handleMenuClick = (e) => {
+    const tabKey = e.key;
+    setActiveSection(tabKey);
+
+    if (tabKey === "dashboard") {
+      navigate("/admin/dashboard");
+    } else {
+      navigate(`/admin/dashboard?tab=${tabKey}`);
+    }
+  };
+
+  const getBreadcrumbItems = () => {
+    const currentItem = menuItems.find((item) => item.key === activeSection);
+    return [
+      {
+        title: "Admin Dashboard",
+      },
+      {
+        title: currentItem?.label || "Tổng quan",
+      },
+    ];
+  };
+
+  const { user, isAuthenticated, isStaff } = useAuth();
 
   // User Management States
   const [showUserModal, setShowUserModal] = useState(false);
@@ -179,22 +244,35 @@ const AdminDashboard = () => {
   const [healthFormInstance] = Form.useForm();
 
   useEffect(() => {
-    // Simple check - AdminProtectedRoute already verified ADMIN access
-    if (!user) {
+    // Redirect if not authenticated or not an admin
+    if (!isAuthenticated) {
       navigate("/login");
       return;
     }
 
-    // Handle URL parameters for tab navigation
-    const urlParams = new URLSearchParams(location.search);
-    const tab = urlParams.get("tab");
-    if (tab) {
-      setActiveTab(tab);
+    if (!isStaff()) {
+      message.error("Bạn không có quyền truy cập vào trang này");
+      navigate("/");
+      return;
     }
 
-    console.log("AdminDashboard loaded for user:", user);
-    console.log("User role:", user.roleName);
-  }, [user, navigate, location.search]);
+    // Set user info from auth context
+    setUserInfo(user);
+  }, [navigate, isAuthenticated, isStaff, user]);
+
+  // Separate useEffect to handle URL parameter changes
+  useEffect(() => {
+    const tabParam = searchParams.get("tab");
+    if (tabParam) {
+      const validTabs = ["dashboard", "users", "health", "profile", "settings"];
+      if (validTabs.includes(tabParam)) {
+        setActiveSection(tabParam);
+      }
+    } else {
+      // If no tab parameter, default to dashboard
+      setActiveSection("dashboard");
+    }
+  }, [searchParams]);
 
   // User Management Functions
   const resetUserForm = () => {
@@ -353,15 +431,6 @@ const AdminDashboard = () => {
       filterStatus === "all" || record.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
-
-  // Navigation items
-  const navItems = [
-    { id: "dashboard", label: "Tổng quan", icon: "📊" },
-    { id: "users", label: "Quản lý người dùng", icon: "👥" },
-    { id: "health", label: "Hồ sơ sức khỏe", icon: "🏥" },
-    { id: "profile", label: "Hồ sơ cá nhân", icon: "👤" },
-    { id: "settings", label: "Cài đặt", icon: "⚙️" },
-  ];
 
   // Dashboard Overview Component
   const DashboardOverview = () => {
@@ -1151,8 +1220,6 @@ const AdminDashboard = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [loading, setLoading] = useState(false);
     const [avatarUrl, setAvatarUrl] = useState(null);
-    const [previewVisible, setPreviewVisible] = useState(false);
-    const [previewImage, setPreviewImage] = useState("");
 
     const [formData, setFormData] = useState({
       firstName: user?.firstName || "",
@@ -1213,6 +1280,7 @@ const AdminDashboard = () => {
         setErrors({});
       } catch (error) {
         message.error("Có lỗi xảy ra khi cập nhật thông tin");
+        console.error("Profile update error:", error);
       } finally {
         setLoading(false);
       }
@@ -1220,30 +1288,10 @@ const AdminDashboard = () => {
 
     const handleChange = (e) => {
       const { name, value } = e.target;
-      setFormData({
-        ...formData,
+      setFormData((prev) => ({
+        ...prev,
         [name]: value,
-      });
-
-      // Clear error when user starts typing
-      if (errors[name]) {
-        setErrors({
-          ...errors,
-          [name]: "",
-        });
-      }
-    };
-
-    const handleAvatarChange = (info) => {
-      if (info.file.status === "uploading") {
-        setLoading(true);
-        return;
-      }
-      if (info.file.status === "done") {
-        setAvatarUrl(info.file.response.url);
-        setLoading(false);
-        message.success("Tải ảnh đại diện thành công");
-      }
+      }));
     };
 
     const beforeUpload = (file) => {
@@ -1257,23 +1305,6 @@ const AdminDashboard = () => {
         message.error("Ảnh phải nhỏ hơn 2MB!");
       }
       return isJpgOrPng && isLt2M;
-    };
-
-    const getBase64 = (file) => {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = (error) => reject(error);
-      });
-    };
-
-    const handlePreview = async (file) => {
-      if (!file.url && !file.preview) {
-        file.preview = await getBase64(file.originFileObj);
-      }
-      setPreviewImage(file.url || file.preview);
-      setPreviewVisible(true);
     };
 
     return (
@@ -1588,17 +1619,6 @@ const AdminDashboard = () => {
             </div>
           </div>
         </div>
-
-        {previewVisible && (
-          <Modal
-            visible={previewVisible}
-            title="Xem trước ảnh"
-            footer={null}
-            onCancel={() => setPreviewVisible(false)}
-          >
-            <img alt="preview" style={{ width: "100%" }} src={previewImage} />
-          </Modal>
-        )}
       </div>
     );
   };
@@ -1642,7 +1662,7 @@ const AdminDashboard = () => {
   );
 
   const renderContent = () => {
-    switch (activeTab) {
+    switch (activeSection) {
       case "dashboard":
         return <DashboardOverview />;
       case "users":
@@ -1658,809 +1678,182 @@ const AdminDashboard = () => {
     }
   };
 
-  // AdminProtectedRoute already verified ADMIN access, so we can render directly
-  if (!user) return null;
+  if (!userInfo) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+          background: "#f4f6fb",
+        }}
+      >
+        <Spin size="large" />
+      </div>
+    );
+  }
 
   return (
-    <div className="admin-dashboard">
-      {/* Sidebar */}
-      <div className="sidebar">
-        <div className="sidebar-header">
-          <h3>Quản Lý</h3>
-        </div>
-
-        <nav className="sidebar-nav">
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              className={`nav-item ${activeTab === item.id ? "active" : ""}`}
-              onClick={() => {
-                setActiveTab(item.id);
-                // Update URL with tab parameter
-                if (item.id === "dashboard") {
-                  navigate("/admin/dashboard");
-                } else {
-                  navigate(`/admin/dashboard?tab=${item.id}`);
-                }
+    <Layout
+      style={{
+        minHeight: "calc(100vh - 140px)",
+        background: "#f4f6fb",
+        margin: "90px 20px 30px 20px",
+        borderRadius: "16px",
+        overflow: "hidden",
+        boxShadow: "0 4px 20px 0 rgba(0,0,0,0.08)",
+      }}
+    >
+      <Sider
+        width={240}
+        collapsed={collapsed}
+        theme="light"
+        className="admin-sidebar"
+        style={{
+          borderRight: "1px solid #f0f0f0",
+          background: "#fff",
+          zIndex: 10,
+          paddingTop: 24,
+          position: "relative",
+        }}
+        trigger={null}
+      >
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            marginBottom: 24,
+            marginTop: 8,
+          }}
+        >
+          <div
+            style={{
+              width: 60,
+              height: 60,
+              borderRadius: "50%",
+              background: "#fff2e8",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              border: "2px solid #fa8c16",
+            }}
+          >
+            <UserOutlined style={{ fontSize: 32, color: "#fa8c16" }} />
+          </div>
+          {!collapsed && (
+            <span
+              style={{
+                fontWeight: 600,
+                color: "#fa8c16",
+                fontSize: 18,
+                marginTop: 12,
+                borderRadius: 20,
+                padding: "4px 12px",
+                background: "#fff2e8",
               }}
             >
-              <span className="nav-icon">{item.icon}</span>
-              <span className="nav-label">{item.label}</span>
-            </button>
-          ))}
-        </nav>
-      </div>
-
-      {/* Dashboard Content */}
-      <div className="dashboard-content">
-        <div className="content-header">
-          <h1>Admin</h1>
+              Quản trị viên
+            </span>
+          )}
         </div>
-        <div className="content-body">{renderContent()}</div>
-      </div>
 
-      {/* Styles */}
-      <style jsx>{`
-        .admin-dashboard {
-          display: flex;
-          min-height: calc(100vh - 140px);
-          margin: 90px 20px 20px 20px;
-          background-color: #f8f9fa;
-          border-radius: 16px;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-          overflow: hidden;
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-            sans-serif;
-        }
-
-        .sidebar {
-          width: 260px;
-          background: #0d5ec2;
-          border-right: none;
-          box-shadow: 2px 0 4px rgba(0, 0, 0, 0.06);
-          display: flex;
-          flex-direction: column;
-          border-radius: 16px 0 0 16px;
-        }
-
-        .sidebar-header {
-          padding: 16px 24px;
-          border-bottom: 1px solid #1565c0;
-          background: #0d5ec2;
-          border-radius: 16px 0 0;
-          position: sticky;
-          top: 0;
-          z-index: 5;
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
-        }
-
-        .sidebar-header h3 {
-          margin: 0 0 4px 0;
-          color: #fff;
-          font-size: 22px;
-          font-weight: 600;
-        }
-
-        .sidebar-nav {
-          flex: 1;
-          padding: 16px 0;
-        }
-
-        .nav-item {
-          display: flex;
-          align-items: center;
-          width: 100%;
-          padding: 12px 16px;
-          border: none;
-          background: none;
-          color: #fff;
-          text-decoration: none;
-          transition: all 0.2s ease;
-          cursor: pointer;
-          font-size: 13px;
-          text-align: left;
-        }
-
-        .nav-item:hover {
-          background-color: #1565c0;
-          color: #fff;
-        }
-
-        .nav-item.active {
-          background-color: #1976d2;
-          color: #fff;
-          border-right: 3px solid #fff;
-          font-weight: 500;
-        }
-
-        .nav-icon {
-          margin-right: 12px;
-          width: 20px;
-          font-size: 16px;
-        }
-
-        .nav-label {
-          flex: 1;
-        }
-
-        .dashboard-content {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-        }
-
-        .content-header {
-          background: white;
-          padding: 16px 24px;
-          border-bottom: 1px solid #e8e8e8;
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
-          border-radius: 0px 16px 0 0;
-          display: flex;
-          justify-content: flex-end;
-          align-items: center;
-        }
-
-        .content-header h1 {
-          color: #1976d2;
-          margin: 0 0 4px 0;
-          font-size: 22px;
-          font-weight: 600;
-        }
-
-        .user-info {
-          color: #666;
-          font-size: 13px;
-        }
-
-        .content-body {
-          flex: 1;
-          padding: 20px 24px;
-          overflow-y: auto;
-          background: #f8f9fa;
-        }
-
-        .content-body > * {
-          background: white;
-          border-radius: 12px;
-          padding: 24px;
-          margin: 0 0 20px 0;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-          border: 1px solid #e8e8e8;
-          transition: all 0.2s ease;
-        }
-
-        .content-body > *:hover {
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-          transform: translateY(-1px);
-        }
-
-        .content-body > *:last-child {
-          margin-bottom: 0;
-        }
-
-        .dashboard-overview,
-        .user-management,
-        .health-records,
-        .settings-management {
-          /* Inherits styles from content-body > * */
-        }
-
-        .dashboard-overview h2,
-        .user-management h2,
-        .health-records h2,
-        .settings-management h2 {
-          margin: 0 0 2rem 0;
-          color: #333;
-          font-size: 1.5rem;
-          font-weight: 600;
-        }
-
-        .section-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 1.5rem;
-          padding-bottom: 1rem;
-          border-bottom: 2px solid #e9ecef;
-        }
-
-        .stats-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-          gap: 1.5rem;
-          margin-bottom: 3rem;
-        }
-
-        .stat-card {
-          background: white;
-          padding: 2rem;
-          border-radius: 8px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-          text-align: center;
-          border-left: 4px solid #1976d2;
-          transition: all 0.3s ease;
-        }
-
-        .stat-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        }
-
-        .stat-info h3 {
-          margin: 0;
-          font-size: 2rem;
-          color: #1976d2;
-          font-weight: 700;
-        }
-
-        .stat-info p {
-          margin: 0.5rem 0 0 0;
-          color: #666;
-          font-size: 0.95rem;
-          font-weight: 500;
-        }
-
-        .charts-section {
-          margin: 2rem 0;
-        }
-
-        .chart-row {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 2rem;
-          margin-bottom: 2rem;
-        }
-
-        .chart-container {
-          background: white;
-          padding: 2rem;
-          border-radius: 8px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .chart-container h3 {
-          margin: 0 0 1.5rem 0;
-          color: #333;
-          font-size: 1.2rem;
-          font-weight: 600;
-          text-align: center;
-        }
-
-        .chart-wrapper {
-          height: 300px;
-          position: relative;
-        }
-
-        .btn-primary {
-          background: #1976d2;
-          color: white;
-          border: none;
-          padding: 0.75rem 1.5rem;
-          border-radius: 6px;
-          cursor: pointer;
-          font-size: 0.9rem;
-          font-weight: 500;
-          transition: all 0.3s ease;
-        }
-
-        .btn-primary:hover {
-          background: #1565c0;
-          transform: translateY(-1px);
-        }
-
-        .search-bar input {
-          flex: 1;
-          padding: 0.75rem;
-          border: 1px solid #ddd;
-          border-radius: 6px;
-          font-size: 0.9rem;
-          transition: border-color 0.2s ease;
-        }
-
-        .search-bar input:focus {
-          outline: none;
-          border-color: #1976d2;
-          box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.1);
-        }
-
-        .btn-search {
-          background: #1976d2;
-          color: white;
-          border: none;
-          padding: 0.75rem 1.5rem;
-          border-radius: 6px;
-          cursor: pointer;
-          font-size: 0.9rem;
-          white-space: nowrap;
-          transition: all 0.2s ease;
-        }
-
-        .btn-search:hover {
-          background: #1565c0;
-        }
-
-        .table-container {
-          background: white;
-          border-radius: 8px;
-          overflow: hidden;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-          border: 1px solid #e9ecef;
-        }
-
-        .data-table {
-          width: 100%;
-          border-collapse: collapse;
-        }
-
-        .data-table th,
-        .data-table td {
-          padding: 0.75rem 1rem;
-          text-align: left;
-          border-bottom: 1px solid #e0e0e0;
-          vertical-align: middle;
-        }
-
-        .data-table th {
-          background: #f8f9fa;
-          font-weight: 600;
-          color: #333;
-          font-size: 0.9rem;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-          border-bottom: 2px solid #dee2e6;
-        }
-
-        .data-table td {
-          font-size: 0.9rem;
-        }
-
-        .data-table tr:hover {
-          background-color: #f8f9fa;
-        }
-
-        .status {
-          padding: 0.25rem 0.75rem;
-          border-radius: 12px;
-          font-size: 0.8rem;
-          font-weight: 500;
-        }
-
-        .status.active {
-          background: #e8f5e8;
-          color: #2e7d32;
-        }
-
-        .status.inactive {
-          background: #ffebee;
-          color: #c62828;
-        }
-
-        .status.completed {
-          background: #e3f2fd;
-          color: #1976d2;
-        }
-
-        .status.pending {
-          background: #fff3e0;
-          color: #f57c00;
-        }
-
-        .action-buttons {
-          display: flex;
-          gap: 0.25rem;
-          justify-content: center;
-        }
-
-        .btn-action {
-          padding: 0.5rem;
-          border: none;
-          border-radius: 6px;
-          cursor: pointer;
-          font-size: 1rem;
-          transition: all 0.2s ease;
-          width: 36px;
-          height: 36px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .btn-action:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-        }
-
-        .btn-action.view {
-          background: #1976d2;
-          color: white;
-        }
-
-        .btn-action.view:hover {
-          background: #1565c0;
-        }
-
-        .btn-action.edit {
-          background: #ff9800;
-          color: white;
-        }
-
-        .btn-action.edit:hover {
-          background: #f57c00;
-        }
-
-        .btn-action.delete {
-          background: #f44336;
-          color: white;
-        }
-
-        .btn-action.delete:hover {
-          background: #d32f2f;
-        }
-
-        .settings-sections {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-          gap: 2rem;
-          margin-bottom: 2rem;
-        }
-
-        .settings-section {
-          background: white;
-          padding: 2rem;
-          border-radius: 8px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .settings-section h3 {
-          margin: 0 0 1.5rem 0;
-          color: #333;
-        }
-
-        .setting-item {
-          margin-bottom: 1.5rem;
-        }
-
-        .setting-item label {
-          display: block;
-          margin-bottom: 0.5rem;
-          color: #333;
-          font-weight: 500;
-        }
-
-        .setting-item input[type="text"],
-        .setting-item input[type="email"] {
-          width: 100%;
-          padding: 0.75rem;
-          border: 1px solid #ddd;
-          border-radius: 6px;
-          font-size: 0.9rem;
-        }
-
-        .setting-item input[type="checkbox"] {
-          margin-right: 0.5rem;
-        }
-
-        /* User Management Enhancements */
-        .filters-section {
-          display: flex;
-          gap: 1rem;
-          margin-bottom: 1.5rem;
-          align-items: flex-end;
-          justify-content: space-between;
-        }
-
-        .search-bar {
-          display: flex;
-          gap: 0.5rem;
-          flex: 1;
-          max-width: 500px;
-        }
-
-        .filter-bar {
-          display: flex;
-          gap: 1rem;
-          align-items: center;
-        }
-
-        .role-filter,
-        .status-filter {
-          padding: 0.75rem;
-          border: 1px solid #ddd;
-          border-radius: 6px;
-          font-size: 0.9rem;
-          background: white;
-          cursor: pointer;
-          min-width: 180px;
-        }
-
-        .users-stats,
-        .records-stats {
-          margin-bottom: 1rem;
-          color: #666;
-          font-size: 0.9rem;
-          font-weight: 500;
-        }
-
-        .role-badge {
-          padding: 0.25rem 0.75rem;
-          border-radius: 12px;
-          font-size: 0.8rem;
-          font-weight: 500;
-        }
-
-        .role-badge.parent {
-          background: #e3f2fd;
-          color: #1976d2;
-        }
-
-        .role-badge.student {
-          background: #e8f5e8;
-          color: #2e7d32;
-        }
-
-        .role-badge.nurse {
-          background: #fff3e0;
-          color: #f57c00;
-        }
-
-        .role-badge.admin {
-          background: #fce4ec;
-          color: #c2185b;
-        }
-
-        .no-data {
-          text-align: center;
-          padding: 2rem;
-          color: #666;
-        }
-
-        /* Modal Styles */
-        .modal-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0, 0, 0, 0.5);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 1000;
-          backdrop-filter: blur(4px);
-          padding: 20px;
-          pointer-events: none;
-        }
-
-        .modal-content {
-          background: white;
-          border-radius: 12px;
-          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-          width: 80%;
-          height: 80%;
-          display: flex;
-          flex-direction: column;
-          animation: modalSlideIn 0.3s ease;
-          overflow: hidden;
-          cursor: default;
-          pointer-events: auto;
-          position: relative;
-        }
-
-        .modal-content.small {
-          width: 400px;
-          height: auto;
-          max-height: 300px;
-        }
-
-        @keyframes modalSlideIn {
-          from {
-            opacity: 0;
-            transform: translateY(-20px) scale(0.95);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
-        }
-
-        .modal-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 1.5rem;
-          border-bottom: 1px solid #e0e0e0;
-          flex-shrink: 0;
-          background: white;
-          border-radius: 12px 12px 0 0;
-        }
-
-        .modal-header h3 {
-          margin: 0;
-          color: #333;
-          font-size: 1.25rem;
-        }
-
-        .modal-close {
-          background: none;
-          border: none;
-          font-size: 1.5rem;
-          cursor: pointer;
-          color: #666;
-          padding: 0.25rem;
-          border-radius: 4px;
-          transition: all 0.2s ease;
-        }
-
-        .modal-close:hover {
-          background: #f5f5f5;
-          color: #333;
-        }
-
-        .modal-body {
-          padding: 1.5rem;
-          flex: 1;
-          min-height: 0;
-          overflow: visible;
-        }
-
-        .form-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 1.5rem;
-          align-items: start;
-        }
-
-        .form-group {
-          display: flex;
-          flex-direction: column;
-        }
-
-        .form-group.full-width {
-          grid-column: 1 / -1;
-        }
-
-        .form-group label {
-          margin-bottom: 0.5rem;
-          color: #333;
-          font-weight: 500;
-          font-size: 0.9rem;
-        }
-
-        .form-group input,
-        .form-group select,
-        .form-group textarea {
-          padding: 0.75rem;
-          border: 1px solid #ddd;
-          border-radius: 6px;
-          font-size: 0.9rem;
-          transition: border-color 0.2s ease;
-        }
-
-        .form-group input:focus,
-        .form-group select:focus,
-        .form-group textarea:focus {
-          outline: none;
-          border-color: #1976d2;
-          box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.1);
-        }
-
-        .form-group input:disabled,
-        .form-group select:disabled,
-        .form-group textarea:disabled {
-          background: #f5f5f5;
-          color: #666;
-          cursor: not-allowed;
-        }
-
-        .form-group textarea {
-          resize: vertical;
-          min-height: 80px;
-          max-height: 120px;
-        }
-
-        /* User Info Display Styles */
-        .user-info-display {
-          padding: 1rem 0;
-        }
-
-        .info-row {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 2rem;
-          margin-bottom: 1.5rem;
-        }
-
-        .info-row.full-width {
-          grid-template-columns: 1fr;
-        }
-
-        .info-item {
-          display: flex;
-          flex-direction: column;
-        }
-
-        .info-item.full-width {
-          grid-column: 1 / -1;
-        }
-
-        .info-item label {
-          font-weight: 600;
-          color: #495057;
-          font-size: 0.9rem;
-          margin-bottom: 0.5rem;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-
-        .info-value {
-          background: #f8f9fa;
-          padding: 0.75rem 1rem;
-          border-radius: 6px;
-          border: 1px solid #e9ecef;
-          font-size: 1rem;
-          color: #212529;
-          min-height: 45px;
-          display: flex;
-          align-items: center;
-        }
-
-        .info-value .role-badge,
-        .info-value .status {
-          margin: 0;
-        }
-
-        .modal-footer {
-          display: flex;
-          justify-content: flex-end;
-          gap: 1rem;
-          padding: 1.5rem;
-          border-top: 1px solid #e0e0e0;
-          background: #f8f9fa;
-          border-radius: 0 0 12px 12px;
-          flex-shrink: 0;
-        }
-
-        .btn-secondary {
-          background: #6c757d;
-          color: white;
-          border: none;
-          padding: 0.75rem 1.5rem;
-          border-radius: 6px;
-          cursor: pointer;
-          font-size: 0.9rem;
-          font-weight: 500;
-          transition: all 0.3s ease;
-        }
-
-        .btn-secondary:hover {
-          background: #5a6268;
-          transform: translateY(-1px);
-        }
-
-        .btn-danger {
-          background: #dc3545;
-          color: white;
-          border: none;
-          padding: 0.75rem 1.5rem;
-          border-radius: 6px;
-          cursor: pointer;
-          font-size: 0.9rem;
-          font-weight: 500;
-          transition: all 0.3s ease;
-        }
-
-        .btn-danger:hover {
-          background: #c82333;
-          transform: translateY(-1px);
-        }
-
-        .warning-text {
-          color: #dc3545;
-          font-size: 0.9rem;
-          margin-top: 0.5rem;
-        }
-      `}</style>
-    </div>
+        <Menu
+          theme="light"
+          selectedKeys={[activeSection]}
+          mode="inline"
+          items={menuItems}
+          onClick={handleMenuClick}
+          style={{ border: "none", fontWeight: 500, fontSize: 16 }}
+        />
+
+        {/* Custom Sidebar Trigger Button */}
+        <div
+          className="custom-sidebar-trigger"
+          onClick={() => setCollapsed(!collapsed)}
+          tabIndex={0}
+          role="button"
+          aria-label={collapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setCollapsed(!collapsed);
+            }
+          }}
+        >
+          {collapsed ? (
+            <RightOutlined className="icon-right" />
+          ) : (
+            <LeftOutlined className="icon-left" />
+          )}
+          {!collapsed && <span className="trigger-text">Thu gọn</span>}
+        </div>
+      </Sider>
+
+      <Layout style={{ marginLeft: 0 }}>
+        <Header
+          style={{
+            background: "#fff",
+            padding: "16px 32px",
+            height: "auto",
+            lineHeight: "normal",
+            minHeight: 80,
+            display: "flex",
+            alignItems: "center",
+            borderBottom: "1px solid #f0f0f0",
+            boxShadow: "0 2px 8px 0 rgba(0,0,0,0.05)",
+          }}
+        >
+          <div style={{ flex: 1 }}>
+            <Breadcrumb
+              items={getBreadcrumbItems()}
+              style={{ fontSize: 14, marginBottom: 4 }}
+            />
+            <h1
+              style={{
+                color: "#fa8c16",
+                margin: 0,
+                fontSize: 28,
+                fontWeight: 700,
+              }}
+            >
+              Bảng điều khiển quản trị
+            </h1>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <div
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: "50%",
+                background: "#fff2e8",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                border: "1px solid #fa8c16",
+              }}
+            >
+              <UserOutlined style={{ fontSize: 20, color: "#fa8c16" }} />
+            </div>
+            <span style={{ fontWeight: 500, fontSize: 16 }}>
+              {userInfo?.firstName || ""} {userInfo?.lastName || ""}
+            </span>
+          </div>
+        </Header>
+
+        <Content
+          style={{
+            margin: "16px 24px 24px 24px",
+            padding: 0,
+            minHeight: "calc(100vh - 260px)",
+            background: "transparent",
+          }}
+        >
+          {renderContent()}
+        </Content>
+      </Layout>
+    </Layout>
   );
 };
 
