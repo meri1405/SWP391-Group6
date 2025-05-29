@@ -117,9 +117,12 @@ export const AuthProvider = ({ children }) => {
     // Update state
     setUser(null);
   };
-
   const isParent = () => {
     return user?.roleName === "PARENT";
+  };
+
+  const isSchoolNurse = () => {
+    return user?.roleName === "SCHOOLNURSE";
   };
 
   const isStaff = () => {
@@ -171,13 +174,13 @@ export const AuthProvider = ({ children }) => {
       });
     };
   }, [user]);
-
   const value = {
     user,
     login,
     logout,
     refreshSession,
     isParent,
+    isSchoolNurse,
     isStaff,
     getToken,
     loading,
