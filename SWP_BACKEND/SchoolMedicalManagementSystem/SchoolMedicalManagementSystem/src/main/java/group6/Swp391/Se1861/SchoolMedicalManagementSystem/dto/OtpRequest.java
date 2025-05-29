@@ -9,8 +9,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class OtpRequest {
-    @NotBlank
-    @Pattern(regexp = "^\\+?[0-9]{10}$", message = "Phone number must be 10 digits and may start with 0")
+public class OtpRequest {    @NotBlank
+    @Pattern(regexp = "^(0[0-9]{9}|\\+84[0-9]{9})$", message = "Phone number must be in Vietnamese format (0xxxxxxxxx) or international format (+84xxxxxxxxx)")
     private String phoneNumber;
 }

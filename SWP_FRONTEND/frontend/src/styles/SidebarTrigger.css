@@ -20,18 +20,18 @@
   font-weight: 500;
   gap: 12px;
   margin: 4px 0;
-  padding: 0 16px;
+  padding: 0 28px;
   position: relative;
 }
 
 .custom-sidebar-trigger:hover {
-  background: #f5f5f5;
-  color: #1677ff;
+  background: transparent;
+  color: rgba(0, 0, 0, 0.88);
 }
 
 .custom-sidebar-trigger:active {
-  background: #e6f4ff;
-  color: #1677ff;
+  background: transparent;
+  color: rgba(0, 0, 0, 0.88);
 }
 
 /* Icon styles with smooth rotation */
@@ -53,7 +53,7 @@
 
 /* Text content in button */
 .custom-sidebar-trigger .trigger-text {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 500;
   flex: 1;
 }
@@ -112,6 +112,6 @@
 /* Focus styles for accessibility */
 .custom-sidebar-trigger:focus {
   outline: none;
-  background: #e6f4ff;
-  color: #1677ff;
+  background: transparent;
+  color: rgba(0, 0, 0, 0.88);
 }
