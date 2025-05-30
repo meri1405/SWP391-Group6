@@ -121,12 +121,33 @@ const ParentDashboard = () => {
       // If no tab parameter, default to overview
       setActiveSection('overview');
     }
-  }, [searchParams]);
-
+  }, [searchParams]);  // Function to handle profile updates
+  const handleProfileUpdate = (updatedProfile) => {
+    console.log("Profile updated in parent dashboard:", updatedProfile);
+    
+    // Create a merged object with all fields
+    const mergedUserInfo = {
+      ...userInfo,
+      ...updatedProfile,
+      // Ensure critical fields are always included
+      firstName: updatedProfile.firstName || userInfo.firstName,
+      lastName: updatedProfile.lastName || userInfo.lastName,
+      email: updatedProfile.email || userInfo.email,
+      phone: updatedProfile.phone || userInfo.phone,
+      // Optional fields that might be null
+      address: updatedProfile.address || userInfo.address,
+      jobTitle: updatedProfile.jobTitle || userInfo.jobTitle,
+      dateOfBirth: updatedProfile.dateOfBirth || userInfo.dateOfBirth
+    };
+    
+    console.log("Updated user info:", mergedUserInfo);
+    setUserInfo(mergedUserInfo);
+  };
+  
   const renderContent = () => {
     switch (activeSection) {
       case 'overview':
-        return <Overview />;
+        return <Overview userInfo={userInfo} />;
       case 'notifications':
         return <Notifications />;
       case 'health-history':
@@ -138,9 +159,9 @@ const ParentDashboard = () => {
       case 'vaccination':
         return <VaccinationSchedule />;
       case 'profile':
-        return <Profile userInfo={userInfo} />;
+        return <Profile userInfo={userInfo} onProfileUpdate={handleProfileUpdate} />;
       default:
-        return <Overview />;
+        return <Overview userInfo={userInfo} />;
     }
   };
 

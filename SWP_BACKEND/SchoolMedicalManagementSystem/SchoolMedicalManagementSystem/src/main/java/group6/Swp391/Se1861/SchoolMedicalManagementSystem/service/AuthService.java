@@ -13,6 +13,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.user.OAuth2User;
@@ -93,14 +94,19 @@ public class AuthService {
         // Check if user is a parent
         if (!"PARENT".equals(user.getRole().getRoleName())) {
             throw new BadCredentialsException("Only parents can use OTP authentication");
-        }
-
-        // Generate JWT token
+        }        // Generate JWT token - use phone number as username for parents since they don't have usernames
+        // Create a custom UserDetails that uses phone as username for JWT generation
+        UserDetails userDetails = new org.springframework.security.core.userdetails.User(
+                user.getPhone(), // Use phone as username for JWT token
+                "", // Password not needed for JWT generation
+                user.getAuthorities()
+        );
+        
         Authentication authentication = new UsernamePasswordAuthenticationToken(
                 user, null, user.getAuthorities());
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        String jwt = jwtUtil.generateToken(authentication);
+        String jwt = jwtUtil.generateToken(userDetails);
 
         return new AuthResponse(
                 jwt,
