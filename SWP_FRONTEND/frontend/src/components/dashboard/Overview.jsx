@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Row, Col, Statistic, Typography, Avatar, List, Badge, Space, Divider, Spin, Empty } from 'antd';
+import { Card, Row, Col, Statistic, Typography, Avatar, List, Badge, Space, Divider, Spin, Empty, Select, message } from 'antd';
 import { 
   UserOutlined, 
   MedicineBoxOutlined, 
@@ -14,36 +14,72 @@ import { useAuth } from '../../contexts/AuthContext';
 import { parentApi } from '../../api/parentApi';
 
 const { Title, Text } = Typography;
+const { Option } = Select;
 
-const Overview = () => {
-  const { isParent, getToken, user } = useAuth();
+const Overview = ({ userInfo: externalUserInfo }) => {
+  const { isParent, getToken } = useAuth();
   const [loading, setLoading] = useState(false);
   const [students, setStudents] = useState([]);
   const [selectedStudent, setSelectedStudent] = useState(null);
-  
-  // Fetch students data
+  const [parentProfile, setParentProfile] = useState(null);
+    // Function to refresh parent profile data
+  const refreshParentProfile = async () => {
+    if (!isParent()) return;
+    
+    try {
+      const token = getToken();
+      const profileData = await parentApi.getParentProfile(token);
+      
+      console.log('Refreshed parent profile:', profileData);
+      setParentProfile(profileData);
+    } catch (error) {
+      console.error('Error refreshing parent profile:', error);
+    }
+  };
+  // When externalUserInfo changes, update the parent profile
   useEffect(() => {
-    const fetchStudents = async () => {
+    if (externalUserInfo) {
+      console.log('Updating parent profile from external info:', externalUserInfo);
+      setParentProfile(prev => {
+        const updated = { ...prev, ...externalUserInfo };
+        console.log('Updated parent profile with external data:', updated);
+        return updated;
+      });
+    }
+  }, [externalUserInfo]);
+
+  // Fetch students and parent profile data
+  useEffect(() => {
+    const fetchData = async () => {
       if (!isParent()) return;
       
       try {
         setLoading(true);
         const token = getToken();
-        const studentsData = await parentApi.getMyStudents(token);
+        
+        // Load both students and parent profile
+        const [studentsData, profileData] = await Promise.all([
+          parentApi.getMyStudents(token),
+          parentApi.getParentProfile(token)
+        ]);
+        
+        console.log('Loaded initial parent profile:', profileData);
         setStudents(studentsData);
+        setParentProfile(profileData);
         
         // Select first student by default
         if (studentsData && studentsData.length > 0) {
           setSelectedStudent(studentsData[0]);
         }
       } catch (error) {
-        console.error('Error fetching students:', error);
+        console.error('Error fetching data:', error);
+        message.error('Không thể tải thông tin. Vui lòng thử lại.');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchStudents();
+    fetchData();
   }, [isParent, getToken]);
 
   // Dữ liệu mẫu cho thông báo
@@ -65,8 +101,20 @@ const Overview = () => {
       time: '20/5/2025',
       read: true,
       icon: <ExclamationCircleOutlined />
-    }
-  ];
+    }  ];
+
+  if (loading) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '400px' 
+      }}>
+        <Spin size="large" />
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -74,81 +122,122 @@ const Overview = () => {
         Tổng quan sức khỏe
       </Title>
 
-      {/* Health Summary Cards */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        <Col xs={24} sm={12} lg={6}>
-          <Card 
-            style={{ 
-              textAlign: 'center', 
-              borderTop: '3px solid #1976d2',
-              height: '100%'
+      {/* Student Selector */}
+      {students.length > 1 && (
+        <Card style={{ marginBottom: 24 }}>
+          <Text strong>Chọn học sinh: </Text>
+          <Select
+            style={{ width: 300, marginLeft: 8 }}
+            value={selectedStudent?.studentID}
+            onChange={(studentId) => {
+              const student = students.find(s => s.studentID === studentId);
+              setSelectedStudent(student);
             }}
-            bodyStyle={{ 
-              padding: '16px',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
+            placeholder="Chọn một học sinh"
           >
-            <Avatar 
-              size={48} 
-              icon={<UserOutlined />} 
-              style={{ backgroundColor: '#1976d2', marginBottom: 8 }}
-            />
-            <Title level={5} style={{ margin: '4px 0', fontSize: 16 }}>{selectedStudent ? selectedStudent.name : 'Chọn một học sinh'}</Title>
-            <Text type="secondary" style={{ fontSize: 14 }}>{selectedStudent ? selectedStudent.class : ''}</Text>
-          </Card>
-        </Col>
-        
-        <Col xs={24} sm={12} lg={6}>
-          <Card 
-            style={{ 
-              borderTop: '3px solid #2196f3',
-              height: '100%'
-            }}
-            bodyStyle={{ 
-              padding: '16px',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center'
-            }}
-          >
-            <div>
-              <Text type="secondary" style={{ fontSize: 14 }}>Chỉ số BMI</Text>
-              <div style={{ display: 'flex', alignItems: 'center', marginTop: 6 }}>
-                <HeartOutlined style={{ color: '#2196f3', fontSize: 20, marginRight: 8 }} />
+            {students.map(student => (
+              <Option key={student.studentID} value={student.studentID}>
+                {student.firstName} {student.lastName} - {student.className}
+              </Option>
+            ))}
+          </Select>
+        </Card>
+      )}
+
+      {students.length === 0 ? (
+        <Empty 
+          description="Không có thông tin học sinh" 
+          style={{ margin: '40px 0' }}
+        />
+      ) : (
+        <>
+          {/* Health Summary Cards */}
+          <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+            <Col xs={24} sm={12} lg={6}>
+              <Card 
+                style={{ 
+                  textAlign: 'center', 
+                  borderTop: '3px solid #1976d2',
+                  height: '100%'
+                }}
+                bodyStyle={{ 
+                  padding: '16px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <Avatar 
+                  size={48} 
+                  icon={<UserOutlined />} 
+                  style={{ backgroundColor: '#1976d2', marginBottom: 8 }}
+                />
+                <Title level={5} style={{ margin: '4px 0', fontSize: 16 }}>
+                  {selectedStudent ? `${selectedStudent.firstName} ${selectedStudent.lastName}` : 'Chọn một học sinh'}
+                </Title>
+                <Text type="secondary" style={{ fontSize: 14 }}>
+                  {selectedStudent ? selectedStudent.className : ''}
+                </Text>
+                {selectedStudent && (
+                  <Text type="secondary" style={{ fontSize: 12, marginTop: 4 }}>
+                    {selectedStudent.gender=== 'M' ? 'Nam' : 'Nữ'}
+                    <br />
+                    {selectedStudent.dob}
+                  </Text>
+                )}
+              </Card>
+            </Col>
+            
+            <Col xs={24} sm={12} lg={6}>
+              <Card 
+                style={{ 
+                  borderTop: '3px solid #2196f3',
+                  height: '100%'
+                }}
+                bodyStyle={{ 
+                  padding: '16px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center'
+                }}
+              >
                 <div>
-                  <Text style={{ fontSize: 20, color: '#2196f3', fontWeight: 500 }}>{selectedStudent ? selectedStudent.bmi : '-'}</Text>
-                  <div>
-                    <Text type="secondary" style={{ fontSize: 12 }}>({selectedStudent ? selectedStudent.weight : '-'} / {selectedStudent ? selectedStudent.height : '-'})</Text>
+                  <Text type="secondary" style={{ fontSize: 14 }}>Nhóm máu</Text>
+                  <div style={{ display: 'flex', alignItems: 'center', marginTop: 6 }}>
+                    <HeartOutlined style={{ color: '#2196f3', fontSize: 20, marginRight: 8 }} />
+                    <div>
+                      <Text style={{ fontSize: 20, color: '#2196f3', fontWeight: 500 }}>
+                        {selectedStudent?.bloodType || '-'}
+                      </Text>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
-          </Card>
-        </Col>
-        
-        <Col xs={24} sm={12} lg={6}>
-          <Card 
-            style={{ 
-              borderTop: '3px solid #4caf50',
-              height: '100%'
-            }}
-            bodyStyle={{ 
-              padding: '16px',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center'
-            }}
-          >
-            <div>
-              <Text type="secondary" style={{ fontSize: 14 }}>Tình trạng sức khỏe</Text>
-              <div style={{ display: 'flex', alignItems: 'center', marginTop: 6 }}>
-                <CheckCircleOutlined style={{ color: '#4caf50', fontSize: 20, marginRight: 8 }} />
-                <Text style={{ fontSize: 20, color: '#4caf50', fontWeight: 500 }}>{selectedStudent ? selectedStudent.status : '-'}</Text>
-              </div>
-            </div>
+              </Card>
+            </Col>
+            
+            <Col xs={24} sm={12} lg={6}>
+              <Card 
+                style={{ 
+                  borderTop: '3px solid #4caf50',
+                  height: '100%'
+                }}
+                bodyStyle={{ 
+                  padding: '16px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center'
+                }}
+              >
+                <div>
+                  <Text type="secondary" style={{ fontSize: 14 }}>Tình trạng sức khỏe</Text>
+                  <div style={{ display: 'flex', alignItems: 'center', marginTop: 6 }}>
+                    <CheckCircleOutlined style={{ color: '#4caf50', fontSize: 20, marginRight: 8 }} />
+                    <Text style={{ fontSize: 20, color: '#4caf50', fontWeight: 500 }}>
+                      {selectedStudent?.disabled ? 'Có vấn đề' : 'Tốt'}
+                    </Text>
+                  </div>
+                </div>
           </Card>
         </Col>
         
@@ -164,17 +253,123 @@ const Overview = () => {
               flexDirection: 'column',
               justifyContent: 'center'
             }}
-          >
-            <div>
-              <Text type="secondary" style={{ fontSize: 14 }}>Lịch khám gần nhất</Text>
+          >            <div>
+              <Text type="secondary" style={{ fontSize: 14 }}>Quốc tịch</Text>
               <div style={{ display: 'flex', alignItems: 'center', marginTop: 6 }}>
                 <CalendarOutlined style={{ color: '#ff9800', fontSize: 20, marginRight: 8 }} />
-                <Text style={{ fontSize: 20, color: '#ff9800', fontWeight: 500 }}>{selectedStudent ? selectedStudent.lastCheckup : '-'}</Text>
+                <Text style={{ fontSize: 20, color: '#ff9800', fontWeight: 500 }}>
+                  {selectedStudent?.citizenship || '-'}
+                </Text>
               </div>
             </div>
-          </Card>
-        </Col>
+          </Card>        </Col>
       </Row>
+
+      {/* Detailed Student Information */}
+      {selectedStudent && (
+        <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+          <Col xs={24} md={12}>
+            <Card 
+              title="Thông tin chi tiết học sinh"
+              style={{ height: '100%' }}
+            >
+              <Row gutter={[16, 8]}>
+                <Col span={12}>
+                  <Text type="secondary">Họ và tên:</Text>
+                  <br />
+                  <Text strong>{selectedStudent.firstName} {selectedStudent.lastName}</Text>
+                </Col>
+                <Col span={12}>
+                  <Text type="secondary">Lớp:</Text>
+                  <br />
+                  <Text strong>{selectedStudent.className}</Text>
+                </Col>
+                <Col span={12}>
+                  <Text type="secondary">Ngày sinh:</Text>
+                  <br />
+                  <Text>{selectedStudent.dob}</Text>
+                </Col>
+                <Col span={12}>
+                  <Text type="secondary">Giới tính:</Text>
+                  <br />
+                  <Text>{selectedStudent.gender}</Text>
+                </Col>
+                <Col span={12}>
+                  <Text type="secondary">Nơi sinh:</Text>
+                  <br />
+                  <Text>{selectedStudent.birthPlace}</Text>
+                </Col>
+                <Col span={12}>
+                  <Text type="secondary">Nhóm máu:</Text>
+                  <br />
+                  <Text>{selectedStudent.bloodType}</Text>
+                </Col>
+                <Col span={24}>
+                  <Text type="secondary">Địa chỉ:</Text>
+                  <br />
+                  <Text>{selectedStudent.address}</Text>
+                </Col>
+              </Row>
+            </Card>
+          </Col>
+
+          <Col xs={24} md={12}>
+            <Card 
+              title="Thông tin phụ huynh"
+              style={{ height: '100%' }}
+            >
+              {parentProfile ? (
+                <Row gutter={[16, 8]}>
+                  <Col span={12}>
+                    <Text type="secondary">Họ và tên:</Text>
+                    <br />
+                    <Text strong>{parentProfile.firstName} {parentProfile.lastName}</Text>
+                  </Col>
+                  <Col span={12}>
+                    <Text type="secondary">Số điện thoại:</Text>
+                    <br />
+                    <Text strong>{parentProfile.phone}</Text>
+                  </Col>                 <Col span={12}>
+                    <Text type="secondary">Nghề nghiệp:</Text>
+                    <br />
+                    <Text>{parentProfile.jobTitle || 'PARENT'}</Text>
+                  </Col>
+                  <Col span={12}>
+                    <Text type="secondary">Ngày sinh:</Text>
+                    <br />
+                    <Text>{parentProfile.dateOfBirth || 'Chưa cập nhật'}</Text>
+                  </Col>
+                  <Col span={24}>
+                    <Text type="secondary">Địa chỉ:</Text>
+                    <br />
+                    <Text>{parentProfile.address || 'Chưa cập nhật'}</Text>
+                  </Col>
+                  {selectedStudent.parents && selectedStudent.parents.length > 1 && (
+                    <Col span={24}>
+                      <Divider />
+                      <Text type="secondary">Phụ huynh khác:</Text>
+                      {selectedStudent.parents
+                        .filter(parent => parent.id !== parentProfile.id)
+                        .map(parent => (
+                          <div key={parent.id} style={{ marginTop: 8 }}>
+                            <Text strong>{parent.firstName} {parent.lastName}</Text>
+                            <br />
+                            <Text type="secondary">{parent.phone}</Text>
+                          </div>
+                        ))
+                      }
+                    </Col>
+                  )}
+                </Row>
+              ) : (
+                <Spin />
+              )}
+            </Card>
+          </Col>
+        </Row>
+      )}
+      </>
+      )}
 
       {/* Only show notifications section for parents */}
       {isParent() && (
