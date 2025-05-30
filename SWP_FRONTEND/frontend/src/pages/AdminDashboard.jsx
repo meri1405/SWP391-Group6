@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { Layout, Menu, Breadcrumb, Spin, message } from "antd";
 import { useAuth } from "../contexts/AuthContext";
 import {
   Chart as ChartJS,
@@ -23,16 +24,31 @@ import {
   Descriptions,
   Tag,
   Space,
-  message,
   Popconfirm,
+  Card,
+  Divider,
 } from "antd";
 import {
+  DashboardOutlined,
+  TeamOutlined,
+  MedicineBoxOutlined,
+  UserOutlined,
+  SettingOutlined,
   EyeOutlined,
   EditOutlined,
   DeleteOutlined,
   PlusOutlined,
+  CloseOutlined,
+  SaveOutlined,
+  LeftOutlined,
+  RightOutlined,
 } from "@ant-design/icons";
 import "antd/dist/reset.css";
+import "../styles/Profile.css";
+import "../styles/SidebarTrigger.css";
+import "../styles/AdminDashboard.css";
+
+const { Header, Sider, Content } = Layout;
 
 ChartJS.register(
   CategoryScale,
@@ -47,9 +63,64 @@ ChartJS.register(
 );
 
 const AdminDashboard = () => {
+  const [activeSection, setActiveSection] = useState("dashboard");
+  const [userInfo, setUserInfo] = useState(null);
+  const [collapsed, setCollapsed] = useState(false);
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const [searchParams] = useSearchParams();
+
+  const menuItems = [
+    {
+      key: "dashboard",
+      icon: <DashboardOutlined />,
+      label: "Tổng quan",
+    },
+    {
+      key: "users",
+      icon: <TeamOutlined />,
+      label: "Quản lý người dùng",
+    },
+    {
+      key: "health",
+      icon: <MedicineBoxOutlined />,
+      label: "Hồ sơ sức khỏe",
+    },
+    {
+      key: "profile",
+      icon: <UserOutlined />,
+      label: "Hồ sơ cá nhân",
+    },
+    {
+      key: "settings",
+      icon: <SettingOutlined />,
+      label: "Cài đặt",
+    },
+  ];
+
+  const handleMenuClick = (e) => {
+    const tabKey = e.key;
+    setActiveSection(tabKey);
+
+    if (tabKey === "dashboard") {
+      navigate("/admin/dashboard");
+    } else {
+      navigate(`/admin/dashboard?tab=${tabKey}`);
+    }
+  };
+
+  const getBreadcrumbItems = () => {
+    const currentItem = menuItems.find((item) => item.key === activeSection);
+    return [
+      {
+        title: "Admin Dashboard",
+      },
+      {
+        title: currentItem?.label || "Tổng quan",
+      },
+    ];
+  };
+
+  const { user, isAuthenticated, isStaff } = useAuth();
 
   // User Management States
   const [showUserModal, setShowUserModal] = useState(false);
@@ -173,15 +244,35 @@ const AdminDashboard = () => {
   const [healthFormInstance] = Form.useForm();
 
   useEffect(() => {
-    // Simple check - AdminProtectedRoute already verified ADMIN access
-    if (!user) {
+    // Redirect if not authenticated or not an admin
+    if (!isAuthenticated) {
       navigate("/login");
       return;
     }
 
-    console.log("AdminDashboard loaded for user:", user);
-    console.log("User role:", user.roleName);
-  }, [user, navigate]);
+    if (!isStaff()) {
+      message.error("Bạn không có quyền truy cập vào trang này");
+      navigate("/");
+      return;
+    }
+
+    // Set user info from auth context
+    setUserInfo(user);
+  }, [navigate, isAuthenticated, isStaff, user]);
+
+  // Separate useEffect to handle URL parameter changes
+  useEffect(() => {
+    const tabParam = searchParams.get("tab");
+    if (tabParam) {
+      const validTabs = ["dashboard", "users", "health", "profile", "settings"];
+      if (validTabs.includes(tabParam)) {
+        setActiveSection(tabParam);
+      }
+    } else {
+      // If no tab parameter, default to dashboard
+      setActiveSection("dashboard");
+    }
+  }, [searchParams]);
 
   // User Management Functions
   const resetUserForm = () => {
@@ -340,14 +431,6 @@ const AdminDashboard = () => {
       filterStatus === "all" || record.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
-
-  // Navigation items
-  const navItems = [
-    { id: "dashboard", label: "Tổng quan", icon: "📊" },
-    { id: "users", label: "Quản lý người dùng", icon: "👥" },
-    { id: "health", label: "Hồ sơ sức khỏe", icon: "🏥" },
-    { id: "settings", label: "Cài đặt", icon: "⚙️" },
-  ];
 
   // Dashboard Overview Component
   const DashboardOverview = () => {
@@ -787,8 +870,8 @@ const AdminDashboard = () => {
             className="status-filter"
           >
             <option value="all">Tất cả trạng thái</option>
-            <option value="Pending">Đang chờ</option>
-            <option value="Completed">Hoàn thành</option>
+            <option value="Pending">Cần theo dõi</option>
+            <option value="Completed">Sức khỏe ổn định</option>
           </select>
         </div>
       </div>
@@ -824,7 +907,9 @@ const AdminDashboard = () => {
                 <td>{record.diagnosis}</td>
                 <td>
                   <span className={`status ${record.status.toLowerCase()}`}>
-                    {record.status === "Completed" ? "Hoàn thành" : "Đang chờ"}
+                    {record.status === "Completed"
+                      ? "Sức khỏe ổn định"
+                      : "Cần theo dõi"}
                   </span>
                 </td>
                 <td>
@@ -954,8 +1039,8 @@ const AdminDashboard = () => {
                 }
               >
                 {selectedHealthRecord?.status === "Completed"
-                  ? "Hoàn thành"
-                  : "Đang chờ"}
+                  ? "Sức khỏe ổn định"
+                  : "Cần theo dõi"}
               </Tag>
             </Descriptions.Item>
             <Descriptions.Item label="Ngày tạo" span={1}>
@@ -1095,8 +1180,10 @@ const AdminDashboard = () => {
                 ]}
               >
                 <Select placeholder="Chọn trạng thái">
-                  <Select.Option value="Pending">Đang chờ</Select.Option>
-                  <Select.Option value="Completed">Hoàn thành</Select.Option>
+                  <Select.Option value="Pending">Cần theo dõi</Select.Option>
+                  <Select.Option value="Completed">
+                    Sức khỏe ổn định
+                  </Select.Option>
                 </Select>
               </Form.Item>
             </div>
@@ -1127,6 +1214,414 @@ const AdminDashboard = () => {
       </Modal>
     </div>
   );
+
+  // Admin Profile Component
+  const AdminProfile = () => {
+    const [isEditing, setIsEditing] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [avatarUrl, setAvatarUrl] = useState(null);
+
+    const [formData, setFormData] = useState({
+      firstName: user?.firstName || "",
+      lastName: user?.lastName || "",
+      email: user?.email || "",
+      phone: user?.phone || "",
+      address: user?.address || "",
+      jobTitle: user?.jobTitle || "Quản trị viên hệ thống",
+      dateOfBirth: user?.dateOfBirth || "",
+      emergencyContact: user?.emergencyContact || "",
+      department: user?.department || "Phòng IT",
+      employeeId: user?.employeeId || "ADMIN001",
+    });
+
+    const [errors, setErrors] = useState({});
+
+    const validateForm = () => {
+      const newErrors = {};
+
+      if (!formData.firstName.trim()) {
+        newErrors.firstName = "Họ không được để trống";
+      }
+
+      if (!formData.lastName.trim()) {
+        newErrors.lastName = "Tên không được để trống";
+      }
+
+      if (!formData.email.trim()) {
+        newErrors.email = "Email không được để trống";
+      } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+        newErrors.email = "Email không hợp lệ";
+      }
+
+      if (!formData.phone.trim()) {
+        newErrors.phone = "Số điện thoại không được để trống";
+      } else if (!/^[0-9]{10,11}$/.test(formData.phone.replace(/\s/g, ""))) {
+        newErrors.phone = "Số điện thoại không hợp lệ";
+      }
+
+      setErrors(newErrors);
+      return Object.keys(newErrors).length === 0;
+    };
+
+    const handleSubmit = async (e) => {
+      e.preventDefault();
+
+      if (!validateForm()) {
+        message.error("Vui lòng kiểm tra lại thông tin");
+        return;
+      }
+
+      try {
+        setLoading(true);
+        // API call to update admin profile would go here
+        // await adminApi.updateProfile(formData);
+        message.success("Cập nhật thông tin thành công");
+        setIsEditing(false);
+        setErrors({});
+      } catch (error) {
+        message.error("Có lỗi xảy ra khi cập nhật thông tin");
+        console.error("Profile update error:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const handleChange = (e) => {
+      const { name, value } = e.target;
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    };
+
+    const beforeUpload = (file) => {
+      const isJpgOrPng =
+        file.type === "image/jpeg" || file.type === "image/png";
+      if (!isJpgOrPng) {
+        message.error("Chỉ có thể tải lên file JPG/PNG!");
+      }
+      const isLt2M = file.size / 1024 / 1024 < 2;
+      if (!isLt2M) {
+        message.error("Ảnh phải nhỏ hơn 2MB!");
+      }
+      return isJpgOrPng && isLt2M;
+    };
+
+    return (
+      <div className="profile-container">
+        <div className="profile-header">
+          <div className="header-content">
+            <h2>👤 Hồ Sơ Cá Nhân</h2>
+            <p>Quản lý thông tin tài khoản quản trị viên</p>
+          </div>
+          <Button
+            type={isEditing ? "default" : "primary"}
+            icon={isEditing ? <CloseOutlined /> : <EditOutlined />}
+            onClick={() => setIsEditing(!isEditing)}
+            size="large"
+          >
+            {isEditing ? "Hủy" : "Chỉnh sửa"}
+          </Button>
+        </div>
+
+        <div className="profile-content">
+          <div className="profile-main-card">
+            <div className="profile-card-header">
+              <h3>Thông tin cá nhân</h3>
+            </div>
+            <div className="profile-card-body">
+              <div className="profile-avatar-section">
+                <div className="avatar-container">
+                  {avatarUrl ? (
+                    <img
+                      src={avatarUrl}
+                      alt="Avatar"
+                      className="profile-avatar-large"
+                    />
+                  ) : (
+                    <div className="profile-avatar-large default-avatar">
+                      👤
+                    </div>
+                  )}
+                </div>
+                {isEditing && (
+                  <div className="avatar-upload">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file && beforeUpload(file)) {
+                          const reader = new FileReader();
+                          reader.onload = () => setAvatarUrl(reader.result);
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                      style={{ display: "none" }}
+                      id="avatar-upload"
+                    />
+                    <label htmlFor="avatar-upload" className="upload-btn">
+                      📷 Đổi ảnh
+                    </label>
+                  </div>
+                )}
+                <div className="profile-basic-info">
+                  <h3>
+                    {formData.firstName} {formData.lastName}
+                  </h3>
+                  <div className="role-badge admin">🛡️ Quản trị viên</div>
+                </div>
+              </div>
+
+              <div className="divider"></div>
+
+              {isEditing ? (
+                <form onSubmit={handleSubmit} className="profile-form-enhanced">
+                  <div className="form-section">
+                    <h4>Thông tin cơ bản</h4>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>Họ *</label>
+                        <input
+                          type="text"
+                          name="firstName"
+                          value={formData.firstName}
+                          onChange={handleChange}
+                          className={errors.firstName ? "error" : ""}
+                          placeholder="Nhập họ"
+                        />
+                        {errors.firstName && (
+                          <span className="error-text">{errors.firstName}</span>
+                        )}
+                      </div>
+                      <div className="form-group">
+                        <label>Tên *</label>
+                        <input
+                          type="text"
+                          name="lastName"
+                          value={formData.lastName}
+                          onChange={handleChange}
+                          className={errors.lastName ? "error" : ""}
+                          placeholder="Nhập tên"
+                        />
+                        {errors.lastName && (
+                          <span className="error-text">{errors.lastName}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>Email *</label>
+                        <input
+                          type="email"
+                          name="email"
+                          value={formData.email}
+                          onChange={handleChange}
+                          className={errors.email ? "error" : ""}
+                          placeholder="admin@school.edu"
+                        />
+                        {errors.email && (
+                          <span className="error-text">{errors.email}</span>
+                        )}
+                      </div>
+                      <div className="form-group">
+                        <label>Số điện thoại *</label>
+                        <input
+                          type="tel"
+                          name="phone"
+                          value={formData.phone}
+                          onChange={handleChange}
+                          className={errors.phone ? "error" : ""}
+                          placeholder="0123456789"
+                        />
+                        {errors.phone && (
+                          <span className="error-text">{errors.phone}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>Ngày sinh</label>
+                        <input
+                          type="date"
+                          name="dateOfBirth"
+                          value={formData.dateOfBirth}
+                          onChange={handleChange}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Mã nhân viên</label>
+                        <input
+                          type="text"
+                          name="employeeId"
+                          value={formData.employeeId}
+                          onChange={handleChange}
+                          placeholder="ADMIN001"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="form-section">
+                    <h4>Thông tin công việc</h4>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>Chức vụ</label>
+                        <input
+                          type="text"
+                          name="jobTitle"
+                          value={formData.jobTitle}
+                          onChange={handleChange}
+                          placeholder="Quản trị viên hệ thống"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Phòng ban</label>
+                        <select
+                          name="department"
+                          value={formData.department}
+                          onChange={handleChange}
+                        >
+                          <option value="Phòng IT">Phòng IT</option>
+                          <option value="Phòng Y tế">Phòng Y tế</option>
+                          <option value="Phòng Giáo vụ">Phòng Giáo vụ</option>
+                          <option value="Phòng Hành chính">
+                            Phòng Hành chính
+                          </option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="form-group">
+                      <label>Địa chỉ</label>
+                      <input
+                        type="text"
+                        name="address"
+                        value={formData.address}
+                        onChange={handleChange}
+                        placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành phố"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Số điện thoại khẩn cấp</label>
+                      <input
+                        type="tel"
+                        name="emergencyContact"
+                        value={formData.emergencyContact}
+                        onChange={handleChange}
+                        placeholder="0123456789"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-actions-enhanced">
+                    <Button
+                      type="primary"
+                      htmlType="submit"
+                      icon={<SaveOutlined />}
+                      loading={loading}
+                      size="large"
+                    >
+                      Lưu thay đổi
+                    </Button>
+                    <Button onClick={() => setIsEditing(false)} size="large">
+                      Hủy
+                    </Button>
+                  </div>
+                </form>
+              ) : (
+                <div className="profile-info-enhanced">
+                  <div className="info-section">
+                    <h4>Thông tin cơ bản</h4>
+                    <div className="info-grid">
+                      <div className="info-item">
+                        <div className="info-icon">👤</div>
+                        <div>
+                          <label>Họ và tên</label>
+                          <span>
+                            {formData.firstName} {formData.lastName}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="info-item">
+                        <div className="info-icon">📧</div>
+                        <div>
+                          <label>Email</label>
+                          <span>{formData.email}</span>
+                        </div>
+                      </div>
+                      <div className="info-item">
+                        <div className="info-icon">📞</div>
+                        <div>
+                          <label>Số điện thoại</label>
+                          <span>{formData.phone}</span>
+                        </div>
+                      </div>
+                      <div className="info-item">
+                        <div className="info-icon">📅</div>
+                        <div>
+                          <label>Ngày sinh</label>
+                          <span>{formData.dateOfBirth || "Chưa cập nhật"}</span>
+                        </div>
+                      </div>
+                      <div className="info-item">
+                        <div className="info-icon">🆔</div>
+                        <div>
+                          <label>Mã nhân viên</label>
+                          <span>{formData.employeeId}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="divider"></div>
+
+                  <div className="info-section">
+                    <h4>Thông tin công việc</h4>
+                    <div className="info-grid">
+                      <div className="info-item">
+                        <div className="info-icon">💼</div>
+                        <div>
+                          <label>Chức vụ</label>
+                          <span>{formData.jobTitle}</span>
+                        </div>
+                      </div>
+                      <div className="info-item">
+                        <div className="info-icon">🏢</div>
+                        <div>
+                          <label>Phòng ban</label>
+                          <span>{formData.department}</span>
+                        </div>
+                      </div>
+                      <div className="info-item full-width">
+                        <div className="info-icon">🏠</div>
+                        <div>
+                          <label>Địa chỉ</label>
+                          <span>{formData.address || "Chưa cập nhật"}</span>
+                        </div>
+                      </div>
+                      <div className="info-item">
+                        <div className="info-icon">🚨</div>
+                        <div>
+                          <label>Số điện thoại khẩn cấp</label>
+                          <span>
+                            {formData.emergencyContact || "Chưa cập nhật"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   // Settings Component
   const SettingsManagement = () => (
@@ -1167,13 +1662,15 @@ const AdminDashboard = () => {
   );
 
   const renderContent = () => {
-    switch (activeTab) {
+    switch (activeSection) {
       case "dashboard":
         return <DashboardOverview />;
       case "users":
         return <UserManagement />;
       case "health":
         return <HealthRecordsManagement />;
+      case "profile":
+        return <AdminProfile />;
       case "settings":
         return <SettingsManagement />;
       default:
@@ -1181,801 +1678,182 @@ const AdminDashboard = () => {
     }
   };
 
-  // AdminProtectedRoute already verified ADMIN access, so we can render directly
-  if (!user) return null;
+  if (!userInfo) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+          background: "#f4f6fb",
+        }}
+      >
+        <Spin size="large" />
+      </div>
+    );
+  }
 
   return (
-    <div className="admin-dashboard">
-      {/* Sidebar */}
-      <div className="sidebar">
-        <div className="sidebar-header">
-          <h3>Quản Lý</h3>
-        </div>
-
-        <nav className="sidebar-nav">
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              className={`nav-item ${activeTab === item.id ? "active" : ""}`}
-              onClick={() => setActiveTab(item.id)}
+    <Layout
+      style={{
+        minHeight: "calc(100vh - 140px)",
+        background: "#f4f6fb",
+        margin: "90px 20px 30px 20px",
+        borderRadius: "16px",
+        overflow: "hidden",
+        boxShadow: "0 4px 20px 0 rgba(0,0,0,0.08)",
+      }}
+    >
+      <Sider
+        width={240}
+        collapsed={collapsed}
+        theme="light"
+        className="admin-sidebar"
+        style={{
+          borderRight: "1px solid #f0f0f0",
+          background: "#fff",
+          zIndex: 10,
+          paddingTop: 24,
+          position: "relative",
+        }}
+        trigger={null}
+      >
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            marginBottom: 24,
+            marginTop: 8,
+          }}
+        >
+          <div
+            style={{
+              width: 60,
+              height: 60,
+              borderRadius: "50%",
+              background: "#fff2e8",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              border: "2px solid #fa8c16",
+            }}
+          >
+            <UserOutlined style={{ fontSize: 32, color: "#fa8c16" }} />
+          </div>
+          {!collapsed && (
+            <span
+              style={{
+                fontWeight: 600,
+                color: "#fa8c16",
+                fontSize: 18,
+                marginTop: 12,
+                borderRadius: 20,
+                padding: "4px 12px",
+                background: "#fff2e8",
+              }}
             >
-              <span className="nav-icon">{item.icon}</span>
-              <span className="nav-label">{item.label}</span>
-            </button>
-          ))}
-        </nav>
-      </div>
-
-      {/* Dashboard Content */}
-      <div className="dashboard-content">
-        <div className="content-header">
-          <h1>Admin</h1>
+              Quản trị viên
+            </span>
+          )}
         </div>
-        <div className="content-body">{renderContent()}</div>
-      </div>
 
-      {/* Styles */}
-      <style jsx>{`
-        .admin-dashboard {
-          display: flex;
-          min-height: calc(100vh - 140px);
-          margin: 90px 20px 20px 20px;
-          background-color: #f8f9fa;
-          border-radius: 16px;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-          overflow: hidden;
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-            sans-serif;
-        }
-
-        .sidebar {
-          width: 260px;
-          background: #0d5ec2;
-          border-right: none;
-          box-shadow: 2px 0 4px rgba(0, 0, 0, 0.06);
-          display: flex;
-          flex-direction: column;
-          border-radius: 16px 0 0 16px;
-        }
-
-        .sidebar-header {
-          padding: 16px 24px;
-          border-bottom: 1px solid #1565c0;
-          background: #0d5ec2;
-          border-radius: 16px 0 0;
-          position: sticky;
-          top: 0;
-          z-index: 5;
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
-        }
-
-        .sidebar-header h3 {
-          margin: 0 0 4px 0;
-          color: #fff;
-          font-size: 22px;
-          font-weight: 600;
-        }
-
-        .sidebar-nav {
-          flex: 1;
-          padding: 16px 0;
-        }
-
-        .nav-item {
-          display: flex;
-          align-items: center;
-          width: 100%;
-          padding: 12px 16px;
-          border: none;
-          background: none;
-          color: #fff;
-          text-decoration: none;
-          transition: all 0.2s ease;
-          cursor: pointer;
-          font-size: 13px;
-          text-align: left;
-        }
-
-        .nav-item:hover {
-          background-color: #1565c0;
-          color: #fff;
-        }
-
-        .nav-item.active {
-          background-color: #1976d2;
-          color: #fff;
-          border-right: 3px solid #fff;
-          font-weight: 500;
-        }
-
-        .nav-icon {
-          margin-right: 12px;
-          width: 20px;
-          font-size: 16px;
-        }
-
-        .nav-label {
-          flex: 1;
-        }
-
-        .dashboard-content {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-        }
-
-        .content-header {
-          background: white;
-          padding: 16px 24px;
-          border-bottom: 1px solid #e8e8e8;
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
-          border-radius: 0px 16px 0 0;
-          display: flex;
-          justify-content: flex-end;
-          align-items: center;
-        }
-
-        .content-header h1 {
-          color: #1976d2;
-          margin: 0 0 4px 0;
-          font-size: 22px;
-          font-weight: 600;
-        }
-
-        .user-info {
-          color: #666;
-          font-size: 13px;
-        }
-
-        .content-body {
-          flex: 1;
-          padding: 20px 24px;
-          overflow-y: auto;
-          background: #f8f9fa;
-        }
-
-        .content-body > * {
-          background: white;
-          border-radius: 12px;
-          padding: 24px;
-          margin: 0 0 20px 0;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-          border: 1px solid #e8e8e8;
-          transition: all 0.2s ease;
-        }
-
-        .content-body > *:hover {
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-          transform: translateY(-1px);
-        }
-
-        .content-body > *:last-child {
-          margin-bottom: 0;
-        }
-
-        .dashboard-overview,
-        .user-management,
-        .health-records,
-        .settings-management {
-          /* Inherits styles from content-body > * */
-        }
-
-        .dashboard-overview h2,
-        .user-management h2,
-        .health-records h2,
-        .settings-management h2 {
-          margin: 0 0 2rem 0;
-          color: #333;
-          font-size: 1.5rem;
-          font-weight: 600;
-        }
-
-        .section-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 1.5rem;
-          padding-bottom: 1rem;
-          border-bottom: 2px solid #e9ecef;
-        }
-
-        .stats-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-          gap: 1.5rem;
-          margin-bottom: 3rem;
-        }
-
-        .stat-card {
-          background: white;
-          padding: 2rem;
-          border-radius: 8px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-          text-align: center;
-          border-left: 4px solid #1976d2;
-          transition: all 0.3s ease;
-        }
-
-        .stat-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        }
-
-        .stat-info h3 {
-          margin: 0;
-          font-size: 2rem;
-          color: #1976d2;
-          font-weight: 700;
-        }
-
-        .stat-info p {
-          margin: 0.5rem 0 0 0;
-          color: #666;
-          font-size: 0.95rem;
-          font-weight: 500;
-        }
-
-        .charts-section {
-          margin: 2rem 0;
-        }
-
-        .chart-row {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 2rem;
-          margin-bottom: 2rem;
-        }
-
-        .chart-container {
-          background: white;
-          padding: 2rem;
-          border-radius: 8px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .chart-container h3 {
-          margin: 0 0 1.5rem 0;
-          color: #333;
-          font-size: 1.2rem;
-          font-weight: 600;
-          text-align: center;
-        }
-
-        .chart-wrapper {
-          height: 300px;
-          position: relative;
-        }
-
-        .btn-primary {
-          background: #1976d2;
-          color: white;
-          border: none;
-          padding: 0.75rem 1.5rem;
-          border-radius: 6px;
-          cursor: pointer;
-          font-size: 0.9rem;
-          font-weight: 500;
-          transition: all 0.3s ease;
-        }
-
-        .btn-primary:hover {
-          background: #1565c0;
-          transform: translateY(-1px);
-        }
-
-        .search-bar input {
-          flex: 1;
-          padding: 0.75rem;
-          border: 1px solid #ddd;
-          border-radius: 6px;
-          font-size: 0.9rem;
-          transition: border-color 0.2s ease;
-        }
-
-        .search-bar input:focus {
-          outline: none;
-          border-color: #1976d2;
-          box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.1);
-        }
-
-        .btn-search {
-          background: #1976d2;
-          color: white;
-          border: none;
-          padding: 0.75rem 1.5rem;
-          border-radius: 6px;
-          cursor: pointer;
-          font-size: 0.9rem;
-          white-space: nowrap;
-          transition: all 0.2s ease;
-        }
-
-        .btn-search:hover {
-          background: #1565c0;
-        }
-
-        .table-container {
-          background: white;
-          border-radius: 8px;
-          overflow: hidden;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-          border: 1px solid #e9ecef;
-        }
-
-        .data-table {
-          width: 100%;
-          border-collapse: collapse;
-        }
-
-        .data-table th,
-        .data-table td {
-          padding: 0.75rem 1rem;
-          text-align: left;
-          border-bottom: 1px solid #e0e0e0;
-          vertical-align: middle;
-        }
-
-        .data-table th {
-          background: #f8f9fa;
-          font-weight: 600;
-          color: #333;
-          font-size: 0.9rem;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-          border-bottom: 2px solid #dee2e6;
-        }
-
-        .data-table td {
-          font-size: 0.9rem;
-        }
-
-        .data-table tr:hover {
-          background-color: #f8f9fa;
-        }
-
-        .status {
-          padding: 0.25rem 0.75rem;
-          border-radius: 12px;
-          font-size: 0.8rem;
-          font-weight: 500;
-        }
-
-        .status.active {
-          background: #e8f5e8;
-          color: #2e7d32;
-        }
-
-        .status.inactive {
-          background: #ffebee;
-          color: #c62828;
-        }
-
-        .status.completed {
-          background: #e3f2fd;
-          color: #1976d2;
-        }
-
-        .status.pending {
-          background: #fff3e0;
-          color: #f57c00;
-        }
-
-        .action-buttons {
-          display: flex;
-          gap: 0.25rem;
-          justify-content: center;
-        }
-
-        .btn-action {
-          padding: 0.5rem;
-          border: none;
-          border-radius: 6px;
-          cursor: pointer;
-          font-size: 1rem;
-          transition: all 0.2s ease;
-          width: 36px;
-          height: 36px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .btn-action:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-        }
-
-        .btn-action.view {
-          background: #1976d2;
-          color: white;
-        }
-
-        .btn-action.view:hover {
-          background: #1565c0;
-        }
-
-        .btn-action.edit {
-          background: #ff9800;
-          color: white;
-        }
-
-        .btn-action.edit:hover {
-          background: #f57c00;
-        }
-
-        .btn-action.delete {
-          background: #f44336;
-          color: white;
-        }
-
-        .btn-action.delete:hover {
-          background: #d32f2f;
-        }
-
-        .settings-sections {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-          gap: 2rem;
-          margin-bottom: 2rem;
-        }
-
-        .settings-section {
-          background: white;
-          padding: 2rem;
-          border-radius: 8px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .settings-section h3 {
-          margin: 0 0 1.5rem 0;
-          color: #333;
-        }
-
-        .setting-item {
-          margin-bottom: 1.5rem;
-        }
-
-        .setting-item label {
-          display: block;
-          margin-bottom: 0.5rem;
-          color: #333;
-          font-weight: 500;
-        }
-
-        .setting-item input[type="text"],
-        .setting-item input[type="email"] {
-          width: 100%;
-          padding: 0.75rem;
-          border: 1px solid #ddd;
-          border-radius: 6px;
-          font-size: 0.9rem;
-        }
-
-        .setting-item input[type="checkbox"] {
-          margin-right: 0.5rem;
-        }
-
-        /* User Management Enhancements */
-        .filters-section {
-          display: flex;
-          gap: 1rem;
-          margin-bottom: 1.5rem;
-          align-items: flex-end;
-          justify-content: space-between;
-        }
-
-        .search-bar {
-          display: flex;
-          gap: 0.5rem;
-          flex: 1;
-          max-width: 500px;
-        }
-
-        .filter-bar {
-          display: flex;
-          gap: 1rem;
-          align-items: center;
-        }
-
-        .role-filter,
-        .status-filter {
-          padding: 0.75rem;
-          border: 1px solid #ddd;
-          border-radius: 6px;
-          font-size: 0.9rem;
-          background: white;
-          cursor: pointer;
-          min-width: 180px;
-        }
-
-        .users-stats,
-        .records-stats {
-          margin-bottom: 1rem;
-          color: #666;
-          font-size: 0.9rem;
-          font-weight: 500;
-        }
-
-        .role-badge {
-          padding: 0.25rem 0.75rem;
-          border-radius: 12px;
-          font-size: 0.8rem;
-          font-weight: 500;
-        }
-
-        .role-badge.parent {
-          background: #e3f2fd;
-          color: #1976d2;
-        }
-
-        .role-badge.student {
-          background: #e8f5e8;
-          color: #2e7d32;
-        }
-
-        .role-badge.nurse {
-          background: #fff3e0;
-          color: #f57c00;
-        }
-
-        .role-badge.admin {
-          background: #fce4ec;
-          color: #c2185b;
-        }
-
-        .no-data {
-          text-align: center;
-          padding: 2rem;
-          color: #666;
-        }
-
-        /* Modal Styles */
-        .modal-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0, 0, 0, 0.5);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 1000;
-          backdrop-filter: blur(4px);
-          padding: 20px;
-          pointer-events: none;
-        }
-
-        .modal-content {
-          background: white;
-          border-radius: 12px;
-          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-          width: 80%;
-          height: 80%;
-          display: flex;
-          flex-direction: column;
-          animation: modalSlideIn 0.3s ease;
-          overflow: hidden;
-          cursor: default;
-          pointer-events: auto;
-          position: relative;
-        }
-
-        .modal-content.small {
-          width: 400px;
-          height: auto;
-          max-height: 300px;
-        }
-
-        @keyframes modalSlideIn {
-          from {
-            opacity: 0;
-            transform: translateY(-20px) scale(0.95);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
-        }
-
-        .modal-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 1.5rem;
-          border-bottom: 1px solid #e0e0e0;
-          flex-shrink: 0;
-          background: white;
-          border-radius: 12px 12px 0 0;
-        }
-
-        .modal-header h3 {
-          margin: 0;
-          color: #333;
-          font-size: 1.25rem;
-        }
-
-        .modal-close {
-          background: none;
-          border: none;
-          font-size: 1.5rem;
-          cursor: pointer;
-          color: #666;
-          padding: 0.25rem;
-          border-radius: 4px;
-          transition: all 0.2s ease;
-        }
-
-        .modal-close:hover {
-          background: #f5f5f5;
-          color: #333;
-        }
-
-        .modal-body {
-          padding: 1.5rem;
-          flex: 1;
-          min-height: 0;
-          overflow: visible;
-        }
-
-        .form-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 1.5rem;
-          align-items: start;
-        }
-
-        .form-group {
-          display: flex;
-          flex-direction: column;
-        }
-
-        .form-group.full-width {
-          grid-column: 1 / -1;
-        }
-
-        .form-group label {
-          margin-bottom: 0.5rem;
-          color: #333;
-          font-weight: 500;
-          font-size: 0.9rem;
-        }
-
-        .form-group input,
-        .form-group select,
-        .form-group textarea {
-          padding: 0.75rem;
-          border: 1px solid #ddd;
-          border-radius: 6px;
-          font-size: 0.9rem;
-          transition: border-color 0.2s ease;
-        }
-
-        .form-group input:focus,
-        .form-group select:focus,
-        .form-group textarea:focus {
-          outline: none;
-          border-color: #1976d2;
-          box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.1);
-        }
-
-        .form-group input:disabled,
-        .form-group select:disabled,
-        .form-group textarea:disabled {
-          background: #f5f5f5;
-          color: #666;
-          cursor: not-allowed;
-        }
-
-        .form-group textarea {
-          resize: vertical;
-          min-height: 80px;
-          max-height: 120px;
-        }
-
-        /* User Info Display Styles */
-        .user-info-display {
-          padding: 1rem 0;
-        }
-
-        .info-row {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 2rem;
-          margin-bottom: 1.5rem;
-        }
-
-        .info-row.full-width {
-          grid-template-columns: 1fr;
-        }
-
-        .info-item {
-          display: flex;
-          flex-direction: column;
-        }
-
-        .info-item.full-width {
-          grid-column: 1 / -1;
-        }
-
-        .info-item label {
-          font-weight: 600;
-          color: #495057;
-          font-size: 0.9rem;
-          margin-bottom: 0.5rem;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-
-        .info-value {
-          background: #f8f9fa;
-          padding: 0.75rem 1rem;
-          border-radius: 6px;
-          border: 1px solid #e9ecef;
-          font-size: 1rem;
-          color: #212529;
-          min-height: 45px;
-          display: flex;
-          align-items: center;
-        }
-
-        .info-value .role-badge,
-        .info-value .status {
-          margin: 0;
-        }
-
-        .modal-footer {
-          display: flex;
-          justify-content: flex-end;
-          gap: 1rem;
-          padding: 1.5rem;
-          border-top: 1px solid #e0e0e0;
-          background: #f8f9fa;
-          border-radius: 0 0 12px 12px;
-          flex-shrink: 0;
-        }
-
-        .btn-secondary {
-          background: #6c757d;
-          color: white;
-          border: none;
-          padding: 0.75rem 1.5rem;
-          border-radius: 6px;
-          cursor: pointer;
-          font-size: 0.9rem;
-          font-weight: 500;
-          transition: all 0.3s ease;
-        }
-
-        .btn-secondary:hover {
-          background: #5a6268;
-          transform: translateY(-1px);
-        }
-
-        .btn-danger {
-          background: #dc3545;
-          color: white;
-          border: none;
-          padding: 0.75rem 1.5rem;
-          border-radius: 6px;
-          cursor: pointer;
-          font-size: 0.9rem;
-          font-weight: 500;
-          transition: all 0.3s ease;
-        }
-
-        .btn-danger:hover {
-          background: #c82333;
-          transform: translateY(-1px);
-        }
-
-        .warning-text {
-          color: #dc3545;
-          font-size: 0.9rem;
-          margin-top: 0.5rem;
-        }
-      `}</style>
-    </div>
+        <Menu
+          theme="light"
+          selectedKeys={[activeSection]}
+          mode="inline"
+          items={menuItems}
+          onClick={handleMenuClick}
+          style={{ border: "none", fontWeight: 500, fontSize: 16 }}
+        />
+
+        {/* Custom Sidebar Trigger Button */}
+        <div
+          className="custom-sidebar-trigger"
+          onClick={() => setCollapsed(!collapsed)}
+          tabIndex={0}
+          role="button"
+          aria-label={collapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setCollapsed(!collapsed);
+            }
+          }}
+        >
+          {collapsed ? (
+            <RightOutlined className="icon-right" />
+          ) : (
+            <LeftOutlined className="icon-left" />
+          )}
+          {!collapsed && <span className="trigger-text">Thu gọn</span>}
+        </div>
+      </Sider>
+
+      <Layout style={{ marginLeft: 0 }}>
+        <Header
+          style={{
+            background: "#fff",
+            padding: "16px 32px",
+            height: "auto",
+            lineHeight: "normal",
+            minHeight: 80,
+            display: "flex",
+            alignItems: "center",
+            borderBottom: "1px solid #f0f0f0",
+            boxShadow: "0 2px 8px 0 rgba(0,0,0,0.05)",
+          }}
+        >
+          <div style={{ flex: 1 }}>
+            <Breadcrumb
+              items={getBreadcrumbItems()}
+              style={{ fontSize: 14, marginBottom: 4 }}
+            />
+            <h1
+              style={{
+                color: "#fa8c16",
+                margin: 0,
+                fontSize: 28,
+                fontWeight: 700,
+              }}
+            >
+              Bảng điều khiển quản trị
+            </h1>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <div
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: "50%",
+                background: "#fff2e8",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                border: "1px solid #fa8c16",
+              }}
+            >
+              <UserOutlined style={{ fontSize: 20, color: "#fa8c16" }} />
+            </div>
+            <span style={{ fontWeight: 500, fontSize: 16 }}>
+              {userInfo?.firstName || ""} {userInfo?.lastName || ""}
+            </span>
+          </div>
+        </Header>
+
+        <Content
+          style={{
+            margin: "16px 24px 24px 24px",
+            padding: 0,
+            minHeight: "calc(100vh - 260px)",
+            background: "transparent",
+          }}
+        >
+          {renderContent()}
+        </Content>
+      </Layout>
+    </Layout>
   );
 };
 
