@@ -1,20 +1,40 @@
 import React, { useState } from 'react';
-import '../../styles/VaccinationSchedule.css';
+import {
+  Tabs,
+  Button,
+  Card,
+  Table,
+  Tag,
+  Modal,
+  Form,
+  Input,
+  DatePicker,
+  Select,
+  Space,
+  message
+} from 'antd';
+import {
+  PlusOutlined,
+  CheckCircleOutlined,
+  CalendarOutlined,
+  EditOutlined,
+  DeleteOutlined
+} from '@ant-design/icons';
+import dayjs from 'dayjs';
+
+const { TabPane } = Tabs;
+const { Option } = Select;
+const { TextArea } = Input;
 
 const VaccinationSchedule = () => {
+  const [form] = Form.useForm();
   const [activeTab, setActiveTab] = useState('completed');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newVaccination, setNewVaccination] = useState({
-    vaccine: '',
-    date: '',
-    location: '',
-    batchNumber: '',
-    nextDue: '',
-    notes: ''
-  });
+  const [editingRecord, setEditingRecord] = useState(null);
+  const [messageApi, contextHolder] = message.useMessage();
 
   // Mock data for completed vaccinations
-  const [completedVaccinations] = useState([
+  const [completedVaccinations, setCompletedVaccinations] = useState([
     {
       id: 1,
       vaccine: 'Viêm gan B (lần 1)',
@@ -32,20 +52,11 @@ const VaccinationSchedule = () => {
       batchNumber: 'DPT2023-045',
       nextDue: '2023-06-20',
       status: 'completed'
-    },
-    {
-      id: 3,
-      vaccine: 'MMR (Sởi - Quai bị - Rubella)',
-      date: '2023-05-10',
-      location: 'Trung tâm Y tế Quận 3',
-      batchNumber: 'MMR2023-078',
-      nextDue: null,
-      status: 'completed'
     }
   ]);
 
   // Mock data for upcoming vaccinations
-  const [upcomingVaccinations] = useState([
+  const [upcomingVaccinations, setUpcomingVaccinations] = useState([
     {
       id: 4,
       vaccine: 'Viêm gan B (lần 2)',
@@ -61,268 +72,342 @@ const VaccinationSchedule = () => {
       location: 'Bệnh viện Nhi Đồng',
       status: 'scheduled',
       priority: 'medium'
-    },
-    {
-      id: 6,
-      vaccine: 'Polio (lần 1)',
-      scheduledDate: '2024-03-10',
-      location: 'Trung tâm Y tế Quận 3',
-      status: 'scheduled',
-      priority: 'medium'
     }
   ]);
 
-  const handleAddVaccination = () => {
-    // API call to add vaccination record
-    console.log('Adding vaccination:', newVaccination);
+  const getPriorityTag = (priority) => {
+    const config = {
+      high: { color: 'red', text: 'Cao' },
+      medium: { color: 'orange', text: 'Trung bình' },
+      low: { color: 'green', text: 'Thấp' }
+    };
+    return <Tag color={config[priority].color}>{config[priority].text}</Tag>;
+  };
+
+  const getStatusTag = (status) => {
+    const config = {
+      completed: { color: 'green', text: 'Đã tiêm' },
+      scheduled: { color: 'blue', text: 'Đã lên lịch' },
+      cancelled: { color: 'red', text: 'Đã hủy' }
+    };
+    return <Tag color={config[status].color}>{config[status].text}</Tag>;
+  };
+
+  const completedColumns = [
+    {
+      title: 'Vaccine',
+      dataIndex: 'vaccine',
+      key: 'vaccine',
+    },
+    {
+      title: 'Ngày tiêm',
+      dataIndex: 'date',
+      key: 'date',
+      render: (date) => dayjs(date).format('DD/MM/YYYY'),
+    },
+    {
+      title: 'Địa điểm',
+      dataIndex: 'location',
+      key: 'location',
+    },
+    {
+      title: 'Số lô',
+      dataIndex: 'batchNumber',
+      key: 'batchNumber',
+    },
+    {
+      title: 'Ngày tiêm tiếp theo',
+      dataIndex: 'nextDue',
+      key: 'nextDue',
+      render: (date) => date ? dayjs(date).format('DD/MM/YYYY') : '--',
+    },
+    {
+      title: 'Trạng thái',
+      dataIndex: 'status',
+      key: 'status',
+      render: (status) => getStatusTag(status),
+    },
+    {
+      title: 'Thao tác',
+      key: 'action',
+      render: (_, record) => (
+        <Space size="middle">
+          <Button
+            type="primary"
+            icon={<EditOutlined />}
+            size="small"
+            onClick={() => handleEdit(record)}
+          >
+            Sửa
+          </Button>
+          <Button
+            danger
+            icon={<DeleteOutlined />}
+            size="small"
+            onClick={() => handleDelete(record)}
+          >
+            Xóa
+          </Button>
+        </Space>
+      ),
+    },
+  ];
+
+  const upcomingColumns = [
+    {
+      title: 'Vaccine',
+      dataIndex: 'vaccine',
+      key: 'vaccine',
+    },
+    {
+      title: 'Ngày dự kiến',
+      dataIndex: 'scheduledDate',
+      key: 'scheduledDate',
+      render: (date) => dayjs(date).format('DD/MM/YYYY'),
+    },
+    {
+      title: 'Địa điểm',
+      dataIndex: 'location',
+      key: 'location',
+    },
+    {
+      title: 'Độ ưu tiên',
+      dataIndex: 'priority',
+      key: 'priority',
+      render: (priority) => getPriorityTag(priority),
+    },
+    {
+      title: 'Thao tác',
+      key: 'action',
+      render: (_, record) => (
+        <Space size="middle">
+          <Button
+            type="primary"
+            icon={<EditOutlined />}
+            size="small"
+            onClick={() => handleEdit(record)}
+          >
+            Sửa
+          </Button>
+          <Button
+            danger
+            icon={<DeleteOutlined />}
+            size="small"
+            onClick={() => handleDelete(record)}
+          >
+            Xóa
+          </Button>
+        </Space>
+      ),
+    },
+  ];
+
+  const handleAdd = (values) => {
+    const newVaccination = {
+      id: Date.now(),
+      ...values,
+      status: activeTab === 'completed' ? 'completed' : 'scheduled'
+    };
+
+    if (activeTab === 'completed') {
+      setCompletedVaccinations([...completedVaccinations, newVaccination]);
+    } else {
+      setUpcomingVaccinations([...upcomingVaccinations, newVaccination]);
+    }
+
+    messageApi.success('Thêm lịch tiêm chủng thành công');
     setShowAddModal(false);
-    setNewVaccination({
-      vaccine: '',
-      date: '',
-      location: '',
-      batchNumber: '',
-      nextDue: '',
-      notes: ''
+    form.resetFields();
+  };
+
+  const handleEdit = (record) => {
+    setEditingRecord(record);
+    form.setFieldsValue({
+      ...record,
+      date: record.date ? dayjs(record.date) : null,
+      nextDue: record.nextDue ? dayjs(record.nextDue) : null,
+      scheduledDate: record.scheduledDate ? dayjs(record.scheduledDate) : null
+    });
+    setShowAddModal(true);
+  };
+
+  const handleDelete = (record) => {
+    Modal.confirm({
+      title: 'Xác nhận xóa',
+      content: 'Bạn có chắc chắn muốn xóa lịch tiêm chủng này?',
+      okText: 'Xóa',
+      okType: 'danger',
+      cancelText: 'Hủy',
+      onOk() {
+        if (activeTab === 'completed') {
+          setCompletedVaccinations(completedVaccinations.filter(item => item.id !== record.id));
+        } else {
+          setUpcomingVaccinations(upcomingVaccinations.filter(item => item.id !== record.id));
+        }
+        messageApi.success('Xóa lịch tiêm chủng thành công');
+      }
     });
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return '--';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('vi-VN');
-  };
-
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case 'high': return '#f44336';
-      case 'medium': return '#ff9800';
-      case 'low': return '#4caf50';
-      default: return '#666';
-    }
-  };
-
-  const getPriorityText = (priority) => {
-    switch (priority) {
-      case 'high': return 'Cao';
-      case 'medium': return 'Trung bình';
-      case 'low': return 'Thấp';
-      default: return '';
-    }
-  };
-
   return (
-    <div className="vaccination-container">
-      <div className="vaccination-header">
-        <h2>Lịch Tiêm Chủng</h2>
-        <button 
-          className="add-btn"
-          onClick={() => setShowAddModal(true)}
-        >
-          <i className="fas fa-plus"></i>
-          Thêm mới
-        </button>
-      </div>
-
-      <div className="tabs">
-        <button 
-          className={`tab ${activeTab === 'completed' ? 'active' : ''}`}
-          onClick={() => setActiveTab('completed')}
-        >
-          <i className="fas fa-check-circle"></i>
-          Đã tiêm ({completedVaccinations.length})
-        </button>
-        <button 
-          className={`tab ${activeTab === 'upcoming' ? 'active' : ''}`}
-          onClick={() => setActiveTab('upcoming')}
-        >
-          <i className="fas fa-calendar-alt"></i>
-          Sắp tới ({upcomingVaccinations.length})
-        </button>
-      </div>
-
-      {activeTab === 'completed' && (
-        <div className="tab-content">
-          <div className="vaccination-list">
-            {completedVaccinations.map(vaccination => (
-              <div key={vaccination.id} className="vaccination-card completed">
-                <div className="card-header">
-                  <h3>{vaccination.vaccine}</h3>
-                  <span className="status-badge completed">
-                    <i className="fas fa-check"></i>
-                    Đã tiêm
-                  </span>
-                </div>
-                <div className="card-body">
-                  <div className="info-row">
-                    <span className="label">
-                      <i className="fas fa-calendar"></i>
-                      Ngày tiêm:
-                    </span>
-                    <span className="value">{formatDate(vaccination.date)}</span>
-                  </div>
-                  <div className="info-row">
-                    <span className="label">
-                      <i className="fas fa-map-marker-alt"></i>
-                      Địa điểm:
-                    </span>
-                    <span className="value">{vaccination.location}</span>
-                  </div>
-                  <div className="info-row">
-                    <span className="label">
-                      <i className="fas fa-barcode"></i>
-                      Số lô:
-                    </span>
-                    <span className="value">{vaccination.batchNumber}</span>
-                  </div>
-                  {vaccination.nextDue && (
-                    <div className="info-row">
-                      <span className="label">
-                        <i className="fas fa-clock"></i>
-                        Tiêm tiếp theo:
-                      </span>
-                      <span className="value">{formatDate(vaccination.nextDue)}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+    <div className="vaccination-schedule">
+      {contextHolder}
+      <Card>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+          <Tabs activeKey={activeTab} onChange={setActiveTab}>
+            <TabPane
+              tab={
+                <span>
+                  <CheckCircleOutlined />
+                  Đã tiêm ({completedVaccinations.length})
+                </span>
+              }
+              key="completed"
+            />
+            <TabPane
+              tab={
+                <span>
+                  <CalendarOutlined />
+                  Sắp tới ({upcomingVaccinations.length})
+                </span>
+              }
+              key="upcoming"
+            />
+          </Tabs>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => {
+              setEditingRecord(null);
+              form.resetFields();
+              setShowAddModal(true);
+            }}
+          >
+            Thêm mới
+          </Button>
         </div>
-      )}
 
-      {activeTab === 'upcoming' && (
-        <div className="tab-content">
-          <div className="vaccination-list">
-            {upcomingVaccinations.map(vaccination => (
-              <div key={vaccination.id} className="vaccination-card upcoming">
-                <div className="card-header">
-                  <h3>{vaccination.vaccine}</h3>
-                  <span 
-                    className="priority-badge"
-                    style={{ 
-                      backgroundColor: getPriorityColor(vaccination.priority),
-                      color: 'white'
-                    }}
-                  >
-                    {getPriorityText(vaccination.priority)}
-                  </span>
-                </div>
-                <div className="card-body">
-                  <div className="info-row">
-                    <span className="label">
-                      <i className="fas fa-calendar"></i>
-                      Ngày dự kiến:
-                    </span>
-                    <span className="value">{formatDate(vaccination.scheduledDate)}</span>
-                  </div>
-                  <div className="info-row">
-                    <span className="label">
-                      <i className="fas fa-map-marker-alt"></i>
-                      Địa điểm:
-                    </span>
-                    <span className="value">{vaccination.location}</span>
-                  </div>
-                </div>
-                <div className="card-actions">
-                  <button className="confirm-btn">
-                    <i className="fas fa-check"></i>
-                    Xác nhận đặt lịch
-                  </button>
-                  <button className="reschedule-btn">
-                    <i className="fas fa-calendar-alt"></i>
-                    Dời lịch
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+        {activeTab === 'completed' ? (
+          <Table
+            columns={completedColumns}
+            dataSource={completedVaccinations}
+            rowKey="id"
+            pagination={{ pageSize: 10 }}
+          />
+        ) : (
+          <Table
+            columns={upcomingColumns}
+            dataSource={upcomingVaccinations}
+            rowKey="id"
+            pagination={{ pageSize: 10 }}
+          />
+        )}
+      </Card>
 
-      {/* Add Vaccination Modal */}
-      {showAddModal && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <div className="modal-header">
-              <h3>Thêm thông tin tiêm chủng</h3>
-              <button 
-                className="close-btn"
-                onClick={() => setShowAddModal(false)}
+      <Modal
+        title={editingRecord ? 'Sửa lịch tiêm chủng' : 'Thêm lịch tiêm chủng mới'}
+        open={showAddModal}
+        onCancel={() => {
+          setShowAddModal(false);
+          setEditingRecord(null);
+          form.resetFields();
+        }}
+        footer={null}
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleAdd}
+        >
+          <Form.Item
+            name="vaccine"
+            label="Tên vaccine"
+            rules={[{ required: true, message: 'Vui lòng nhập tên vaccine' }]}
+          >
+            <Input placeholder="Nhập tên vaccine" />
+          </Form.Item>
+
+          {activeTab === 'completed' ? (
+            <>
+              <Form.Item
+                name="date"
+                label="Ngày tiêm"
+                rules={[{ required: true, message: 'Vui lòng chọn ngày tiêm' }]}
               >
-                <i className="fas fa-times"></i>
-              </button>
-            </div>
-            <div className="modal-body">
-              <div className="form-group">
-                <label>Tên vaccine</label>
-                <input
-                  type="text"
-                  value={newVaccination.vaccine}
-                  onChange={(e) => setNewVaccination(prev => ({ ...prev, vaccine: e.target.value }))}
-                  placeholder="Nhập tên vaccine"
-                />
-              </div>
-              <div className="form-group">
-                <label>Ngày tiêm</label>
-                <input
-                  type="date"
-                  value={newVaccination.date}
-                  onChange={(e) => setNewVaccination(prev => ({ ...prev, date: e.target.value }))}
-                />
-              </div>
-              <div className="form-group">
-                <label>Địa điểm tiêm</label>
-                <input
-                  type="text"
-                  value={newVaccination.location}
-                  onChange={(e) => setNewVaccination(prev => ({ ...prev, location: e.target.value }))}
-                  placeholder="Nhập địa điểm tiêm"
-                />
-              </div>
-              <div className="form-group">
-                <label>Số lô vaccine</label>
-                <input
-                  type="text"
-                  value={newVaccination.batchNumber}
-                  onChange={(e) => setNewVaccination(prev => ({ ...prev, batchNumber: e.target.value }))}
-                  placeholder="Nhập số lô"
-                />
-              </div>
-              <div className="form-group">
-                <label>Ngày tiêm tiếp theo (nếu có)</label>
-                <input
-                  type="date"
-                  value={newVaccination.nextDue}
-                  onChange={(e) => setNewVaccination(prev => ({ ...prev, nextDue: e.target.value }))}
-                />
-              </div>
-              <div className="form-group">
-                <label>Ghi chú</label>
-                <textarea
-                  value={newVaccination.notes}
-                  onChange={(e) => setNewVaccination(prev => ({ ...prev, notes: e.target.value }))}
-                  placeholder="Nhập ghi chú (nếu có)"
-                  rows="3"
-                />
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button 
-                className="cancel-btn"
-                onClick={() => setShowAddModal(false)}
+                <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
+              </Form.Item>
+              <Form.Item
+                name="nextDue"
+                label="Ngày tiêm tiếp theo"
               >
+                <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
+              </Form.Item>
+            </>
+          ) : (
+            <Form.Item
+              name="scheduledDate"
+              label="Ngày dự kiến"
+              rules={[{ required: true, message: 'Vui lòng chọn ngày dự kiến' }]}
+            >
+              <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
+            </Form.Item>
+          )}
+
+          <Form.Item
+            name="location"
+            label="Địa điểm"
+            rules={[{ required: true, message: 'Vui lòng nhập địa điểm' }]}
+          >
+            <Input placeholder="Nhập địa điểm tiêm" />
+          </Form.Item>
+
+          {activeTab === 'completed' && (
+            <Form.Item
+              name="batchNumber"
+              label="Số lô"
+              rules={[{ required: true, message: 'Vui lòng nhập số lô' }]}
+            >
+              <Input placeholder="Nhập số lô vaccine" />
+            </Form.Item>
+          )}
+
+          {activeTab === 'upcoming' && (
+            <Form.Item
+              name="priority"
+              label="Độ ưu tiên"
+              rules={[{ required: true, message: 'Vui lòng chọn độ ưu tiên' }]}
+            >
+              <Select placeholder="Chọn độ ưu tiên">
+                <Option value="high">Cao</Option>
+                <Option value="medium">Trung bình</Option>
+                <Option value="low">Thấp</Option>
+              </Select>
+            </Form.Item>
+          )}
+
+          <Form.Item
+            name="notes"
+            label="Ghi chú"
+          >
+            <TextArea rows={4} placeholder="Nhập ghi chú (nếu có)" />
+          </Form.Item>
+
+          <Form.Item>
+            <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
+              <Button onClick={() => {
+                setShowAddModal(false);
+                setEditingRecord(null);
+                form.resetFields();
+              }}>
                 Hủy
-              </button>
-              <button 
-                className="save-btn"
-                onClick={handleAddVaccination}
-              >
-                Lưu
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+              </Button>
+              <Button type="primary" htmlType="submit">
+                {editingRecord ? 'Cập nhật' : 'Thêm mới'}
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 };

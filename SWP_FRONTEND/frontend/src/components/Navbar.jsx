@@ -197,17 +197,21 @@ const Navbar = () => {
             }`}
           >
             Giới thiệu
-          </Link>          {user ? (
+          </Link>
+
+          {user ? (
             <>
-              {/* Show management button for all authenticated users */}
-              <button
-                onClick={handleDashboardClick}
-                className={`nav-link management-btn${
-                  location.pathname.includes("dashboard") ? " active" : ""
-                }`}
-              >
-                Quản lý
-              </button>
+              {/* Only show management button for ADMIN and staff, not for PARENT */}
+              {!isParent() && (
+                <button
+                  onClick={handleDashboardClick}
+                  className={`nav-link management-btn${
+                    location.pathname.includes("dashboard") ? " active" : ""
+                  }`}
+                >
+                  Quản lý
+                </button>
+              )}
 
               {/* Only show notification bell for parent users who logged in via phone */}
               {isParent() && user.loginMethod !== "username" && (
