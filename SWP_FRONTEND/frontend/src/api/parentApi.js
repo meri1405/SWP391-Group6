@@ -119,7 +119,6 @@ export const parentApi = {
       throw error;
     }
   },
-
   // Delete a medication request
   deleteMedicationRequest: async (token, requestId) => {
     try {
@@ -128,6 +127,24 @@ export const parentApi = {
       return response.data;
     } catch (error) {
       console.error('Error deleting medication request:', error);
+      throw error;
+    }
+  },
+
+  // Get detailed medication request by ID
+  getMedicationRequestDetails: async (token, requestId) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      console.log('Fetching medication request details for ID:', requestId);
+      const response = await authAxios.get(`/api/parent/medication-requests/${requestId}`);
+      console.log('Received medication request details:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching medication request details:', error);
+      if (error.response) {
+        console.error('Error response data:', error.response.data);
+        console.error('Error response status:', error.response.status);
+      }
       throw error;
     }
   }
