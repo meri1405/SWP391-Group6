@@ -170,7 +170,8 @@ public class ParentController {
             Map<String, Object> response = new HashMap<>();
             response.put("message", "Profile updated successfully");
             
-            Map<String, Object> updatedProfile = new HashMap<>();            updatedProfile.put("id", parent.getId());
+            Map<String, Object> updatedProfile = new HashMap<>();
+            updatedProfile.put("id", parent.getId());
             updatedProfile.put("firstName", parent.getFirstName());
             updatedProfile.put("lastName", parent.getLastName());
             updatedProfile.put("phone", parent.getPhone());
