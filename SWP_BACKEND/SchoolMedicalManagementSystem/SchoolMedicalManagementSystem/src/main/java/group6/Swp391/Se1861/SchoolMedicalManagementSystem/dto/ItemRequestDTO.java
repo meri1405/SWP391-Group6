@@ -8,7 +8,6 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import java.time.LocalDate;
 
 @Data
 @AllArgsConstructor
@@ -36,13 +35,6 @@ public class ItemRequestDTO {
     @Min(value = 1, message = "Frequency must be at least 1")
     private Integer frequency;
 
-    @NotNull(message = "Start date is required")
-    private LocalDate startDate;
-
-    @NotNull(message = "End date is required")
-    private LocalDate endDate;
-
-    //@NotBlank(message = "Note is required")
     @Size(max = 500, message = "Note cannot exceed 500 characters")
     private String note;
 }

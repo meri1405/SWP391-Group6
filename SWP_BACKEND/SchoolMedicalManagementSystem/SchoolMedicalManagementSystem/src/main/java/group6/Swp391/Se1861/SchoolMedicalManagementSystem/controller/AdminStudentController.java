@@ -42,7 +42,7 @@ public class AdminStudentController {
             Map<String, Object> response = new HashMap<>();
             response.put("message", "Student created successfully");
             response.put("studentId", createdStudent.getStudentID());
-            response.put("fullName", createdStudent.getFirstName() + " " + createdStudent.getLastName());
+            response.put("fullName", createdStudent.getLastName() + " " + createdStudent.getFirstName());
             response.put("className", createdStudent.getClassName());
 
             return ResponseEntity.status(HttpStatus.CREATED).body(response);

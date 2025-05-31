@@ -151,11 +151,10 @@ const ParentDashboard = () => {
       case 'notifications':
         return <Notifications />;
       case 'health-history':
-        return <HealthHistory />;
-      case 'physical-mental':
+        return <HealthHistory />;      case 'physical-mental':
         return <PhysicalMental />;
       case 'medication':
-        return <MedicationManagement />;
+        return <MedicationManagement userInfo={userInfo} />;
       case 'vaccination':
         return <VaccinationSchedule />;
       case 'profile':
@@ -292,7 +291,7 @@ const ParentDashboard = () => {
               <UserOutlined style={{ fontSize: 20, color: '#1976d2' }} />
             </div>
             <span style={{ fontWeight: 500, fontSize: 16 }}>
-              {userInfo?.firstName || ''} {userInfo?.lastName || ''}
+              {userInfo?.lastName || ''} {userInfo?.firstName || ''}
             </span>
           </div>
         </Header>

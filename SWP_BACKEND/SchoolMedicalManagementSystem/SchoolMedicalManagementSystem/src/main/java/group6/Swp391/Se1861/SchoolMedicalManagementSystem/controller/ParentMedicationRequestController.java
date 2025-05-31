@@ -1,72 +1,61 @@
 package group6.Swp391.Se1861.SchoolMedicalManagementSystem.controller;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.MedicationRequestDTO;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.MessageResponse;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.MedicationRequestService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/medication-requests")
-@PreAuthorize("hasRole('PARENT')")  // Only parents can access these endpoints
+@RequestMapping("/api/parent/medication-requests")
+@RequiredArgsConstructor
 public class ParentMedicationRequestController {
 
-    @Autowired
-    private MedicationRequestService medicationRequestService;
+    private final MedicationRequestService medicationRequestService;
 
     /**
      * Create a new medication request
+     * @param medicationRequestDTO Request data
+     * @param user Authenticated parent
+     * @return Created medication request
      */
     @PostMapping
-    public ResponseEntity<?> createMedicationRequest(
+    public ResponseEntity<MedicationRequestDTO> createMedicationRequest(
             @Valid @RequestBody MedicationRequestDTO medicationRequestDTO,
-            @AuthenticationPrincipal User parent) {
-
-        MedicationRequestDTO createdRequest = medicationRequestService.createMedicationRequest(medicationRequestDTO, parent);
-        return ResponseEntity.ok(createdRequest);
-    }
-
-    /**
-     * Submit a medication request
-     */
-    @PostMapping("/submit")
-    public ResponseEntity<String> submitMedicationRequest(
-            @RequestBody MedicationRequestDTO medicationRequestDTO,
-            @AuthenticationPrincipal User parent) {
-
-        if (!medicationRequestDTO.isConfirm()) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Medication request cannot be submitted as it is not confirmed.");
-        }
-        medicationRequestService.createMedicationRequest(medicationRequestDTO, parent);
-        return ResponseEntity.ok("Medication request submitted successfully.");
+            @AuthenticationPrincipal User user) {
+        MedicationRequestDTO createdRequest = medicationRequestService.createMedicationRequest(medicationRequestDTO, user);
+        return new ResponseEntity<>(createdRequest, HttpStatus.CREATED);
     }
 
     /**
      * Get all medication requests for the authenticated parent
+     * @param user Authenticated parent
+     * @return List of medication requests
      */
     @GetMapping
-    public ResponseEntity<List<MedicationRequestDTO>> getMedicationRequests(@AuthenticationPrincipal User parent) {
-        List<MedicationRequestDTO> requests = medicationRequestService.getParentMedicationRequests(parent);
+    public ResponseEntity<List<MedicationRequestDTO>> getParentMedicationRequests(
+            @AuthenticationPrincipal User user) {
+        List<MedicationRequestDTO> requests = medicationRequestService.getParentMedicationRequests(user);
         return ResponseEntity.ok(requests);
     }
 
     /**
-     * Get a specific medication request by ID
+     * Get a specific medication request
+     * @param requestId Request ID
+     * @param user Authenticated parent
+     * @return Medication request details
      */
     @GetMapping("/{requestId}")
     public ResponseEntity<MedicationRequestDTO> getMedicationRequest(
             @PathVariable Long requestId,
-            @AuthenticationPrincipal User parent) {
-
-        MedicationRequestDTO request = medicationRequestService.getMedicationRequest(requestId, parent);
+            @AuthenticationPrincipal User user) {
+        MedicationRequestDTO request = medicationRequestService.getMedicationRequest(requestId, user);
         return ResponseEntity.ok(request);
     }
 }

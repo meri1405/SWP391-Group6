@@ -171,4 +171,8 @@ public class User implements UserDetails, OAuth2User {
     public boolean isCredentialsNonExpired() {
         return true;
     }
+
+    public String getFullName() {
+        return lastName + " " + firstName;
+    }
 }

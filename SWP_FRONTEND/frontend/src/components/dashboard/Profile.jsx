@@ -39,7 +39,6 @@ const Profile = ({ userInfo, onProfileUpdate }) => {
   const [formData, setFormData] = useState({
     firstName: userInfo?.firstName || "",
     lastName: userInfo?.lastName || "",
-    email: userInfo?.email || "",
     phone: userInfo?.phone || "",
     address: userInfo?.address || "123 Healthcare Ave",
     jobTitle: userInfo?.jobTitle || "PARENT",
@@ -133,7 +132,6 @@ const Profile = ({ userInfo, onProfileUpdate }) => {
         setFormData({
           firstName: profileData.firstName || "",
           lastName: profileData.lastName || "",
-          email: profileData.email || "",
           phone: profileData.phone || "",
           address: userAddress,
           jobTitle: userJobTitle,
@@ -170,12 +168,6 @@ const Profile = ({ userInfo, onProfileUpdate }) => {
 
     if (!formData.lastName.trim()) {
       newErrors.lastName = "Tên không được để trống";
-    }
-
-    if (!formData.email.trim()) {
-      newErrors.email = "Email không được để trống";
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = "Email không hợp lệ";
     }
 
     if (!formData.phone.trim()) {
@@ -241,7 +233,6 @@ const Profile = ({ userInfo, onProfileUpdate }) => {
           ...prevData,
           firstName: response.profile.firstName || prevData.firstName,
           lastName: response.profile.lastName || prevData.lastName,
-          email: response.profile.email || prevData.email,
           phone: response.profile.phone || prevData.phone,
           address: response.profile.address || prevData.address,
           jobTitle: response.profile.jobTitle || prevData.jobTitle,
@@ -366,7 +357,7 @@ const Profile = ({ userInfo, onProfileUpdate }) => {
             )}
             <div className="profile-basic-info">
               <h3>
-                {formData.firstName} {formData.lastName}
+                {formData.lastName} {formData.firstName}
               </h3>
               <Tag color="blue" icon={<TeamOutlined />}>
                 Phụ Huynh
@@ -382,7 +373,7 @@ const Profile = ({ userInfo, onProfileUpdate }) => {
                   <input
                     type="text"
                     name="firstName"
-                    value={formData.firstName}
+                    value={formData.lastName}
                     onChange={handleChange}
                     required
                   />
@@ -392,7 +383,7 @@ const Profile = ({ userInfo, onProfileUpdate }) => {
                   <input
                     type="text"
                     name="lastName"
-                    value={formData.lastName}
+                    value={formData.firstName}
                     onChange={handleChange}
                     required
                   />
@@ -400,20 +391,6 @@ const Profile = ({ userInfo, onProfileUpdate }) => {
               </div>
 
                 <div className="form-row">
-                  <div className="form-group">
-                    <label>Email *</label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleChange}
-                      className={errors.email ? "error" : ""}
-                      placeholder="example@email.com"
-                    />
-                    {errors.email && (
-                      <span className="error-text">{errors.email}</span>
-                    )}
-                  </div>
                   <div className="form-group">
                     <label>Số điện thoại *</label>
                     <input
@@ -449,16 +426,12 @@ const Profile = ({ userInfo, onProfileUpdate }) => {
                   </div>
                   <div className="form-group">
                     <label>Mối quan hệ</label>
-                    <select
+                    <input
+                      type="text"
                       name="relationship"
-                      value={formData.relationship}
-                      onChange={handleChange}
-                    >
-                      <option value="Cha/Mẹ">Cha/Mẹ</option>
-                      <option value="Ông/Bà">Ông/Bà</option>
-                      <option value="Anh/Chị">Anh/Chị</option>
-                      <option value="Người giám hộ">Người giám hộ</option>
-                    </select>
+                      value={formData.relationship || ""}
+                      readOnly
+                    />
                   </div>
                 </div>
               </div>
@@ -526,7 +499,7 @@ const Profile = ({ userInfo, onProfileUpdate }) => {
                     <div>
                       <label>Họ và tên</label>
                       <span>
-                        {formData.firstName} {formData.lastName}
+                        {formData.lastName} {formData.firstName}
                       </span>
                     </div>
                   </div>
@@ -624,6 +597,7 @@ const Profile = ({ userInfo, onProfileUpdate }) => {
                       }
                     />
                   </Card>
+                  
                 ))
               ) : (
                 <div className="no-children">
