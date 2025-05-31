@@ -354,8 +354,7 @@ const Profile = ({ userInfo, onProfileUpdate }) => {
                   Đổi ảnh
                 </Button>
               </Upload>
-            )}
-            <div className="profile-basic-info">
+            )}            <div className="profile-basic-info">
               <h3>
                 {formData.lastName} {formData.firstName}
               </h3>
@@ -366,13 +365,12 @@ const Profile = ({ userInfo, onProfileUpdate }) => {
           </div>
 
           {isEditing ? (
-            <form onSubmit={handleSubmit} className="profile-form">
-              <div className="form-row">
+            <form onSubmit={handleSubmit} className="profile-form">              <div className="form-row">
                 <div className="form-group">
                   <label>Họ</label>
                   <input
                     type="text"
-                    name="firstName"
+                    name="lastName"
                     value={formData.lastName}
                     onChange={handleChange}
                     required
@@ -382,7 +380,7 @@ const Profile = ({ userInfo, onProfileUpdate }) => {
                   <label>Tên</label>
                   <input
                     type="text"
-                    name="lastName"
+                    name="firstName"
                     value={formData.firstName}
                     onChange={handleChange}
                     required
