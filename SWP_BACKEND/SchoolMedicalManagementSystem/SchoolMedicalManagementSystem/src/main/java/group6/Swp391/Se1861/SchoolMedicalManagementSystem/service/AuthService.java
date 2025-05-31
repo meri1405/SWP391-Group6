@@ -175,11 +175,12 @@ public class AuthService {
      * Preprocesses a user before saving to ensure:
      * 1. If roleName is PARENT, username, password, and email are set to null
      * 2. Phone number is unique for all roles
-     * 3. Password is properly encoded for non-PARENT users
+     * 3. Email is unique for non-PARENT users
+     * 4. Password is properly encoded for non-PARENT users
      *
      * @param user The user to preprocess
      * @return The preprocessed user
-     * @throws IllegalArgumentException if phone number is already in use
+     * @throws IllegalArgumentException if phone number or email is already in use
      */
     public User preprocessUserBeforeSave(User user) {
         // Check if phone is already in use
@@ -196,6 +197,15 @@ public class AuthService {
             user.setPassword(null);
             user.setEmail(null);
         } else {
+            // For non-PARENT roles, check if email is already in use
+            if (user.getEmail() != null && !user.getEmail().isEmpty()) {
+                Optional<User> existingUserWithEmail = userRepository.findByEmail(user.getEmail());
+                if (existingUserWithEmail.isPresent() &&
+                    (user.getId() == null || !existingUserWithEmail.get().getId().equals(user.getId()))) {
+                    throw new IllegalArgumentException("Email is already in use");
+                }
+            }
+
             // For non-PARENT roles, encode the password if it's a plain text password
             String password = user.getPassword();
             if (password != null && !password.isEmpty() && !password.startsWith("$2a$")) {

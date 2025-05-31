@@ -897,7 +897,7 @@ const MedicationManagement = () => {
             <div className="medication-detail-content">
               <div className="medication-detail-section">
                 <div className="medication-detail-header" style={{marginBottom: '10px'}}>
-                  <h1>Thông tin cơ bản</h1>
+                  <h3>Thông tin cơ bản</h3>
                   <strong>Trạng thái: </strong>
                   <Tag color={selectedMedicationDetail.status === 'PENDING' ? 'processing' : (selectedMedicationDetail.status === 'APPROVED' ? 'success' : selectedMedicationDetail.status === 'REJECTED' ? 'error' : 'default')}>
                     {selectedMedicationDetail.status === 'PENDING' ? 'Đang chờ duyệt' : 
