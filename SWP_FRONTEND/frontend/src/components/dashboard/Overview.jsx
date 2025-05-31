@@ -352,7 +352,7 @@ const Overview = ({ userInfo: externalUserInfo }) => {
                         .filter(parent => parent.id !== parentProfile.id)
                         .map(parent => (
                           <div key={parent.id} style={{ marginTop: 8 }}>
-                            <Text strong>{parent.firstName} {parent.lastName}</Text>
+                            <Text strong>{parent.lastName} {parent.firstName}</Text>
                             <br />
                             <Text type="secondary">{parent.phone}</Text>
                           </div>

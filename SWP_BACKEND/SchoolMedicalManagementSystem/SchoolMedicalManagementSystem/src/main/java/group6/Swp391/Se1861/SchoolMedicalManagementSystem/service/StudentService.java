@@ -48,7 +48,7 @@ public class StudentService {
     public StudentDTO createStudentByAdmin(StudentCreationDTO studentCreationDTO) {
         // Validate required fields
         validateStudentData(studentCreationDTO);
-        
+
         // Create student entity
         Student student = new Student();
         student.setFirstName(studentCreationDTO.getFirstName());
@@ -61,13 +61,13 @@ public class StudentService {
         student.setCitizenship(studentCreationDTO.getCitizenship());
         student.setBloodType(studentCreationDTO.getBloodType());
         student.setDisabled(studentCreationDTO.isDisabled());
-        
+
         // Initialize parents set
         student.setParents(new HashSet<>());
-        
+
         // Save student first
         Student savedStudent = studentRepository.save(student);
-        
+
         // Add parent relationships if specified
         if (studentCreationDTO.getParentIds() != null && !studentCreationDTO.getParentIds().isEmpty()) {
             for (Long parentId : studentCreationDTO.getParentIds()) {
@@ -77,11 +77,9 @@ public class StudentService {
             savedStudent = studentRepository.findByIdWithParents(savedStudent.getStudentID())
                     .orElse(savedStudent);
         }
-        
+
         return convertToDTO(savedStudent);
     }
-
-
 
     /**
      * Get all students (admin only)

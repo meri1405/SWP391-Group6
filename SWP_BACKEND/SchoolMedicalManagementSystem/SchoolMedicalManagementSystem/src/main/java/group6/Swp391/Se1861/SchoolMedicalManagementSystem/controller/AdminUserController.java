@@ -91,7 +91,7 @@ public class AdminUserController {
             Map<String, Object> response = new HashMap<>();
             response.put("message", "User created successfully");
             response.put("userId", createdUser.getId());
-            response.put("fullName", createdUser.getFirstName() + " " + createdUser.getLastName());
+            response.put("fullName", createdUser.getFullName());
             response.put("role", createdUser.getRole().getRoleName());
 
             return ResponseEntity.status(HttpStatus.CREATED).body(response);

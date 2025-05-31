@@ -33,16 +33,13 @@ public class ItemRequest {
     @Column(name = "frequency", nullable = false)
     private int frequency;
 
-    @Column(name = "startDate", nullable = false)
-    private LocalDate startDate;
-
-    @Column(name = "endDate", nullable = false)
-    private LocalDate endDate;
-
-    @Column(name = "note", nullable = false)
+    @Column(name = "note", nullable = true)
     private String note;
 
     @ManyToOne
-    @JoinColumn(name = "requestID", referencedColumnName = "id")
+    @JoinColumn(name = "medicationRequestId", nullable = false)
     private MedicationRequest medicationRequest;
+
+    @OneToMany(mappedBy = "itemRequest", cascade = CascadeType.ALL)
+    private java.util.List<MedicationSchedule> medicationSchedules;
 }

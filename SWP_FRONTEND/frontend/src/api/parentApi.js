@@ -37,7 +37,6 @@ export const parentApi = {
       throw error;
     }
   },
-
   // Update parent profile (if needed in the future)
   updateParentProfile: async (token, profileData) => {
     try {
@@ -46,6 +45,89 @@ export const parentApi = {
       return response.data;
     } catch (error) {
       console.error('Error updating parent profile:', error);
+      throw error;
+    }
+  },  // Get medication requests for parent's students
+  getMedicationRequests: async (token) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      console.log('Sending request to fetch medication requests');
+      const response = await authAxios.get('/api/parent/medication-requests');
+      console.log('Received medication request response:', response);
+      
+      // Check for proper data structure
+      if (response.data === null) {
+        console.warn('Medication data is null, returning empty array');
+        return [];
+      }
+      
+      // Ensure we handle both array and single object responses
+      if (Array.isArray(response.data)) {
+        return response.data;
+      } else if (response.data && typeof response.data === 'object') {
+        // Handle case when API returns a single object or a wrapper object
+        if (Array.isArray(response.data.content)) {
+          return response.data.content;
+        }
+        // If it's a single object with an ID, wrap it in an array
+        if (response.data.id) {
+          return [response.data];
+        }
+      }
+      
+      // Default to empty array if we couldn't determine the structure
+      console.warn('Unexpected response format, using empty array:', response.data);
+      return [];
+    } catch (error) {
+      console.error('Error fetching medication requests:', error);
+      
+      // Add more detailed error reporting
+      if (error.response) {
+        console.error('Error response data:', error.response.data);
+        console.error('Error response status:', error.response.status);
+      }
+      
+      throw error;
+    }
+  },
+  // Create a new medication request
+  createMedicationRequest: async (token, medicationData) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      console.log('Creating new medication request with data:', medicationData);
+      const response = await authAxios.post('/api/parent/medication-requests', medicationData);
+      console.log('Medication request creation response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating medication request:', error);
+      if (error.response) {
+        console.error('Error response data:', error.response.data);
+        console.error('Error response status:', error.response.status);
+      }
+      throw error;
+    }
+  },
+
+  // Update an existing medication request
+  updateMedicationRequest: async (token, requestId, medicationData) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.put(`/api/parent/medication-requests/${requestId}`, medicationData);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating medication request:', error);
+      throw error;
+    }
+  },
+
+  // Delete a medication request
+  deleteMedicationRequest: async (token, requestId) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.delete(`/api/parent/medication-requests/${requestId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error deleting medication request:', error);
       throw error;
     }
   }

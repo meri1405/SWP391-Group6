@@ -94,6 +94,13 @@ public class JwtUtil {
     public boolean validateToken(String token) {
         try {
             Jwts.parserBuilder().setSigningKey(getSigningKey()).build().parseClaimsJws(token);
+
+            // If parsing succeeds, also check if the token has expired
+            if (isTokenExpired(token)) {
+                logger.warn("JWT token is expired");
+                return false;
+            }
+
             return true;
         } catch (SignatureException e) {
             logger.error("Invalid JWT signature: {}", e.getMessage());
@@ -105,6 +112,8 @@ public class JwtUtil {
             logger.error("JWT token is unsupported: {}", e.getMessage());
         } catch (IllegalArgumentException e) {
             logger.error("JWT claims string is empty: {}", e.getMessage());
+        } catch (Exception e) {
+            logger.error("JWT validation error: {}", e.getMessage());
         }
         return false;
     }

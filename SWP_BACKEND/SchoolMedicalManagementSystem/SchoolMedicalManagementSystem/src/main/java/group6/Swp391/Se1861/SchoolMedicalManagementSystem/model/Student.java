@@ -55,4 +55,8 @@ public class Student {
 
     @OneToMany(mappedBy = "student", cascade = CascadeType.ALL)
     private Set<MedicationRequest> medicationRequests;
+
+    public String getFullName() {
+        return firstName + " " + lastName;
+    }
 }
