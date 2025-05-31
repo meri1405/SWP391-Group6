@@ -55,6 +55,8 @@ const MedicationManagement = () => {
   const [tabKey, setTabKey] = useState('active');
   const [selectedStudentId, setSelectedStudentId] = useState(null);
   const [isConfirmed, setIsConfirmed] = useState(false);
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [selectedMedicationDetail, setSelectedMedicationDetail] = useState(null);
 
   // Fetch data on component mount
   useEffect(() => {
@@ -94,7 +96,7 @@ const MedicationManagement = () => {
       console.log('Valid students after filtering:', validStudents);
       console.log('Valid medications after filtering:', validMedications);
       
-      // Map medication data to ensure it has the expected format
+      // Map medication data to ensure it has the expected format and fix student ID mapping
       const formattedMedications = validMedications.map(med => {
         // Make sure itemRequests is always an array
         if (!med.itemRequests) {
@@ -378,27 +380,29 @@ const MedicationManagement = () => {
       title: 'Thao tác',
       key: 'action',
       render: (_, record) => (
-        <div className="medication-actions">
+        <Space size="small">
           {record.status === 'PENDING' && (
             <>
-              <Button 
-                type="link" 
-                icon={<EditOutlined />} 
-                onClick={() => showEditModal(record)}
-              >
-              </Button>
+              <Tooltip title="Chỉnh sửa yêu cầu">
+                <Button 
+                  type="link" 
+                  icon={<EditOutlined />} 
+                  onClick={() => showEditModal(record)}
+                />
+              </Tooltip>
               <Popconfirm
                 title="Bạn có chắc muốn xóa yêu cầu này không?"
                 onConfirm={() => handleDelete(record.id)}
                 okText="Có"
                 cancelText="Không"
               >
-                <Button 
-                  type="link" 
-                  danger 
-                  icon={<DeleteOutlined />}
-                >
-                </Button>
+                <Tooltip title="Xóa yêu cầu">
+                  <Button 
+                    type="link" 
+                    danger 
+                    icon={<DeleteOutlined />}
+                  />
+                </Tooltip>
               </Popconfirm>
             </>
           )}
@@ -406,115 +410,34 @@ const MedicationManagement = () => {
             <Button 
               type="link" 
               icon={<InfoCircleOutlined />}
-              onClick={() => {
-                // Create a formatted message with medication details
-                const items = record.itemRequests || [];
+              onClick={async () => {
+                console.log('View details button clicked for record:', record);
                 
-                Modal.info({
-                  title: 'Chi tiết thuốc',
-                  content: (
-                    <div className="medication-detail-modal">
-                      <div className="medication-detail-content">
-                        <div className="medication-detail-section">
-                          <div className="medication-detail-header">
-                            <h3>Thông tin cơ bản</h3>
-                            <Tag color={record.status === 'PENDING' ? 'processing' : (record.status === 'APPROVED' ? 'success' : 'default')}>
-                              {record.status === 'PENDING' ? 'Đang chờ' : 
-                               record.status === 'APPROVED' ? 'Đã duyệt' : 
-                               record.status === 'REJECTED' ? 'Từ chối' : 
-                               record.status === 'COMPLETED' ? 'Hoàn thành' : 'Không xác định'}
-                            </Tag>
-                          </div>
-                          
-                          <div className="medication-detail-info">
-                            <p><strong>Học sinh:</strong> {record.studentName || (() => {
-                              const student = students.find(s => s.id === record.studentId);
-                              return student ? `${student.firstName} ${student.lastName}` : 'N/A';
-                            })()}</p>
-                            <p><strong>Mã yêu cầu:</strong> #{record.id}</p>
-                            <p><strong>Ngày yêu cầu:</strong> {record.requestDate ? dayjs(record.requestDate).format('DD/MM/YYYY') : dayjs().format('DD/MM/YYYY')}</p>
-                            <p><strong>Thời gian sử dụng:</strong> {dayjs(record.startDate).format('DD/MM/YYYY')} - {dayjs(record.endDate).format('DD/MM/YYYY')}</p>
-                            <p><strong>Ghi chú:</strong> {record.note ? (
-                              <span className="general-note">{record.note}</span>
-                            ) : (
-                              <span className="empty-note">Không có ghi chú</span>
-                            )}</p>
-                          </div>
-                        </div>
-                        
-                        <Divider />
-                        
-                        <div className="medication-detail-section">
-                          <h4>Danh sách thuốc ({items.length} loại)</h4>
-                          
-                          {items.length === 0 ? (
-                            <p>Không có thông tin thuốc</p>
-                          ) : (
-                            <div className="medication-items-list">
-                              {items.map((item, index) => (
-                                <div key={index} className="medication-item-card">
-                                  <div className="medication-item-header">
-                                    <h4>{item.itemName}</h4>
-                                    <Tag color={
-                                      item.itemType === 'PRESCRIPTION' ? 'purple' : 
-                                      item.itemType === 'OTC' ? 'blue' :
-                                      item.itemType === 'TABLET' ? 'green' :
-                                      item.itemType === 'LIQUID' ? 'cyan' :
-                                      item.itemType === 'CAPSULE' ? 'magenta' :
-                                      item.itemType === 'CREAM' ? 'orange' :
-                                      item.itemType === 'INJECTION' ? 'red' :
-                                      'default'
-                                    }>{item.itemType === 'PRESCRIPTION' ? 'Thuốc kê đơn' : 
-                                       item.itemType === 'OTC' ? 'Thuốc không kê đơn' :
-                                       item.itemType === 'TABLET' ? 'Viên' :
-                                       item.itemType === 'LIQUID' ? 'Nước' :
-                                       item.itemType === 'CAPSULE' ? 'Viên nang' :
-                                       item.itemType === 'CREAM' ? 'Kem' :
-                                       item.itemType === 'POWDER' ? 'Bột' :
-                                       item.itemType === 'INJECTION' ? 'Tiêm' : 'Khác'}</Tag>
-                                  </div>
-                                  <div className="medication-item-details">
-                                    <p><strong>Liều lượng:</strong> <span className="medication-dosage">{item.dosage} {
-                                      item.itemType === 'TABLET' ? 'viên' :
-                                      item.itemType === 'LIQUID' ? 'ml' :
-                                      item.itemType === 'CAPSULE' ? 'viên' :
-                                      item.itemType === 'CREAM' ? 'g' :
-                                      item.itemType === 'POWDER' ? 'g' :
-                                      item.itemType === 'INJECTION' ? 'ml' : 
-                                      ''
-                                    }</span></p>
-                                    <p><strong>Tần suất:</strong> <span className="medication-frequency">{item.frequency} lần/ngày</span></p>
-                                    <p><strong>Mục đích:</strong> <span className="medication-purpose">{item.purpose || 'Không có mục đích'}</span></p>
-                                    <p><strong>Ghi chú:</strong> {item.note ? (
-                                      <span className="medication-note">{item.note}</span>
-                                    ) : (
-                                      <span className="empty-note">Không có ghi chú</span>
-                                    )}</p>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        
-                        <Divider />
-                        
-                        <div className="medication-detail-footer">
-                          <p className="note-text">Lưu ý: Yêu cầu thuốc sẽ được y tá trường xem xét và phản hồi trong vòng 24 giờ.</p>
-                        </div>
-                      </div>
-                    </div>
-                  ),
-                  width: 700,
-                  okText: 'Đóng',
-                  maskClosable: true,
-                  className: 'custom-modal',
-                });
+                try {
+                  // Fetch detailed medication request data from backend
+                  const token = getToken();
+                  console.log('Fetching details for medication request ID:', record.id);
+                  
+                  const detailedData = await parentApi.getMedicationRequestDetails(token, record.id);
+                  console.log('Detailed medication data received:', detailedData);
+                  
+                  // Use the detailed data from backend, fallback to record data if needed
+                  const medicationData = detailedData || record;
+                  const items = medicationData.itemRequests || [];
+                  
+                  console.log('Items to display:', items);
+                  
+                  // Set the data and show the modal
+                  setSelectedMedicationDetail(medicationData);
+                  setDetailModalVisible(true);
+                } catch (error) {
+                  console.error('Error fetching medication details:', error);
+                  message.error('Không thể tải chi tiết yêu cầu thuốc. Vui lòng thử lại.');
+                }
               }}
-            >
-            </Button>
+            />
           </Tooltip>
-        </div>
+        </Space>
       ),
     },
   ];
@@ -830,6 +753,128 @@ const MedicationManagement = () => {
             </Button>
           </div>
         </Form>
+      </Modal>
+
+      {/* Detail Modal */}
+      <Modal
+        title="Chi tiết yêu cầu thuốc"
+        open={detailModalVisible}
+        onCancel={() => {
+          setDetailModalVisible(false);
+          setSelectedMedicationDetail(null);
+        }}
+        footer={[
+          <Button key="close" onClick={() => {
+            setDetailModalVisible(false);
+            setSelectedMedicationDetail(null);
+          }}>
+            Đóng
+          </Button>
+        ]}
+        width={800}
+        className="medication-detail-modal-wrapper"
+      >
+        {selectedMedicationDetail && (
+          <div className="medication-detail-modal">
+            <div className="medication-detail-content">
+              <div className="medication-detail-section">
+                <div className="medication-detail-header">
+                  <h1>Thông tin cơ bản</h1>
+                  <Tag color={selectedMedicationDetail.status === 'PENDING' ? 'processing' : (selectedMedicationDetail.status === 'APPROVED' ? 'success' : selectedMedicationDetail.status === 'REJECTED' ? 'error' : 'default')}>
+                    {selectedMedicationDetail.status === 'PENDING' ? 'Đang chờ duyệt' : 
+                     selectedMedicationDetail.status === 'APPROVED' ? 'Đã duyệt' : 
+                     selectedMedicationDetail.status === 'REJECTED' ? 'Từ chối' : 
+                     selectedMedicationDetail.status === 'COMPLETED' ? 'Hoàn thành' : 'Không xác định'}
+                  </Tag>
+                </div>
+                
+                <div className="medication-detail-info">
+                  <p><strong>Học sinh:</strong> {selectedMedicationDetail.studentName || (() => {
+                    const student = students.find(s => s.id === selectedMedicationDetail.studentId);
+                    return student ? `${student.firstName} ${student.lastName}` : 'N/A';
+                  })()}</p>
+                  <p><strong>Mã yêu cầu:</strong> {selectedMedicationDetail.id}</p>
+                  <p><strong>Ngày yêu cầu:</strong> {selectedMedicationDetail.requestDate ? dayjs(selectedMedicationDetail.requestDate).format('DD/MM/YYYY') : dayjs().format('DD/MM/YYYY')}</p>
+                  <p><strong>Thời gian sử dụng:</strong> {dayjs(selectedMedicationDetail.startDate).format('DD/MM/YYYY')} - {dayjs(selectedMedicationDetail.endDate).format('DD/MM/YYYY')}</p>
+                  <p><strong>Ghi chú chung:</strong> {selectedMedicationDetail.note ? (
+                    <span className="general-note">{selectedMedicationDetail.note}</span>
+                  ) : (
+                    <span className="empty-note">Không có ghi chú</span>
+                  )}</p>
+                  {selectedMedicationDetail.nurseName && (
+                    <p><strong>Y tá phụ trách:</strong> {selectedMedicationDetail.nurseName}</p>
+                  )}
+                </div>
+              </div>
+              
+              <Divider />
+              
+              <div className="medication-detail-section">
+                <h2 style={{textAlign: 'left'}}>Chi tiết các loại thuốc ({(selectedMedicationDetail.itemRequests || []).length} loại)</h2>
+                
+                {(!selectedMedicationDetail.itemRequests || selectedMedicationDetail.itemRequests.length === 0) ? (
+                  <div className="empty-medications">
+                    <p>Không có thông tin thuốc trong yêu cầu này.</p>
+                  </div>
+                ) : (
+                  <div className="medication-items-list">
+                    {selectedMedicationDetail.itemRequests.map((item, index) => (
+                      <div key={item.id || index} className="medication-item-card">
+                        <div className="medication-item-header">
+                          <h4>{index + 1}. {item.itemName}</h4>
+                          <strong>Loại: </strong> <Tag color={
+                            item.itemType === 'PRESCRIPTION' ? 'red' :
+                            item.itemType === 'OTC' ? 'green' :
+                            item.itemType === 'TABLET' ? 'blue' :
+                            item.itemType === 'LIQUID' ? 'cyan' :
+                            item.itemType === 'CAPSULE' ? 'magenta' :
+                            item.itemType === 'CREAM' ? 'orange' :
+                            item.itemType === 'POWDER' ? 'purple' :
+                            item.itemType === 'INJECTION' ? 'red' :
+                            'default'
+                          }>
+                            {item.itemType === 'PRESCRIPTION' ? 'Thuốc kê đơn' :
+                             item.itemType === 'OTC' ? 'Thuốc không kê đơn' :
+                             item.itemType === 'TABLET' ? 'Viên' :
+                             item.itemType === 'LIQUID' ? 'Nước' :
+                             item.itemType === 'CAPSULE' ? 'Viên nang' :
+                             item.itemType === 'CREAM' ? 'Kem' :
+                             item.itemType === 'POWDER' ? 'Bột' :
+                             item.itemType === 'INJECTION' ? 'Tiêm' : item.itemType}
+                          </Tag>
+                        </div>
+                        <div className="medication-item-details">
+                          <p><strong>Mục đích:</strong> <span className="medication-purpose">{item.purpose || 'Không có mục đích'}</span></p>
+                          <p><strong>Liều lượng:</strong> <span className="medication-dosage">{item.dosage} {
+                            item.itemType === 'TABLET' || item.itemType === 'CAPSULE' ? 'viên' :
+                            item.itemType === 'LIQUID' || item.itemType === 'INJECTION' ? 'ml' :
+                            item.itemType === 'CREAM' || item.itemType === 'POWDER' ? 'g' :
+                            'đơn vị'
+                          }</span></p>
+                          <p><strong>Tần suất:</strong> <span className="medication-frequency">{item.frequency} lần/ngày</span></p>
+                          <p><strong>Ghi chú riêng:</strong> {item.note ? (
+                            <span className="medication-note">{item.note}</span>
+                          ) : (
+                            <span className="empty-note">Không có ghi chú</span>
+                          )}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
+              <Divider />
+              
+              <div className="medication-detail-footer">
+                <p className="note-text">
+                  <strong>Lưu ý:</strong> Yêu cầu thuốc sẽ được y tá trường xem xét và phản hồi trong vòng 24 giờ. 
+                  Vui lòng đảm bảo thông tin thuốc chính xác và được kê đơn bởi bác sĩ.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );
