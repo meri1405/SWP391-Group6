@@ -172,6 +172,143 @@ public class MedicationRequestService {
     }
 
     /**
+     * Update an existing medication request
+     * @param requestId the ID of the request to update
+     * @param medicationRequestDTO the updated request data
+     * @param parent the authenticated parent user
+     * @return the updated medication request
+     */
+    @Transactional
+    public MedicationRequestDTO updateMedicationRequest(Long requestId, MedicationRequestDTO medicationRequestDTO, User parent) {
+        // Find the medication request
+        MedicationRequest request = medicationRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Medication request not found with id: " + requestId));
+
+        // Verify the parent owns this request
+        if (!request.getParent().getId().equals(parent.getId())) {
+            throw new UnauthorizedAccessException("You are not authorized to update this medication request");
+        }
+
+        // Verify the request is in PENDING status
+        if (!"PENDING".equals(request.getStatus())) {
+            throw new IllegalStateException("Only medication requests with PENDING status can be updated");
+        }
+
+        // Update medication request basic information
+        request.setStartDate(medicationRequestDTO.getStartDate());
+        request.setEndDate(medicationRequestDTO.getEndDate());
+        request.setNote(medicationRequestDTO.getNote());
+
+        // Get current item requests to track which ones should be deleted
+        List<ItemRequest> existingItems = new ArrayList<>(request.getItemRequests());
+        List<ItemRequest> updatedItems = new ArrayList<>();
+
+        // Process item requests
+        for (ItemRequestDTO itemDTO : medicationRequestDTO.getItemRequests()) {
+            if (itemDTO.getId() != null) {
+                // Update existing item
+                ItemRequest existingItem = existingItems.stream()
+                        .filter(item -> item.getId().equals(itemDTO.getId()))
+                        .findFirst()
+                        .orElseThrow(() -> new ResourceNotFoundException("Item request not found with id: " + itemDTO.getId()));
+
+                // Remove from existing items list to track what's been processed
+                existingItems.remove(existingItem);
+
+                // Update item properties
+                existingItem.setItemName(itemDTO.getItemName());
+                existingItem.setPurpose(itemDTO.getPurpose());
+                existingItem.setItemType(itemDTO.getItemType());
+                existingItem.setDosage(itemDTO.getDosage());
+                existingItem.setFrequency(itemDTO.getFrequency());
+                existingItem.setNote(itemDTO.getNote());
+
+                // Save updated item
+                ItemRequest savedItem = itemRequestRepository.save(existingItem);
+
+                // Delete existing schedules and regenerate for updated item
+                medicationScheduleService.deleteSchedulesForItemRequest(savedItem.getId());
+                medicationScheduleService.generateSchedules(
+                    savedItem,
+                    request.getStartDate(),
+                    request.getEndDate()
+                );
+
+                updatedItems.add(savedItem);
+            } else {
+                // Create new item
+                ItemRequest newItem = new ItemRequest();
+                newItem.setItemName(itemDTO.getItemName());
+                newItem.setPurpose(itemDTO.getPurpose());
+                newItem.setItemType(itemDTO.getItemType());
+                newItem.setDosage(itemDTO.getDosage());
+                newItem.setFrequency(itemDTO.getFrequency());
+                newItem.setNote(itemDTO.getNote());
+                newItem.setMedicationRequest(request);
+
+                // Save the new item
+                ItemRequest savedItem = itemRequestRepository.save(newItem);
+
+                // Generate medication schedules for this new item
+                medicationScheduleService.generateSchedules(
+                    savedItem,
+                    request.getStartDate(),
+                    request.getEndDate()
+                );
+
+                updatedItems.add(savedItem);
+            }
+        }
+
+        // Delete items that were not included in the update
+        for (ItemRequest itemToDelete : existingItems) {
+            // Delete associated schedules first
+            medicationScheduleService.deleteSchedulesForItemRequest(itemToDelete.getId());
+            // Delete the item
+            itemRequestRepository.delete(itemToDelete);
+        }
+
+        // Update the medication request with the updated items
+        request.setItemRequests(updatedItems);
+        MedicationRequest savedRequest = medicationRequestRepository.save(request);
+
+        // Convert back to DTO for response
+        return convertToDTO(savedRequest);
+    }
+
+    /**
+     * Delete a medication request
+     * @param requestId the ID of the request to delete
+     * @param parent the authenticated parent user
+     */
+    @Transactional
+    public void deleteMedicationRequest(Long requestId, User parent) {
+        // Find the medication request
+        MedicationRequest request = medicationRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Medication request not found with id: " + requestId));
+
+        // Verify the parent owns this request
+        if (!request.getParent().getId().equals(parent.getId())) {
+            throw new UnauthorizedAccessException("You are not authorized to delete this medication request");
+        }
+
+        // Verify the request is in PENDING status
+        if (!"PENDING".equals(request.getStatus())) {
+            throw new IllegalStateException("Only medication requests with PENDING status can be deleted");
+        }
+
+        // Delete all associated item requests and their schedules
+        for (ItemRequest item : request.getItemRequests()) {
+            // Delete associated schedules first
+            medicationScheduleService.deleteSchedulesForItemRequest(item.getId());
+            // We don't need to delete items explicitly as they will be deleted via cascade
+        }
+
+        // Delete the medication request (this will cascade delete the item requests)
+        medicationRequestRepository.delete(request);
+    }
+
+    /**
      * Convert entity to DTO
      * @param request the medication request entity
      * @return the DTO representation

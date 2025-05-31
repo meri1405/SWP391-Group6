@@ -58,4 +58,34 @@ public class ParentMedicationRequestController {
         MedicationRequestDTO request = medicationRequestService.getMedicationRequest(requestId, user);
         return ResponseEntity.ok(request);
     }
+
+    /**
+     * Update an existing medication request
+     * @param requestId Request ID to update
+     * @param medicationRequestDTO Updated request data
+     * @param user Authenticated parent
+     * @return Updated medication request
+     */
+    @PutMapping("/{requestId}")
+    public ResponseEntity<MedicationRequestDTO> updateMedicationRequest(
+            @PathVariable Long requestId,
+            @Valid @RequestBody MedicationRequestDTO medicationRequestDTO,
+            @AuthenticationPrincipal User user) {
+        MedicationRequestDTO updatedRequest = medicationRequestService.updateMedicationRequest(requestId, medicationRequestDTO, user);
+        return ResponseEntity.ok(updatedRequest);
+    }
+
+    /**
+     * Delete a medication request
+     * @param requestId Request ID to delete
+     * @param user Authenticated parent
+     * @return No content response
+     */
+    @DeleteMapping("/{requestId}")
+    public ResponseEntity<Void> deleteMedicationRequest(
+            @PathVariable Long requestId,
+            @AuthenticationPrincipal User user) {
+        medicationRequestService.deleteMedicationRequest(requestId, user);
+        return ResponseEntity.noContent().build();
+    }
 }

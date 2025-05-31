@@ -174,24 +174,46 @@ const MedicationManagement = () => {
     form.setFieldsValue(defaultValues);
     setVisible(true);
   };
-
   // Show modal for editing an existing medication request
-  const showEditModal = (record) => {
-    setIsEdit(true);
-    setCurrentMedication(record);
-    setIsConfirmed(record.isConfirmed);
-    
-    // Format the data for the form
-    const formData = {
-      studentId: record.studentId,
-      startDate: dayjs(record.startDate),
-      endDate: dayjs(record.endDate),
-      note: record.note,
-      itemRequests: record.itemRequests || []
-    };
-    
-    form.setFieldsValue(formData);
-    setVisible(true);
+  const showEditModal = async (record) => {
+    try {
+      setIsEdit(true);
+      setCurrentMedication(record);
+      setIsConfirmed(record.isConfirmed);
+      
+      // Fetch detailed medication request data to get item IDs
+      const token = getToken();
+      console.log('Fetching detailed data for edit modal, ID:', record.id);
+      
+      const detailedData = await parentApi.getMedicationRequestDetails(token, record.id);
+      console.log('Detailed data for edit modal:', detailedData);
+      
+      // Use detailed data if available, fallback to record data
+      const medicationData = detailedData || record;
+        // Format the data for the form with proper item IDs
+      const formData = {
+        studentId: medicationData.studentId,
+        startDate: dayjs(medicationData.startDate),
+        endDate: dayjs(medicationData.endDate),
+        note: medicationData.note,
+        itemRequests: (medicationData.itemRequests || []).map(item => {
+          console.log('Processing item for form:', item);
+          return {
+            ...item,
+            // Ensure we have the item ID for updating existing items - only include if it's a valid number
+            ...(item.id && typeof item.id === 'number' && item.id > 0 ? { id: item.id } : {})
+          };
+        })
+      };
+      
+      console.log('Form data for edit modal:', formData);
+      console.log('Item requests with IDs:', formData.itemRequests.map(item => ({ id: item.id, itemName: item.itemName })));
+      form.setFieldsValue(formData);
+      setVisible(true);
+    } catch (error) {
+      console.error('Error loading medication details for edit:', error);
+      message.error('Không thể tải chi tiết yêu cầu thuốc để chỉnh sửa. Vui lòng thử lại.');
+    }
   };
 
   // Handle form submission
@@ -223,31 +245,79 @@ const MedicationManagement = () => {
         setLoading(false);
         return;
       }
-      
-      // Prepare data for API according to the expected format
+        // Prepare data for API according to the expected format
       const medicationData = {
         studentId: values.studentId,
         requestDate: today,
         startDate: values.startDate.format('YYYY-MM-DD'),
         endDate: values.endDate.format('YYYY-MM-DD'),
-        note: values.note || "Yêu cầu dùng thuốc cho học sinh",
-        itemRequests: values.itemRequests.map(item => ({
-          itemName: item.itemName,
-          purpose: item.purpose,
-          itemType: item.itemType,
-          dosage: Number(item.dosage),
-          frequency: Number(item.frequency),
-          note: item.note || ""
-        }))
+        note: values.note || "Yêu cầu dùng thuốc cho học sinh",        itemRequests: values.itemRequests.map((item, index) => {
+          const processedItem = {
+            // Only include ID for existing items when editing - must be a valid number
+            ...(item.id && typeof item.id === 'number' && item.id > 0 ? { id: item.id } : {}),
+            itemName: item.itemName,
+            purpose: item.purpose,
+            itemType: item.itemType,
+            dosage: Number(item.dosage),
+            frequency: Number(item.frequency),
+            note: item.note || ""
+          };
+          
+          console.log(`Processing item ${index}:`, {
+            original: item,
+            processed: processedItem,
+            hasValidId: item.id && typeof item.id === 'number' && item.id > 0
+          });
+          
+          return processedItem;
+        })
       };
-      
-      console.log('Sending medication data to API:', medicationData);
-      
-      if (isEdit) {
+        console.log('Sending medication data to API:', medicationData);
+      console.log('itemRequests with IDs:', medicationData.itemRequests);
+        if (isEdit) {
         // Update existing request
-        const updatedRequest = await parentApi.updateMedicationRequest(token, currentMedication.id, medicationData);
-        console.log('Updated medication request response:', updatedRequest);
-        message.success('Cập nhật yêu cầu thuốc thành công');
+        console.log('Updating medication request with ID:', currentMedication.id);
+        
+        // Validate that only PENDING requests can be updated
+        if (currentMedication.status !== 'PENDING') {
+          message.error('Chỉ có thể chỉnh sửa yêu cầu thuốc đang chờ duyệt');
+          setLoading(false);
+          return;
+        }
+        
+        try {
+          const updatedRequest = await parentApi.updateMedicationRequest(token, currentMedication.id, medicationData);
+          console.log('Updated medication request response:', updatedRequest);
+          
+          // Update the local state with the updated request
+          setMedicationRequests(prev => 
+            prev.map(req => 
+              req.id === currentMedication.id 
+                ? {
+                    ...updatedRequest,
+                    studentName: updatedRequest.studentName || (() => {
+                      const student = students.find(s => s.id === updatedRequest.studentId);
+                      return student ? `${student.firstName} ${student.lastName}` : currentMedication.studentName;
+                    })()
+                  }
+                : req
+            )
+          );
+          
+          message.success('Cập nhật yêu cầu thuốc thành công');
+        } catch (apiError) {
+          console.error('API Error during update:', apiError);
+          
+          // Display specific error message from API
+          if (apiError.message) {
+            message.error(apiError.message);
+          } else {
+            message.error('Có lỗi xảy ra khi cập nhật yêu cầu thuốc. Vui lòng thử lại sau.');
+          }
+          
+          setLoading(false);
+          return;
+        }
       } else {
         // Create new request
         const newRequest = await parentApi.createMedicationRequest(token, medicationData);
@@ -262,7 +332,7 @@ const MedicationManagement = () => {
               // Ensure studentName is set
               studentName: newRequest.studentName || (() => {
                 const student = students.find(s => s.id === newRequest.studentId);
-                return student ? `${student.firstName} ${student.lastName}` : 'N/A';
+                return student ? `${student.lastName} ${student.firstName}` : 'N/A';
               })()
             };
             
@@ -285,15 +355,56 @@ const MedicationManagement = () => {
       setLoading(false);
     }
   };
-
   // Handle delete medication request
   const handleDelete = async (id) => {
     try {
       setLoading(true);
       const token = getToken();
-      await parentApi.deleteMedicationRequest(token, id);
-      message.success('Xóa yêu cầu thuốc thành công');
-      fetchData();
+      
+      // Find the medication request to validate status
+      const medicationToDelete = medicationRequests.find(req => req.id === id);
+      if (!medicationToDelete) {
+        message.error('Không tìm thấy yêu cầu thuốc');
+        setLoading(false);
+        return;
+      }
+      
+      // Validate that only PENDING requests can be deleted
+      if (medicationToDelete.status !== 'PENDING') {
+        message.error('Chỉ có thể xóa yêu cầu thuốc đang chờ duyệt');
+        setLoading(false);
+        return;
+      }
+      
+      console.log('Deleting medication request with ID:', id);
+      
+      // Optimistic update - remove from UI immediately
+      const previousRequests = medicationRequests;
+      setMedicationRequests(prev => prev.filter(req => req.id !== id));
+      
+      try {
+        await parentApi.deleteMedicationRequest(token, id);
+        console.log('Successfully deleted medication request');
+        message.success('Xóa yêu cầu thuốc thành công');
+        
+        // Optional: refresh data to ensure consistency
+        // Uncomment the line below if you want to refresh from server
+        // fetchData();
+        
+      } catch (apiError) {
+        console.error('API Error during deletion:', apiError);
+        
+        // Rollback optimistic update on error
+        setMedicationRequests(previousRequests);
+        
+        // Display specific error message from API
+        if (apiError.message) {
+          message.error(apiError.message);
+        } else {
+          message.error('Có lỗi xảy ra khi xóa yêu cầu thuốc. Vui lòng thử lại sau.');
+        }
+      }
+      
     } catch (error) {
       console.error('Error deleting medication request:', error);
       message.error('Có lỗi xảy ra khi xóa yêu cầu thuốc');
@@ -332,7 +443,7 @@ const MedicationManagement = () => {
         
         // Otherwise, try to find the student in the students array
         const student = students.find(s => s.id === record.studentId);
-        return student ? `${student.firstName} ${student.lastName}` : 'N/A';
+        return student ? `${student.lastName} ${student.firstName}` : 'N/A';
       }
     },
     {
@@ -350,13 +461,12 @@ const MedicationManagement = () => {
       render: (_, record) => (
         <span>{record.itemRequests?.length || 0} loại</span>
       )
-    },
-    {
+    },    {
       title: 'Ghi chú',
       dataIndex: 'note',
       key: 'note',
       width: 250,
-      render: (text, record) => {
+      render: (text) => {
         // Only display the main medication request note
         const generalNote = text || '';
         
@@ -558,7 +668,7 @@ const MedicationManagement = () => {
                 .filter(student => student && student.id) // Filter out students with null/undefined IDs
                 .map(student => (
                   <Option key={student.id.toString()} value={student.id}>
-                    {student.firstName} {student.lastName}
+                    {student.lastName} {student.firstName}
                   </Option>
                 ))}
             </Select>
@@ -622,8 +732,16 @@ const MedicationManagement = () => {
                         </Button>
                       )}
                     </div>
-                    
-                    <div className="medication-item-form">
+                      <div className="medication-item-form">
+                      {/* Hidden field to store item ID for existing items */}
+                      <Form.Item
+                        {...restField}
+                        name={[name, 'id']}
+                        hidden
+                      >
+                        <Input type="hidden" />
+                      </Form.Item>
+                      
                       <div className="form-row">
                         <Form.Item
                           {...restField}
@@ -778,8 +896,9 @@ const MedicationManagement = () => {
           <div className="medication-detail-modal">
             <div className="medication-detail-content">
               <div className="medication-detail-section">
-                <div className="medication-detail-header">
+                <div className="medication-detail-header" style={{marginBottom: '10px'}}>
                   <h1>Thông tin cơ bản</h1>
+                  <strong>Trạng thái: </strong>
                   <Tag color={selectedMedicationDetail.status === 'PENDING' ? 'processing' : (selectedMedicationDetail.status === 'APPROVED' ? 'success' : selectedMedicationDetail.status === 'REJECTED' ? 'error' : 'default')}>
                     {selectedMedicationDetail.status === 'PENDING' ? 'Đang chờ duyệt' : 
                      selectedMedicationDetail.status === 'APPROVED' ? 'Đã duyệt' : 
@@ -820,8 +939,8 @@ const MedicationManagement = () => {
                   <div className="medication-items-list">
                     {selectedMedicationDetail.itemRequests.map((item, index) => (
                       <div key={item.id || index} className="medication-item-card">
-                        <div className="medication-item-header">
-                          <h4>{index + 1}. {item.itemName}</h4>
+                        <div className="medication-item-header" style={{marginBottom: '5px'}}>
+                          <h4><strong>{index + 1}. {item.itemName}</strong></h4>
                           <strong>Loại: </strong> <Tag color={
                             item.itemType === 'PRESCRIPTION' ? 'red' :
                             item.itemType === 'OTC' ? 'green' :
@@ -842,6 +961,7 @@ const MedicationManagement = () => {
                              item.itemType === 'POWDER' ? 'Bột' :
                              item.itemType === 'INJECTION' ? 'Tiêm' : item.itemType}
                           </Tag>
+                  
                         </div>
                         <div className="medication-item-details">
                           <p><strong>Mục đích:</strong> <span className="medication-purpose">{item.purpose || 'Không có mục đích'}</span></p>
@@ -857,6 +977,7 @@ const MedicationManagement = () => {
                           ) : (
                             <span className="empty-note">Không có ghi chú</span>
                           )}</p>
+                          <hr />
                         </div>
                       </div>
                     ))}
