@@ -51,7 +51,7 @@ public class MedicationRequestService {
         medicationRequest.setEndDate(medicationRequestDTO.getEndDate());
         medicationRequest.setNote(medicationRequestDTO.getNote());
         medicationRequest.setStatus("PENDING"); // Default status for new requests
-        medicationRequest.setConfirm(true); // Not confirmed initially
+        medicationRequest.setConfirm(false); // Not confirmed initially
         medicationRequest.setStudent(student);
         medicationRequest.setParent(parent);
         medicationRequest.setNurse(null); // Nurse will be assigned when processing the request
