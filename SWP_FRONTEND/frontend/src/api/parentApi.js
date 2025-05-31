@@ -107,26 +107,82 @@ export const parentApi = {
       throw error;
     }
   },
-
   // Update an existing medication request
   updateMedicationRequest: async (token, requestId, medicationData) => {
     try {
       const authAxios = createAuthAxios(token);
+      console.log('Updating medication request with ID:', requestId, 'and data:', medicationData);
+      
+      // Validate required fields
+      if (!requestId) {
+        throw new Error('Request ID is required for updating medication request');
+      }
+      
+      if (!medicationData.studentId) {
+        throw new Error('Student ID is required');
+      }
+      
+      if (!medicationData.itemRequests || medicationData.itemRequests.length === 0) {
+        throw new Error('At least one medication item is required');
+      }
+      
       const response = await authAxios.put(`/api/parent/medication-requests/${requestId}`, medicationData);
+      console.log('Medication request update response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error updating medication request:', error);
+      
+      // Enhanced error handling
+      if (error.response) {
+        console.error('Error response data:', error.response.data);
+        console.error('Error response status:', error.response.status);
+        
+        // Handle specific error cases
+        if (error.response.status === 403) {
+          throw new Error('Bạn không có quyền cập nhật yêu cầu thuốc này');
+        } else if (error.response.status === 404) {
+          throw new Error('Không tìm thấy yêu cầu thuốc');
+        } else if (error.response.status === 400) {
+          throw new Error('Chỉ có thể cập nhật yêu cầu thuốc đang chờ duyệt');
+        }
+      }
+      
       throw error;
     }
   },
+
   // Delete a medication request
   deleteMedicationRequest: async (token, requestId) => {
     try {
       const authAxios = createAuthAxios(token);
+      console.log('Deleting medication request with ID:', requestId);
+      
+      // Validate required fields
+      if (!requestId) {
+        throw new Error('Request ID is required for deleting medication request');
+      }
+      
       const response = await authAxios.delete(`/api/parent/medication-requests/${requestId}`);
+      console.log('Medication request deletion response:', response.status);
       return response.data;
     } catch (error) {
       console.error('Error deleting medication request:', error);
+      
+      // Enhanced error handling
+      if (error.response) {
+        console.error('Error response data:', error.response.data);
+        console.error('Error response status:', error.response.status);
+        
+        // Handle specific error cases
+        if (error.response.status === 403) {
+          throw new Error('Bạn không có quyền xóa yêu cầu thuốc này');
+        } else if (error.response.status === 404) {
+          throw new Error('Không tìm thấy yêu cầu thuốc');
+        } else if (error.response.status === 400) {
+          throw new Error('Chỉ có thể xóa yêu cầu thuốc đang chờ duyệt');
+        }
+      }
+      
       throw error;
     }
   },

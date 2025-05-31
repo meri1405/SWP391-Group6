@@ -153,6 +153,16 @@ public class MedicationScheduleService {
     }
 
     /**
+     * Delete all medication schedules associated with a specific item request
+     * @param itemRequestId The ID of the item request
+     */
+    public void deleteSchedulesForItemRequest(Long itemRequestId) {
+        // Find all schedules for this item request and delete them
+        List<MedicationSchedule> schedules = medicationScheduleRepository.findByItemRequestId(itemRequestId);
+        medicationScheduleRepository.deleteAll(schedules);
+    }
+
+    /**
      * Convert entity to DTO
      * @param schedule The medication schedule entity
      * @return The DTO representation
