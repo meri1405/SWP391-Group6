@@ -3,19 +3,6 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Layout, Menu, Breadcrumb, Spin, message } from "antd";
 import { useAuth } from "../contexts/AuthContext";
 import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-  ArcElement,
-  PointElement,
-  LineElement,
-} from "chart.js";
-import { Bar, Doughnut, Line } from "react-chartjs-2";
-import {
   Modal,
   Form,
   Input,
@@ -29,9 +16,7 @@ import {
   Divider,
 } from "antd";
 import {
-  DashboardOutlined,
   TeamOutlined,
-  MedicineBoxOutlined,
   UserOutlined,
   SettingOutlined,
   EyeOutlined,
@@ -50,20 +35,8 @@ import "../styles/AdminDashboard.css";
 
 const { Header, Sider, Content } = Layout;
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-  ArcElement,
-  PointElement,
-  LineElement
-);
-
 const AdminDashboard = () => {
-  const [activeSection, setActiveSection] = useState("dashboard");
+  const [activeSection, setActiveSection] = useState("users");
   const [userInfo, setUserInfo] = useState(null);
   const [collapsed, setCollapsed] = useState(false);
   const navigate = useNavigate();
@@ -71,19 +44,9 @@ const AdminDashboard = () => {
 
   const menuItems = [
     {
-      key: "dashboard",
-      icon: <DashboardOutlined />,
-      label: "Tổng quan",
-    },
-    {
       key: "users",
       icon: <TeamOutlined />,
       label: "Quản lý người dùng",
-    },
-    {
-      key: "health",
-      icon: <MedicineBoxOutlined />,
-      label: "Hồ sơ sức khỏe",
     },
     {
       key: "profile",
@@ -100,12 +63,7 @@ const AdminDashboard = () => {
   const handleMenuClick = (e) => {
     const tabKey = e.key;
     setActiveSection(tabKey);
-
-    if (tabKey === "dashboard") {
-      navigate("/admin/dashboard");
-    } else {
-      navigate(`/admin/dashboard?tab=${tabKey}`);
-    }
+    navigate(`/admin/dashboard?tab=${tabKey}`);
   };
 
   const getBreadcrumbItems = () => {
@@ -115,7 +73,7 @@ const AdminDashboard = () => {
         title: "Admin Dashboard",
       },
       {
-        title: currentItem?.label || "Tổng quan",
+        title: currentItem?.label || "Quản lý người dùng",
       },
     ];
   };
@@ -129,19 +87,11 @@ const AdminDashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterRole, setFilterRole] = useState("all");
 
-  // Health Records Management States
-  const [showHealthModal, setShowHealthModal] = useState(false);
-  const [healthModalMode, setHealthModalMode] = useState("add"); // add, view, edit
-  const [selectedHealthRecord, setSelectedHealthRecord] = useState(null);
-  const [healthSearchTerm, setHealthSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
-
   // Sample data
   const [stats, setStats] = useState({
     totalUsers: 1234,
     totalParents: 856,
     totalStudents: 2341,
-    totalHealthRecords: 1567,
   });
 
   const [users, setUsers] = useState([
@@ -187,61 +137,8 @@ const AdminDashboard = () => {
     },
   ]);
 
-  // Sample health records data
-  const [healthRecords, setHealthRecords] = useState([
-    {
-      id: 1,
-      studentName: "Nguyễn Văn A",
-      studentId: "SV001",
-      examDate: "2024-01-15",
-      doctor: "BS. Trần Thị Lan",
-      height: "165",
-      weight: "55",
-      bloodPressure: "120/80",
-      heartRate: "72",
-      temperature: "36.5",
-      diagnosis: "Sức khỏe tốt",
-      notes: "Học sinh có sức khỏe ổn định",
-      status: "Completed",
-      createdAt: "2024-01-15",
-    },
-    {
-      id: 2,
-      studentName: "Trần Thị B",
-      studentId: "SV002",
-      examDate: "2024-01-20",
-      doctor: "BS. Lê Văn Nam",
-      height: "158",
-      weight: "48",
-      bloodPressure: "110/70",
-      heartRate: "68",
-      temperature: "36.3",
-      diagnosis: "Thiếu máu nhẹ",
-      notes: "Cần bổ sung dinh dưỡng",
-      status: "Pending",
-      createdAt: "2024-01-20",
-    },
-    {
-      id: 3,
-      studentName: "Lê Văn C",
-      studentId: "SV003",
-      examDate: "2024-01-25",
-      doctor: "BS. Phạm Thị Hoa",
-      height: "170",
-      weight: "62",
-      bloodPressure: "125/85",
-      heartRate: "75",
-      temperature: "36.7",
-      diagnosis: "Huyết áp hơi cao",
-      notes: "Cần theo dõi huyết áp định kỳ",
-      status: "Completed",
-      createdAt: "2024-01-25",
-    },
-  ]);
-
   // Ant Design form instances
   const [userFormInstance] = Form.useForm();
-  const [healthFormInstance] = Form.useForm();
 
   useEffect(() => {
     // Redirect if not authenticated or not an admin
@@ -264,13 +161,13 @@ const AdminDashboard = () => {
   useEffect(() => {
     const tabParam = searchParams.get("tab");
     if (tabParam) {
-      const validTabs = ["dashboard", "users", "health", "profile", "settings"];
+      const validTabs = ["users", "profile", "settings"];
       if (validTabs.includes(tabParam)) {
         setActiveSection(tabParam);
       }
     } else {
-      // If no tab parameter, default to dashboard
-      setActiveSection("dashboard");
+      // If no tab parameter, default to users
+      setActiveSection("users");
     }
   }, [searchParams]);
 
@@ -340,78 +237,6 @@ const AdminDashboard = () => {
     message.success("Xóa người dùng thành công!");
   };
 
-  // Health Records Management Functions
-  const resetHealthForm = () => {
-    healthFormInstance.resetFields();
-  };
-
-  const openAddHealthModal = () => {
-    resetHealthForm();
-    setHealthModalMode("add");
-    setSelectedHealthRecord(null);
-    setShowHealthModal(true);
-  };
-
-  const openViewHealthModal = (record) => {
-    setSelectedHealthRecord(record);
-    setHealthModalMode("view");
-    setShowHealthModal(true);
-  };
-
-  const openEditHealthModal = (record) => {
-    setSelectedHealthRecord(record);
-    setHealthModalMode("edit");
-    healthFormInstance.setFieldsValue(record);
-    setShowHealthModal(true);
-  };
-
-  const handleSaveHealthRecord = async () => {
-    try {
-      const values = await healthFormInstance.validateFields();
-
-      if (healthModalMode === "add") {
-        const newRecord = {
-          ...values,
-          id: Math.max(...healthRecords.map((r) => r.id)) + 1,
-          createdAt: new Date().toISOString().split("T")[0],
-        };
-        setHealthRecords((prev) => [...prev, newRecord]);
-        setStats((prev) => ({
-          ...prev,
-          totalHealthRecords: prev.totalHealthRecords + 1,
-        }));
-        message.success("Thêm hồ sơ sức khỏe thành công!");
-      } else if (healthModalMode === "edit") {
-        setHealthRecords((prev) =>
-          prev.map((r) =>
-            r.id === selectedHealthRecord.id
-              ? {
-                  ...values,
-                  id: selectedHealthRecord.id,
-                  createdAt: selectedHealthRecord.createdAt,
-                }
-              : r
-          )
-        );
-        message.success("Cập nhật hồ sơ sức khỏe thành công!");
-      }
-
-      setShowHealthModal(false);
-      resetHealthForm();
-    } catch {
-      message.error("Vui lòng kiểm tra lại thông tin!");
-    }
-  };
-
-  const handleDeleteHealthRecord = (record) => {
-    setHealthRecords((prev) => prev.filter((r) => r.id !== record.id));
-    setStats((prev) => ({
-      ...prev,
-      totalHealthRecords: prev.totalHealthRecords - 1,
-    }));
-    message.success("Xóa hồ sơ sức khỏe thành công!");
-  };
-
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -419,126 +244,6 @@ const AdminDashboard = () => {
     const matchesRole = filterRole === "all" || user.role === filterRole;
     return matchesSearch && matchesRole;
   });
-
-  const filteredHealthRecords = healthRecords.filter((record) => {
-    const matchesSearch =
-      record.studentName
-        .toLowerCase()
-        .includes(healthSearchTerm.toLowerCase()) ||
-      record.studentId.toLowerCase().includes(healthSearchTerm.toLowerCase()) ||
-      record.doctor.toLowerCase().includes(healthSearchTerm.toLowerCase());
-    const matchesStatus =
-      filterStatus === "all" || record.status === filterStatus;
-    return matchesSearch && matchesStatus;
-  });
-
-  // Dashboard Overview Component
-  const DashboardOverview = () => {
-    // Chart data
-    const barChartData = {
-      labels: [
-        "Tháng 1",
-        "Tháng 2",
-        "Tháng 3",
-        "Tháng 4",
-        "Tháng 5",
-        "Tháng 6",
-      ],
-      datasets: [
-        {
-          label: "Số lượng khám sức khỏe",
-          data: [120, 190, 300, 500, 200, 300],
-          backgroundColor: "rgba(25, 118, 210, 0.8)",
-          borderColor: "rgba(25, 118, 210, 1)",
-          borderWidth: 1,
-        },
-      ],
-    };
-
-    const doughnutChartData = {
-      labels: ["Phụ huynh", "Học sinh", "Giáo viên", "Y tá"],
-      datasets: [
-        {
-          data: [856, 2341, 120, 15],
-          backgroundColor: [
-            "rgba(25, 118, 210, 0.8)",
-            "rgba(76, 175, 80, 0.8)",
-            "rgba(255, 193, 7, 0.8)",
-            "rgba(156, 39, 176, 0.8)",
-          ],
-          borderColor: [
-            "rgba(25, 118, 210, 1)",
-            "rgba(76, 175, 80, 1)",
-            "rgba(255, 193, 7, 1)",
-            "rgba(156, 39, 176, 1)",
-          ],
-          borderWidth: 2,
-        },
-      ],
-    };
-
-    const chartOptions = {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          position: "top",
-        },
-      },
-    };
-
-    return (
-      <div className="dashboard-overview">
-        <h2>Tổng quan hệ thống</h2>
-
-        {/* Stats Grid */}
-        <div className="stats-grid">
-          <div className="stat-card">
-            <div className="stat-info">
-              <h3>{stats.totalUsers}</h3>
-              <p>Tổng người dùng</p>
-            </div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-info">
-              <h3>{stats.totalParents}</h3>
-              <p>Phụ huynh</p>
-            </div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-info">
-              <h3>{stats.totalStudents}</h3>
-              <p>Học sinh</p>
-            </div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-info">
-              <h3>{stats.totalHealthRecords}</h3>
-              <p>Hồ sơ sức khỏe</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Charts Section */}
-        <div className="charts-section">
-          <div className="chart-row">
-            <div className="chart-container">
-              <h3>Thống kê hoạt động theo tháng</h3>
-              <div className="chart-wrapper">
-                <Bar data={barChartData} options={chartOptions} />
-              </div>
-            </div>
-            <div className="chart-container">
-              <h3>Phân bố người dùng</h3>
-              <div className="chart-wrapper">
-                <Doughnut data={doughnutChartData} options={chartOptions} />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
 
   // User Management Component
   const UserManagement = () => (
@@ -829,384 +534,6 @@ const AdminDashboard = () => {
                 rows={3}
                 showCount
                 maxLength={200}
-              />
-            </Form.Item>
-          </Form>
-        )}
-      </Modal>
-    </div>
-  );
-
-  // Health Records Management Component
-  const HealthRecordsManagement = () => (
-    <div className="health-records">
-      <div className="section-header">
-        <h2>Quản lý hồ sơ sức khỏe</h2>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={openAddHealthModal}
-          size="large"
-        >
-          Thêm hồ sơ
-        </Button>
-      </div>
-
-      <div className="filters-section">
-        <div className="search-bar">
-          <input
-            type="text"
-            placeholder="Tìm kiếm theo tên học sinh, mã SV hoặc bác sĩ..."
-            value={healthSearchTerm}
-            onChange={(e) => setHealthSearchTerm(e.target.value)}
-          />
-          <button className="btn-search">🔍 Tìm kiếm</button>
-        </div>
-
-        <div className="filter-bar">
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="status-filter"
-          >
-            <option value="all">Tất cả trạng thái</option>
-            <option value="Pending">Cần theo dõi</option>
-            <option value="Completed">Sức khỏe ổn định</option>
-          </select>
-        </div>
-      </div>
-
-      <div className="records-stats">
-        <span>
-          Hiển thị {filteredHealthRecords.length} / {healthRecords.length} hồ sơ
-        </span>
-      </div>
-
-      <div className="table-container">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Tên học sinh</th>
-              <th>Mã SV</th>
-              <th>Ngày khám</th>
-              <th>Bác sĩ</th>
-              <th>Chẩn đoán</th>
-              <th>Trạng thái</th>
-              <th>Thao tác</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredHealthRecords.map((record) => (
-              <tr key={record.id}>
-                <td>{record.id}</td>
-                <td>{record.studentName}</td>
-                <td>{record.studentId}</td>
-                <td>{record.examDate}</td>
-                <td>{record.doctor}</td>
-                <td>{record.diagnosis}</td>
-                <td>
-                  <span className={`status ${record.status.toLowerCase()}`}>
-                    {record.status === "Completed"
-                      ? "Sức khỏe ổn định"
-                      : "Cần theo dõi"}
-                  </span>
-                </td>
-                <td>
-                  <Space size="small">
-                    <Button
-                      type="primary"
-                      icon={<EyeOutlined />}
-                      size="small"
-                      onClick={() => openViewHealthModal(record)}
-                      title="Xem chi tiết"
-                    />
-                    <Button
-                      type="default"
-                      icon={<EditOutlined />}
-                      size="small"
-                      onClick={() => openEditHealthModal(record)}
-                      title="Chỉnh sửa"
-                    />
-                    <Popconfirm
-                      title="Xác nhận xóa"
-                      description={`Bạn có chắc chắn muốn xóa hồ sơ của ${record.studentName}?`}
-                      onConfirm={() => handleDeleteHealthRecord(record)}
-                      okText="Xóa"
-                      cancelText="Hủy"
-                      okType="danger"
-                    >
-                      <Button
-                        type="primary"
-                        danger
-                        icon={<DeleteOutlined />}
-                        size="small"
-                        title="Xóa"
-                      />
-                    </Popconfirm>
-                  </Space>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        {filteredHealthRecords.length === 0 && (
-          <div className="no-data">
-            <p>Không tìm thấy hồ sơ nào phù hợp với tiêu chí tìm kiếm.</p>
-          </div>
-        )}
-      </div>
-
-      {/* Health Record Modal */}
-      <Modal
-        title={
-          healthModalMode === "add"
-            ? "Thêm hồ sơ sức khỏe mới"
-            : healthModalMode === "view"
-            ? "Thông tin hồ sơ sức khỏe"
-            : "Chỉnh sửa hồ sơ sức khỏe"
-        }
-        open={showHealthModal}
-        onCancel={() => setShowHealthModal(false)}
-        footer={
-          healthModalMode === "view"
-            ? [
-                <Button key="close" onClick={() => setShowHealthModal(false)}>
-                  Đóng
-                </Button>,
-              ]
-            : [
-                <Button key="cancel" onClick={() => setShowHealthModal(false)}>
-                  Hủy
-                </Button>,
-                <Button
-                  key="submit"
-                  type="primary"
-                  onClick={handleSaveHealthRecord}
-                >
-                  {healthModalMode === "add" ? "Thêm" : "Cập nhật"}
-                </Button>,
-              ]
-        }
-        width={900}
-        destroyOnClose
-      >
-        {healthModalMode === "view" ? (
-          <Descriptions bordered column={2} size="middle">
-            <Descriptions.Item label="ID hồ sơ" span={1}>
-              {selectedHealthRecord?.id}
-            </Descriptions.Item>
-            <Descriptions.Item label="Tên học sinh" span={1}>
-              {selectedHealthRecord?.studentName}
-            </Descriptions.Item>
-            <Descriptions.Item label="Mã sinh viên" span={1}>
-              {selectedHealthRecord?.studentId}
-            </Descriptions.Item>
-            <Descriptions.Item label="Ngày khám" span={1}>
-              {selectedHealthRecord?.examDate}
-            </Descriptions.Item>
-            <Descriptions.Item label="Bác sĩ khám" span={1}>
-              {selectedHealthRecord?.doctor}
-            </Descriptions.Item>
-            <Descriptions.Item label="Chiều cao (cm)" span={1}>
-              {selectedHealthRecord?.height}
-            </Descriptions.Item>
-            <Descriptions.Item label="Cân nặng (kg)" span={1}>
-              {selectedHealthRecord?.weight}
-            </Descriptions.Item>
-            <Descriptions.Item label="Huyết áp" span={1}>
-              {selectedHealthRecord?.bloodPressure}
-            </Descriptions.Item>
-            <Descriptions.Item label="Nhịp tim" span={1}>
-              {selectedHealthRecord?.heartRate}
-            </Descriptions.Item>
-            <Descriptions.Item label="Nhiệt độ (°C)" span={1}>
-              {selectedHealthRecord?.temperature}
-            </Descriptions.Item>
-            <Descriptions.Item label="Chẩn đoán" span={2}>
-              {selectedHealthRecord?.diagnosis}
-            </Descriptions.Item>
-            <Descriptions.Item label="Ghi chú" span={2}>
-              {selectedHealthRecord?.notes || "Không có ghi chú"}
-            </Descriptions.Item>
-            <Descriptions.Item label="Trạng thái" span={1}>
-              <Tag
-                color={
-                  selectedHealthRecord?.status === "Completed"
-                    ? "success"
-                    : "warning"
-                }
-              >
-                {selectedHealthRecord?.status === "Completed"
-                  ? "Sức khỏe ổn định"
-                  : "Cần theo dõi"}
-              </Tag>
-            </Descriptions.Item>
-            <Descriptions.Item label="Ngày tạo" span={1}>
-              {selectedHealthRecord?.createdAt}
-            </Descriptions.Item>
-          </Descriptions>
-        ) : (
-          <Form
-            form={healthFormInstance}
-            layout="vertical"
-            initialValues={{
-              status: "Pending",
-            }}
-          >
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: "16px",
-              }}
-            >
-              <Form.Item
-                label="Tên học sinh"
-                name="studentName"
-                rules={[
-                  { required: true, message: "Vui lòng nhập tên học sinh!" },
-                  { min: 2, message: "Tên học sinh phải có ít nhất 2 ký tự!" },
-                ]}
-              >
-                <Input placeholder="Nhập tên học sinh" />
-              </Form.Item>
-
-              <Form.Item
-                label="Mã sinh viên"
-                name="studentId"
-                rules={[
-                  { required: true, message: "Vui lòng nhập mã sinh viên!" },
-                  {
-                    pattern: /^SV\d{3,}$/,
-                    message: "Mã sinh viên phải có định dạng SV001, SV002...",
-                  },
-                ]}
-              >
-                <Input placeholder="Nhập mã sinh viên (VD: SV001)" />
-              </Form.Item>
-
-              <Form.Item
-                label="Ngày khám"
-                name="examDate"
-                rules={[
-                  { required: true, message: "Vui lòng chọn ngày khám!" },
-                ]}
-              >
-                <Input type="date" />
-              </Form.Item>
-
-              <Form.Item
-                label="Bác sĩ khám"
-                name="doctor"
-                rules={[
-                  { required: true, message: "Vui lòng nhập tên bác sĩ!" },
-                ]}
-              >
-                <Input placeholder="Nhập tên bác sĩ" />
-              </Form.Item>
-
-              <Form.Item
-                label="Chiều cao (cm)"
-                name="height"
-                rules={[
-                  {
-                    pattern: /^\d{2,3}$/,
-                    message: "Chiều cao phải là số từ 2-3 chữ số!",
-                  },
-                ]}
-              >
-                <Input placeholder="Nhập chiều cao" />
-              </Form.Item>
-
-              <Form.Item
-                label="Cân nặng (kg)"
-                name="weight"
-                rules={[
-                  {
-                    pattern: /^\d{2,3}$/,
-                    message: "Cân nặng phải là số từ 2-3 chữ số!",
-                  },
-                ]}
-              >
-                <Input placeholder="Nhập cân nặng" />
-              </Form.Item>
-
-              <Form.Item
-                label="Huyết áp"
-                name="bloodPressure"
-                rules={[
-                  {
-                    pattern: /^\d{2,3}\/\d{2,3}$/,
-                    message: "Huyết áp phải có định dạng 120/80!",
-                  },
-                ]}
-              >
-                <Input placeholder="Nhập huyết áp (VD: 120/80)" />
-              </Form.Item>
-
-              <Form.Item
-                label="Nhịp tim (bpm)"
-                name="heartRate"
-                rules={[
-                  {
-                    pattern: /^\d{2,3}$/,
-                    message: "Nhịp tim phải là số từ 2-3 chữ số!",
-                  },
-                ]}
-              >
-                <Input placeholder="Nhập nhịp tim" />
-              </Form.Item>
-
-              <Form.Item
-                label="Nhiệt độ (°C)"
-                name="temperature"
-                rules={[
-                  {
-                    pattern: /^\d{2}\.\d$/,
-                    message: "Nhiệt độ phải có định dạng 36.5!",
-                  },
-                ]}
-              >
-                <Input placeholder="Nhập nhiệt độ (VD: 36.5)" />
-              </Form.Item>
-
-              <Form.Item
-                label="Trạng thái"
-                name="status"
-                rules={[
-                  { required: true, message: "Vui lòng chọn trạng thái!" },
-                ]}
-              >
-                <Select placeholder="Chọn trạng thái">
-                  <Select.Option value="Pending">Cần theo dõi</Select.Option>
-                  <Select.Option value="Completed">
-                    Sức khỏe ổn định
-                  </Select.Option>
-                </Select>
-              </Form.Item>
-            </div>
-
-            <Form.Item
-              label="Chẩn đoán"
-              name="diagnosis"
-              rules={[{ required: true, message: "Vui lòng nhập chẩn đoán!" }]}
-            >
-              <Input.TextArea
-                placeholder="Nhập chẩn đoán"
-                rows={2}
-                showCount
-                maxLength={200}
-              />
-            </Form.Item>
-
-            <Form.Item label="Ghi chú" name="notes">
-              <Input.TextArea
-                placeholder="Nhập ghi chú (tùy chọn)"
-                rows={3}
-                showCount
-                maxLength={300}
               />
             </Form.Item>
           </Form>
@@ -1663,18 +990,14 @@ const AdminDashboard = () => {
 
   const renderContent = () => {
     switch (activeSection) {
-      case "dashboard":
-        return <DashboardOverview />;
       case "users":
         return <UserManagement />;
-      case "health":
-        return <HealthRecordsManagement />;
       case "profile":
         return <AdminProfile />;
       case "settings":
         return <SettingsManagement />;
       default:
-        return <DashboardOverview />;
+        return <UserManagement />;
     }
   };
 
