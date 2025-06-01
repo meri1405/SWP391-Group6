@@ -13,15 +13,44 @@ const createAuthAxios = (token) => {
   });
 };
 
+// Helper to get token from localStorage with fallback
+const getTokenFromStorage = () => {
+  return localStorage.getItem('token');
+};
+
 export const parentApi = {
   // Get students associated with the authenticated parent
-  getMyStudents: async (token) => {
+  getMyStudents: async (token = getTokenFromStorage()) => {
     try {
       const authAxios = createAuthAxios(token);
       const response = await authAxios.get('/api/parent/students');
       return response.data;
     } catch (error) {
       console.error('Error fetching parent students:', error);
+      throw error;
+    }
+  },
+  
+  // Get medication schedules for a specific child
+  getChildMedicationSchedules: async (studentId, token = getTokenFromStorage()) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.get(`/api/parent/students/${studentId}/medication-schedules`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching child medication schedules:', error);
+      throw error;
+    }
+  },
+  
+  // Get medication schedules for all children with optional filters
+  getAllChildrenMedicationSchedules: async (params = {}, token = getTokenFromStorage()) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.get('/api/parent/medication-schedules', { params });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching all children medication schedules:', error);
       throw error;
     }
   },

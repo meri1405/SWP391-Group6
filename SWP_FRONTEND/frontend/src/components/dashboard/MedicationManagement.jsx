@@ -35,6 +35,7 @@ import dayjs from 'dayjs';
 import { useAuth } from '../../contexts/AuthContext';
 import { parentApi } from '../../api/parentApi';
 import '../../styles/MedicationManagement.css';
+import ParentMedicationSchedules from './ParentMedicationSchedules';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -417,15 +418,15 @@ const MedicationManagement = () => {
   const getStatusTag = (status) => {
     switch (status) {
       case 'APPROVED':
-        return <Tag icon={<CheckCircleOutlined />} color="success"></Tag>;
+        return <Tag icon={<CheckCircleOutlined />} color="success"> Đã duyệt</Tag>;
       case 'REJECTED':
-        return <Tag icon={<CloseCircleOutlined />} color="error"></Tag>;
+        return <Tag icon={<CloseCircleOutlined />} color="error"> Đã từ chối</Tag>;
       case 'PENDING':
-        return <Tag icon={<ClockCircleOutlined />} color="processing"></Tag>;
+        return <Tag icon={<ClockCircleOutlined />} color="processing"> Đang chờ duyệt</Tag>;
       case 'COMPLETED':
-        return <Tag icon={<CheckCircleOutlined />} color="blue"></Tag>;
+        return <Tag icon={<CheckCircleOutlined />} color="blue"> Đã hoàn thành</Tag>;
       default:
-        return <Tag color="default"></Tag>;
+        return <Tag color="default">Không xác định</Tag>;
     }
   };
 
@@ -485,8 +486,7 @@ const MedicationManagement = () => {
       title: 'Trạng thái',
       key: 'status',
       render: (_, record) => getStatusTag(record.status)
-    },
-    {
+    },    {
       title: 'Thao tác',
       key: 'action',
       render: (_, record) => (
@@ -515,6 +515,17 @@ const MedicationManagement = () => {
                 </Tooltip>
               </Popconfirm>
             </>
+          )}
+          {record.status === 'APPROVED' && (
+            <Tooltip title="Xem lịch uống thuốc">
+              <Button
+                type="link"
+                onClick={() => setTabKey('schedules')}
+                style={{ color: '#1890ff' }}
+              >
+                Xem lịch uống thuốc
+              </Button>
+            </Tooltip>
           )}
           <Tooltip title="Xem chi tiết các loại thuốc">
             <Button 
@@ -617,8 +628,7 @@ const MedicationManagement = () => {
                 pagination={{ pageSize: 5 }}
                 locale={{ emptyText: 'Không có yêu cầu thuốc nào' }}
               />
-            )}
-          </TabPane>
+            )}          </TabPane>
           <TabPane tab="Đã hoàn thành/Từ chối" key="completed">
             {loading ? (
               <div className="loading-container">
@@ -633,6 +643,9 @@ const MedicationManagement = () => {
                 locale={{ emptyText: 'Không có yêu cầu thuốc nào' }}
               />
             )}
+          </TabPane>
+          <TabPane tab="Lịch uống thuốc" key="schedules">
+            <ParentMedicationSchedules />
           </TabPane>
         </Tabs>
         
@@ -941,7 +954,9 @@ const MedicationManagement = () => {
                       <div key={item.id || index} className="medication-item-card">
                         <div className="medication-item-header" style={{marginBottom: '5px'}}>
                           <h4><strong>{index + 1}. {item.itemName}</strong></h4>
-                          <strong>Loại: </strong> <Tag color={
+                          </div>
+
+                          <h4><strong>Loại: <Tag color={
                             item.itemType === 'PRESCRIPTION' ? 'red' :
                             item.itemType === 'OTC' ? 'green' :
                             item.itemType === 'TABLET' ? 'blue' :
@@ -960,9 +975,9 @@ const MedicationManagement = () => {
                              item.itemType === 'CREAM' ? 'Kem' :
                              item.itemType === 'POWDER' ? 'Bột' :
                              item.itemType === 'INJECTION' ? 'Tiêm' : item.itemType}
-                          </Tag>
+                          </Tag> </strong></h4>
                   
-                        </div>
+                        
                         <div className="medication-item-details">
                           <p><strong>Mục đích:</strong> <span className="medication-purpose">{item.purpose || 'Không có mục đích'}</span></p>
                           <p><strong>Liều lượng:</strong> <span className="medication-dosage">{item.dosage} {

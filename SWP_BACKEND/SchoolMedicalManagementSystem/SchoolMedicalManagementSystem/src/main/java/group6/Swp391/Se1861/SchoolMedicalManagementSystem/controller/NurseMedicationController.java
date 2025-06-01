@@ -107,4 +107,20 @@ public class NurseMedicationController {
 
         return ResponseEntity.ok(medicationScheduleService.updateScheduleStatus(scheduleId, status, nurse, note));
     }
+
+    /**
+     * Update medication schedule note only
+     * @param scheduleId The schedule ID
+     * @param nurse Authenticated nurse
+     * @param requestBody Request body containing the note
+     * @return Updated medication schedule
+     */
+    @PutMapping("/schedules/{scheduleId}/note")
+    public ResponseEntity<MedicationScheduleDTO> updateScheduleNote(
+            @PathVariable Long scheduleId,
+            @AuthenticationPrincipal User nurse,
+            @RequestBody Map<String, String> requestBody) {
+        String note = requestBody.get("note");
+        return ResponseEntity.ok(medicationScheduleService.updateScheduleNote(scheduleId, nurse, note));
+    }
 }
