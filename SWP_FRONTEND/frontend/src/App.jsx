@@ -25,6 +25,7 @@ import Search from "./pages/Search";
 import ParentDashboard from "./pages/ParentDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import SchoolNurseDashboard from "./pages/SchoolNurseDashboard";
+import ManagerDashboard from "./pages/ManagerDashboard";
 import "./styles/App.css";
 
 function App() {
