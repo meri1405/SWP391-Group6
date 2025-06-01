@@ -137,7 +137,7 @@ const Overview = ({ userInfo: externalUserInfo }) => {
           >
             {students.map(student => (
               <Option key={student.studentID} value={student.studentID}>
-                {student.firstName} {student.lastName} - {student.className}
+                {student.lastName} {student.firstName} - {student.className}
               </Option>
             ))}
           </Select>
@@ -174,7 +174,7 @@ const Overview = ({ userInfo: externalUserInfo }) => {
                   style={{ backgroundColor: '#1976d2', marginBottom: 8 }}
                 />
                 <Title level={5} style={{ margin: '4px 0', fontSize: 16 }}>
-                  {selectedStudent ? `${selectedStudent.firstName} ${selectedStudent.lastName}` : 'Chọn một học sinh'}
+                  {selectedStudent ? `${selectedStudent.lastName} ${selectedStudent.firstName}` : 'Chọn một học sinh'}
                 </Title>
                 <Text type="secondary" style={{ fontSize: 14 }}>
                   {selectedStudent ? selectedStudent.className : ''}
@@ -277,7 +277,7 @@ const Overview = ({ userInfo: externalUserInfo }) => {
                 <Col span={12}>
                   <Text type="secondary">Họ và tên:</Text>
                   <br />
-                  <Text strong>{selectedStudent.firstName} {selectedStudent.lastName}</Text>
+                  <Text strong>{selectedStudent.lastName} {selectedStudent.firstName}</Text>
                 </Col>
                 <Col span={12}>
                   <Text type="secondary">Lớp:</Text>
@@ -323,7 +323,7 @@ const Overview = ({ userInfo: externalUserInfo }) => {
                   <Col span={12}>
                     <Text type="secondary">Họ và tên:</Text>
                     <br />
-                    <Text strong>{parentProfile.firstName} {parentProfile.lastName}</Text>
+                    <Text strong>{parentProfile.lastName} {parentProfile.firstName}</Text>
                   </Col>
                   <Col span={12}>
                     <Text type="secondary">Số điện thoại:</Text>

@@ -24,4 +24,6 @@ public class MedicationScheduleDTO {
     private String nurseName;
     private Long studentId;
     private String studentName;
+    private String className;
+    private int dosage;
 }

@@ -69,17 +69,11 @@ public class MedicationRequestService {
             item.setDosage(itemDTO.getDosage());
             item.setFrequency(itemDTO.getFrequency());
             item.setNote(itemDTO.getNote());
-            item.setMedicationRequest(savedRequest);
-
-            // Save the item request
+            item.setMedicationRequest(savedRequest);            // Save the item request
             ItemRequest savedItem = itemRequestRepository.save(item);
 
-            // Generate medication schedules for this item using the dates from the medication request
-            medicationScheduleService.generateSchedules(
-                savedItem,
-                medicationRequest.getStartDate(),
-                medicationRequest.getEndDate()
-            );
+            // NOTE: Medication schedules will be generated only when the request is approved by nurse
+            // Do not generate schedules here to ensure schedules exist only for approved requests
 
             itemRequests.add(savedItem);
         }
@@ -127,8 +121,7 @@ public class MedicationRequestService {
      * @param requestId the request ID
      * @param nurse the nurse approving the request
      * @return the updated medication request
-     */
-    @Transactional
+     */    @Transactional
     public MedicationRequestDTO approveMedicationRequest(Long requestId, User nurse) {
         MedicationRequest request = medicationRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Medication request not found with id: " + requestId));
@@ -136,6 +129,15 @@ public class MedicationRequestService {
         request.setStatus("APPROVED");
         request.setConfirm(true);
         request.setNurse(nurse);
+
+        // Generate medication schedules for all item requests when request is approved
+        for (ItemRequest itemRequest : request.getItemRequests()) {
+            medicationScheduleService.generateSchedules(
+                itemRequest,
+                request.getStartDate(),
+                request.getEndDate()
+            );
+        }
 
         return convertToDTO(medicationRequestRepository.save(request));
     }
@@ -221,18 +223,19 @@ public class MedicationRequestService {
                 existingItem.setItemType(itemDTO.getItemType());
                 existingItem.setDosage(itemDTO.getDosage());
                 existingItem.setFrequency(itemDTO.getFrequency());
-                existingItem.setNote(itemDTO.getNote());
-
-                // Save updated item
+                existingItem.setNote(itemDTO.getNote());                // Save updated item
                 ItemRequest savedItem = itemRequestRepository.save(existingItem);
 
-                // Delete existing schedules and regenerate for updated item
-                medicationScheduleService.deleteSchedulesForItemRequest(savedItem.getId());
-                medicationScheduleService.generateSchedules(
-                    savedItem,
-                    request.getStartDate(),
-                    request.getEndDate()
-                );
+                // Delete existing schedules if any (only for approved requests)
+                // Note: Schedules are only generated when request is approved by nurse
+                if ("APPROVED".equals(request.getStatus())) {
+                    medicationScheduleService.deleteSchedulesForItemRequest(savedItem.getId());
+                    medicationScheduleService.generateSchedules(
+                        savedItem,
+                        request.getStartDate(),
+                        request.getEndDate()
+                    );
+                }
 
                 updatedItems.add(savedItem);
             } else {
@@ -244,17 +247,11 @@ public class MedicationRequestService {
                 newItem.setDosage(itemDTO.getDosage());
                 newItem.setFrequency(itemDTO.getFrequency());
                 newItem.setNote(itemDTO.getNote());
-                newItem.setMedicationRequest(request);
-
-                // Save the new item
+                newItem.setMedicationRequest(request);                // Save the new item
                 ItemRequest savedItem = itemRequestRepository.save(newItem);
 
-                // Generate medication schedules for this new item
-                medicationScheduleService.generateSchedules(
-                    savedItem,
-                    request.getStartDate(),
-                    request.getEndDate()
-                );
+                // Note: Medication schedules will be generated only when the request is approved by nurse
+                // Do not generate schedules here for new items during update
 
                 updatedItems.add(savedItem);
             }

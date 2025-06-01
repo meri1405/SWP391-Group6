@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
 
 const AuthContext = createContext();
 
@@ -19,8 +19,24 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const logoutTimerRef = useRef(null);
 
+  const logout = useCallback(() => {
+    // Clear all authentication data
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    localStorage.removeItem("loginTimestamp");
+    
+    // Clear timeout if it exists
+    if (logoutTimerRef.current) {
+      clearTimeout(logoutTimerRef.current);
+      logoutTimerRef.current = null;
+    }
+    
+    // Update state
+    setUser(null);
+  }, []);
+
   // Khởi tạo session timeout timer
-  const startLogoutTimer = () => {
+  const startLogoutTimer = useCallback(() => {
     // Clear any existing timer
     if (logoutTimerRef.current) {
       clearTimeout(logoutTimerRef.current);
@@ -31,7 +47,7 @@ export const AuthProvider = ({ children }) => {
       console.log("Session timeout (30 minutes) - logging out");
       logout();
     }, SESSION_TIMEOUT);
-  };
+  }, [logout]);
 
   useEffect(() => {
     // Check for stored authentication data on app start
@@ -79,11 +95,10 @@ export const AuthProvider = ({ children }) => {
     
     // Cleanup timer on unmount
     return () => {
-      if (logoutTimerRef.current) {
-        clearTimeout(logoutTimerRef.current);
+      if (logoutTimerRef.current) {        clearTimeout(logoutTimerRef.current);
       }
     };
-  }, []);  const login = (authResponse) => {
+  }, [startLogoutTimer, logout]);  const login = (authResponse) => {
     console.log("Login called with:", authResponse);
     const { token, ...userInfo } = authResponse;
     
@@ -97,26 +112,10 @@ export const AuthProvider = ({ children }) => {
     // Update state
     setUser(userInfo);
     console.log("User set to:", userInfo);
-    
-    // Start the logout timer (30 minutes)
+      // Start the logout timer (30 minutes)
     startLogoutTimer();
   };
 
-  const logout = () => {
-    // Clear all authentication data
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    localStorage.removeItem("loginTimestamp");
-    
-    // Clear timeout if it exists
-    if (logoutTimerRef.current) {
-      clearTimeout(logoutTimerRef.current);
-      logoutTimerRef.current = null;
-    }
-    
-    // Update state
-    setUser(null);
-  };
   const isParent = () => {
     return user?.roleName === "PARENT";
   };
@@ -132,14 +131,35 @@ export const AuthProvider = ({ children }) => {
   const getToken = () => {
     return localStorage.getItem("token");
   };  // Function to refresh the session timer
-  const refreshSession = () => {
+  const refreshSession = useCallback(() => {
     if (user) {
+      const token = localStorage.getItem("token");
+      if (!token || isTokenExpired(token)) {
+        console.log("Token expired during refresh - logging out");
+        logout();
+        return false;
+      }
+      
       console.log("Refreshing session timer");
       localStorage.setItem("loginTimestamp", Date.now().toString());
       startLogoutTimer();
+      return true;
+    }
+    return false;
+  }, [user, startLogoutTimer, logout]);
+  // Function to check if token is expired
+  const isTokenExpired = (token) => {
+    if (!token) return true;
+    
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const currentTime = Date.now() / 1000;
+      return payload.exp < currentTime;
+    } catch (error) {
+      console.error('Error parsing token:', error);
+      return true;
     }
   };
-  
   // Effect to set up activity monitoring
   useEffect(() => {
     if (!user) return;
@@ -173,8 +193,7 @@ export const AuthProvider = ({ children }) => {
         window.removeEventListener(event, activityHandler);
       });
     };
-  }, [user]);
-  const value = {
+  }, [user, refreshSession]);const value = {
     user,
     login,
     logout,
@@ -185,6 +204,7 @@ export const AuthProvider = ({ children }) => {
     getToken,
     loading,
     isAuthenticated: !!user,
+    startLogoutTimer,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -307,7 +307,7 @@ const Navbar = () => {
                   <div className="dropdown-menu">
                     <div className="user-info">
                       <div className="user-name">
-                        {user.firstName} {user.lastName}
+                        {user.lastName} {user.firstName}
                       </div>
                       <div className="user-email">{user.email}</div>
                     </div>

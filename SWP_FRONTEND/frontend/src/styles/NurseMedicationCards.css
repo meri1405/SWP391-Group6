@@ -1,0 +1,188 @@
+/* Nurse Medication Card Styles - Matching the design */
+
+/* Status card grid layout */
+.medication-status-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+/* Style for each status card */
+.status-card {
+  background-color: white;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  border-top: 3px solid #FF8C00;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  transition: all 0.3s ease;
+  min-height: 110px;
+}
+
+.status-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Status count styling */
+.status-count {
+  font-size: 32px;
+  font-weight: 700;
+  color: #FF8C00;
+  line-height: 1.1;
+  margin-bottom: 6px;
+}
+
+/* Status card icon */
+.status-card-icon {
+  font-size: 20px;
+  position: absolute;
+  right: 16px;
+  top: 16px;
+}
+
+/* Status label styling */
+.status-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
+}
+
+/* Filter section styling */
+.filter-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 24px;
+  align-items: flex-end;
+  background-color: #f9fafe;
+  border-radius: 8px;
+  padding: 16px;
+  border: 1px solid #eaeaea;
+}
+
+.filter-item {
+  flex: 1;
+  min-width: 180px;
+}
+
+.filter-label {
+  font-weight: 500;
+  margin-bottom: 6px;
+  color: #262626;
+  font-size: 14px;
+}
+
+/* Responsive design */
+@media (max-width: 1280px) {
+  .medication-status-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  
+  .status-card {
+    padding: 12px;
+    min-height: 100px;
+  }
+  
+  .status-count {
+    font-size: 28px;
+  }
+  
+  .status-label {
+    font-size: 13px;
+  }
+  
+  .status-card-icon {
+    font-size: 18px;
+    right: 12px;
+    top: 12px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .medication-status-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+  
+  .status-card {
+    min-height: 110px;
+  }
+  
+  .status-count {
+    font-size: 30px;
+  }
+}
+
+@media (max-width: 640px) {
+  .medication-status-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  
+  .filter-container {
+    flex-direction: column;
+  }
+  
+  .filter-item {
+    width: 100%;
+  }
+  
+  .status-card {
+    padding: 12px;
+    min-height: 90px;
+  }
+  
+  .status-count {
+    font-size: 26px;
+  }
+}
+
+/* Specific card styles */
+/* Pending/Chưa uống */
+.status-card-pending {
+  border-top-color: #faad14;
+}
+.status-card-pending .status-count {
+  color: #faad14;
+}
+.status-card-pending .status-card-icon {
+  color: #faad14;
+}
+
+/* Taken/Đã uống */
+.status-card-taken {
+  border-top-color: #52c41a;
+}
+.status-card-taken .status-count {
+  color: #52c41a;
+}
+.status-card-taken .status-card-icon {
+  color: #52c41a;
+}
+
+/* Missed/Bỏ lỡ */
+.status-card-missed {
+  border-top-color: #f5222d;
+}
+.status-card-missed .status-count {
+  color: #f5222d;
+}
+.status-card-missed .status-card-icon {
+  color: #f5222d;
+}
+
+/* Total/Tổng số */
+.status-card-total {
+  border-top-color: #1890ff;
+}
+.status-card-total .status-count {
+  color: #1890ff;
+}
+.status-card-total .status-card-icon {
+  color: #1890ff;
+}
