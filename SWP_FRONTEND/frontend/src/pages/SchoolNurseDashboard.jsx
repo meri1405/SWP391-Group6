@@ -1573,9 +1573,7 @@ const SchoolNurseDashboard = () => {
                   <p><strong>Lớp:</strong> {selectedStudent.class}</p>
                   <p><strong>Tuổi:</strong> {selectedStudent.age} tuổi</p>
                   <p><strong>Giới tính:</strong> {selectedStudent.gender}</p>
-                  <p><strong>Phụ huynh:</strong> {selectedStudent.parentName}</p>
-                  <p><strong>SĐT:</strong> {selectedStudent.parentPhone}</p>
-                  <p><strong>Tiền sử:</strong> {selectedStudent.healthHistory.join(', ')}</p>
+                  <p><strong>SĐT phụ huynh:</strong> {selectedStudent.parentPhone}</p>
                 </div>
               </div>
 
@@ -1692,8 +1690,8 @@ const SchoolNurseDashboard = () => {
                       <textarea 
                         className="nurse-search-input" 
                         rows="3" 
-                        placeholder="Ghi chú khuyến nghị cho phụ huynh..."
                         id="recommendations"
+                        placeholder="Ghi chú khuyến nghị cho phụ huynh..."
                       ></textarea>
                     </div>
                   </div>
@@ -1753,45 +1751,968 @@ const SchoolNurseDashboard = () => {
     );
   }
   
-  const HealthRecords = () => (
-    <div className="nurse-content-card">
-      <h2 className="nurse-section-title">Cập nhật hồ sơ y tế học sinh</h2>
-      <div className="nurse-search-filters">
-        <input
-          type="text"
-          placeholder="Tìm kiếm học sinh..."
-          className="nurse-search-input"
-        />
-        <select className="nurse-filter-select">
-          <option value="all">Tất cả lớp</option>
-          <option value="6">Khối 6</option>
-          <option value="7">Khối 7</option>
-          <option value="8">Khối 8</option>
-          <option value="9">Khối 9</option>
-        </select>
-      </div>
-      <p>Chức năng hồ sơ y tế đang được phát triển...</p>
-    </div>
-  );
+  const HealthRecords = () => {
+    const [activeTab, setActiveTab] = useState('student-list');
+    const [selectedStudent, setSelectedStudent] = useState(null);
+    const [showVaccinationModal, setShowVaccinationModal] = useState(false);
+    const [showHealthCheckModal, setShowHealthCheckModal] = useState(false);
+    const [showMedicalEventModal, setShowMedicalEventModal] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [classFilter, setClassFilter] = useState('all');
 
-  const BlogManagement = () => (
-    <div className="nurse-content-card">
-      <h2 className="nurse-section-title">Quản lý các blog trong hệ thống</h2>
-      <div className="nurse-action-buttons">
-        <button className="nurse-btn-primary">
-          <EditOutlined /> Viết bài mới
-        </button>
-      </div>
-      <p>Chức năng quản lý blog đang được phát triển...</p>
-    </div>
-  );
+    // Mock data cho học sinh tiểu học
+    const [primaryStudents, setPrimaryStudents] = useState([
+      {
+        id: 1,
+        studentId: "TH001",
+        studentName: "Nguyễn Văn An",
+        class: "1A",
+        grade: 1,
+        dateOfBirth: "2017-05-15",
+        age: 6,
+        gender: "Nam",
+        parentName: "Nguyễn Văn A",
+        parentPhone: "0912345678",
+        address: "123 Đường ABC, Quận 1, TP.HCM",
+        healthHistory: ["Dị ứng thức ăn"],
+        bloodType: "O+",
+        allergies: ["Đậu phộng", "Tôm cua"]
+      },
+      {
+        id: 2,
+        studentId: "TH002",
+        studentName: "Trần Thị Bình",
+        class: "2B",
+        grade: 2,
+        dateOfBirth: "2016-08-22",
+        age: 7,
+        gender: "Nữ",
+        parentName: "Trần Văn B",
+        parentPhone: "0987654321",
+        address: "456 Đường XYZ, Quận 2, TP.HCM",
+        healthHistory: ["Bình thường"],
+        bloodType: "A+",
+        allergies: []
+      },
+      {
+        id: 3,
+        studentId: "TH003",
+        studentName: "Lê Văn Cường",
+        class: "3A",
+        grade: 3,
+        dateOfBirth: "2015-12-10",
+        age: 8,
+        gender: "Nam",
+        parentName: "Lê Văn C",
+        parentPhone: "0901234567",
+        address: "789 Đường DEF, Quận 3, TP.HCM",
+        healthHistory: ["Cận thị nhẹ"],
+        bloodType: "B+",
+        allergies: ["Phấn hoa"]
+      },
+      {
+        id: 4,
+        studentId: "TH004",
+        studentName: "Phạm Thị Dung",
+        class: "4C",
+        grade: 4,
+        dateOfBirth: "2014-03-18",
+        age: 9,
+        gender: "Nữ",
+        parentName: "Phạm Văn D",
+        parentPhone: "0909876543",
+        address: "321 Đường GHI, Quận 4, TP.HCM",
+        healthHistory: ["Hen phế quản nhẹ"],
+        bloodType: "AB+",
+        allergies: ["Bụi", "Lông động vật"]
+      },
+      {
+        id: 5,
+        studentId: "TH005",
+        studentName: "Hoàng Văn Em",
+        class: "5B",
+        grade: 5,
+        dateOfBirth: "2013-07-25",
+        age: 10,
+        gender: "Nam",
+        parentName: "Hoàng Văn E",
+        parentPhone: "0912567890",
+        address: "654 Đường JKL, Quận 5, TP.HCM",
+        healthHistory: ["Suy dinh dưỡng nhẹ"],
+        bloodType: "O-",
+        allergies: ["Kháng sinh Penicillin"]
+      }
+    ]);
 
-  const SchoolHealth = () => (
-    <div className="nurse-content-card">
-      <h2 className="nurse-section-title">Thông tin sức khỏe học đường</h2>
-      <p>Chức năng thông tin sức khỏe học đường đang được phát triển...</p>
-    </div>
-  );
+    // Mock data cho lịch sử tiêm chủng
+    const [vaccinationHistory, setVaccinationHistory] = useState([
+      {
+        id: 1,
+        studentId: "TH001",
+        vaccineName: "Vaccine COVID-19 (Pfizer)",
+        vaccineDate: "2023-09-15",
+        vaccineLot: "PF230915",
+        doseNumber: 1,
+        injectionSite: "Cánh tay trái",
+        reaction: "Không có phản ứng",
+        nurseName: "Y tá Lan",
+        notes: "Học sinh khỏe mạnh, tiêm bình thường"
+      },
+      {
+        id: 2,
+        studentId: "TH001",
+        vaccineName: "Vaccine Sởi - Rubella (MR)",
+        vaccineDate: "2023-03-20",
+        vaccineLot: "MR230320",
+        doseNumber: 1,
+        injectionSite: "Cánh tay phải",
+        reaction: "Sốt nhẹ 37.5°C",
+        nurseName: "Y tá Mai",
+        notes: "Có sốt nhẹ sau 6h, đã hướng dẫn phụ huynh"
+      }
+    ]);
+
+    // Mock data cho lịch sử khám sức khỏe
+    const [healthCheckHistory, setHealthCheckHistory] = useState([
+      {
+        id: 1,
+        studentId: "TH001",
+        checkDate: "2024-01-15",
+        checkType: "Định kỳ học kỳ I",
+        height: 120,
+        weight: 22.5,
+        bmi: 15.6,
+        bloodPressure: "100/65",
+        heartRate: 85,
+        temperature: 36.5,
+        vision: "10/10 cả hai mắt",
+        hearing: "Bình thường",
+        dental: "Sâu răng 1 răng",
+        overallAssessment: "Khỏe mạnh",
+        recommendations: ["Điều trị sâu răng", "Duy trì chế độ ăn uống"],
+        doctorName: "BS. Nguyễn Thị Lan",
+        nurseName: "Y tá Mai"
+      }
+    ]);
+
+    // Mock data cho sự kiện y tế
+    const [medicalEvents, setMedicalEvents] = useState([
+      {
+        id: 1,
+        studentId: "TH001",
+        eventDate: "2024-02-20",
+        eventTime: "10:30",
+        eventType: "Té ngã",
+        description: "Té ngã ở sân trường khi chơi",
+        symptoms: ["Đau đầu gối", "Xây xát nhẹ"],
+        treatment: "Làm sạch vết thương, băng bó",
+        medication: "Betadine, gạc y tế",
+        severity: "Nhẹ",
+        parentNotified: true,
+        followUp: "Theo dõi 1 tuần",
+        nurseName: "Y tá Lan",
+        status: "Đã xử lý"
+      }
+    ]);
+
+    // Lọc học sinh
+    const filteredStudents = primaryStudents.filter(student => {
+      const matchesSearch = student.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           student.studentId.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesClass = classFilter === 'all' || student.grade.toString() === classFilter;
+      return matchesSearch && matchesClass;
+    });
+
+    // Thêm tiêm chủng mới
+    const handleAddVaccination = (vaccinationData) => {
+      const newVaccination = {
+        id: vaccinationHistory.length + 1,
+        studentId: selectedStudent.studentId,
+        vaccineDate: new Date().toISOString().split('T')[0],
+        nurseName: "Y tá Lan",
+        ...vaccinationData
+      };
+      setVaccinationHistory(prev => [...prev, newVaccination]);
+      setShowVaccinationModal(false);
+      message.success('Đã thêm lịch sử tiêm chủng thành công!');
+    };
+
+    // Thêm khám sức khỏe mới
+    const handleAddHealthCheck = (healthData) => {
+      const height = parseFloat(healthData.height) || 0;
+      const weight = parseFloat(healthData.weight) || 0;
+      const bmi = weight > 0 && height > 0 ? (weight / ((height/100) * (height/100))).toFixed(1) : 0;
+      
+      const newHealthCheck = {
+        id: healthCheckHistory.length + 1,
+        studentId: selectedStudent.studentId,
+        checkDate: new Date().toISOString().split('T')[0],
+        nurseName: "Y tá Mai",
+        doctorName: "BS. Nguyễn Thị Lan",
+        bmi: parseFloat(bmi),
+        ...healthData
+      };
+      setHealthCheckHistory(prev => [...prev, newHealthCheck]);
+      setShowHealthCheckModal(false);
+      message.success('Đã thêm kết quả khám sức khỏe thành công!');
+    };
+
+    // Thêm sự kiện y tế mới
+    const handleAddMedicalEvent = (eventData) => {
+      const newEvent = {
+        id: medicalEvents.length + 1,
+        studentId: selectedStudent.studentId,
+        eventDate: new Date().toISOString().split('T')[0],
+        eventTime: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+        nurseName: "Y tá Lan",
+        status: "Đã xử lý",
+        ...eventData
+      };
+      setMedicalEvents(prev => [...prev, newEvent]);
+      setShowMedicalEventModal(false);
+      message.success('Đã thêm sự kiện y tế thành công!');
+    };
+
+    // Render danh sách học sinh
+    const renderStudentList = () => (
+      <div className="nurse-content-card">
+        <h2 className="nurse-section-title">Hồ sơ y tế học sinh tiểu học</h2>
+        
+        <div className="nurse-search-filters">
+          <input
+            type="text"
+            placeholder="Tìm kiếm theo tên hoặc mã học sinh..."
+            className="nurse-search-input"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          <select 
+            className="nurse-filter-select"
+            value={classFilter}
+            onChange={(e) => setClassFilter(e.target.value)}
+          >
+            <option value="all">Tất cả khối</option>
+            <option value="1">Khối 1</option>
+            <option value="2">Khối 2</option>
+            <option value="3">Khối 3</option>
+            <option value="4">Khối 4</option>
+            <option value="5">Khối 5</option>
+          </select>
+        </div>
+
+        <div className="nurse-table-container">
+          <table className="nurse-data-table">
+            <thead>
+              <tr>
+                <th>Mã HS</th>
+                <th>Họ tên</th>
+                <th>Lớp</th>
+                <th>Tuổi</th>
+                <th>Giới tính</th>
+                <th>Nhóm máu</th>
+                <th>Dị ứng</th>
+                <th>Phụ huynh</th>
+                <th>SĐT</th>
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredStudents.map(student => (
+                <tr key={student.id}>
+                  <td>{student.studentId}</td>
+                  <td>{student.studentName}</td>
+                  <td>{student.class}</td>
+                  <td>{student.age} tuổi</td>
+                  <td>{student.gender}</td>
+                  <td>{student.bloodType}</td>
+                  <td>
+                    {student.allergies.length > 0 ? (
+                      <div className="allergies-list">
+                        {student.allergies.slice(0, 2).map((allergy, idx) => (
+                          <span key={idx} className="allergy-tag">{allergy}</span>
+                        ))}
+                        {student.allergies.length > 2 && <span>+{student.allergies.length - 2}</span>}
+                      </div>
+                    ) : (
+                      <span className="no-allergies">Không có</span>
+                    )}
+                  </td>
+                  <td>{student.parentName}</td>
+                  <td>{student.parentPhone}</td>
+                  <td>
+                    <div className="nurse-table-actions">
+                      <button 
+                        className="nurse-btn-action view"
+                        onClick={() => {
+                          setSelectedStudent(student);
+                          setActiveTab('student-detail');
+                        }}
+                      >
+                        Xem hồ sơ
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+
+    // Render chi tiết hồ sơ học sinh
+    const renderStudentDetail = () => {
+      const studentVaccinations = vaccinationHistory.filter(v => v.studentId === selectedStudent.studentId);
+      const studentHealthChecks = healthCheckHistory.filter(h => h.studentId === selectedStudent.studentId);
+      const studentMedicalEvents = medicalEvents.filter(e => e.studentId === selectedStudent.studentId);
+
+      return (
+        <div className="nurse-content-card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+            <div>
+              <button 
+                className="nurse-btn-back"
+                onClick={() => setActiveTab('student-list')}
+              >
+                ← Quay lại danh sách
+              </button>
+              <h2 className="nurse-section-title" style={{ marginTop: '16px' }}>
+                Hồ sơ y tế - {selectedStudent.studentName}
+              </h2>
+            </div>
+          </div>
+
+          {/* Thông tin cơ bản */}
+          <div className="student-basic-info">
+            <h3>Thông tin cơ bản</h3>
+            <div className="info-grid">
+              <div className="info-item">
+                <label>Mã học sinh:</label>
+                <span>{selectedStudent.studentId}</span>
+              </div>
+              <div className="info-item">
+                <label>Họ tên:</label>
+                <span>{selectedStudent.studentName}</span>
+              </div>
+              <div className="info-item">
+                <label>Lớp:</label>
+                <span>{selectedStudent.class}</span>
+              </div>
+              <div className="info-item">
+                <label>Tuổi:</label>
+                <span>{selectedStudent.age} tuổi</span>
+              </div>
+              <div className="info-item">
+                <label>Giới tính:</label>
+                <span>{selectedStudent.gender}</span>
+              </div>
+              <div className="info-item">
+                <label>Ngày sinh:</label>
+                <span>{new Date(selectedStudent.dateOfBirth).toLocaleDateString('vi-VN')}</span>
+              </div>
+              <div className="info-item">
+                <label>Nhóm máu:</label>
+                <span>{selectedStudent.bloodType}</span>
+              </div>
+              <div className="info-item">
+                <label>Phụ huynh:</label>
+                <span>{selectedStudent.parentName}</span>
+              </div>
+              <div className="info-item">
+                <label>SĐT:</label>
+                <span>{selectedStudent.parentPhone}</span>
+              </div>
+              <div className="info-item full-width">
+                <label>Địa chỉ:</label>
+                <span>{selectedStudent.address}</span>
+              </div>
+              <div className="info-item full-width">
+                <label>Dị ứng:</label>
+                <span>
+                  {selectedStudent.allergies.length > 0 
+                    ? selectedStudent.allergies.join(', ') 
+                    : 'Không có dị ứng đã biết'
+                  }
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Lịch sử tiêm chủng */}
+          <div className="medical-section">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3>Lịch sử tiêm chủng</h3>
+              <button 
+                className="nurse-btn-primary"
+                onClick={() => setShowVaccinationModal(true)}
+              >
+                + Thêm tiêm chủng
+              </button>
+            </div>
+            <div className="medical-history-table">
+              <table className="nurse-data-table">
+                <thead>
+                  <tr>
+                    <th>Ngày tiêm</th>
+                    <th>Tên vaccine</th>
+                    <th>Mũi số</th>
+                    <th>Vị trí tiêm</th>
+                    <th>Phản ứng</th>
+                    <th>Y tá thực hiện</th>
+                    <th>Ghi chú</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {studentVaccinations.length > 0 ? (
+                    studentVaccinations.map(vaccination => (
+                      <tr key={vaccination.id}>
+                        <td>{new Date(vaccination.vaccineDate).toLocaleDateString('vi-VN')}</td>
+                        <td>{vaccination.vaccineName}</td>
+                        <td>Mũi {vaccination.doseNumber}</td>
+                        <td>{vaccination.injectionSite}</td>
+                        <td>{vaccination.reaction}</td>
+                        <td>{vaccination.nurseName}</td>
+                        <td>{vaccination.notes}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="7" style={{ textAlign: 'center', color: '#666' }}>
+                        Chưa có lịch sử tiêm chủng
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Lịch sử khám sức khỏe */}
+          <div className="medical-section">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3>Lịch sử khám sức khỏe</h3>
+              <button 
+                className="nurse-btn-primary"
+                onClick={() => setShowHealthCheckModal(true)}
+              >
+                + Thêm khám sức khỏe
+              </button>
+            </div>
+            <div className="medical-history-table">
+              <table className="nurse-data-table">
+                <thead>
+                  <tr>
+                    <th>Ngày khám</th>
+                    <th>Loại khám</th>
+                    <th>Chiều cao (cm)</th>
+                    <th>Cân nặng (kg)</th>
+                    <th>BMI</th>
+                    <th>Thị lực</th>
+                    <th>Kết luận</th>
+                    <th>Bác sĩ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {studentHealthChecks.length > 0 ? (
+                    studentHealthChecks.map(check => (
+                      <tr key={check.id}>
+                        <td>{new Date(check.checkDate).toLocaleDateString('vi-VN')}</td>
+                        <td>{check.checkType}</td>
+                        <td>{check.height}</td>
+                        <td>{check.weight}</td>
+                        <td>{check.bmi}</td>
+                        <td>{check.vision}</td>
+                        <td>{check.overallAssessment}</td>
+                        <td>{check.doctorName}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="8" style={{ textAlign: 'center', color: '#666' }}>
+                        Chưa có lịch sử khám sức khỏe
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Lịch sử sự kiện y tế */}
+          <div className="medical-section">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3>Lịch sử sự kiện y tế</h3>
+              <button 
+                className="nurse-btn-primary"
+                onClick={() => setShowMedicalEventModal(true)}
+              >
+                + Thêm sự kiện y tế
+              </button>
+            </div>
+            <div className="medical-history-table">
+              <table className="nurse-data-table">
+                <thead>
+                  <tr>
+                    <th>Ngày/Giờ</th>
+                    <th>Loại sự kiện</th>
+                    <th>Mô tả</th>
+                    <th>Triệu chứng</th>
+                    <th>Xử lý</th>
+                    <th>Mức độ</th>
+                    <th>Trạng thái</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {studentMedicalEvents.length > 0 ? (
+                    studentMedicalEvents.map(event => (
+                      <tr key={event.id}>
+                        <td>
+                          {new Date(event.eventDate).toLocaleDateString('vi-VN')}<br/>
+                          <small>{event.eventTime}</small>
+                        </td>
+                        <td>{event.eventType}</td>
+                        <td>{event.description}</td>
+                        <td>{Array.isArray(event.symptoms) ? event.symptoms.join(', ') : event.symptoms}</td>
+                        <td>{event.treatment}</td>
+                        <td>
+                          <span className={`severity-badge ${event.severity.toLowerCase()}`}>
+                            {event.severity}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={`nurse-status ${event.status === 'Đã xử lý' ? 'completed' : 'pending'}`}>
+                            {event.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="7" style={{ textAlign: 'center', color: '#666' }}>
+                        Chưa có sự kiện y tế nào
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // Modal thêm tiêm chủng
+    const renderVaccinationModal = () => (
+      showVaccinationModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h3>Thêm lịch sử tiêm chủng - {selectedStudent.studentName}</h3>
+              <button 
+                className="modal-close"
+                onClick={() => setShowVaccinationModal(false)}
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              <div className="form-grid">
+                <div className="form-group">
+                  <label>Tên vaccine:</label>
+                  <select className="nurse-filter-select" id="vaccineName">
+                    <option value="">Chọn vaccine</option>
+                    <option value="Vaccine COVID-19 (Pfizer)">Vaccine COVID-19 (Pfizer)</option>
+                    <option value="Vaccine Sởi - Rubella (MR)">Vaccine Sởi - Rubella (MR)</option>
+                    <option value="Vaccine DPT-VGB-Hib">Vaccine DPT-VGB-Hib</option>
+                    <option value="Vaccine Viêm gan A">Vaccine Viêm gan A</option>
+                    <option value="Vaccine HPV">Vaccine HPV</option>
+                    <option value="Vaccine Cúm mùa">Vaccine Cúm mùa</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Số lô vaccine:</label>
+                  <input type="text" className="nurse-search-input" id="vaccineLot" placeholder="VD: PF240301" />
+                </div>
+                <div className="form-group">
+                  <label>Mũi số:</label>
+                  <select className="nurse-filter-select" id="doseNumber">
+                    <option value="1">Mũi 1</option>
+                    <option value="2">Mũi 2</option>
+                    <option value="3">Mũi 3</option>
+                    <option value="4">Mũi nhắc lại</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Vị trí tiêm:</label>
+                  <select className="nurse-filter-select" id="injectionSite">
+                    <option value="Cánh tay trái">Cánh tay trái</option>
+                    <option value="Cánh tay phải">Cánh tay phải</option>
+                    <option value="Đùi trái">Đùi trái</option>
+                    <option value="Đùi phải">Đùi phải</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Phản ứng sau tiêm:</label>
+                  <select className="nurse-filter-select" id="reaction">
+                    <option value="Không có phản ứng">Không có phản ứng</option>
+                    <option value="Đau nhẹ tại chỗ tiêm">Đau nhẹ tại chỗ tiêm</option>
+                    <option value="Sốt nhẹ dưới 38°C">Sốt nhẹ dưới 38°C</option>
+                    <option value="Sốt cao trên 38°C">Sốt cao trên 38°C</option>
+                    <option value="Phản ứng dị ứng nhẹ">Phản ứng dị ứng nhẹ</option>
+                  </select>
+                </div>
+                <div className="form-group full-width">
+                  <label>Ghi chú:</label>
+                  <textarea 
+                    className="nurse-search-input" 
+                    rows="3" 
+                    id="vaccinationNotes"
+                    placeholder="Ghi chú thêm về quá trình tiêm chủng..."
+                  ></textarea>
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button 
+                className="nurse-btn-secondary"
+                onClick={() => setShowVaccinationModal(false)}
+              >
+                Hủy
+              </button>
+              <button 
+                className="nurse-btn-primary"
+                onClick={() => {
+                  const vaccineName = document.getElementById('vaccineName').value;
+                  if (!vaccineName) {
+                    message.error('Vui lòng chọn vaccine');
+                    return;
+                  }
+                  
+                  const vaccinationData = {
+                    vaccineName,
+                    vaccineLot: document.getElementById('vaccineLot').value,
+                    doseNumber: parseInt(document.getElementById('doseNumber').value),
+                    injectionSite: document.getElementById('injectionSite').value,
+                    reaction: document.getElementById('reaction').value,
+                    notes: document.getElementById('vaccinationNotes').value
+                  };
+                  handleAddVaccination(vaccinationData);
+                }}
+              >
+                Lưu tiêm chủng
+              </button>
+            </div>
+          </div>
+        </div>
+      )
+    );
+
+    // Modal thêm khám sức khỏe
+    const renderHealthCheckModal = () => (
+      showHealthCheckModal && (
+        <div className="modal-overlay">
+          <div className="modal-content health-check-modal">
+            <div className="modal-header">
+              <h3>Thêm kết quả khám sức khỏe - {selectedStudent.studentName}</h3>
+              <button 
+                className="modal-close"
+                onClick={() => setShowHealthCheckModal(false)}
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              <div className="form-sections">
+                <div className="form-section">
+                  <h4>Thông tin khám</h4>
+                  <div className="form-grid">
+                    <div className="form-group">
+                      <label>Loại khám:</label>
+                      <select className="nurse-filter-select" id="checkType">
+                        <option value="Định kỳ học kỳ I">Định kỳ học kỳ I</option>
+                        <option value="Định kỳ học kỳ II">Định kỳ học kỳ II</option>
+                        <option value="Sàng lọc">Sàng lọc</option>
+                        <option value="Khám đột xuất">Khám đột xuất</option>
+                        <option value="Khám theo yêu cầu">Khám theo yêu cầu</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="form-section">
+                  <h4>Thông số cơ bản</h4>
+                  <div className="form-grid">
+                    <div className="form-group">
+                      <label>Chiều cao (cm):</label>
+                      <input type="number" className="nurse-search-input" id="height" placeholder="120" />
+                    </div>
+                    <div className="form-group">
+                      <label>Cân nặng (kg):</label>
+                      <input type="number" className="nurse-search-input" id="weight" placeholder="22.5" />
+                    </div>
+                    <div className="form-group">
+                      <label>Huyết áp:</label>
+                      <input type="text" className="nurse-search-input" id="bloodPressure" placeholder="100/65" />
+                    </div>
+                    <div className="form-group">
+                      <label>Nhịp tim:</label>
+                      <input type="number" className="nurse-search-input" id="heartRate" placeholder="85" />
+                    </div>
+                    <div className="form-group">
+                      <label>Nhiệt độ (°C):</label>
+                      <input type="number" step="0.1" className="nurse-search-input" id="temperature" placeholder="36.5" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="form-section">
+                  <h4>Khám chuyên khoa</h4>
+                  <div className="form-grid">
+                    <div className="form-group">
+                      <label>Thị lực:</label>
+                      <select className="nurse-filter-select" id="vision">
+                        <option value="10/10 cả hai mắt">10/10 cả hai mắt</option>
+                        <option value="Cận thị nhẹ">Cận thị nhẹ</option>
+                        <option value="Cận thị vừa">Cận thị vừa</option>
+                        <option value="Viễn thị">Viễn thị</option>
+                        <option value="Loạn thị">Loạn thị</option>
+                        <option value="Cần kiểm tra thêm">Cần kiểm tra thêm</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>Thính lực:</label>
+                      <select className="nurse-filter-select" id="hearing">
+                        <option value="Bình thường">Bình thường</option>
+                        <option value="Giảm nhẹ">Giảm nhẹ</option>
+                        <option value="Cần kiểm tra thêm">Cần kiểm tra thêm</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>Răng miệng:</label>
+                      <select className="nurse-filter-select" id="dental">
+                        <option value="Bình thường">Bình thường</option>
+                        <option value="Sâu răng 1 răng">Sâu răng 1 răng</option>
+                        <option value="Sâu răng 2-3 răng">Sâu răng 2-3 răng</option>
+                        <option value="Sâu răng nhiều">Sâu răng nhiều</option>
+                        <option value="Viêm nướu">Viêm nướu</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="form-section">
+                  <h4>Đánh giá tổng quan</h4>
+                  <div className="form-grid">
+                    <div className="form-group">
+                      <label>Kết luận:</label>
+                      <select className="nurse-filter-select" id="overallAssessment">
+                        <option value="Khỏe mạnh">Khỏe mạnh</option>
+                        <option value="Khỏe mạnh có vấn đề nhỏ">Khỏe mạnh có vấn đề nhỏ</option>
+                        <option value="Cần điều trị">Cần điều trị</option>
+                        <option value="Cần theo dõi">Cần theo dõi</option>
+                        <option value="Cần chuyển viện">Cần chuyển viện</option>
+                      </select>
+                    </div>
+                    <div className="form-group full-width">
+                      <label>Khuyến nghị:</label>
+                      <textarea 
+                        className="nurse-search-input" 
+                        rows="3" 
+                        id="recommendations"
+                        placeholder="Khuyến nghị cho phụ huynh và học sinh..."
+                      ></textarea>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button 
+                className="nurse-btn-secondary"
+                onClick={() => setShowHealthCheckModal(false)}
+              >
+                Hủy
+              </button>
+              <button 
+                className="nurse-btn-primary"
+                onClick={() => {
+                  const healthData = {
+                    checkType: document.getElementById('checkType').value,
+                    height: document.getElementById('height').value,
+                    weight: document.getElementById('weight').value,
+                    bloodPressure: document.getElementById('bloodPressure').value,
+                    heartRate: document.getElementById('heartRate').value,
+                    temperature: document.getElementById('temperature').value,
+                    vision: document.getElementById('vision').value,
+                    hearing: document.getElementById('hearing').value,
+                    dental: document.getElementById('dental').value,
+                    overallAssessment: document.getElementById('overallAssessment').value,
+                    recommendations: document.getElementById('recommendations').value.split('\n').filter(r => r.trim())
+                  };
+                  handleAddHealthCheck(healthData);
+                }}
+              >
+                Lưu kết quả
+              </button>
+            </div>
+          </div>
+        </div>
+      )
+    );
+
+    // Modal thêm sự kiện y tế
+    const renderMedicalEventModal = () => (
+      showMedicalEventModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h3>Thêm sự kiện y tế - {selectedStudent.studentName}</h3>
+              <button 
+                className="modal-close"
+                onClick={() => setShowMedicalEventModal(false)}
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              <div className="form-grid">
+                <div className="form-group">
+                  <label>Loại sự kiện:</label>
+                  <select className="nurse-filter-select" id="eventType">
+                    <option value="">Chọn loại sự kiện</option>
+                    <option value="Té ngã">Té ngã</option>
+                    <option value="Đau bụng">Đau bụng</option>
+                    <option value="Sốt">Sốt</option>
+                    <option value="Đau đầu">Đau đầu</option>
+                    <option value="Buồn nôn">Buồn nôn</option>
+                    <option value="Chảy máu cam">Chảy máu cam</option>
+                    <option value="Dị ứng">Dị ứng</option>
+                    <option value="Khó thở">Khó thở</option>
+                    <option value="Khác">Khác</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Mức độ nghiêm trọng:</label>
+                  <select className="nurse-filter-select" id="severity">
+                    <option value="Nhẹ">Nhẹ</option>
+                    <option value="Vừa">Vừa</option>
+                    <option value="Nặng">Nặng</option>
+                    <option value="Khẩn cấp">Khẩn cấp</option>
+                  </select>
+                </div>
+                <div className="form-group full-width">
+                  <label>Mô tả chi tiết:</label>
+                  <textarea 
+                    className="nurse-search-input" 
+                    rows="3" 
+                    id="description"
+                    placeholder="Mô tả chi tiết về sự kiện..."
+                  ></textarea>
+                </div>
+                <div className="form-group full-width">
+                  <label>Triệu chứng:</label>
+                  <textarea 
+                    className="nurse-search-input" 
+                    rows="2" 
+                    id="symptoms"
+                    placeholder="Các triệu chứng quan sát được (mỗi triệu chứng một dòng)..."
+                  ></textarea>
+                </div>
+                <div className="form-group full-width">
+                  <label>Biện pháp xử lý:</label>
+                  <textarea 
+                    className="nurse-search-input" 
+                    rows="3" 
+                    id="treatment"
+                    placeholder="Các biện pháp đã thực hiện..."
+                  ></textarea>
+                </div>
+                <div className="form-group">
+                  <label>Thuốc/Vật tư sử dụng:</label>
+                  <input 
+                    type="text" 
+                    className="nurse-search-input" 
+                    id="medication"
+                    placeholder="VD: Betadine, gạc y tế..."
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Đã thông báo phụ huynh:</label>
+                  <select className="nurse-filter-select" id="parentNotified">
+                    <option value={true}>Có</option>
+                    <option value={false}>Chưa</option>
+                  </select>
+                </div>
+                <div className="form-group full-width">
+                  <label>Theo dõi sau:</label>
+                  <textarea 
+                    className="nurse-search-input" 
+                    rows="2" 
+                    id="followUp"
+                    placeholder="Kế hoạch theo dõi..."
+                  ></textarea>
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button 
+                className="nurse-btn-secondary"
+                onClick={() => setShowMedicalEventModal(false)}
+              >
+                Hủy
+              </button>
+              <button 
+                className="nurse-btn-primary"
+                onClick={() => {
+                  const eventType = document.getElementById('eventType').value;
+                  if (!eventType) {
+                    message.error('Vui lòng chọn loại sự kiện');
+                    return;
+                  }
+                  
+                  const symptoms = document.getElementById('symptoms').value
+                    .split('\n')
+                    .filter(s => s.trim())
+                    .map(s => s.trim());
+                
+                  const eventData = {
+                    eventType,
+                    severity: document.getElementById('severity').value,
+                    description: document.getElementById('description').value,
+                    symptoms: symptoms.length > 0 ? symptoms : [],
+                    treatment: document.getElementById('treatment').value,
+                    medication: document.getElementById('medication').value,
+                    parentNotified: document.getElementById('parentNotified').value === 'true',
+                    followUp: document.getElementById('followUp').value
+                  };
+                  handleAddMedicalEvent(eventData);
+                }}
+              >
+                Lưu sự kiện
+              </button>
+            </div>
+          </div>
+        </div>
+      )
+    );
+
+    return (
+      <div>
+        {activeTab === 'student-list' && renderStudentList()}
+        {activeTab === 'student-detail' && renderStudentDetail()}
+        {renderVaccinationModal()}
+        {renderHealthCheckModal()}
+        {renderMedicalEventModal()}
+      </div>
+    );
+  };
+
   if (!userInfo) {
     return (
       <div style={{ 
