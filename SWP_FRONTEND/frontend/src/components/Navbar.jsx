@@ -311,12 +311,15 @@ const Navbar = () => {
                       </div>
                       <div className="user-email">{user.email}</div>
                     </div>
-                    <div className="dropdown-divider"></div>
-                    <Link
+                    <div className="dropdown-divider"></div>                    <Link
                       to={
                         isParent()
                           ? "/parent-dashboard?tab=profile"
-                          : "/admin/dashboard?tab=profile"
+                          : user?.roleName === "MANAGER"
+                            ? "/manager-dashboard?tab=profile"
+                            : user?.roleName === "SCHOOLNURSE"
+                              ? "/nurse-dashboard?tab=profile"
+                              : "/admin/dashboard?tab=profile"
                       }
                       className="dropdown-item"
                       onClick={() => setShowUserDropdown(false)}

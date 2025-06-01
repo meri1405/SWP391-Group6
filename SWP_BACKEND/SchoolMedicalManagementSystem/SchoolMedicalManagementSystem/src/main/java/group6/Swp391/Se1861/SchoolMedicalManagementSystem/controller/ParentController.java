@@ -1,7 +1,13 @@
 package group6.Swp391.Se1861.SchoolMedicalManagementSystem.controller;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.Student;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.MedicationSchedule;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.MedicationStatus;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.UserRepository;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.StudentRepository;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.MedicationScheduleRepository;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.MedicationScheduleService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -10,8 +16,11 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/parent")
@@ -20,6 +29,15 @@ public class ParentController {
 
     @Autowired
     private UserRepository userRepository;
+    
+    @Autowired
+    private StudentRepository studentRepository;
+    
+    @Autowired
+    private MedicationScheduleRepository medicationScheduleRepository;
+    
+    @Autowired
+    private MedicationScheduleService medicationScheduleService;
 
     /**
      * Get parent profile information
@@ -191,13 +209,114 @@ public class ParentController {
             updatedProfile.put("role", parent.getRole().getRoleName());
             
             response.put("profile", updatedProfile);
-            
-            return ResponseEntity.ok(response);
+              return ResponseEntity.ok(response);
             
         } catch (Exception e) {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", "Update failed");
             errorResponse.put("message", "An error occurred while updating the profile: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(errorResponse);
+        }
+    }
+
+    /**
+     * Get medication schedules for all children of the parent
+     */
+    @GetMapping("/medication-schedules")
+    public ResponseEntity<?> getAllChildrenMedicationSchedules(
+            @AuthenticationPrincipal User parent,
+            @RequestParam(required = false) String date,
+            @RequestParam(required = false) String status) {
+        try {
+            // Get all students of this parent
+            List<Student> parentStudents = studentRepository.findByParents(parent);
+
+            if (parentStudents.isEmpty()) {
+                return ResponseEntity.ok(List.of());
+            }
+            
+            List<Long> studentIds = parentStudents.stream()
+                    .map(Student::getStudentID)
+                    .collect(Collectors.toList());
+            
+            List<MedicationSchedule> schedules = new ArrayList<>();
+
+            // Fetch all schedules for each student ID
+            for (Long studentId : studentIds) {
+                List<MedicationSchedule> studentSchedules = medicationScheduleRepository
+                    .findByItemRequestMedicationRequestStudentStudentID(studentId);
+                schedules.addAll(studentSchedules);
+            }
+
+            // Filter by date and status if provided
+            if (date != null && !date.isEmpty()) {
+                LocalDate targetDate = LocalDate.parse(date);
+                schedules = schedules.stream()
+                    .filter(schedule -> schedule.getScheduledDate().equals(targetDate))
+                    .collect(Collectors.toList());
+            }
+
+            if (status != null && !status.isEmpty() && !status.equals("ALL")) {
+                MedicationStatus medicationStatus = MedicationStatus.valueOf(status);
+                schedules = schedules.stream()
+                    .filter(schedule -> schedule.getStatus() == medicationStatus)
+                    .collect(Collectors.toList());
+            }
+            
+            return ResponseEntity.ok(medicationScheduleService.convertToScheduleDTOList(schedules));
+            
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Failed to fetch medication schedules");
+            errorResponse.put("message", e.getMessage());
+            return ResponseEntity.internalServerError().body(errorResponse);
+        }
+    }
+
+    /**
+     * Get medication schedules for a specific child
+     */
+    @GetMapping("/students/{studentId}/medication-schedules")
+    public ResponseEntity<?> getChildMedicationSchedules(
+            @AuthenticationPrincipal User parent,
+            @PathVariable Long studentId,
+            @RequestParam(required = false) String date,
+            @RequestParam(required = false) String status) {
+        try {
+            // Verify that this student belongs to the parent
+            boolean isParentOfStudent = studentRepository.isStudentOwnedByParent(studentId, parent.getId());
+            if (!isParentOfStudent) {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("error", "Access denied");
+                errorResponse.put("message", "You don't have permission to view this student's medication schedules");
+                return ResponseEntity.status(403).body(errorResponse);
+            }
+            
+            // Fetch all schedules for this student
+            List<MedicationSchedule> schedules = medicationScheduleRepository
+                .findByItemRequestMedicationRequestStudentStudentID(studentId);
+
+            // Filter by date and status if provided
+            if (date != null && !date.isEmpty()) {
+                LocalDate targetDate = LocalDate.parse(date);
+                schedules = schedules.stream()
+                    .filter(schedule -> schedule.getScheduledDate().equals(targetDate))
+                    .collect(Collectors.toList());
+            }
+
+            if (status != null && !status.isEmpty() && !status.equals("ALL")) {
+                MedicationStatus medicationStatus = MedicationStatus.valueOf(status);
+                schedules = schedules.stream()
+                    .filter(schedule -> schedule.getStatus() == medicationStatus)
+                    .collect(Collectors.toList());
+            }
+            
+            return ResponseEntity.ok(medicationScheduleService.convertToScheduleDTOList(schedules));
+            
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Failed to fetch medication schedules");
+            errorResponse.put("message", e.getMessage());
             return ResponseEntity.internalServerError().body(errorResponse);
         }
     }

@@ -64,18 +64,18 @@ public class SecurityConfig {
         http.cors(cors -> cors.configure(http))
             .csrf(csrf -> csrf.disable())
             .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth ->
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))            .authorizeHttpRequests(auth ->
                 auth.requestMatchers("/api/auth/**").permitAll()
                     .requestMatchers("/api/public/**").permitAll()
                     .requestMatchers("/oauth2/**").permitAll()
                     .requestMatchers("/login/oauth2/**").permitAll()
                     .requestMatchers("/api/admin/**").hasRole("ADMIN")
                     .requestMatchers("/api/manager/**").hasRole("MANAGER")
+                    .requestMatchers("/api/nurse/**").hasRole("SCHOOLNURSE")
                     .requestMatchers("/api/schoolnurse/**").hasRole("SCHOOLNURSE")
                     .requestMatchers("/api/parent/**").hasRole("PARENT")
                     .anyRequest().authenticated()
-            )            .oauth2Login(oauth2 ->
+            ).oauth2Login(oauth2 ->
                 oauth2.authorizationEndpoint(authEndpoint ->
                         authEndpoint.baseUri("/oauth2/authorize"))
                     .redirectionEndpoint(redirectEndpoint ->

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
+import axios from "axios";
 
 const AuthContext = createContext();
 
@@ -119,7 +120,6 @@ export const AuthProvider = ({ children }) => {
   const isParent = () => {
     return user?.roleName === "PARENT";
   };
-
   const isSchoolNurse = () => {
     return user?.roleName === "SCHOOLNURSE";
   };
@@ -128,25 +128,7 @@ export const AuthProvider = ({ children }) => {
     const staffRoles = ["ADMIN", "MANAGER", "SCHOOLNURSE"];
     return user && staffRoles.includes(user.roleName);
   };
-  const getToken = () => {
-    return localStorage.getItem("token");
-  };  // Function to refresh the session timer
-  const refreshSession = useCallback(() => {
-    if (user) {
-      const token = localStorage.getItem("token");
-      if (!token || isTokenExpired(token)) {
-        console.log("Token expired during refresh - logging out");
-        logout();
-        return false;
-      }
-      
-      console.log("Refreshing session timer");
-      localStorage.setItem("loginTimestamp", Date.now().toString());
-      startLogoutTimer();
-      return true;
-    }
-    return false;
-  }, [user, startLogoutTimer, logout]);
+
   // Function to check if token is expired
   const isTokenExpired = (token) => {
     if (!token) return true;
@@ -160,6 +142,95 @@ export const AuthProvider = ({ children }) => {
       return true;
     }
   };
+
+  const getToken = () => {
+    const token = localStorage.getItem("token");
+    if (token && !isTokenExpired(token)) {
+      return token;
+    }
+    return null;
+  };  // Function to refresh the session timer
+  const refreshSession = useCallback(() => {
+    try {
+      const token = localStorage.getItem("token");
+      
+      // If no token exists, return false immediately
+      if (!token) {
+        console.log("No token found during refresh - logging out");
+        logout();
+        return false;
+      }
+      
+      // Check if token is valid and not expired
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const currentTime = Date.now() / 1000;
+        
+        // If token is expired, logout and return false
+        if (payload.exp < currentTime) {
+          console.log("Token expired during refresh - logging out");
+          logout();
+          return false;
+        }
+      } catch (tokenError) {
+        console.error("Error parsing token:", tokenError);
+        logout();
+        return false;
+      }
+      
+      // Token is valid, refresh the session timestamp
+      console.log("Refreshing session timer");
+      localStorage.setItem("loginTimestamp", Date.now().toString());
+      startLogoutTimer();
+      return true;
+    } catch (error) {
+      console.error("Error in refreshSession:", error);
+      logout();
+      return false;
+    }
+  }, [startLogoutTimer, logout]);
+  // Set up axios interceptors for authentication
+  useEffect(() => {
+    console.log("Setting up axios interceptors");
+    
+    // Request interceptor - Add token to all requests
+    const requestInterceptor = axios.interceptors.request.use(
+      (config) => {
+        const token = localStorage.getItem("token");
+        if (token) {
+          // Add token to request headers
+          config.headers.Authorization = `Bearer ${token}`;
+          
+          // Always refresh session when making API calls
+          refreshSession();
+        }
+        return config;
+      },
+      (error) => {
+        return Promise.reject(error);
+      }
+    );
+    
+    // Response interceptor - Handle 401 errors
+    const responseInterceptor = axios.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response && error.response.status === 401) {
+          console.log("Received 401 Unauthorized error - Token may be invalid");
+          // Log out the user if they get a 401 error
+          logout();
+        }
+        return Promise.reject(error);
+      }
+    );
+    
+    // Clean up interceptors when component unmounts
+    return () => {
+      axios.interceptors.request.eject(requestInterceptor);
+      axios.interceptors.response.eject(responseInterceptor);
+    };
+  }, [refreshSession, logout]);
+
   // Effect to set up activity monitoring
   useEffect(() => {
     if (!user) return;
@@ -193,7 +264,7 @@ export const AuthProvider = ({ children }) => {
         window.removeEventListener(event, activityHandler);
       });
     };
-  }, [user, refreshSession]);const value = {
+  }, [user, refreshSession]);  const value = {
     user,
     login,
     logout,
@@ -205,6 +276,7 @@ export const AuthProvider = ({ children }) => {
     loading,
     isAuthenticated: !!user,
     startLogoutTimer,
+    isTokenExpired,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -50,30 +50,36 @@ public class MedicationScheduleService {
     }
 
     /**
-     * Calculate time slots based on frequency
-     * @param frequency Number of times per day
-     * @return Array of LocalTime representing scheduled times
+     * Calculate time slots based on medication frequency
+     * @param frequency Daily frequency of medication
+     * @return Array of time slots for medication
      */
     private LocalTime[] calculateTimeSlots(int frequency) {
         LocalTime[] timeSlots = new LocalTime[frequency];
 
-        // Define starting time (e.g., 8 AM)
-        LocalTime startTime = LocalTime.of(8, 0);
-
         if (frequency == 1) {
-            timeSlots[0] = LocalTime.of(8, 0); // 8:00 AM
+            // Once a day - at noon
+            timeSlots[0] = LocalTime.of(12, 0);
         } else if (frequency == 2) {
-            timeSlots[0] = LocalTime.of(8, 0); // 8:00 AM
-            timeSlots[1] = LocalTime.of(18, 0); // 6:00 PM
+            // Twice a day - morning and evening
+            timeSlots[0] = LocalTime.of(8, 0);
+            timeSlots[1] = LocalTime.of(18, 0);
         } else if (frequency == 3) {
-            timeSlots[0] = LocalTime.of(8, 0);  // 8:00 AM
-            timeSlots[1] = LocalTime.of(13, 0); // 1:00 PM
-            timeSlots[2] = LocalTime.of(19, 0); // 7:00 PM
+            // Three times a day - morning, noon, evening
+            timeSlots[0] = LocalTime.of(8, 0);
+            timeSlots[1] = LocalTime.of(12, 0);
+            timeSlots[2] = LocalTime.of(18, 0);
+        } else if (frequency == 4) {
+            // Four times a day - morning, noon, afternoon, evening
+            timeSlots[0] = LocalTime.of(8, 0);
+            timeSlots[1] = LocalTime.of(12, 0);
+            timeSlots[2] = LocalTime.of(16, 0);
+            timeSlots[3] = LocalTime.of(20, 0);
         } else {
-            // For frequencies greater than 3, distribute evenly throughout the day
-            int intervalHours = 12 / frequency;
+            // Default to evenly spaced throughout the day
+            int intervalHours = 24 / frequency;
             for (int i = 0; i < frequency; i++) {
-                timeSlots[i] = startTime.plusHours(i * intervalHours);
+                timeSlots[i] = LocalTime.of((8 + i * intervalHours) % 24, 0);
             }
         }
 
@@ -159,6 +165,23 @@ public class MedicationScheduleService {
     }
 
     /**
+     * Update medication schedule note only
+     * @param scheduleId The schedule ID
+     * @param nurse Nurse who updated the note
+     * @param note New note content
+     * @return Updated medication schedule
+     */
+    public MedicationScheduleDTO updateScheduleNote(Long scheduleId, User nurse, String note) {
+        MedicationSchedule schedule = medicationScheduleRepository.findById(scheduleId)
+                .orElseThrow(() -> new RuntimeException("Schedule not found"));
+
+        schedule.setNurseNote(note);
+        schedule.setNurse(nurse);
+
+        return convertToDTO(medicationScheduleRepository.save(schedule));
+    }
+
+    /**
      * Convert entity to DTO
      * @param schedule The medication schedule entity
      * @return The DTO representation
@@ -186,5 +209,52 @@ public class MedicationScheduleService {
         dto.setClassName(student.getClassName());
 
         return dto;
+    }
+
+    /**
+     * Convert a MedicationSchedule entity to a MedicationScheduleDTO
+     * @param schedule The medication schedule entity
+     * @return The medication schedule DTO
+     */
+    public MedicationScheduleDTO convertToScheduleDTO(MedicationSchedule schedule) {
+        MedicationScheduleDTO dto = new MedicationScheduleDTO();
+        dto.setId(schedule.getId());
+        dto.setItemRequestId(schedule.getItemRequest().getId());
+        dto.setMedicationName(schedule.getItemRequest().getItemName());
+        dto.setScheduledDate(schedule.getScheduledDate());
+        dto.setScheduledTime(schedule.getScheduledTime());
+        dto.setStatus(schedule.getStatus());
+        dto.setAdministeredTime(schedule.getAdministeredTime());
+        dto.setNurseNote(schedule.getNurseNote());
+
+        // Set nurse info if available
+        if (schedule.getNurse() != null) {
+            dto.setNurseId(schedule.getNurse().getId());
+            dto.setNurseName(schedule.getNurse().getLastName() + " " + schedule.getNurse().getFirstName());
+        }
+
+        // Set student info
+        Student student = schedule.getItemRequest().getMedicationRequest().getStudent();
+        if (student != null) {
+            dto.setStudentId(student.getStudentID());
+            dto.setStudentName(student.getLastName() + " " + student.getFirstName());
+            dto.setClassName(student.getClassName());
+        }
+
+        // Set dosage
+        dto.setDosage(schedule.getItemRequest().getDosage());
+
+        return dto;
+    }
+
+    /**
+     * Convert a list of MedicationSchedule entities to DTOs
+     * @param schedules List of medication schedule entities
+     * @return List of medication schedule DTOs
+     */
+    public List<MedicationScheduleDTO> convertToScheduleDTOList(List<MedicationSchedule> schedules) {
+        return schedules.stream()
+            .map(this::convertToScheduleDTO)
+            .collect(Collectors.toList());
     }
 }

@@ -57,11 +57,12 @@ const NurseMedicationSchedules = () => {    const { refreshSession } = useAuth()
         TAKEN: { color: 'green', text: 'Đã uống', icon: <CheckCircleOutlined /> },
         MISSED: { color: 'red', text: 'Bỏ lỡ', icon: <CloseCircleOutlined /> },
         SKIPPED: { color: 'gray', text: 'Bỏ qua', icon: <CloseCircleOutlined /> }
-    };
-
-    const loadSchedules = useCallback(async () => {
+    };    const loadSchedules = useCallback(async () => {
         try {
         setLoading(true);
+        // Refresh session before API call
+        refreshSession();
+        
         let data;
         
         if (selectedStudent) {
@@ -92,7 +93,7 @@ const NurseMedicationSchedules = () => {    const { refreshSession } = useAuth()
         } finally {
         setLoading(false);
         }
-    }, [selectedDate, selectedStatus, selectedStudent]);
+    }, [selectedDate, selectedStatus, selectedStudent, refreshSession]);
 
     useEffect(() => {
         loadSchedules();
@@ -119,37 +120,68 @@ const NurseMedicationSchedules = () => {    const { refreshSession } = useAuth()
                 message.error('Không thể cập nhật trạng thái');
             }
         }
-    };
-
-    const openEditNoteModal = (schedule) => {
+    };    const openEditNoteModal = (schedule) => {
         setEditingScheduleId(schedule.id);
-        setCurrentNote(schedule.notes || '');
+        setCurrentNote(schedule.nurseNote || '');
         setEditNoteModalVisible(true);
-    };
-
-    const handleUpdateNote = async () => {
+    };const handleUpdateNote = async () => {
         try {
             setLoading(true);
-            refreshSession(); // Refresh session timer
+            
+            // Check if there's a valid token before making the API call
+            const token = localStorage.getItem('token');
+            if (!token) {
+                message.error('Phiên làm việc đã hết hạn, vui lòng đăng nhập lại');
+                setLoading(false);
+                return;
+            }
+            
+            // Try to refresh the session
+            const sessionRefreshed = refreshSession();
+            if (!sessionRefreshed) {
+                message.error('Phiên làm việc đã hết hạn, vui lòng đăng nhập lại');
+                setLoading(false);
+                return;
+            }
+            
+            // Call the API to update the note
             await nurseApi.updateScheduleNote(editingScheduleId, currentNote);
             
             // Update local state optimistically
             setSchedules(prevSchedules => 
                 prevSchedules.map(schedule => 
                 schedule.id === editingScheduleId 
-                    ? { ...schedule, notes: currentNote }
+                    ? { ...schedule, nurseNote: currentNote }
                     : schedule
                 )
             );
             
             message.success('Cập nhật ghi chú thành công');
             setEditNoteModalVisible(false);
+            
+            // Reload schedules to ensure fresh data from the server
+            loadSchedules();
         } catch (error) {
             console.error('Error updating note:', error);
-            if (error.response?.status === 401) {
-                message.error('Phiên làm việc hết hạn, vui lòng đăng nhập lại');
+            
+            // Check for specific error types
+            if (error.response) {
+                if (error.response.status === 401) {
+                    message.error('Phiên làm việc hết hạn, vui lòng đăng nhập lại');
+                    // Force logout on 401
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    localStorage.removeItem('loginTimestamp');
+                    setTimeout(() => {
+                        window.location.href = '/login';
+                    }, 2000);
+                } else if (error.response.status === 403) {
+                    message.error('Bạn không có quyền thực hiện hành động này');
+                } else {
+                    message.error(`Không thể cập nhật ghi chú: ${error.response.data?.message || error.message}`);
+                }
             } else {
-                message.error('Không thể cập nhật ghi chú');
+                message.error('Không thể cập nhật ghi chú: Lỗi kết nối');
             }
         } finally {
             setLoading(false);
@@ -191,21 +223,18 @@ const NurseMedicationSchedules = () => {    const { refreshSession } = useAuth()
         });
 
         return processedData;
-    };
-    const columns = [
+    };    const columns = [
         {
         title: 'Học sinh',
         key: 'student',
-        render: (_, record) => ({
-            children: (
+        render: (_, record) => (
             <div className="student-info-cell">
                 <div className="student-name">{record.studentName} - {record.className}</div>
             </div>
-            ),
-            props: {
+        ),
+        onCell: (record) => ({
             rowSpan: record.studentRowSpan,
             className: record.studentRowSpan > 0 ? 'merged-student-cell' : '',
-            },
         }),
         width: 180,
         },{      title: 'Tên thuốc',
@@ -216,15 +245,13 @@ const NurseMedicationSchedules = () => {    const { refreshSession } = useAuth()
             </div>
         ),
         width: 180,
-        },    {
-        title: 'Ghi chú',
-        key: 'notes',
+        },    {        title: 'Ghi chú',
+        key: 'nurseNote',
         render: (_, record) => (
             <div className="medication-notes-cell">
-            {record.notes ? (
+            {record.nurseNote ? (
                 <div className="medication-notes">
-                <AlertOutlined style={{ fontSize: '12px', marginRight: '4px' }} />
-                {record.notes}
+                {record.nurseNote}
                 </div>
             ) : (
                 <span className="no-notes">-</span>
@@ -366,12 +393,11 @@ const NurseMedicationSchedules = () => {    const { refreshSession } = useAuth()
             </div>
             
             <div className="filter-item">
-                <div className="filter-label">Trạng thái:</div>
-                <Select
+                <div className="filter-label">Trạng thái:</div>                <Select
                 value={selectedStatus}
                 onChange={setSelectedStatus}
                 style={{ width: '100%' }}
-                dropdownMatchSelectWidth={false}
+                popupMatchSelectWidth={false}
                 >
                 <Option value="ALL">Tất cả</Option>
                 <Option value="PENDING">Chưa uống</Option>
@@ -382,8 +408,7 @@ const NurseMedicationSchedules = () => {    const { refreshSession } = useAuth()
             </div>
             
             <div className="filter-item">
-                <div className="filter-label">Học sinh:</div>
-                <Select
+                <div className="filter-label">Học sinh:</div>                <Select
                 value={selectedStudent}
                 onChange={(value) => {
                     setSelectedStudent(value);
@@ -394,7 +419,7 @@ const NurseMedicationSchedules = () => {    const { refreshSession } = useAuth()
                 placeholder="Chọn học sinh"
                 style={{ width: '100%' }}
                 allowClear
-                dropdownMatchSelectWidth={false}
+                popupMatchSelectWidth={false}
                 >
                 {students.map(student => (
                     <Option key={student.id} value={student.id}>
@@ -540,34 +565,23 @@ const NurseMedicationSchedules = () => {    const { refreshSession } = useAuth()
                         type="link" 
                         size="small" 
                         icon={<EditOutlined />}
-                        onClick={() => {
-                        setEditingScheduleId(selectedSchedule.id);
-                        setCurrentNote(selectedSchedule.notes || '');
+                        onClick={() => {                        setEditingScheduleId(selectedSchedule.id);
+                        setCurrentNote(selectedSchedule.nurseNote || '');
                         setEditNoteModalVisible(true);
                         }}
                     >
                         Sửa
                     </Button>
-                    </div>
-                    {selectedSchedule.notes ? (
-                    <div className="modal-notes">
-                        <AlertOutlined style={{ fontSize: '14px', marginRight: '6px', color: '#ff6b6b' }} />
-                        <Text>{selectedSchedule.notes}</Text>
+                    </div>                    
+                    {selectedSchedule.nurseNote ? (
+                    <div>
+                        <Text>{selectedSchedule.nurseNote}</Text>
                     </div>
                     ) : (
                     <Text type="secondary" italic>Không có ghi chú</Text>
                     )}
                 </Col>
                 </Row>
-
-                {selectedSchedule.instructions && (
-                <>
-                    <Divider />
-                    <Text strong>Hướng dẫn sử dụng:</Text>
-                    <br />
-                    <Text>{selectedSchedule.instructions}</Text>
-                </>
-                )}
             </div>
             )}      </Modal>
 

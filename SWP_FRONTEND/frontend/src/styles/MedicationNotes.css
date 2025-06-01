@@ -15,11 +15,8 @@
 
 .medication-notes {
   font-size: 12px;
-  color: #ff6b6b;
-  background-color: #fff8f8;
-  padding: 4px 8px;
-  border-radius: 4px;
-  border-left: 2px solid #ff6b6b;
+  color: black;
+  padding: 4px 0;
   margin-top: 0;
   display: flex;
   align-items: center;
@@ -38,17 +35,6 @@
 
 .medication-notes-cell:hover .edit-note-button {
   opacity: 1;
-}
-
-/* Modal notes styling */
-.modal-notes {
-  display: flex;
-  align-items: flex-start;
-  background-color: #fff8f8;
-  padding: 8px 12px;
-  border-radius: 6px;
-  border-left: 3px solid #ff6b6b;
-  margin-top: 4px;
 }
 
 /* Responsive adjustments for notes column */

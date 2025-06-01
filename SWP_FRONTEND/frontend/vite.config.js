@@ -11,6 +11,10 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       }
-    }
-  }
+    },
+    // Thêm cấu hình historyApiFallback để xử lý client-side routing
+    historyApiFallback: true
+  },
+  // Thêm cấu hình base để tránh lỗi routing khi reload
+  base: '/'
 })
