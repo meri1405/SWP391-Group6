@@ -13,8 +13,12 @@ import {
   EditOutlined,
   HeartOutlined,
   LeftOutlined,
-  RightOutlined
+  RightOutlined,
+  ClockCircleOutlined,
+  FileDoneOutlined
 } from '@ant-design/icons';
+import NurseMedicationRequests from '../components/dashboard/NurseMedicationRequests';
+import NurseMedicationSchedules from '../components/dashboard/NurseMedicationSchedules';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -59,18 +63,21 @@ const SchoolNurseDashboard = () => {
     totalVaccinations: 450,
     totalHealthChecks: 1200,
   });
-
   // Navigation items specific to SchoolNurse role
-  const menuItems = [
-    {
+  const menuItems = [    {
       key: 'dashboard',
       icon: <DashboardOutlined />,
       label: 'Tổng quan',
     },
     {
-      key: 'medicine',
-      icon: <MedicineBoxOutlined />,
-      label: 'Nhận thuốc từ phụ huynh',
+      key: 'medication-requests',
+      icon: <FileDoneOutlined />,
+      label: 'Duyệt yêu cầu thuốc',
+    },
+    {
+      key: 'medication-schedules',
+      icon: <ClockCircleOutlined />,
+      label: 'Quản lý lịch uống thuốc',
     },
     {
       key: 'medical-events',
@@ -148,11 +155,10 @@ const SchoolNurseDashboard = () => {
 
     setUserInfo(user);
   }, [navigate, isAuthenticated, isSchoolNurse, user]);
-
   useEffect(() => {
     const tabParam = searchParams.get('tab');
     if (tabParam) {
-      const validTabs = ['dashboard', 'medicine', 'medical-events', 'inventory', 'vaccination', 'health-check', 'health-records', 'blog-management', 'school-health'];
+      const validTabs = ['dashboard', 'medicine', 'medication-requests', 'medication-schedules', 'medical-events', 'inventory', 'vaccination', 'health-check', 'health-records', 'blog-management', 'school-health'];
       if (validTabs.includes(tabParam)) {
         setActiveSection(tabParam);
       } else {
@@ -272,13 +278,13 @@ const SchoolNurseDashboard = () => {
       </div>
     );
   };
-
   const renderContent = () => {
-    switch (activeSection) {
-      case "dashboard":
+    switch (activeSection) {      case "dashboard":
         return <DashboardOverview />;
-      case "medicine":
-        return <MedicineReceiving />;
+      case "medication-requests":
+        return <NurseMedicationRequests />;
+      case "medication-schedules":
+        return <NurseMedicationSchedules />;
       case "medical-events":
         return <MedicalEvents />;
       case "inventory":
@@ -297,68 +303,7 @@ const SchoolNurseDashboard = () => {
         return <DashboardOverview />;
     }
   };
-
   // Placeholder components for each section
-  const MedicineReceiving = () => (
-    <div className="nurse-content-card">
-      <h2 className="nurse-section-title">Nhận thuốc từ phụ huynh</h2>
-      <div className="nurse-action-buttons">
-        <button className="nurse-btn-primary">
-          <MedicineBoxOutlined /> Thêm đơn thuốc mới
-        </button>
-      </div>
-
-      <div className="nurse-search-filters">
-        <input
-          type="text"
-          placeholder="Tìm kiếm theo tên học sinh..."
-          className="nurse-search-input"
-        />
-        <select className="nurse-filter-select">
-          <option value="all">Tất cả trạng thái</option>
-          <option value="pending">Chờ xác nhận</option>
-          <option value="approved">Đã xác nhận</option>
-          <option value="completed">Đã cấp phát</option>
-        </select>
-      </div>
-
-      <div className="nurse-table-container">
-        <table className="nurse-data-table">
-          <thead>
-            <tr>
-              <th>Mã đơn</th>
-              <th>Học sinh</th>
-              <th>Tên thuốc</th>
-              <th>Liều lượng</th>
-              <th>Thời gian</th>
-              <th>Trạng thái</th>
-              <th>Thao tác</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>MED001</td>
-              <td>Nguyễn Văn A</td>
-              <td>Paracetamol</td>
-              <td>500mg - 2 lần/ngày</td>
-              <td>08:00, 14:00</td>
-              <td>
-                <span className="nurse-status pending">Chờ xác nhận</span>
-              </td>
-              <td>
-                <div className="nurse-table-actions">
-                  <button className="nurse-btn-action view">Xem</button>
-                  <button className="nurse-btn-action approve">Xác nhận</button>
-                  <button className="nurse-btn-action complete">Cấp phát</button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-
   const MedicalEvents = () => (
     <div className="nurse-content-card">
       <h2 className="nurse-section-title">Ghi nhận và xử lý sự kiện y tế</h2>
