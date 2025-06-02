@@ -50,8 +50,38 @@ const NurseMedicationSchedules = () => {    const { refreshSession } = useAuth()
     const [selectedSchedule, setSelectedSchedule] = useState(null);
     const [editNoteModalVisible, setEditNoteModalVisible] = useState(false);
     const [currentNote, setCurrentNote] = useState('');
-    const [editingScheduleId, setEditingScheduleId] = useState(null);
-  // Status mapping
+    const [editingScheduleId, setEditingScheduleId] = useState(null);    // Function to check if schedule can be updated based on current time
+    const canUpdateSchedule = (scheduledDate, scheduledTime) => {
+        const now = dayjs();
+        const scheduleDateTime = dayjs(`${scheduledDate} ${scheduledTime}`, 'YYYY-MM-DD HH:mm');
+        
+        // Allow updates only from scheduled time onwards
+        // Use isAfter() or isSame() instead of isSameOrAfter plugin
+        return now.isAfter(scheduleDateTime) || now.isSame(scheduleDateTime);
+    };
+
+    // Function to get time remaining until schedule time
+    const getTimeUntilSchedule = (scheduledDate, scheduledTime) => {
+        const now = dayjs();
+        const scheduleDateTime = dayjs(`${scheduledDate} ${scheduledTime}`, 'YYYY-MM-DD HH:mm');
+        
+        // Use isAfter() or isSame() instead of isSameOrAfter plugin
+        if (now.isAfter(scheduleDateTime) || now.isSame(scheduleDateTime)) {
+            return null; // Can update now
+        }
+        
+        const diffMinutes = scheduleDateTime.diff(now, 'minute');
+        const hours = Math.floor(diffMinutes / 60);
+        const minutes = diffMinutes % 60;
+        
+        if (hours > 0) {
+            return `${hours}h ${minutes}m`;
+        } else {
+            return `${minutes}m`;
+        }
+    };
+
+    // Status mapping
     const statusConfig = {
         PENDING: { color: 'orange', text: 'Chưa uống', icon: <ClockCircleOutlined /> },
         TAKEN: { color: 'green', text: 'Đã uống', icon: <CheckCircleOutlined /> },
@@ -98,6 +128,20 @@ const NurseMedicationSchedules = () => {    const { refreshSession } = useAuth()
     useEffect(() => {
         loadSchedules();
     }, [loadSchedules]);    const handleStatusUpdate = async (scheduleId, newStatus) => {
+        // Find the schedule to check time validation
+        const schedule = schedules.find(s => s.id === scheduleId);
+        if (!schedule) {
+            message.error('Không tìm thấy lịch uống thuốc');
+            return;
+        }
+
+        // Check if update is allowed based on time
+        if (!canUpdateSchedule(schedule.scheduledDate, schedule.scheduledTime)) {
+            const timeRemaining = getTimeUntilSchedule(schedule.scheduledDate, schedule.scheduledTime);
+            message.warning(`Chỉ có thể cập nhật trạng thái từ thời gian uống thuốc trở đi. Còn lại: ${timeRemaining}`);
+            return;
+        }
+
         try {
             refreshSession(); // Refresh session timer
             await nurseApi.updateScheduleStatus(scheduleId, newStatus);
@@ -121,6 +165,13 @@ const NurseMedicationSchedules = () => {    const { refreshSession } = useAuth()
             }
         }
     };    const openEditNoteModal = (schedule) => {
+        // Check if update is allowed based on time
+        if (!canUpdateSchedule(schedule.scheduledDate, schedule.scheduledTime)) {
+            const timeRemaining = getTimeUntilSchedule(schedule.scheduledDate, schedule.scheduledTime);
+            message.warning(`Chỉ có thể chỉnh sửa ghi chú từ thời gian uống thuốc trở đi. Còn lại: ${timeRemaining}`);
+            return;
+        }
+
         setEditingScheduleId(schedule.id);
         setCurrentNote(schedule.nurseNote || '');
         setEditNoteModalVisible(true);

@@ -230,11 +230,11 @@ const Overview = ({ userInfo: externalUserInfo }) => {
                 }}
               >
                 <div>
-                  <Text type="secondary" style={{ fontSize: 14 }}>Tình trạng sức khỏe</Text>
+                  <Text type="secondary" style={{ fontSize: 14 }}>Trạng thái</Text>
                   <div style={{ display: 'flex', alignItems: 'center', marginTop: 6 }}>
                     <CheckCircleOutlined style={{ color: '#4caf50', fontSize: 20, marginRight: 8 }} />
                     <Text style={{ fontSize: 20, color: '#4caf50', fontWeight: 500 }}>
-                      {selectedStudent?.disabled ? 'Có vấn đề' : 'Tốt'}
+                      {selectedStudent?.disabled ? 'Thôi học' : 'Đang học'}
                     </Text>
                   </div>
                 </div>
@@ -292,7 +292,7 @@ const Overview = ({ userInfo: externalUserInfo }) => {
                 <Col span={12}>
                   <Text type="secondary">Giới tính:</Text>
                   <br />
-                  <Text>{selectedStudent.gender}</Text>
+                  <Text>{selectedStudent.gender === 'M' ? 'Nam' : 'Nữ'}</Text>
                 </Col>
                 <Col span={12}>
                   <Text type="secondary">Nơi sinh:</Text>
