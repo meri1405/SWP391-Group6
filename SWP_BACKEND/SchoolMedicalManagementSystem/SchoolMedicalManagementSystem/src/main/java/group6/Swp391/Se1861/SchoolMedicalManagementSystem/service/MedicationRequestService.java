@@ -72,8 +72,13 @@ public class MedicationRequestService {
             item.setMedicationRequest(savedRequest);            // Save the item request
             ItemRequest savedItem = itemRequestRepository.save(item);
 
-            // NOTE: Medication schedules will be generated only when the request is approved by nurse
-            // Do not generate schedules here to ensure schedules exist only for approved requests
+            // Generate medication schedules immediately when parent creates request
+            // This ensures schedules are available for nurse review
+            medicationScheduleService.generateSchedules(
+                savedItem,
+                savedRequest.getStartDate(),
+                savedRequest.getEndDate()
+            );
 
             itemRequests.add(savedItem);
         }
@@ -130,14 +135,8 @@ public class MedicationRequestService {
         request.setConfirm(true);
         request.setNurse(nurse);
 
-        // Generate medication schedules for all item requests when request is approved
-        for (ItemRequest itemRequest : request.getItemRequests()) {
-            medicationScheduleService.generateSchedules(
-                itemRequest,
-                request.getStartDate(),
-                request.getEndDate()
-            );
-        }
+        // Schedules are already generated when parent creates request
+        // No need to generate schedules again, just update the request status
 
         return convertToDTO(medicationRequestRepository.save(request));
     }
@@ -148,8 +147,7 @@ public class MedicationRequestService {
      * @param nurse the nurse rejecting the request
      * @param note rejection reason
      * @return the updated medication request
-     */
-    @Transactional
+     */    @Transactional
     public MedicationRequestDTO rejectMedicationRequest(Long requestId, User nurse, String note) {
         MedicationRequest request = medicationRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Medication request not found with id: " + requestId));
@@ -159,10 +157,13 @@ public class MedicationRequestService {
         request.setNurse(nurse);
         request.setNote(note);
 
-        return convertToDTO(medicationRequestRepository.save(request));
-    }
+        // Delete all associated medication schedules when request is rejected
+        for (ItemRequest itemRequest : request.getItemRequests()) {
+            medicationScheduleService.deleteSchedulesForItemRequest(itemRequest.getId());
+        }
 
-    /**
+        return convertToDTO(medicationRequestRepository.save(request));
+    }    /**
      * Get all pending medication requests for nurse review
      * @return list of pending medication requests
      */
@@ -171,6 +172,35 @@ public class MedicationRequestService {
         return requests.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Auto-reject medication requests that are pending for more than 24 hours
+     * This method should be called by a scheduled job
+     * @return number of auto-rejected requests
+     */
+    @Transactional
+    public int autoRejectExpiredRequests() {
+        LocalDate cutoffDate = LocalDate.now().minusDays(1);
+        List<MedicationRequest> expiredRequests = medicationRequestRepository
+                .findByStatusAndRequestDateBefore("PENDING", cutoffDate);
+        
+        int rejectedCount = 0;
+        for (MedicationRequest request : expiredRequests) {
+            request.setStatus("REJECTED");
+            request.setConfirm(true);
+            request.setNote("Tự động từ chối - Quá 24 giờ không được phê duyệt");
+            
+            // Delete all associated medication schedules
+            for (ItemRequest itemRequest : request.getItemRequests()) {
+                medicationScheduleService.deleteSchedulesForItemRequest(itemRequest.getId());
+            }
+            
+            medicationRequestRepository.save(request);
+            rejectedCount++;
+        }
+        
+        return rejectedCount;
     }
 
     /**
@@ -215,15 +245,14 @@ public class MedicationRequestService {
                         .orElseThrow(() -> new ResourceNotFoundException("Item request not found with id: " + itemDTO.getId()));
 
                 // Remove from existing items list to track what's been processed
-                existingItems.remove(existingItem);
-
-                // Update item properties
+                existingItems.remove(existingItem);                // Update item properties
                 existingItem.setItemName(itemDTO.getItemName());
                 existingItem.setPurpose(itemDTO.getPurpose());
                 existingItem.setItemType(itemDTO.getItemType());
                 existingItem.setDosage(itemDTO.getDosage());
                 existingItem.setFrequency(itemDTO.getFrequency());
-                existingItem.setNote(itemDTO.getNote());                // Save updated item
+                existingItem.setNote(itemDTO.getNote());
+                existingItem.setScheduleTimeJson(itemDTO.getScheduleTimeJson());// Save updated item
                 ItemRequest savedItem = itemRequestRepository.save(existingItem);
 
                 // Delete existing schedules if any (only for approved requests)

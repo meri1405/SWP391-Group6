@@ -136,12 +136,15 @@ const MedicationManagement = () => {
     setCurrentMedication(null);
     setIsConfirmed(false);
     form.resetFields();
-    
-    // Set default values
+      // Set default values
     const defaultValues = {
       startDate: dayjs(),
       endDate: dayjs().add(7, 'day'),
-      itemRequests: [{ itemType: 'TABLET' }] // Default first empty medication item
+      itemRequests: [{ 
+        itemType: 'TABLET',
+        frequency: 1,
+        timeSlots: [dayjs().hour(8).minute(0)]  // Default first medication time to 8:00 AM
+      }] // Default first empty medication item
     };
     
     // Add student ID if available
@@ -188,10 +191,10 @@ const MedicationManagement = () => {
       
       const detailedData = await parentApi.getMedicationRequestDetails(token, record.id);
       console.log('Detailed data for edit modal:', detailedData);
-      
-      // Use detailed data if available, fallback to record data
+        // Use detailed data if available, fallback to record data
       const medicationData = detailedData || record;
-        // Format the data for the form with proper item IDs
+      
+      // Format the data for the form with proper item IDs
       const formData = {
         studentId: medicationData.studentId,
         startDate: dayjs(medicationData.startDate),
@@ -199,8 +202,44 @@ const MedicationManagement = () => {
         note: medicationData.note,
         itemRequests: (medicationData.itemRequests || []).map(item => {
           console.log('Processing item for form:', item);
+            // Extract time slots from scheduleTimeJson if available
+          let timeSlots = [];
+          if (item.scheduleTimeJson) {
+            try {
+              const noteObj = JSON.parse(item.scheduleTimeJson);
+              if (noteObj && noteObj.scheduleTimes) {
+                timeSlots = noteObj.scheduleTimes.map(timeStr => dayjs(timeStr, 'HH:mm'));
+                console.log('Found time slots from scheduleTimeJson:', timeSlots);
+              }            // eslint-disable-next-line no-unused-vars
+            } catch (e) {
+              console.log('scheduleTimeJson is not valid JSON:', item.scheduleTimeJson);
+            }
+          }
+          
+          // Fallback to checking note field if scheduleTimeJson is not available
+          if (timeSlots.length === 0 && item.note) {
+            try {
+              const noteObj = JSON.parse(item.note);
+              if (noteObj && noteObj.scheduleTimes) {
+                timeSlots = noteObj.scheduleTimes.map(timeStr => dayjs(timeStr, 'HH:mm'));
+                console.log('Found time slots from note field:', timeSlots);
+              }            // eslint-disable-next-line no-unused-vars
+            } catch (e) {
+              console.log('Note is not a valid JSON or does not contain scheduleTimes:', item.note);
+            }
+          }
+          
+          // If no time slots were found, create default ones based on frequency
+          if (timeSlots.length === 0 && item.frequency) {
+            for (let i = 0; i < item.frequency; i++) {
+              const defaultHour = i === 0 ? 8 : i === 1 ? 12 : i === 2 ? 18 : 8 + (i * 4) % 24;
+              timeSlots.push(dayjs().hour(defaultHour).minute(0));
+            }
+          }
+          
           return {
             ...item,
+            timeSlots,
             // Ensure we have the item ID for updating existing items - only include if it's a valid number
             ...(item.id && typeof item.id === 'number' && item.id > 0 ? { id: item.id } : {})
           };
@@ -239,20 +278,39 @@ const MedicationManagement = () => {
       
       // Format today's date in YYYY-MM-DD
       const today = dayjs().format('YYYY-MM-DD');
-      
-      // Check if we have medication items
+          // Check if we have medication items
       if (!Array.isArray(values.itemRequests) || values.itemRequests.length === 0) {
         message.error('Vui lòng thêm ít nhất một loại thuốc');
         setLoading(false);
         return;
       }
-        // Prepare data for API according to the expected format
+      
+      // Validate that each medication item has time slots specified
+      let hasInvalidTimeSlots = false;
+      values.itemRequests.forEach((item, index) => {
+        if (!item.timeSlots || item.timeSlots.length === 0) {
+          message.error(`Vui lòng chỉ định thời gian uống thuốc cho thuốc #${index + 1}`);
+          hasInvalidTimeSlots = true;
+        }
+      });
+      
+      if (hasInvalidTimeSlots) {
+        setLoading(false);
+        return;
+      }// Prepare data for API according to the expected format
       const medicationData = {
         studentId: values.studentId,
         requestDate: today,
         startDate: values.startDate.format('YYYY-MM-DD'),
         endDate: values.endDate.format('YYYY-MM-DD'),
-        note: values.note || "Yêu cầu dùng thuốc cho học sinh",        itemRequests: values.itemRequests.map((item, index) => {
+        note: values.note || "Yêu cầu dùng thuốc cho học sinh",
+        itemRequests: values.itemRequests.map((item, index) => {          // Format time slots as a JSON string and add to the note
+          let timeSlotNote = "";
+          if (item.timeSlots && item.timeSlots.length > 0) {
+            const timeStrings = item.timeSlots.map(time => time.format('HH:mm'));
+            timeSlotNote = JSON.stringify({ scheduleTimes: timeStrings });
+          }
+          
           const processedItem = {
             // Only include ID for existing items when editing - must be a valid number
             ...(item.id && typeof item.id === 'number' && item.id > 0 ? { id: item.id } : {}),
@@ -261,7 +319,8 @@ const MedicationManagement = () => {
             itemType: item.itemType,
             dosage: Number(item.dosage),
             frequency: Number(item.frequency),
-            note: item.note || ""
+            note: item.note || "", // Giữ nguyên ghi chú của người dùng
+            scheduleTimeJson: timeSlotNote // Thêm trường mới để lưu thông tin thời gian
           };
           
           console.log(`Processing item ${index}:`, {
@@ -590,6 +649,84 @@ const MedicationManagement = () => {
     return filteredData;
   };
 
+  // Validation functions
+  const validateStartDate = (date) => {
+    if (!date) return Promise.resolve();
+    
+    const today = dayjs().startOf('day');
+    if (date.isBefore(today)) {
+      return Promise.reject(new Error('Ngày bắt đầu không thể là ngày trong quá khứ'));
+    }
+    return Promise.resolve();
+  };
+
+  const validateEndDate = (date) => {
+    if (!date) return Promise.resolve();
+    
+    const startDate = form.getFieldValue('startDate');
+    if (startDate && date.isBefore(startDate)) {
+      return Promise.reject(new Error('Ngày kết thúc phải sau hoặc bằng ngày bắt đầu'));
+    }
+    
+    const today = dayjs().startOf('day');
+    if (date.isBefore(today)) {
+      return Promise.reject(new Error('Ngày kết thúc không thể là ngày trong quá khứ'));
+    }
+    return Promise.resolve();
+  };
+
+  const validateTimeSlot = (time) => {
+    if (!time) return Promise.resolve();
+    
+    const startDate = form.getFieldValue('startDate');
+    const now = dayjs();
+    
+    // If start date is today, time must be in the future
+    if (startDate && startDate.isSame(now, 'day')) {
+      const selectedTime = dayjs().hour(time.hour()).minute(time.minute());
+      if (selectedTime.isBefore(now)) {
+        return Promise.reject(new Error('Thời gian uống thuốc phải từ giờ hiện tại trở đi'));
+      }
+    }
+    return Promise.resolve();
+  };
+
+  const disabledDate = (current) => {
+    // Disable all dates before today
+    return current && current.isBefore(dayjs().startOf('day'));
+  };
+  const disabledTime = () => {
+    const startDate = form.getFieldValue('startDate');
+    const now = dayjs();
+    
+    // If start date is today, disable past hours
+    if (startDate && startDate.isSame(now, 'day')) {
+      const currentHour = now.hour();
+      const currentMinute = now.minute();
+      
+      return {
+        disabledHours: () => {
+          const hours = [];
+          for (let i = 0; i < currentHour; i++) {
+            hours.push(i);
+          }
+          return hours;
+        },
+        disabledMinutes: (selectedHour) => {
+          if (selectedHour === currentHour) {
+            const minutes = [];
+            for (let i = 0; i <= currentMinute; i++) {
+              minutes.push(i);
+            }
+            return minutes;
+          }
+          return [];
+        }
+      };
+    }
+    return {};
+  };
+
   return (
     <div className="medication-management">
       <div className="page-header">
@@ -658,13 +795,17 @@ const MedicationManagement = () => {
         onCancel={() => setVisible(false)}
         footer={null}
         width={800}
-      >
-        <Form
+      >        <Form
           form={form}
           layout="vertical"
           onFinish={handleSubmit}
           className="medication-form"
         >
+          <div style={{ marginBottom: '15px', padding: '10px', backgroundColor: '#f0f9ff', border: '1px solid #1890ff', borderRadius: '4px' }}>
+            <div style={{ color: '#1890ff', fontWeight: 'bold', marginBottom: '5px' }}>Thông báo quan trọng:</div>
+            <div>Bạn phải thiết lập thời gian uống thuốc cụ thể cho mỗi loại thuốc. Hệ thống sẽ sử dụng các thời gian này để tạo lịch uống thuốc.</div>
+          </div>
+
           <Form.Item
             name="studentId"
             label="Học sinh"
@@ -685,22 +826,36 @@ const MedicationManagement = () => {
                   </Option>
                 ))}
             </Select>
-          </Form.Item>
-
-          <Form.Item
+          </Form.Item>          <Form.Item
             name="startDate"
             label="Ngày bắt đầu"
-            rules={[{ required: true, message: 'Vui lòng chọn ngày bắt đầu' }]}
+            rules={[
+              { required: true, message: 'Vui lòng chọn ngày bắt đầu' },
+              { validator: (_, value) => validateStartDate(value) }
+            ]}
+            validateTrigger="onChange"
           >
-            <DatePicker format="DD/MM/YYYY" placeholder="Chọn ngày bắt đầu" style={{ width: '100%' }} />
-          </Form.Item>
-
-          <Form.Item
+            <DatePicker 
+              format="DD/MM/YYYY" 
+              placeholder="Chọn ngày bắt đầu" 
+              style={{ width: '100%' }}
+              disabledDate={disabledDate}
+            />
+          </Form.Item>          <Form.Item
             name="endDate"
             label="Ngày kết thúc"
-            rules={[{ required: true, message: 'Vui lòng chọn ngày kết thúc' }]}
+            rules={[
+              { required: true, message: 'Vui lòng chọn ngày kết thúc' },
+              { validator: (_, value) => validateEndDate(value) }
+            ]}
+            validateTrigger="onChange"
           >
-            <DatePicker format="DD/MM/YYYY" placeholder="Chọn ngày kết thúc" style={{ width: '100%' }} />
+            <DatePicker 
+              format="DD/MM/YYYY" 
+              placeholder="Chọn ngày kết thúc" 
+              style={{ width: '100%' }}
+              disabledDate={disabledDate}
+            />
           </Form.Item>
 
           <Form.Item
@@ -807,9 +962,7 @@ const MedicationManagement = () => {
                         >
                           <Input placeholder="Ví dụ: 1, 5, 10" />
                         </Form.Item>
-                      </div>
-                      
-                      <div className="form-row">
+                      </div>                      <div className="form-row">
                         <Form.Item
                           {...restField}
                           name={[name, 'frequency']}
@@ -822,7 +975,35 @@ const MedicationManagement = () => {
                             }
                           ]}
                         >
-                          <Input placeholder="Ví dụ: 1, 2, 3" />
+                          <Input placeholder="Ví dụ: 1, 2, 3" onChange={(e) => {
+                            const value = parseInt(e.target.value) || 0;
+                            
+                            // When frequency changes, update time slots field to match frequency
+                            const currentTimeSlots = form.getFieldValue(['itemRequests', name, 'timeSlots']) || [];
+                            const newTimeSlots = [...currentTimeSlots];
+                            
+                            // Add or remove time slots as needed
+                            if (value > currentTimeSlots.length) {
+                              // Add more time slots
+                              for (let i = currentTimeSlots.length; i < value; i++) {
+                                // Default to 8:00, 12:00, 18:00, etc. based on index
+                                const defaultHour = i === 0 ? 8 : i === 1 ? 12 : i === 2 ? 18 : 8 + (i * 4) % 24;
+                                newTimeSlots.push(dayjs().hour(defaultHour).minute(0));
+                              }
+                            } else if (value < currentTimeSlots.length) {
+                              // Remove excess time slots
+                              newTimeSlots.length = value;
+                            }
+                            
+                            // Update form field
+                            form.setFieldsValue({
+                              itemRequests: {
+                                [name]: {
+                                  timeSlots: newTimeSlots
+                                }
+                              }
+                            });
+                          }} />
                         </Form.Item>
                         
                         <Form.Item
@@ -833,6 +1014,47 @@ const MedicationManagement = () => {
                           <Input placeholder="Hướng dẫn cụ thể về cách dùng" />
                         </Form.Item>
                       </div>
+                        {/* Time slots selection based on frequency */}
+                      <Form.Item
+                        {...restField}
+                        label="Thời gian uống thuốc (bắt buộc)"
+                        required
+                        className="medication-time-slots"
+                      >
+                        <Form.List name={[name, 'timeSlots']}>
+                          {(timeFields) => (
+                            <div className="time-slots-container">
+                              {timeFields.map(({ key, name: timeIndex, ...restTimeField }) => (
+                                <div key={key} className="time-slot-item">                                  <Form.Item
+                                    {...restTimeField}
+                                    name={timeIndex}
+                                    rules={[
+                                      { required: true, message: 'Vui lòng chọn thời gian' },
+                                      { validator: (_, value) => validateTimeSlot(value) }
+                                    ]}
+                                    className="time-slot-input"
+                                    validateTrigger="onChange"
+                                  >
+                                    <TimePicker 
+                                      format="HH:mm" 
+                                      placeholder={`Thời gian ${timeIndex + 1}`}
+                                      minuteStep={5}
+                                      use12Hours={false}
+                                      disabledTime={disabledTime}
+                                    />
+                                  </Form.Item>
+                                </div>
+                              ))}
+                              {timeFields.length === 0 && (
+                                <div className="no-time-slots">
+                                  <span style={{ color: '#ff4d4f' }}>
+                                    Bạn phải chọn ít nhất một thời gian uống thuốc sau khi nhập tần suất
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </Form.List>                      </Form.Item>
                     </div>
                     
                     {fields.length > 1 && <Divider />}
@@ -977,8 +1199,7 @@ const MedicationManagement = () => {
                              item.itemType === 'INJECTION' ? 'Tiêm' : item.itemType}
                           </Tag> </strong></h4>
                   
-                        
-                        <div className="medication-item-details">
+                          <div className="medication-item-details">
                           <p><strong>Mục đích:</strong> <span className="medication-purpose">{item.purpose || 'Không có mục đích'}</span></p>
                           <p><strong>Liều lượng:</strong> <span className="medication-dosage">{item.dosage} {
                             item.itemType === 'TABLET' || item.itemType === 'CAPSULE' ? 'viên' :
@@ -987,11 +1208,67 @@ const MedicationManagement = () => {
                             'đơn vị'
                           }</span></p>
                           <p><strong>Tần suất:</strong> <span className="medication-frequency">{item.frequency} lần/ngày</span></p>
-                          <p><strong>Ghi chú riêng:</strong> {item.note ? (
-                            <span className="medication-note">{item.note}</span>
-                          ) : (
-                            <span className="empty-note">Không có ghi chú</span>
-                          )}</p>
+                          
+                          {/* Display schedule times extracted from note */}
+                          <p><strong>Thời gian uống:</strong> {(() => {
+                            // Extract schedule times from note field
+                            let scheduleTimes = [];
+                            if (item.note) {
+                              try {
+                                const noteObj = JSON.parse(item.note);
+                                if (noteObj && noteObj.scheduleTimes) {
+                                  scheduleTimes = noteObj.scheduleTimes;                                }
+                                // eslint-disable-next-line no-unused-vars
+                              } catch (e) {
+                                // If not valid JSON or doesn't have scheduleTimes, try to get note as regular text
+                                console.log('Note is not a valid JSON or does not contain scheduleTimes:', item.note);
+                              }
+                            }
+                            
+                            if (scheduleTimes.length > 0) {
+                              return (
+                                <span className="medication-schedule-times">
+                                  {scheduleTimes.map((time, timeIndex) => (
+                                    <Tag key={timeIndex} color="blue" style={{marginRight: '4px', marginBottom: '4px'}}>
+                                      {time}
+                                    </Tag>
+                                  ))}
+                                </span>
+                              );
+                            } else {
+                              return <span className="empty-schedule">Chưa có thời gian cụ thể</span>;
+                            }
+                          })()}</p>
+                          
+                          <p><strong>Ghi chú riêng:</strong> {(() => {
+                            // Show cleaned note (without schedule times JSON) or original note if not JSON
+                            let displayNote = item.note;
+                            if (item.note) {
+                              try {
+                                const noteObj = JSON.parse(item.note);
+                                if (noteObj && noteObj.scheduleTimes) {
+                                  // If note contains schedule times JSON, check if there's any other content
+                                  const otherKeys = Object.keys(noteObj).filter(key => key !== 'scheduleTimes');
+                                  if (otherKeys.length > 0) {
+                                    // Show other content
+                                    displayNote = otherKeys.map(key => `${key}: ${noteObj[key]}`).join(', ');
+                                                                    } else {
+                                    displayNote = null; // No other content besides schedule times
+                                  }
+                                }
+                                // eslint-disable-next-line no-unused-vars
+                              } catch (e) {
+                                // Not JSON, use original note
+                                displayNote = item.note;
+                              }
+                            }
+                            
+                            return displayNote ? (
+                              <span className="medication-note">{displayNote}</span>
+                            ) : (
+                              <span className="empty-note">Không có ghi chú</span>
+                            );
+                          })()}</p>
                           <hr />
                         </div>
                       </div>

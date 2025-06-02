@@ -6,6 +6,7 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Repository
@@ -25,4 +26,7 @@ public interface MedicationRequestRepository extends JpaRepository<MedicationReq
 
     // Find all medication requests by status
     List<MedicationRequest> findByStatus(String status);
+
+    // Find all medication requests by status and request date before specified date (for auto-rejection)
+    List<MedicationRequest> findByStatusAndRequestDateBefore(String status, LocalDate requestDate);
 }

@@ -110,46 +110,42 @@ public class MedicationScheduleService {
     }    /**
      * Get schedules for a medication request
      * @param medicationRequestId The medication request ID
-     * @return List of schedules from approved medication requests only
+     * @return List of schedules for the medication request
      */
     public List<MedicationScheduleDTO> getSchedulesForMedicationRequest(Long medicationRequestId) {
         return medicationScheduleRepository.findByItemRequestMedicationRequestId(medicationRequestId)
                 .stream()
-                .filter(schedule -> "APPROVED".equals(schedule.getItemRequest().getMedicationRequest().getStatus()))
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }/**
      * Get schedules for a student
      * @param studentId The student ID
-     * @return List of schedules from approved medication requests only
+     * @return List of schedules for the student
      */
     public List<MedicationScheduleDTO> getSchedulesForStudent(Long studentId) {
         return medicationScheduleRepository.findByItemRequestMedicationRequestStudentStudentID(studentId)
                 .stream()
-                .filter(schedule -> "APPROVED".equals(schedule.getItemRequest().getMedicationRequest().getStatus()))
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }/**
      * Get schedules for a specific date
      * @param date The date to check
-     * @return List of schedules from approved medication requests only
+     * @return List of schedules for the specified date
      */
     public List<MedicationScheduleDTO> getSchedulesByDate(LocalDate date) {
         return medicationScheduleRepository.findAll().stream()
                 .filter(schedule -> schedule.getScheduledDate().equals(date))
-                .filter(schedule -> "APPROVED".equals(schedule.getItemRequest().getMedicationRequest().getStatus()))
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }    /**
      * Get schedules for a specific date and status
      * @param date The date to check
      * @param status The status to filter by
-     * @return List of schedules from approved medication requests only
+     * @return List of schedules for the specified date and status
      */
     public List<MedicationScheduleDTO> getSchedulesByDateAndStatus(LocalDate date, MedicationStatus status) {
         return medicationScheduleRepository.findByScheduledDateAndStatus(date, status)
                 .stream()
-                .filter(schedule -> "APPROVED".equals(schedule.getItemRequest().getMedicationRequest().getStatus()))
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
