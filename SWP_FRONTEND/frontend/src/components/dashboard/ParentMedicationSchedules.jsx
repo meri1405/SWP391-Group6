@@ -52,8 +52,7 @@ const ParentMedicationSchedules = ({ userInfo }) => {
     const statusConfig = {
         PENDING: { color: 'orange', text: 'Chưa uống', icon: <ClockCircleOutlined /> },
         TAKEN: { color: 'green', text: 'Đã uống', icon: <CheckCircleOutlined /> },
-        MISSED: { color: 'red', text: 'Bỏ lỡ', icon: <CloseCircleOutlined /> },
-        SKIPPED: { color: 'gray', text: 'Bỏ qua', icon: <CloseCircleOutlined /> }
+        SKIPPED: { color: 'red', text: 'Bỏ lỡ', icon: <CloseCircleOutlined /> }
     };
 
     const loadSchedules = useCallback(async () => {
@@ -280,8 +279,7 @@ const ParentMedicationSchedules = ({ userInfo }) => {
                             <Option value="ALL">Tất cả</Option>
                             <Option value="PENDING">Chưa uống</Option>
                             <Option value="TAKEN">Đã uống</Option>
-                            <Option value="MISSED">Bỏ lỡ</Option>
-                            <Option value="SKIPPED">Bỏ qua</Option>
+                            <Option value="SKIPPED">Bỏ lỡ</Option>
                         </Select>
                     </div>
                     
@@ -340,7 +338,7 @@ const ParentMedicationSchedules = ({ userInfo }) => {
                     <div className="status-card status-card-missed">
                         <div className="status-card-icon"><AlertOutlined /></div>
                         <div className="status-count">
-                            {statusSummary.MISSED || 0}
+                            {statusSummary.SKIPPED || 0}
                         </div>
                         <div className="status-label">Bỏ lỡ</div>
                     </div>
