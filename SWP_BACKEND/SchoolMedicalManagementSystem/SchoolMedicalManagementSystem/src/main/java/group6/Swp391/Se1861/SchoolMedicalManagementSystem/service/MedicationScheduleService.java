@@ -1,12 +1,17 @@
 package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.MedicationScheduleDTO;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.exception.UnauthorizedAccessException;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.*;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.MedicationScheduleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.DateTimeException;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,9 +21,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class MedicationScheduleService {
 
-    private final MedicationScheduleRepository medicationScheduleRepository;
-
-    /**
+    private final MedicationScheduleRepository medicationScheduleRepository;    /**
      * Generate medication schedules for an item request
      * @param itemRequest The medication item request
      * @param startDate The start date for medication
@@ -28,8 +31,13 @@ public class MedicationScheduleService {
     public List<MedicationSchedule> generateSchedules(ItemRequest itemRequest, LocalDate startDate, LocalDate endDate) {
         List<MedicationSchedule> schedules = new ArrayList<>();
 
-        // Calculate the daily frequency and assign time slots
-        LocalTime[] timeSlots = calculateTimeSlots(itemRequest.getFrequency());
+        // Calculate the daily frequency and assign time slots (using custom times if available)
+        LocalTime[] timeSlots;
+        try {
+            timeSlots = calculateTimeSlots(itemRequest);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Failed to generate medication schedules: " + e.getMessage());
+        }
 
         // Create schedules for each day between start and end date
         LocalDate currentDate = startDate;
@@ -47,43 +55,61 @@ public class MedicationScheduleService {
         }
 
         return medicationScheduleRepository.saveAll(schedules);
-    }
-
-    /**
-     * Calculate time slots based on medication frequency
-     * @param frequency Daily frequency of medication
+    }    /**
+     * Calculate time slots based on medication frequency and any custom times in the item note
+     * @param itemRequest The medication item request containing frequency and note
      * @return Array of time slots for medication
-     */
-    private LocalTime[] calculateTimeSlots(int frequency) {
+     */    private LocalTime[] calculateTimeSlots(ItemRequest itemRequest) {
+        int frequency = itemRequest.getFrequency();
+        String note = itemRequest.getNote();
         LocalTime[] timeSlots = new LocalTime[frequency];
-
-        if (frequency == 1) {
-            // Once a day - at noon
-            timeSlots[0] = LocalTime.of(12, 0);
-        } else if (frequency == 2) {
-            // Twice a day - morning and evening
-            timeSlots[0] = LocalTime.of(8, 0);
-            timeSlots[1] = LocalTime.of(18, 0);
-        } else if (frequency == 3) {
-            // Three times a day - morning, noon, evening
-            timeSlots[0] = LocalTime.of(8, 0);
-            timeSlots[1] = LocalTime.of(12, 0);
-            timeSlots[2] = LocalTime.of(18, 0);
-        } else if (frequency == 4) {
-            // Four times a day - morning, noon, afternoon, evening
-            timeSlots[0] = LocalTime.of(8, 0);
-            timeSlots[1] = LocalTime.of(12, 0);
-            timeSlots[2] = LocalTime.of(16, 0);
-            timeSlots[3] = LocalTime.of(20, 0);
-        } else {
-            // Default to evenly spaced throughout the day
-            int intervalHours = 24 / frequency;
-            for (int i = 0; i < frequency; i++) {
-                timeSlots[i] = LocalTime.of((8 + i * intervalHours) % 24, 0);
+        
+        // Extract time slots from note JSON
+        if (note != null && !note.isEmpty()) {
+            int scheduleTimeJsonIndex = note.indexOf("scheduleTimeJson:");
+            if (scheduleTimeJsonIndex >= 0) {
+                // Extract the JSON part after the marker
+                String scheduleTimeJsonStr = note.substring(scheduleTimeJsonIndex + "scheduleTimeJson:".length()).trim();
+                
+                try {
+                    ObjectMapper mapper = new ObjectMapper();
+                    JsonNode rootNode = mapper.readTree(scheduleTimeJsonStr);
+                    
+                    if (rootNode.has("scheduleTimes")) {
+                        JsonNode timesNode = rootNode.get("scheduleTimes");
+                        if (timesNode.isArray()) {
+                            // If we have a mismatch between the array size and frequency, throw exception
+                            if (timesNode.size() != frequency) {
+                                throw new IllegalArgumentException("Number of time slots (" + timesNode.size() + 
+                                    ") does not match frequency (" + frequency + ")");
+                            }
+                                
+                            for (int i = 0; i < frequency; i++) {
+                                String timeStr = timesNode.get(i).asText();
+                                String[] parts = timeStr.split(":");
+                                if (parts.length == 2) {
+                                    try {
+                                        int hour = Integer.parseInt(parts[0]);
+                                        int minute = Integer.parseInt(parts[1]);
+                                        timeSlots[i] = LocalTime.of(hour, minute);
+                                    } catch (NumberFormatException | DateTimeException e) {
+                                        throw new IllegalArgumentException("Invalid time format for slot " + (i+1));
+                                    }
+                                } else {
+                                    throw new IllegalArgumentException("Invalid time format for slot " + (i+1));
+                                }
+                            }
+                            
+                            return timeSlots;
+                        }
+                    }
+                } catch (Exception e) {
+                    throw new IllegalArgumentException("Error parsing schedule times: " + e.getMessage());
+                }
             }
         }
-
-        return timeSlots;
+        
+        throw new IllegalArgumentException("No schedule times provided. Please set medication times for all " + frequency + " slots.");
     }
 
     /**
@@ -98,11 +124,24 @@ public class MedicationScheduleService {
         MedicationSchedule schedule = medicationScheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> new RuntimeException("Schedule not found"));
 
+        // Check if the nurse is authorized to update this schedule
+        User approvingNurse = schedule.getItemRequest().getMedicationRequest().getNurse();
+        if (approvingNurse == null || !approvingNurse.getId().equals(nurse.getId())) {
+            throw new UnauthorizedAccessException("You are not authorized to update this schedule. Only the nurse who approved the request can update its schedules.");
+        }
+
+        // Validate that the schedule time has arrived
+        LocalDateTime scheduleDateTime = LocalDateTime.of(schedule.getScheduledDate(), schedule.getScheduledTime());
+        LocalDateTime now = LocalDateTime.now();
+        if (scheduleDateTime.isAfter(now)) {
+            throw new IllegalStateException("Cannot update status for future medication schedules");
+        }
+
         schedule.setStatus(status);
         schedule.setNurse(nurse);
         schedule.setNurseNote(note);
 
-        if (status == MedicationStatus.TAKEN) {
+        if (status == MedicationStatus.TAKEN || status == MedicationStatus.SKIPPED) {
             schedule.setAdministeredTime(LocalTime.now());
         }
 
@@ -151,6 +190,50 @@ public class MedicationScheduleService {
     }
 
     /**
+     * Get schedules for a specific date filtered by approving nurse
+     * @param date The date to check
+     * @param nurse The nurse who approved the requests
+     * @return List of schedules for the specified date
+     */
+    public List<MedicationScheduleDTO> getSchedulesByDateAndNurse(LocalDate date, User nurse) {
+        return medicationScheduleRepository.findAll().stream()
+                .filter(schedule -> schedule.getScheduledDate().equals(date)
+                        && schedule.getItemRequest().getMedicationRequest().getNurse() != null
+                        && schedule.getItemRequest().getMedicationRequest().getNurse().getId().equals(nurse.getId()))
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get schedules for a specific date and status filtered by approving nurse
+     * @param date The date to check
+     * @param status The status to filter by
+     * @param nurse The nurse who approved the requests
+     * @return List of schedules for the specified date and status
+     */
+    public List<MedicationScheduleDTO> getSchedulesByDateAndStatusAndNurse(LocalDate date, MedicationStatus status, User nurse) {
+        return medicationScheduleRepository.findByScheduledDateAndStatus(date, status).stream()
+                .filter(schedule -> schedule.getItemRequest().getMedicationRequest().getNurse() != null
+                        && schedule.getItemRequest().getMedicationRequest().getNurse().getId().equals(nurse.getId()))
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get schedules for a student filtered by approving nurse
+     * @param studentId The student ID
+     * @param nurse The nurse who approved the requests
+     * @return List of schedules for the student
+     */
+    public List<MedicationScheduleDTO> getSchedulesForStudentAndNurse(Long studentId, User nurse) {
+        return medicationScheduleRepository.findByItemRequestMedicationRequestStudentStudentID(studentId).stream()
+                .filter(schedule -> schedule.getItemRequest().getMedicationRequest().getNurse() != null
+                        && schedule.getItemRequest().getMedicationRequest().getNurse().getId().equals(nurse.getId()))
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    /**
      * Delete all medication schedules associated with a specific item request
      * @param itemRequestId The ID of the item request
      */
@@ -170,6 +253,12 @@ public class MedicationScheduleService {
     public MedicationScheduleDTO updateScheduleNote(Long scheduleId, User nurse, String note) {
         MedicationSchedule schedule = medicationScheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> new RuntimeException("Schedule not found"));
+
+        // Check if the nurse is authorized to update this schedule
+        User approvingNurse = schedule.getItemRequest().getMedicationRequest().getNurse();
+        if (approvingNurse == null || !approvingNurse.getId().equals(nurse.getId())) {
+            throw new UnauthorizedAccessException("You are not authorized to update this schedule. Only the nurse who approved the request can update its schedules.");
+        }
 
         schedule.setNurseNote(note);
         schedule.setNurse(nurse);

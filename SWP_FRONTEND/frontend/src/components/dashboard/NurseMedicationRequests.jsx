@@ -280,9 +280,56 @@ const NurseMedicationRequests = () => {
                         item.itemType === 'TABLET' || item.itemType === 'CAPSULE' ? 'viên' :
                         item.itemType === 'LIQUID' || item.itemType === 'INJECTION' ? 'ml' :
                         item.itemType === 'CREAM' || item.itemType === 'POWDER' ? 'g' : 'đơn vị'
-                      }</p>
-                      <p><strong>Tần suất:</strong> {item.frequency} lần/ngày</p>
-                      {item.note && <p><strong>Ghi chú:</strong> {item.note}</p>}
+                      }</p>                      <p><strong>Tần suất:</strong> {item.frequency} lần/ngày</p>
+                      <p><strong>Thời gian uống:</strong> {(() => {
+                        let scheduleTimes = [];
+                        
+                        // First try to get scheduleTimes directly from the item
+                        if (Array.isArray(item.scheduleTimes) && item.scheduleTimes.length > 0) {
+                          scheduleTimes = item.scheduleTimes;
+                        }
+                        // If not found, try to parse from note
+                        else if (item.note) {
+                          const scheduleTimeMatch = item.note.match(/scheduleTimeJson:(\{[^}]+\})/);
+                          if (scheduleTimeMatch) {
+                            try {
+                              const scheduleTimeJson = JSON.parse(scheduleTimeMatch[1]);
+                              if (Array.isArray(scheduleTimeJson.scheduleTimes)) {
+                                scheduleTimes = scheduleTimeJson.scheduleTimes;
+                              }
+                            } catch (e) {
+                              console.error('Error parsing schedule times from note:', e);
+                            }
+                          }
+                        }
+
+                        // Sort time slots for consistent display
+                        scheduleTimes = scheduleTimes
+                          .map(time => dayjs(time, 'HH:mm'))
+                          .sort((a, b) => a.isBefore(b) ? -1 : a.isAfter(b) ? 1 : 0)
+                          .map(time => time.format('HH:mm'));
+                        
+                        return scheduleTimes.length > 0 ? (
+                          <span className="medication-schedule-times">
+                            {scheduleTimes.map((time, timeIndex) => (
+                              <Tag key={timeIndex} color="blue" style={{marginRight: '4px', marginBottom: '4px'}}>
+                                {time}
+                              </Tag>
+                            ))}
+                          </span>
+                        ) : (
+                          <span className="no-schedule-times">Chưa thiết lập</span>
+                        );
+                      })()}</p>
+                      {item.note && <p><strong>Ghi chú:</strong> {(() => {
+                        // Show cleaned note without schedule times JSON
+                        let displayNote = item.note;
+                        if (displayNote) {
+                          // Remove scheduleTimeJson part if exists
+                          displayNote = displayNote.replace(/scheduleTimeJson:.*?($|\s)/, '').trim();
+                        }
+                        return displayNote || 'Không có ghi chú';
+                      })()}</p>}
                     </div>
                   </Card>
                 ))}

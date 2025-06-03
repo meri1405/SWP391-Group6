@@ -65,29 +65,33 @@ public class NurseMedicationController {
     /**
      * Get medication schedules for a student
      * @param studentId The student ID
+     * @param nurse Authenticated nurse
      * @return List of medication schedules
      */
     @GetMapping("/schedules/student/{studentId}")
     public ResponseEntity<List<MedicationScheduleDTO>> getSchedulesForStudent(
-            @PathVariable Long studentId) {
-        return ResponseEntity.ok(medicationScheduleService.getSchedulesForStudent(studentId));
+            @PathVariable Long studentId,
+            @AuthenticationPrincipal User nurse) {
+        return ResponseEntity.ok(medicationScheduleService.getSchedulesForStudentAndNurse(studentId, nurse));
     }
 
     /**
      * Get medication schedules for a specific date and status
      * @param date The date
      * @param status The status filter
+     * @param nurse Authenticated nurse
      * @return List of medication schedules
      */
     @GetMapping("/schedules")
     public ResponseEntity<List<MedicationScheduleDTO>> getSchedulesByDateAndStatus(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-            @RequestParam(required = false) MedicationStatus status) {
+            @RequestParam(required = false) MedicationStatus status,
+            @AuthenticationPrincipal User nurse) {
         if (status == null) {
-            // Return all schedules for the date if status is not specified
-            return ResponseEntity.ok(medicationScheduleService.getSchedulesByDate(date));
+            // Return all schedules for the date if status is not specified, filtered by nurse
+            return ResponseEntity.ok(medicationScheduleService.getSchedulesByDateAndNurse(date, nurse));
         }
-        return ResponseEntity.ok(medicationScheduleService.getSchedulesByDateAndStatus(date, status));
+        return ResponseEntity.ok(medicationScheduleService.getSchedulesByDateAndStatusAndNurse(date, status, nurse));
     }
 
     /**

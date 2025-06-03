@@ -6,8 +6,10 @@ import lombok.NoArgsConstructor;
 
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import java.util.List;
 
 @Data
 @AllArgsConstructor
@@ -37,4 +39,8 @@ public class ItemRequestDTO {
 
     @Size(max = 500, message = "Note cannot exceed 500 characters")
     private String note;
+
+    // List of schedule times in HH:mm format, size must match frequency
+    @NotEmpty(message = "Schedule times are required")
+    private List<String> scheduleTimes;
 }

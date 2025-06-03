@@ -202,45 +202,44 @@ const MedicationManagement = () => {
         note: medicationData.note,
         itemRequests: (medicationData.itemRequests || []).map(item => {
           console.log('Processing item for form:', item);
-            // Extract time slots from scheduleTimeJson if available
           let timeSlots = [];
-          if (item.scheduleTimeJson) {
-            try {
-              const noteObj = JSON.parse(item.scheduleTimeJson);
-              if (noteObj && noteObj.scheduleTimes) {
-                timeSlots = noteObj.scheduleTimes.map(timeStr => dayjs(timeStr, 'HH:mm'));
-                console.log('Found time slots from scheduleTimeJson:', timeSlots);
-              }            // eslint-disable-next-line no-unused-vars
-            } catch (e) {
-              console.log('scheduleTimeJson is not valid JSON:', item.scheduleTimeJson);
+
+          // First try to get timeSlots directly from scheduleTimes array
+          if (Array.isArray(item.scheduleTimes)) {
+            timeSlots = item.scheduleTimes.map(timeStr => dayjs(timeStr, 'HH:mm'));
+            console.log('Found time slots from scheduleTimes:', timeSlots);
+          } 
+          // If no direct scheduleTimes, try to parse from note
+          else if (item.note) {
+            const scheduleTimeMatch = item.note.match(/scheduleTimeJson:(.*?)($|\s)/);
+            if (scheduleTimeMatch) {
+              try {
+                const scheduleTimeJson = JSON.parse(scheduleTimeMatch[1]);
+                if (scheduleTimeJson.scheduleTimes) {
+                  timeSlots = scheduleTimeJson.scheduleTimes.map(timeStr => dayjs(timeStr, 'HH:mm'));
+                  console.log('Found time slots from note JSON:', timeSlots);
+                }
+              } catch (e) {
+                console.log('Error parsing schedule times from note:', e);
+              }
             }
           }
-          
-          // Fallback to checking note field if scheduleTimeJson is not available
-          if (timeSlots.length === 0 && item.note) {
-            try {
-              const noteObj = JSON.parse(item.note);
-              if (noteObj && noteObj.scheduleTimes) {
-                timeSlots = noteObj.scheduleTimes.map(timeStr => dayjs(timeStr, 'HH:mm'));
-                console.log('Found time slots from note field:', timeSlots);
-              }            // eslint-disable-next-line no-unused-vars
-            } catch (e) {
-              console.log('Note is not a valid JSON or does not contain scheduleTimes:', item.note);
-            }
-          }
-          
-          // If no time slots were found, create default ones based on frequency
+
+          // Only create default slots if no existing slots were found
           if (timeSlots.length === 0 && item.frequency) {
             for (let i = 0; i < item.frequency; i++) {
               const defaultHour = i === 0 ? 8 : i === 1 ? 12 : i === 2 ? 18 : 8 + (i * 4) % 24;
               timeSlots.push(dayjs().hour(defaultHour).minute(0));
             }
           }
+
+          // Clean the note to remove any schedule time JSON
+          const cleanedNote = item.note ? item.note.replace(/scheduleTimeJson:.*?($|\s)/, '').trim() : '';
           
           return {
             ...item,
             timeSlots,
-            // Ensure we have the item ID for updating existing items - only include if it's a valid number
+            note: cleanedNote,
             ...(item.id && typeof item.id === 'number' && item.id > 0 ? { id: item.id } : {})
           };
         })
@@ -304,80 +303,112 @@ const MedicationManagement = () => {
         startDate: values.startDate.format('YYYY-MM-DD'),
         endDate: values.endDate.format('YYYY-MM-DD'),
         note: values.note || "Yêu cầu dùng thuốc cho học sinh",
-        itemRequests: values.itemRequests.map((item, index) => {          // Format time slots as a JSON string and add to the note
-          let timeSlotNote = "";
+        itemRequests: values.itemRequests.map((item, index) => {
+          // Format schedule times in HH:mm format
+          let scheduleTimes = [];
           if (item.timeSlots && item.timeSlots.length > 0) {
-            const timeStrings = item.timeSlots.map(time => time.format('HH:mm'));
-            timeSlotNote = JSON.stringify({ scheduleTimes: timeStrings });
+            scheduleTimes = item.timeSlots.map(time => time.format('HH:mm'));
           }
-          
+
+          // Validate schedule times
+          if (!scheduleTimes || scheduleTimes.length === 0) {
+            throw new Error(`Vui lòng thiết lập thời gian sử dụng thuốc cho ${item.itemName || `thuốc #${index + 1}`}`);
+          }
+          if (scheduleTimes.length !== parseInt(item.frequency)) {
+            throw new Error(`Số lượng thời gian sử dụng thuốc cho ${item.itemName || `thuốc #${index + 1}`} phải khớp với tần suất (${item.frequency})`);
+          }
+
+          // Process note and schedule time JSON
+          const noteStr = item.note?.trim() || '';
+          const scheduleTimeJson = {
+            scheduleTimes
+          };
+
           const processedItem = {
-            // Only include ID for existing items when editing - must be a valid number
             ...(item.id && typeof item.id === 'number' && item.id > 0 ? { id: item.id } : {}),
             itemName: item.itemName,
             purpose: item.purpose,
             itemType: item.itemType,
-            dosage: Number(item.dosage),
-            frequency: Number(item.frequency),
-            note: item.note || "", // Giữ nguyên ghi chú của người dùng
-            scheduleTimeJson: timeSlotNote // Thêm trường mới để lưu thông tin thời gian
+            dosage: parseInt(item.dosage, 10),
+            frequency: parseInt(item.frequency, 10),
+            // Properly separate note and schedule time JSON with a clear marker
+            note: noteStr ? `${noteStr} scheduleTimeJson:${JSON.stringify(scheduleTimeJson)}` : `scheduleTimeJson:${JSON.stringify(scheduleTimeJson)}`,
+            scheduleTimes
           };
-          
+
           console.log(`Processing item ${index}:`, {
             original: item,
             processed: processedItem,
             hasValidId: item.id && typeof item.id === 'number' && item.id > 0
           });
-          
+
           return processedItem;
         })
       };
         console.log('Sending medication data to API:', medicationData);
-      console.log('itemRequests with IDs:', medicationData.itemRequests);
+        console.log('itemRequests with IDs:', medicationData.itemRequests);
         if (isEdit) {
-        // Update existing request
-        console.log('Updating medication request with ID:', currentMedication.id);
-        
-        // Validate that only PENDING requests can be updated
-        if (currentMedication.status !== 'PENDING') {
-          message.error('Chỉ có thể chỉnh sửa yêu cầu thuốc đang chờ duyệt');
-          setLoading(false);
-          return;
-        }
-        
-        try {
-          const updatedRequest = await parentApi.updateMedicationRequest(token, currentMedication.id, medicationData);
-          console.log('Updated medication request response:', updatedRequest);
+          // Update existing request
+          console.log('Updating medication request with ID:', currentMedication.id);
           
-          // Update the local state with the updated request
-          setMedicationRequests(prev => 
-            prev.map(req => 
-              req.id === currentMedication.id 
-                ? {
-                    ...updatedRequest,
-                    studentName: updatedRequest.studentName || (() => {
-                      const student = students.find(s => s.id === updatedRequest.studentId);
-                      return student ? `${student.firstName} ${student.lastName}` : currentMedication.studentName;
-                    })()
-                  }
-                : req
-            )
-          );
-          
-          message.success('Cập nhật yêu cầu thuốc thành công');
-        } catch (apiError) {
-          console.error('API Error during update:', apiError);
-          
-          // Display specific error message from API
-          if (apiError.message) {
-            message.error(apiError.message);
-          } else {
-            message.error('Có lỗi xảy ra khi cập nhật yêu cầu thuốc. Vui lòng thử lại sau.');
+          // Validate that only PENDING requests can be updated
+          if (currentMedication.status !== 'PENDING') {
+            message.error('Chỉ có thể chỉnh sửa yêu cầu thuốc đang chờ duyệt');
+            setLoading(false);
+            return;
+          }
+
+          // Validate schedule times for each item
+          const hasInvalidSchedule = medicationData.itemRequests.some((item, index) => {
+            if (!item.scheduleTimes || !Array.isArray(item.scheduleTimes) || item.scheduleTimes.length === 0) {
+              message.error(`Vui lòng thiết lập thời gian sử dụng thuốc cho ${item.itemName || `thuốc #${index + 1}`}`);
+              return true;
+            }
+            if (item.scheduleTimes.length !== Number(item.frequency)) {
+              message.error(`Số lượng thời gian sử dụng thuốc cho ${item.itemName || `thuốc #${index + 1}`} phải khớp với tần suất (${item.frequency})`);
+              return true;
+            }
+            return false;
+          });
+
+          if (hasInvalidSchedule) {
+            setLoading(false);
+            return;
           }
           
-          setLoading(false);
-          return;
-        }
+          try {
+            const updatedRequest = await parentApi.updateMedicationRequest(token, currentMedication.id, medicationData);
+            console.log('Updated medication request response:', updatedRequest);
+            
+            // Update the local state with the updated request
+            setMedicationRequests(prev => 
+              prev.map(req => 
+                req.id === currentMedication.id 
+                  ? {
+                      ...updatedRequest,
+                      studentName: updatedRequest.studentName || (() => {
+                        const student = students.find(s => s.id === updatedRequest.studentId);
+                        return student ? `${student.firstName} ${student.lastName}` : currentMedication.studentName;
+                      })()
+                    }
+                  : req
+              )
+            );
+            
+            message.success('Cập nhật yêu cầu thuốc thành công');
+          } catch (apiError) {
+            console.error('API Error during update:', apiError);
+            
+            // Display specific error message from API
+            if (apiError.message) {
+              message.error(apiError.message);
+            } else {
+              message.error('Có lỗi xảy ra khi cập nhật yêu cầu thuốc. Vui lòng thử lại sau.');
+            }
+            
+            setLoading(false);
+            return;
+          }
       } else {
         // Create new request
         const newRequest = await parentApi.createMedicationRequest(token, medicationData);
@@ -637,11 +668,11 @@ const MedicationManagement = () => {
     let filteredData = [];
     if (tabKey === 'active') {
       filteredData = validMeds.filter(med => 
-        med.status === 'PENDING' || med.status === 'APPROVED'
+        med.status === 'PENDING'
       );
     } else {
       filteredData = validMeds.filter(med => 
-        med.status === 'COMPLETED' || med.status === 'REJECTED'
+        med.status === 'COMPLETED' || med.status === 'REJECTED'  || med.status === 'APPROVED'
       );
     }
     
@@ -674,58 +705,15 @@ const MedicationManagement = () => {
     }
     return Promise.resolve();
   };
-
   const validateTimeSlot = (time) => {
-    if (!time) return Promise.resolve();
-    
-    const startDate = form.getFieldValue('startDate');
-    const now = dayjs();
-    
-    // If start date is today, time must be in the future
-    if (startDate && startDate.isSame(now, 'day')) {
-      const selectedTime = dayjs().hour(time.hour()).minute(time.minute());
-      if (selectedTime.isBefore(now)) {
-        return Promise.reject(new Error('Thời gian uống thuốc phải từ giờ hiện tại trở đi'));
-      }
-    }
+    if (!time) return Promise.reject(new Error('Vui lòng chọn thời gian'));
     return Promise.resolve();
   };
 
   const disabledDate = (current) => {
     // Disable all dates before today
     return current && current.isBefore(dayjs().startOf('day'));
-  };
-  const disabledTime = () => {
-    const startDate = form.getFieldValue('startDate');
-    const now = dayjs();
-    
-    // If start date is today, disable past hours
-    if (startDate && startDate.isSame(now, 'day')) {
-      const currentHour = now.hour();
-      const currentMinute = now.minute();
-      
-      return {
-        disabledHours: () => {
-          const hours = [];
-          for (let i = 0; i < currentHour; i++) {
-            hours.push(i);
-          }
-          return hours;
-        },
-        disabledMinutes: (selectedHour) => {
-          if (selectedHour === currentHour) {
-            const minutes = [];
-            for (let i = 0; i <= currentMinute; i++) {
-              minutes.push(i);
-            }
-            return minutes;
-          }
-          return [];
-        }
-      };
-    }
-    return {};
-  };
+  };  // Time selection is not restricted
 
   return (
     <div className="medication-management">
@@ -766,7 +754,7 @@ const MedicationManagement = () => {
                 locale={{ emptyText: 'Không có yêu cầu thuốc nào' }}
               />
             )}          </TabPane>
-          <TabPane tab="Đã hoàn thành/Từ chối" key="completed">
+          <TabPane tab="Đã duyệt/Đã hoàn thành/Từ chối" key="completed">
             {loading ? (
               <div className="loading-container">
                 <Spin size="large" />
@@ -1034,13 +1022,11 @@ const MedicationManagement = () => {
                                     ]}
                                     className="time-slot-input"
                                     validateTrigger="onChange"
-                                  >
-                                    <TimePicker 
+                                  >                                    <TimePicker 
                                       format="HH:mm" 
                                       placeholder={`Thời gian ${timeIndex + 1}`}
                                       minuteStep={5}
                                       use12Hours={false}
-                                      disabledTime={disabledTime}
                                     />
                                   </Form.Item>
                                 </div>
@@ -1209,19 +1195,26 @@ const MedicationManagement = () => {
                           }</span></p>
                           <p><strong>Tần suất:</strong> <span className="medication-frequency">{item.frequency} lần/ngày</span></p>
                           
-                          {/* Display schedule times extracted from note */}
+                          {/* Display schedule times - check both direct scheduleTimes and note field */}
                           <p><strong>Thời gian uống:</strong> {(() => {
-                            // Extract schedule times from note field
                             let scheduleTimes = [];
-                            if (item.note) {
-                              try {
-                                const noteObj = JSON.parse(item.note);
-                                if (noteObj && noteObj.scheduleTimes) {
-                                  scheduleTimes = noteObj.scheduleTimes;                                }
-                                // eslint-disable-next-line no-unused-vars
-                              } catch (e) {
-                                // If not valid JSON or doesn't have scheduleTimes, try to get note as regular text
-                                console.log('Note is not a valid JSON or does not contain scheduleTimes:', item.note);
+                            
+                            // First try to get scheduleTimes directly from the item
+                            if (Array.isArray(item.scheduleTimes)) {
+                              scheduleTimes = item.scheduleTimes;
+                            }
+                            // If not found, try to parse from note
+                            else if (item.note) {
+                              const scheduleTimeMatch = item.note.match(/scheduleTimeJson:(.*?)($|\s)/);
+                              if (scheduleTimeMatch) {
+                                try {
+                                  const scheduleTimeJson = JSON.parse(scheduleTimeMatch[1]);
+                                  if (scheduleTimeJson.scheduleTimes) {
+                                    scheduleTimes = scheduleTimeJson.scheduleTimes;
+                                  }
+                                } catch (e) {
+                                  console.error('Error parsing schedule times from note:', e);
+                                }
                               }
                             }
                             
@@ -1241,26 +1234,11 @@ const MedicationManagement = () => {
                           })()}</p>
                           
                           <p><strong>Ghi chú riêng:</strong> {(() => {
-                            // Show cleaned note (without schedule times JSON) or original note if not JSON
-                            let displayNote = item.note;
-                            if (item.note) {
-                              try {
-                                const noteObj = JSON.parse(item.note);
-                                if (noteObj && noteObj.scheduleTimes) {
-                                  // If note contains schedule times JSON, check if there's any other content
-                                  const otherKeys = Object.keys(noteObj).filter(key => key !== 'scheduleTimes');
-                                  if (otherKeys.length > 0) {
-                                    // Show other content
-                                    displayNote = otherKeys.map(key => `${key}: ${noteObj[key]}`).join(', ');
-                                                                    } else {
-                                    displayNote = null; // No other content besides schedule times
-                                  }
-                                }
-                                // eslint-disable-next-line no-unused-vars
-                              } catch (e) {
-                                // Not JSON, use original note
-                                displayNote = item.note;
-                              }
+                            // Show cleaned note without schedule times JSON
+                            let displayNote = item.note || '';
+                            if (displayNote) {
+                              // Remove scheduleTimeJson part if exists
+                              displayNote = displayNote.replace(/scheduleTimeJson:.*?($|\s)/, '').trim();
                             }
                             
                             return displayNote ? (

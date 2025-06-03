@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { nurseApi } from '../../api/nurseApi';
 import dayjs from 'dayjs';
+import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import { 
   Table, 
   Card, 
@@ -39,7 +40,10 @@ import '../../styles/MedicationNotes.css';
 const { Title, Text } = Typography;
 const { Option } = Select;
 
-const NurseMedicationSchedules = () => {    const { refreshSession } = useAuth();
+// Extend dayjs with plugins
+dayjs.extend(isSameOrAfter);
+
+const NurseMedicationSchedules = () => {const { refreshSession } = useAuth();
     const [schedules, setSchedules] = useState([]);
     const [students, setStudents] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -55,21 +59,35 @@ const NurseMedicationSchedules = () => {    const { refreshSession } = useAuth()
         const now = dayjs();
         const scheduleDateTime = dayjs(`${scheduledDate} ${scheduledTime}`, 'YYYY-MM-DD HH:mm');
         
-        // Allow updates only from scheduled time onwards
-        // Use isAfter() or isSame() instead of isSameOrAfter plugin
+        // Allow updates only from scheduled time onwards or future dates
+        // Future dates are allowed for planning purposes
+        if (dayjs(scheduledDate).isAfter(now, 'day')) {
+            return true;
+        }
+        
+        // For today's schedules, only allow updates if we've reached or passed the time slot
+        if (dayjs(scheduledDate).isSame(now, 'day')) {
+            return now.isSameOrAfter(scheduleDateTime);
+        }
+        
+        // For past dates, allow updates if we're at or past the scheduled time
         return now.isAfter(scheduleDateTime) || now.isSame(scheduleDateTime);
-    };
-
-    // Function to get time remaining until schedule time
+    };    // Function to get time remaining until schedule time
     const getTimeUntilSchedule = (scheduledDate, scheduledTime) => {
         const now = dayjs();
         const scheduleDateTime = dayjs(`${scheduledDate} ${scheduledTime}`, 'YYYY-MM-DD HH:mm');
         
-        // Use isAfter() or isSame() instead of isSameOrAfter plugin
+        // For future dates, return the full date and time
+        if (dayjs(scheduledDate).isAfter(now, 'day')) {
+            return `vào ${dayjs(scheduledDate).format('DD/MM/YYYY')} ${scheduledTime}`;
+        }
+        
+        // For today's dates or past dates
         if (now.isAfter(scheduleDateTime) || now.isSame(scheduleDateTime)) {
             return null; // Can update now
         }
         
+        // Calculate remaining time
         const diffMinutes = scheduleDateTime.diff(now, 'minute');
         const hours = Math.floor(diffMinutes / 60);
         const minutes = diffMinutes % 60;
@@ -79,49 +97,71 @@ const NurseMedicationSchedules = () => {    const { refreshSession } = useAuth()
         } else {
             return `${minutes}m`;
         }
-    };
-
-    // Status mapping
+    };    // Status mapping
     const statusConfig = {
         PENDING: { color: 'orange', text: 'Chưa uống', icon: <ClockCircleOutlined /> },
         TAKEN: { color: 'green', text: 'Đã uống', icon: <CheckCircleOutlined /> },
-        MISSED: { color: 'red', text: 'Bỏ lỡ', icon: <CloseCircleOutlined /> },
-        SKIPPED: { color: 'gray', text: 'Bỏ qua', icon: <CloseCircleOutlined /> }
-    };    const loadSchedules = useCallback(async () => {
+        SKIPPED: { color: 'red', text: 'Bỏ lỡ', icon: <CloseCircleOutlined /> }
+    };const loadSchedules = useCallback(async () => {
         try {
-        setLoading(true);
-        // Refresh session before API call
-        refreshSession();
-        
-        let data;
-        
-        if (selectedStudent) {
-            data = await nurseApi.getSchedulesForStudent(selectedStudent);
-        } else {
-            const params = {
-            date: selectedDate.format('YYYY-MM-DD'),
-            status: selectedStatus === 'ALL' ? undefined : selectedStatus
-            };
-            data = await nurseApi.getSchedulesByDate(params);
-        }
-        
-        setSchedules(data);
-        
-        // Extract unique students for filter
-        const uniqueStudents = [...new Map(
-            data.map(schedule => [schedule.studentId, {
-            id: schedule.studentId,
-            name: schedule.studentName,
-            className: schedule.className
-            }])
-        ).values()];
-        setStudents(uniqueStudents);
+            setLoading(true);
+            refreshSession();
+            
+            let data;
+            
+            if (selectedStudent) {
+                // If a student is selected, get all their schedules
+                data = await nurseApi.getSchedulesForStudent(selectedStudent);
+            } else {
+                // Otherwise, filter by date and status
+                // Ensure date is valid before formatting
+                const params = {};
+                if (selectedDate && dayjs.isDayjs(selectedDate)) {
+                    params.date = selectedDate.format('YYYY-MM-DD');
+                } else {
+                    params.date = dayjs().format('YYYY-MM-DD'); // Default to today
+                }
+                
+                // Only include status if it's not 'ALL'
+                if (selectedStatus && selectedStatus !== 'ALL') {
+                    params.status = selectedStatus;
+                }
+                
+                data = await nurseApi.getSchedulesByDate(params);
+            }
+            
+            if (!Array.isArray(data)) {
+                console.error('Unexpected data format:', data);
+                setSchedules([]);
+                setStudents([]);
+                return;
+            }
+            
+            setSchedules(data);
+            
+            // Extract unique students for filter, with null checks
+            const uniqueStudents = [...new Map(
+                data
+                    .filter(schedule => schedule && schedule.studentId && schedule.studentName) // Filter out invalid entries
+                    .map(schedule => [
+                        schedule.studentId, 
+                        {
+                            id: schedule.studentId,
+                            name: schedule.studentName,
+                            className: schedule.className || 'N/A'
+                        }
+                    ])
+            ).values()];
+            
+            setStudents(uniqueStudents);
         
         } catch (error) {
-        console.error('Error loading schedules:', error);
-        message.error('Không thể tải danh sách lịch uống thuốc');
+            console.error('Error loading schedules:', error);
+            message.error('Không thể tải danh sách lịch uống thuốc');
+            setSchedules([]);
+            setStudents([]);
         } finally {
-        setLoading(false);
+            setLoading(false);
         }
     }, [selectedDate, selectedStatus, selectedStudent, refreshSession]);
 
@@ -165,8 +205,17 @@ const NurseMedicationSchedules = () => {    const { refreshSession } = useAuth()
             }
         }
     };    const openEditNoteModal = (schedule) => {
-        // Check if update is allowed based on time
-        if (!canUpdateSchedule(schedule.scheduledDate, schedule.scheduledTime)) {
+        const now = dayjs();
+        const scheduleDateTime = dayjs(`${schedule.scheduledDate} ${schedule.scheduledTime}`, 'YYYY-MM-DD HH:mm');
+
+        // Kiểm tra nếu là ngày trong tương lai
+        if (dayjs(schedule.scheduledDate).isAfter(now, 'day')) {
+            message.warning(`Chỉ có thể cập nhật ghi chú cho ngày hiện tại hoặc ngày đã qua`);
+            return;
+        }
+
+        // Kiểm tra giờ uống thuốc
+        if (dayjs(schedule.scheduledDate).isSame(now, 'day') && now.isBefore(scheduleDateTime)) {
             const timeRemaining = getTimeUntilSchedule(schedule.scheduledDate, schedule.scheduledTime);
             message.warning(`Chỉ có thể chỉnh sửa ghi chú từ thời gian uống thuốc trở đi. Còn lại: ${timeRemaining}`);
             return;
@@ -175,9 +224,17 @@ const NurseMedicationSchedules = () => {    const { refreshSession } = useAuth()
         setEditingScheduleId(schedule.id);
         setCurrentNote(schedule.nurseNote || '');
         setEditNoteModalVisible(true);
-    };const handleUpdateNote = async () => {
+    };    const handleUpdateNote = async () => {
         try {
             setLoading(true);
+
+            // Find the schedule
+            const schedule = schedules.find(s => s.id === editingScheduleId);
+            if (!schedule) {
+                message.error('Không tìm thấy lịch uống thuốc');
+                setLoading(false);
+                return;
+            }
             
             // Check if there's a valid token before making the API call
             const token = localStorage.getItem('token');
@@ -198,14 +255,22 @@ const NurseMedicationSchedules = () => {    const { refreshSession } = useAuth()
             // Call the API to update the note
             await nurseApi.updateScheduleNote(editingScheduleId, currentNote);
             
-            // Update local state optimistically
+            // Update local states optimistically
             setSchedules(prevSchedules => 
                 prevSchedules.map(schedule => 
-                schedule.id === editingScheduleId 
-                    ? { ...schedule, nurseNote: currentNote }
-                    : schedule
+                    schedule.id === editingScheduleId 
+                        ? { ...schedule, nurseNote: currentNote }
+                        : schedule
                 )
             );
+
+            // Update selectedSchedule if we're editing from detail modal
+            if (selectedSchedule && selectedSchedule.id === editingScheduleId) {
+                setSelectedSchedule(prev => ({
+                    ...prev,
+                    nurseNote: currentNote
+                }));
+            }
             
             message.success('Cập nhật ghi chú thành công');
             setEditNoteModalVisible(false);
@@ -244,34 +309,40 @@ const NurseMedicationSchedules = () => {    const { refreshSession } = useAuth()
         setDetailModalVisible(true);
     };// Function to process data for row merging
     const processDataForMerging = (data) => {
-        if (!data || data.length === 0) return [];
+        if (!Array.isArray(data) || data.length === 0) return [];
 
         // Group by student, date, and time for merging student cells only
         const groups = {};
         data.forEach((item, index) => {
-        const key = `${item.studentName}_${item.scheduledDate}_${item.scheduledTime}`;
-        if (!groups[key]) {
-            groups[key] = [];
-        }
-        groups[key].push({ ...item, originalIndex: index });
+            // Skip invalid items
+            if (!item || !item.studentName || !item.scheduledDate || !item.scheduledTime) {
+                console.warn('Invalid schedule item:', item);
+                return;
+            }
+
+            const key = `${item.studentName}_${item.scheduledDate}_${item.scheduledTime}`;
+            if (!groups[key]) {
+                groups[key] = [];
+            }
+            groups[key].push({ ...item, originalIndex: index });
         });
 
         // Process groups to add rowSpan information for student column only
         const processedData = [];
-        Object.keys(groups)
-        .sort() // Sort to ensure consistent ordering
-        .forEach((key) => {
-            const group = groups[key];
-            group.forEach((item, groupIndex) => {
-            processedData.push({
-                ...item,
-                groupKey: key,
-                studentRowSpan: groupIndex === 0 ? group.length : 0, // Only merge student column
-                isFirstInGroup: groupIndex === 0,
-                groupSize: group.length,
+        Object.entries(groups)
+            .filter(([_, group]) => Array.isArray(group) && group.length > 0)
+            .sort(([keyA], [keyB]) => keyA.localeCompare(keyB)) // Ensure consistent ordering
+            .forEach(([key, group]) => {
+                group.forEach((item, groupIndex) => {
+                    processedData.push({
+                        ...item,
+                        groupKey: key,
+                        studentRowSpan: groupIndex === 0 ? group.length : 0,
+                        isFirstInGroup: groupIndex === 0,
+                        groupSize: group.length,
+                    });
+                });
             });
-            });
-        });
 
         return processedData;
     };    const columns = [
@@ -385,7 +456,7 @@ const NurseMedicationSchedules = () => {    const { refreshSession } = useAuth()
                     <Button 
                     size="small"
                     danger
-                    onClick={() => handleStatusUpdate(record.id, 'MISSED')}
+                    onClick={() => handleStatusUpdate(record.id, 'SKIPPED')}
                     style={{ width: '60px' }}
                     >
                     Bỏ lỡ
@@ -419,76 +490,112 @@ const NurseMedicationSchedules = () => {    const { refreshSession } = useAuth()
     };
 
     const statusSummary = getStatusSummary();  
-    
+    // Reset filters safely
+const resetFilters = () => {
+    setSelectedDate(dayjs());
+    setSelectedStatus('ALL');
+    setSelectedStudent(null);
+    loadSchedules();
+};
+
+// DatePicker with built-in validation
+const DatePickerWithValidation = ({ value, onChange, disabled }) => {
+    const handleChange = (date) => {
+        if (!date) {
+            onChange(dayjs()); // Default to today if cleared
+            return;
+        }
+        onChange(date);
+    };
+
     return (
-        <div className="nurse-medication-container">
-            <Card className="nurse-medication-card">
-                <div className="medication-dashboard-header">
-                    <MedicineBoxFilled style={{ fontSize: '24px', color: '#1890ff', marginRight: '10px' }} />
-                    <h2 style={{ margin: 0, fontWeight: 600, fontSize: '20px' }}>Quản lý lịch uống thuốc</h2>
+        <DatePicker
+            value={value}
+            onChange={handleChange}
+            format="DD/MM/YYYY"
+            style={{ width: '100%' }}
+            disabled={disabled}
+            disabledDate={(current) => {
+                // Can't select days after today
+                return current && current.isAfter(dayjs(), 'day');
+            }}
+        />
+    );
+};
+
+return (
+    <div className="nurse-medication-container">
+        <Card className="nurse-medication-card">
+            <div className="medication-dashboard-header">
+                <MedicineBoxFilled style={{ fontSize: '24px', color: '#1890ff', marginRight: '10px' }} />
+                <h2 style={{ margin: 0, fontWeight: 600, fontSize: '20px' }}>Quản lý lịch uống thuốc</h2>
+            </div>
+            
+            {/* Filters */}
+            <div className="filter-container">
+                <div className="filter-item">
+                    <div className="filter-label">Ngày:</div>
+                    <DatePickerWithValidation
+                        value={selectedDate}
+                        onChange={(date) => {
+                            setSelectedDate(date);
+                            if (selectedStudent) {
+                                setSelectedStudent(null); // Reset student filter when date changes
+                            }
+                        }}
+                        disabled={selectedStudent !== null}
+                    />
                 </div>
-                {/* Filters */}
-                <div className="filter-container">
-                    <div className="filter-item">
-                        <div className="filter-label">Ngày:</div>
-                        <DatePicker
-                value={selectedDate}
-                onChange={(date) => {
-                    setSelectedDate(date);
-                    setSelectedStudent(null); // Reset student filter when date changes
-                }}
-                format="DD/MM/YYYY"
-                style={{ width: '100%' }}
-                disabled={selectedStudent}
-                />
-            </div>
-            
-            <div className="filter-item">
-                <div className="filter-label">Trạng thái:</div>                <Select
-                value={selectedStatus}
-                onChange={setSelectedStatus}
-                style={{ width: '100%' }}
-                popupMatchSelectWidth={false}
-                >
-                <Option value="ALL">Tất cả</Option>
-                <Option value="PENDING">Chưa uống</Option>
-                <Option value="TAKEN">Đã uống</Option>
-                <Option value="MISSED">Bỏ lỡ</Option>
-                <Option value="SKIPPED">Bỏ qua</Option>
-                </Select>
-            </div>
-            
-            <div className="filter-item">
-                <div className="filter-label">Học sinh:</div>                <Select
-                value={selectedStudent}
-                onChange={(value) => {
-                    setSelectedStudent(value);
-                    if (value) {
-                    setSelectedStatus('ALL'); // Reset status filter when student is selected
-                    }
-                }}
-                placeholder="Chọn học sinh"
-                style={{ width: '100%' }}
-                allowClear
-                popupMatchSelectWidth={false}
-                >
-                {students.map(student => (
-                    <Option key={student.id} value={student.id}>
-                    {student.name} - {student.className}
-                    </Option>
-                ))}
-                </Select>
-            </div>
-            
-            <div className="filter-item" style={{ display: 'flex', alignItems: 'flex-end' }}>
-                <Button 
-                type="primary" 
-                onClick={loadSchedules}
-                style={{ marginTop: 'auto' }}
-                >
-                Làm mới
-                </Button>
-            </div>
+                
+                <div className="filter-item">
+                    <div className="filter-label">Trạng thái:</div>
+                    <Select
+                        value={selectedStatus}
+                        onChange={setSelectedStatus}
+                        style={{ width: '100%' }}
+                        popupMatchSelectWidth={false}
+                    >
+                        <Option value="ALL">Tất cả</Option>
+                        <Option value="PENDING">Chưa uống</Option>
+                        <Option value="TAKEN">Đã uống</Option>
+                        <Option value="SKIPPED">Bỏ lỡ</Option>
+                    </Select>
+                </div>
+                
+                <div className="filter-item">
+                    <div className="filter-label">Học sinh:</div>
+                    <Select
+                        value={selectedStudent}
+                        onChange={(value) => {
+                            setSelectedStudent(value);
+                            if (value) {
+                                setSelectedStatus('ALL'); // Reset status filter when student is selected
+                            }
+                        }}
+                        placeholder="Chọn học sinh"
+                        style={{ width: '100%' }}
+                        allowClear
+                        popupMatchSelectWidth={false}
+                    >
+                        {students.map(student => (
+                            <Option key={student.id} value={student.id}>
+                                {student.name} - {student.className}
+                            </Option>
+                        ))}
+                    </Select>
+                </div>
+                
+                <div className="filter-item" style={{ display: 'flex', alignItems: 'flex-end', gap: '8px' }}>
+                    <Button 
+                        type="primary" 
+                        onClick={loadSchedules}
+                    >
+                        Làm mới
+                    </Button>
+                    <Button onClick={resetFilters}>
+                        Đặt lại bộ lọc
+                    </Button>
+                </div>
             </div>        {/* Status Summary */}
             <div className="medication-status-grid">
             <div className="status-card status-card-pending">
@@ -510,7 +617,7 @@ const NurseMedicationSchedules = () => {    const { refreshSession } = useAuth()
             <div className="status-card status-card-missed">
                 <div className="status-card-icon"><AlertOutlined /></div>
                 <div className="status-count">
-                {statusSummary.MISSED || 0}
+                {statusSummary.SKIPPED || 0}
                 </div>
                 <div className="status-label">Bỏ lỡ</div>
             </div>
@@ -611,14 +718,12 @@ const NurseMedicationSchedules = () => {    const { refreshSession } = useAuth()
                 </Col>
                 <Col span={12}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Text strong>Ghi chú:</Text>
-                    <Button 
+                    <Text strong>Ghi chú:</Text>                    <Button 
                         type="link" 
                         size="small" 
                         icon={<EditOutlined />}
-                        onClick={() => {                        setEditingScheduleId(selectedSchedule.id);
-                        setCurrentNote(selectedSchedule.nurseNote || '');
-                        setEditNoteModalVisible(true);
+                        onClick={() => {
+                            openEditNoteModal(selectedSchedule);
                         }}
                     >
                         Sửa

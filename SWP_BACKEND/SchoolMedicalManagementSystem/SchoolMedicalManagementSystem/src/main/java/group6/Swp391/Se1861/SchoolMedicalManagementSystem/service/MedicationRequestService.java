@@ -1,5 +1,9 @@
 package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.ItemRequestDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.MedicationRequestDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.exception.ResourceNotFoundException;
@@ -13,8 +17,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.DateTimeException;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -69,7 +77,19 @@ public class MedicationRequestService {
             item.setDosage(itemDTO.getDosage());
             item.setFrequency(itemDTO.getFrequency());
             item.setNote(itemDTO.getNote());
-            item.setMedicationRequest(savedRequest);            // Save the item request
+
+            // Create JSON with schedule times
+            if (itemDTO.getScheduleTimes() != null && !itemDTO.getScheduleTimes().isEmpty()) {
+                ObjectMapper mapper = new ObjectMapper();
+                ObjectNode root = mapper.createObjectNode();
+                ArrayNode timesNode = root.putArray("scheduleTimes");
+                itemDTO.getScheduleTimes().forEach(timesNode::add);
+                item.setNote(item.getNote() + "\nscheduleTimeJson:" + root.toString());
+            }
+
+            item.setMedicationRequest(savedRequest);
+            
+            // Save the item request
             ItemRequest savedItem = itemRequestRepository.save(item);
 
             // Generate medication schedules immediately when parent creates request
@@ -101,9 +121,7 @@ public class MedicationRequestService {
         return requests.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
-    }
-
-    /**
+    }    /**
      * Get a specific medication request
      * @param requestId the request ID
      * @param parent the authenticated parent user
@@ -118,7 +136,8 @@ public class MedicationRequestService {
             throw new UnauthorizedAccessException("You are not authorized to view this medication request");
         }
 
-        return convertToDTO(request);
+        // Convert to DTO with actual schedule times from medication schedules
+        return convertToDTOWithScheduleTimes(request);
     }
 
     /**
@@ -172,21 +191,29 @@ public class MedicationRequestService {
         return requests.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
-    }
-
-    /**
+    }    /**
      * Auto-reject medication requests that are pending for more than 24 hours
      * This method should be called by a scheduled job
      * @return number of auto-rejected requests
      */
     @Transactional
     public int autoRejectExpiredRequests() {
-        LocalDate cutoffDate = LocalDate.now().minusDays(1);
+        LocalDateTime cutoffDateTime = LocalDateTime.now().minusHours(24);
+        LocalDate cutoffDate = cutoffDateTime.toLocalDate();
+        
         List<MedicationRequest> expiredRequests = medicationRequestRepository
                 .findByStatusAndRequestDateBefore("PENDING", cutoffDate);
         
         int rejectedCount = 0;
         for (MedicationRequest request : expiredRequests) {
+            // Skip requests created less than 24 hours ago, even if they're from yesterday
+            if (request.getRequestDate().equals(cutoffDate)) {
+                // For requests created on the cutoff date, check if they're actually older than 24 hours
+                // This is a simplification since we don't have request time - in a real system, 
+                // you would store and check the exact timestamp
+                continue;
+            }
+            
             request.setStatus("REJECTED");
             request.setConfirm(true);
             request.setNote("Tự động từ chối - Quá 24 giờ không được phê duyệt");
@@ -245,26 +272,23 @@ public class MedicationRequestService {
                         .orElseThrow(() -> new ResourceNotFoundException("Item request not found with id: " + itemDTO.getId()));
 
                 // Remove from existing items list to track what's been processed
-                existingItems.remove(existingItem);                // Update item properties
-                existingItem.setItemName(itemDTO.getItemName());
+                existingItems.remove(existingItem);
                 existingItem.setPurpose(itemDTO.getPurpose());
                 existingItem.setItemType(itemDTO.getItemType());
                 existingItem.setDosage(itemDTO.getDosage());
                 existingItem.setFrequency(itemDTO.getFrequency());
                 existingItem.setNote(itemDTO.getNote());
-                existingItem.setScheduleTimeJson(itemDTO.getScheduleTimeJson());// Save updated item
+                // Save updated item
                 ItemRequest savedItem = itemRequestRepository.save(existingItem);
 
-                // Delete existing schedules if any (only for approved requests)
-                // Note: Schedules are only generated when request is approved by nurse
-                if ("APPROVED".equals(request.getStatus())) {
-                    medicationScheduleService.deleteSchedulesForItemRequest(savedItem.getId());
-                    medicationScheduleService.generateSchedules(
-                        savedItem,
-                        request.getStartDate(),
-                        request.getEndDate()
-                    );
-                }
+                // Delete existing schedules and regenerate them with updated information
+                // This ensures custom time slots from the note are properly used
+                medicationScheduleService.deleteSchedulesForItemRequest(savedItem.getId());
+                medicationScheduleService.generateSchedules(
+                    savedItem,
+                    request.getStartDate(),
+                    request.getEndDate()
+                );
 
                 updatedItems.add(savedItem);
             } else {
@@ -272,15 +296,19 @@ public class MedicationRequestService {
                 ItemRequest newItem = new ItemRequest();
                 newItem.setItemName(itemDTO.getItemName());
                 newItem.setPurpose(itemDTO.getPurpose());
-                newItem.setItemType(itemDTO.getItemType());
-                newItem.setDosage(itemDTO.getDosage());
+                newItem.setItemType(itemDTO.getItemType());                newItem.setDosage(itemDTO.getDosage());
                 newItem.setFrequency(itemDTO.getFrequency());
                 newItem.setNote(itemDTO.getNote());
-                newItem.setMedicationRequest(request);                // Save the new item
+                newItem.setMedicationRequest(request);                
+                // Save the new item
                 ItemRequest savedItem = itemRequestRepository.save(newItem);
 
-                // Note: Medication schedules will be generated only when the request is approved by nurse
-                // Do not generate schedules here for new items during update
+                // Generate schedules for the new item immediately
+                medicationScheduleService.generateSchedules(
+                    savedItem,
+                    request.getStartDate(),
+                    request.getEndDate()
+                );
 
                 updatedItems.add(savedItem);
             }
@@ -373,6 +401,74 @@ public class MedicationRequestService {
 
         dto.setItemRequests(itemDTOs);
 
+        return dto;
+    }
+
+    /**
+     * Convert entity to DTO with actual schedule times from medication schedules
+     * @param request the medication request entity
+     * @return the DTO representation with schedule times
+     */
+    private MedicationRequestDTO convertToDTOWithScheduleTimes(MedicationRequest request) {
+        MedicationRequestDTO dto = new MedicationRequestDTO();
+        dto.setId(request.getId());
+        dto.setRequestDate(request.getRequestDate());
+        dto.setStartDate(request.getStartDate());
+        dto.setEndDate(request.getEndDate());
+        dto.setNote(request.getNote());
+        dto.setStatus(request.getStatus());
+        dto.setConfirm(request.isConfirm());
+        dto.setStudentId(request.getStudent().getStudentID());
+        dto.setStudentName(request.getStudent().getLastName() + " " + request.getStudent().getFirstName());
+
+        if (request.getNurse() != null) {
+            dto.setNurseId(request.getNurse().getId());
+            dto.setNurseName(request.getNurse().getLastName() + " " + request.getNurse().getFirstName());
+        }
+
+        // Convert item requests with schedule times
+        List<ItemRequestDTO> itemDTOs = request.getItemRequests().stream()
+            .map(item -> {
+                ItemRequestDTO itemDTO = new ItemRequestDTO();
+                itemDTO.setId(item.getId());
+                itemDTO.setItemName(item.getItemName());
+                itemDTO.setPurpose(item.getPurpose());
+                itemDTO.setItemType(item.getItemType());
+                itemDTO.setDosage(item.getDosage());
+                itemDTO.setFrequency(item.getFrequency());
+
+                // Extract note and schedule times
+                String originalNote = item.getNote();
+                if (originalNote != null && originalNote.contains("scheduleTimeJson:")) {
+                    String[] parts = originalNote.split("scheduleTimeJson:");
+                    itemDTO.setNote(parts[0].trim());
+
+                    try {
+                        ObjectMapper mapper = new ObjectMapper();
+                        JsonNode rootNode = mapper.readTree(parts[1].trim());
+                        if (rootNode.has("scheduleTimes")) {
+                            JsonNode timesNode = rootNode.get("scheduleTimes");
+                            if (timesNode.isArray()) {
+                                List<String> times = new ArrayList<>();
+                                for (JsonNode timeNode : timesNode) {
+                                    times.add(timeNode.asText());
+                                }
+                                itemDTO.setScheduleTimes(times);
+                            }
+                        }
+                    } catch (Exception e) {
+                        System.err.println("Error processing schedule times: " + e.getMessage());
+                    }
+                } else {
+                    itemDTO.setNote(originalNote);
+                    itemDTO.setScheduleTimes(new ArrayList<>());
+                }
+
+                return itemDTO;
+            })
+            .collect(Collectors.toList());
+
+        dto.setItemRequests(itemDTOs);
         return dto;
     }
 }

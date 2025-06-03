@@ -4,13 +4,42 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080
 
 // Create axios instance with authorization header
 const createAuthAxios = (token) => {
-  return axios.create({
+  const instance = axios.create({
     baseURL: API_BASE_URL,
     headers: {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'
     }
   });
+
+  // Add response interceptor for token expiration
+  instance.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+      const originalRequest = error.config;
+      
+      // If we get a 401 error and haven't tried refreshing already
+      if (error.response?.status === 401 && !originalRequest._retry) {
+        console.log('Received 401, attempting token refresh');
+        originalRequest._retry = true;
+        
+        // Update the timestamp and try to get a fresh token
+        localStorage.setItem("loginTimestamp", Date.now().toString());
+        const freshToken = getTokenFromStorage();
+        
+        if (freshToken) {
+          // If we got a fresh token, retry the request
+          console.log('Got fresh token, retrying request');
+          originalRequest.headers['Authorization'] = `Bearer ${freshToken}`;
+          return axios(originalRequest);
+        }
+      }
+      
+      return Promise.reject(error);
+    }
+  );
+
+  return instance;
 };
 
 // Helper to get token from localStorage with fallback
