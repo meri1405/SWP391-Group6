@@ -181,18 +181,17 @@ public class AuthService {
      * @param user The user to preprocess
      * @return The preprocessed user
      * @throws IllegalArgumentException if phone number or email is already in use
-     */
-    public User preprocessUserBeforeSave(User user) {
-        // Check if phone is already in use
-        if (user.getId() == null) { // Only for new users
+     */    public User preprocessUserBeforeSave(User user) {
+        // Check if phone is already in use (only if phone is not null)
+        if (user.getId() == null && user.getPhone() != null && !user.getPhone().trim().isEmpty()) { // Only for new users with phone
             Optional<User> existingUserWithPhone = userRepository.findByPhone(user.getPhone());
             if (existingUserWithPhone.isPresent()) {
                 throw new IllegalArgumentException("Phone number is already in use");
             }
-        }
-
-        // If role is PARENT, nullify username, password, and email
-        if (user.getRole() != null && "PARENT".equalsIgnoreCase(user.getRole().getRoleName())) {
+        }// If role is PARENT or STUDENT, nullify username, password, and email
+        if (user.getRole() != null && 
+            ("PARENT".equalsIgnoreCase(user.getRole().getRoleName()) || 
+             "STUDENT".equalsIgnoreCase(user.getRole().getRoleName()))) {
             user.setUsername(null);
             user.setPassword(null);
             user.setEmail(null);
@@ -204,9 +203,7 @@ public class AuthService {
                     (user.getId() == null || !existingUserWithEmail.get().getId().equals(user.getId()))) {
                     throw new IllegalArgumentException("Email is already in use");
                 }
-            }
-
-            // For non-PARENT roles, encode the password if it's a plain text password
+            }            // For roles that need authentication (not PARENT or STUDENT), encode the password if it's a plain text password
             String password = user.getPassword();
             if (password != null && !password.isEmpty() && !password.startsWith("$2a$")) {
                 // Password is not yet encoded (doesn't start with BCrypt prefix)
@@ -245,10 +242,8 @@ public class AuthService {
         user.setRole(role);
 
         // Apply role-specific validation and constraints
-        validateUserByRole(user, roleName);
-
-        // Encode password for non-PARENT users
-        if (!"PARENT".equalsIgnoreCase(roleName) && user.getPassword() != null) {
+        validateUserByRole(user, roleName);        // Encode password for roles that need authentication (not PARENT or STUDENT)
+        if (!"PARENT".equalsIgnoreCase(roleName) && !"STUDENT".equalsIgnoreCase(roleName) && user.getPassword() != null) {
             user.setPassword(encodePassword(user.getPassword()));
         }
 
@@ -263,10 +258,20 @@ public class AuthService {
      * @param roleName The role name
      * @throws IllegalArgumentException if validation fails
      */
-    private void validateUserByRole(User user, String roleName) {
-        // Common validations for all users
-        if (user.getPhone() == null || user.getPhone().trim().isEmpty() || !user.getPhone().matches("\\d{10}")) {
-            throw new IllegalArgumentException("Phone number is required for all users");
+    private void validateUserByRole(User user, String roleName) {        // Common validations for all users
+        // Phone number is required for all users except STUDENT
+        if (!"STUDENT".equalsIgnoreCase(roleName) && (user.getPhone() == null || user.getPhone().trim().isEmpty())) {
+            throw new IllegalArgumentException("Phone number is required for " + roleName + " role");
+        }
+        
+        // For STUDENT role, phone number is optional
+        if ("STUDENT".equalsIgnoreCase(roleName) && user.getPhone() != null && !user.getPhone().trim().isEmpty() && !user.getPhone().matches("\\d{10}")) {
+            throw new IllegalArgumentException("Phone number format is invalid for STUDENT");
+        }
+        
+        // For non-STUDENT roles, validate phone format if provided
+        if (!"STUDENT".equalsIgnoreCase(roleName) && user.getPhone() != null && !user.getPhone().trim().isEmpty() && !user.getPhone().matches("\\d{10}")) {
+            throw new IllegalArgumentException("Phone number format is invalid for " + roleName + " role");
         }
 
         if (user.getFirstName() == null || user.getFirstName().trim().isEmpty()) {
@@ -287,26 +292,26 @@ public class AuthService {
 
         if (user.getAddress() == null || user.getAddress().trim().isEmpty()) {
             throw new IllegalArgumentException("Address is required for all users");
-        }
-
-        if (user.getRole() == null) {
+        }        if (user.getRole() == null) {
             throw new IllegalArgumentException("Role is required for all users");
         }
 
-        if (user.getJobTitle() == null || user.getJobTitle().trim().isEmpty()) {
-            throw new IllegalArgumentException("Job title is required for all users");
+        // Job title is required for all users except STUDENT
+        if (!"STUDENT".equalsIgnoreCase(roleName) && (user.getJobTitle() == null || user.getJobTitle().trim().isEmpty())) {
+            throw new IllegalArgumentException("Job title is required for " + roleName + " role");
         }
 
-        if (!"PARENT".equalsIgnoreCase(roleName) && user.getUsername() == null) {
-            throw new IllegalArgumentException("Username is required for non-parent users");
+        // Username, password, and email are not required for PARENT and STUDENT roles
+        if (!"PARENT".equalsIgnoreCase(roleName) && !"STUDENT".equalsIgnoreCase(roleName) && user.getUsername() == null) {
+            throw new IllegalArgumentException("Username is required for " + roleName + " role");
         }
 
-        if (!"PARENT".equalsIgnoreCase(roleName) && user.getPassword() == null) {
-            throw new IllegalArgumentException("Password is required for non-parent users");
+        if (!"PARENT".equalsIgnoreCase(roleName) && !"STUDENT".equalsIgnoreCase(roleName) && user.getPassword() == null) {
+            throw new IllegalArgumentException("Password is required for " + roleName + " role");
         }
 
-        if (!"PARENT".equalsIgnoreCase(roleName) && user.getEmail() == null) {
-            throw new IllegalArgumentException("Email is required for non-parent users");
+        if (!"PARENT".equalsIgnoreCase(roleName) && !"STUDENT".equalsIgnoreCase(roleName) && user.getEmail() == null) {
+            throw new IllegalArgumentException("Email is required for " + roleName + " role");
         }
 
     }

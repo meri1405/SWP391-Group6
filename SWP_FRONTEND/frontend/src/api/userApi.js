@@ -11,16 +11,28 @@ const getAuthHeaders = () => {
 // Get all users
 export const getAllUsers = async () => {
   try {
+    console.log("Making API request to:", `${API_BASE_URL}/admin/users`);
+    console.log("Auth headers:", getAuthHeaders());
+
     const response = await fetch(`${API_BASE_URL}/admin/users`, {
       method: "GET",
       headers: getAuthHeaders(),
     });
 
+    console.log("Response status:", response.status);
+    console.log("Response headers:", [...response.headers.entries()]);
+
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    return await response.json();
+    const data = await response.json();
+    console.log("Raw API data received:", data);
+    console.log("Data is array:", Array.isArray(data));
+    console.log("Data length:", data.length);
+
+    // Return the users array from the response
+    return data.users || data;
   } catch (error) {
     console.error("Error fetching users:", error);
     throw error;
@@ -49,23 +61,45 @@ export const getUserById = async (userId) => {
 // Create new user
 export const createUser = async (userData) => {
   try {
+    console.log("🔧 userApi.createUser received userData:", userData);
+
     // Format data for backend
     const requestData = {
-      username: userData.username || null,
-      password: userData.password || null,
+      username: userData.username, // Don't convert to null if empty string
+      password: userData.password, // Don't convert to null if empty string
       firstName: userData.firstName,
       lastName: userData.lastName,
-      dob: userData.dateOfBirth || userData.dob, // Handle both field names
+      dob: userData.dob || userData.dateOfBirth, // Handle both field names
       gender: userData.gender,
-      phone: userData.phone,
-      email: userData.email || null,
+      email: userData.email, // Don't convert to null if empty string
       address: userData.address,
       jobTitle: userData.jobTitle,
       roleName: userData.role,
+      status: userData.status, // Add status field
     };
 
-    console.log("Creating user with data:", requestData);
-    console.log("Auth headers:", getAuthHeaders());
+    console.log("🔧 Formatted requestData:", requestData);
+
+    // Only add phone number for non-STUDENT roles
+    if (userData.role !== "STUDENT") {
+      requestData.phone = userData.phone;
+    }
+
+    // Add STUDENT-specific fields if the role is STUDENT
+    if (userData.role === "STUDENT") {
+      requestData.className = userData.className;
+      requestData.birthPlace = userData.birthPlace;
+      requestData.citizenship = userData.citizenship;
+      requestData.bloodType = userData.bloodType;
+      requestData.isDisabled = userData.isDisabled || false;
+    }
+
+    // Add PARENT-specific fields
+    if (userData.role === "PARENT") {
+      requestData.studentIds = userData.studentIds || [];
+    }
+
+    console.log("🚀 Final requestData to be sent:", requestData);
 
     const response = await fetch(`${API_BASE_URL}/admin/users/create`, {
       method: "POST",
@@ -73,21 +107,21 @@ export const createUser = async (userData) => {
       body: JSON.stringify(requestData),
     });
 
-    console.log("Response status:", response.status);
+    console.log("📡 Response status:", response.status);
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.error("Error response:", errorData);
+      console.error("❌ Error response:", errorData);
       throw new Error(
         errorData.message || `HTTP error! status: ${response.status}`
       );
     }
 
     const data = await response.json();
-    console.log("Success response:", data);
+    console.log("✅ Success response:", data);
     return data;
   } catch (error) {
-    console.error("Error creating user:", error);
+    console.error("❌ Error creating user:", error);
     throw error;
   }
 };
@@ -159,6 +193,59 @@ export const toggleUserStatus = async (userId) => {
     return data;
   } catch (error) {
     console.error("Error toggling user status:", error);
+    throw error;
+  }
+};
+
+// Get admin profile (full information from database)
+export const getAdminProfile = async () => {
+  try {
+    console.log("Fetching admin profile from API...");
+
+    const response = await fetch(`${API_BASE_URL}/admin/profile`, {
+      method: "GET",
+      headers: getAuthHeaders(),
+    });
+
+    console.log("Admin profile response status:", response.status);
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log("Admin profile data received:", data);
+    return data;
+  } catch (error) {
+    console.error("Error fetching admin profile:", error);
+    throw error;
+  }
+};
+
+// Update admin profile
+export const updateAdminProfile = async (profileData) => {
+  try {
+    console.log("Updating admin profile:", profileData);
+
+    const response = await fetch(`${API_BASE_URL}/admin/profile`, {
+      method: "PUT",
+      headers: getAuthHeaders(),
+      body: JSON.stringify(profileData),
+    });
+
+    console.log("Update admin profile response:", response.status);
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log("Admin profile updated successfully:", data);
+
+    // Return the profile data from the response
+    return data.profile || data;
+  } catch (error) {
+    console.error("Error updating admin profile:", error);
     throw error;
   }
 };

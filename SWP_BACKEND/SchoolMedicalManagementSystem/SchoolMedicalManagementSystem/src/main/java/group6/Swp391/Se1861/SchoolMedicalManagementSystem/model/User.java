@@ -9,6 +9,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.oauth2.core.user.OAuth2User;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -44,9 +45,7 @@ public class User implements UserDetails, OAuth2User {
     private LocalDate dob;
 
     @Column(name = "gender", nullable = false, length = 1)
-    private String gender;
-
-    @Column(name = "phone", nullable = false, unique = true)
+    private String gender;    @Column(name = "phone", nullable = true, unique = true)
     private String phone;
 
     @Column(name = "email")
@@ -71,30 +70,32 @@ public class User implements UserDetails, OAuth2User {
 
     @ManyToOne
     @JoinColumn(name = "roleID") // FK tới Role.id
-    private Role role;
-
-    @ManyToMany
+    private Role role;    @ManyToMany
     @JoinTable(
             name = "student_parent",
             joinColumns = @JoinColumn(name = "parent_id"), // vì User giữ role parent, nên joinColumns là parent_id
             inverseJoinColumns = @JoinColumn(name = "student_id",
             referencedColumnName = "studentID") // vì Student giữ role student, nên inverseJoinColumns là student_id
     )
+    @JsonIgnore  // Prevent circular reference during JSON serialization
     private Set<Student> students;
 
     @OneToMany(mappedBy = "createdBy", cascade = CascadeType.ALL)
+    @JsonIgnore  // Prevent circular reference during JSON serialization
     private List<VaccinationCampaign> createdCampaigns;
 
     @OneToMany(mappedBy = "manager", cascade = CascadeType.ALL)
+    @JsonIgnore  // Prevent circular reference during JSON serialization
     private List<VaccinationCampaign> managedCampaigns;
 
     @OneToMany(mappedBy = "nurse", cascade = CascadeType.ALL)
+    @JsonIgnore  // Prevent circular reference during JSON serialization
     private List<MedicationRequest> nurseMedicationRequests;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL)
-    private List<MedicationRequest> parentMedicationRequests;
-
-    @Transient
+    @JsonIgnore  // Prevent circular reference during JSON serialization
+    private List<MedicationRequest> parentMedicationRequests;    @Transient
+    @JsonIgnore  // Prevent serialization of OAuth2 attributes
     private Map<String, Object> attributes;
 
     @Override
@@ -174,5 +175,18 @@ public class User implements UserDetails, OAuth2User {
 
     public String getFullName() {
         return lastName + " " + firstName;
+    }
+
+    // Add getter methods for frontend mapping
+    public String getRoleName() {
+        return this.role != null ? this.role.getRoleName() : null;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return this.createdDate;
+    }
+
+    public LocalDate getDateOfBirth() {
+        return this.dob;
     }
 }

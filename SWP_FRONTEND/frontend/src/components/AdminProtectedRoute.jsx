@@ -1,6 +1,7 @@
 import React from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import "../styles/AdminProtectedRoute.css";
 
 const AdminProtectedRoute = ({ children }) => {
   const { user } = useAuth();
@@ -46,98 +47,6 @@ const AdminProtectedRoute = ({ children }) => {
             </button>
           </div>
         </div>
-
-        <style jsx>{`
-          .access-denied-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 80vh;
-            padding: 2rem;
-            background-color: #f8f9fa;
-          }
-
-          .access-denied-content {
-            text-align: center;
-            background: white;
-            padding: 3rem;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            max-width: 500px;
-            width: 100%;
-          }
-
-          .access-denied-icon {
-            font-size: 4rem;
-            margin-bottom: 1.5rem;
-          }
-
-          .access-denied-content h2 {
-            color: #dc3545;
-            margin-bottom: 1rem;
-            font-size: 1.5rem;
-            font-weight: 600;
-          }
-
-          .access-denied-content p {
-            color: #495057;
-            font-size: 1rem;
-            line-height: 1.6;
-            margin: 0 0 1rem 0;
-          }
-
-          .access-denied-content p:last-of-type {
-            margin-bottom: 2rem;
-          }
-
-          .access-denied-actions {
-            display: flex;
-            gap: 1rem;
-            justify-content: center;
-            flex-wrap: wrap;
-          }
-
-          .btn-back,
-          .btn-login {
-            padding: 0.75rem 1.5rem;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            font-weight: 500;
-            transition: all 0.2s ease;
-            min-width: 120px;
-          }
-
-          .btn-back {
-            background: #6c757d;
-            color: white;
-          }
-
-          .btn-back:hover {
-            background: #5a6268;
-          }
-
-          .btn-login {
-            background: #1976d2;
-            color: white;
-          }
-
-          .btn-login:hover {
-            background: #1565c0;
-          }
-
-          @media (max-width: 480px) {
-            .access-denied-actions {
-              flex-direction: column;
-            }
-
-            .btn-back,
-            .btn-login {
-              width: 100%;
-            }
-          }
-        `}</style>
       </div>
     );
   }

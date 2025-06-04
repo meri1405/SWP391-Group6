@@ -52,16 +52,31 @@ public class SchoolMedicalManagementSystemApplication {
 					jdbcTemplate.update(
 						"INSERT INTO role (role_name) VALUES (?)",
 						"SCHOOLNURSE"
-					);
-
-					jdbcTemplate.update(
+					);					jdbcTemplate.update(
 						"INSERT INTO role (role_name) VALUES (?)",
 						"PARENT"
 					);
 
-					System.out.println("Roles created successfully");
-				} else {
-					System.out.println("Roles already exist");
+					jdbcTemplate.update(
+						"INSERT INTO role (role_name) VALUES (?)",
+						"STUDENT"
+					);
+
+					System.out.println("Roles created successfully");				} else {
+					// Check if STUDENT role exists, add it if missing
+					Integer studentRoleCount = jdbcTemplate.queryForObject(
+						"SELECT COUNT(*) FROM role WHERE role_name = ?", 
+						Integer.class, "STUDENT");
+					
+					if (studentRoleCount == null || studentRoleCount == 0) {
+						jdbcTemplate.update(
+							"INSERT INTO role (role_name) VALUES (?)",
+							"STUDENT"
+						);
+						System.out.println("STUDENT role added successfully");
+					} else {
+						System.out.println("All roles already exist");
+					}
 				}
 			} catch (Exception e) {
 				System.err.println("Failed to initialize roles: " + e.getMessage());
