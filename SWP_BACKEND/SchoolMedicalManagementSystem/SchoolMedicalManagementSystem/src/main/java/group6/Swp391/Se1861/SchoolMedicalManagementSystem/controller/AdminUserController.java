@@ -2,11 +2,8 @@ package group6.Swp391.Se1861.SchoolMedicalManagementSystem.controller;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.config.AdminOnly;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.UserCreationDTO;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.StudentCreationDTO;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.StudentDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.AuthService;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.StudentService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -28,13 +25,11 @@ public class AdminUserController {
 
     private final AuthService authService;
     private final UserRepository userRepository;
-    private final StudentService studentService;
 
     @Autowired
-    public AdminUserController(AuthService authService, UserRepository userRepository, StudentService studentService) {
+    public AdminUserController(AuthService authService, UserRepository userRepository) {
         this.authService = authService;
         this.userRepository = userRepository;
-        this.studentService = studentService;
     }
 
     /**
@@ -44,16 +39,12 @@ public class AdminUserController {
      * - For ADMIN, SCHOOLNURSE, MANAGER: username, password, email are required
      * - For PARENT: username, password, email are ignored/nullified
      * - Phone number must be unique for all users regardless of role
-     */    @PostMapping("/create")
+     */
+    @PostMapping("/create")
     public ResponseEntity<?> createUser(@RequestBody UserCreationDTO userCreationDTO) {
         try {
-            // Check if this is a STUDENT creation request
-            if ("STUDENT".equalsIgnoreCase(userCreationDTO.getRoleName())) {
-                return handleStudentCreation(userCreationDTO);
-            }
-            
-            // Handle non-STUDENT user creation (existing logic)
-            return handleNonStudentUserCreation(userCreationDTO);
+            // Handle user creation (no STUDENT support)
+            return handleUserCreation(userCreationDTO);
         } catch (IllegalArgumentException e) {
             // Return validation errors
             Map<String, Object> errorResponse = new HashMap<>();
@@ -69,62 +60,23 @@ public class AdminUserController {
 
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
-    }    /**
-     * Handle STUDENT creation by routing to StudentService
+    }
+
+    /**
+     * Handle user creation (excluding STUDENT role)
      */
-    private ResponseEntity<?> handleStudentCreation(UserCreationDTO userCreationDTO) {
+    private ResponseEntity<?> handleUserCreation(UserCreationDTO userCreationDTO) {
         try {
-            // Convert UserCreationDTO to StudentCreationDTO
-            StudentCreationDTO studentCreationDTO = new StudentCreationDTO();
-            studentCreationDTO.setFirstName(userCreationDTO.getFirstName());
-            studentCreationDTO.setLastName(userCreationDTO.getLastName());
-            studentCreationDTO.setDob(userCreationDTO.getDob());
-            studentCreationDTO.setGender(userCreationDTO.getGender());
-            studentCreationDTO.setAddress(userCreationDTO.getAddress());
-            
-            // Set STUDENT-specific fields
-            studentCreationDTO.setClassName(userCreationDTO.getClassName());
-            studentCreationDTO.setBirthPlace(userCreationDTO.getBirthPlace());
-            studentCreationDTO.setCitizenship(userCreationDTO.getCitizenship());
-            studentCreationDTO.setBloodType(userCreationDTO.getBloodType());
-            studentCreationDTO.setDisabled(userCreationDTO.getIsDisabled() != null ? userCreationDTO.getIsDisabled() : false);
-            
-            // Set parent IDs if provided
-            studentCreationDTO.setParentIds(userCreationDTO.getStudentIds()); // This field might contain parent IDs for student creation
+            // Block STUDENT creation entirely
+            if ("STUDENT".equalsIgnoreCase(userCreationDTO.getRoleName())) {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("error", "Validation failed");
+                errorResponse.put("message", "STUDENT creation is not supported through this endpoint.");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+            }
 
-            // Create student using StudentService
-            StudentDTO createdStudent = studentService.createStudentByAdmin(studentCreationDTO);
-
-            // Return response in same format as User creation
-            Map<String, Object> response = new HashMap<>();
-            response.put("message", "Student created successfully");
-            response.put("userId", createdStudent.getStudentID());
-            response.put("fullName", createdStudent.getFirstName() + " " + createdStudent.getLastName());
-            response.put("role", "STUDENT");
-
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
-        } catch (IllegalArgumentException e) {
-            // Return validation errors
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", "Validation failed");
-            errorResponse.put("message", e.getMessage());
-
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
-        } catch (Exception e) {
-            // Return general server errors
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", "Server error");
-            errorResponse.put("message", "An unexpected error occurred while creating the student: " + e.getMessage());
-
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
-        }
-    }/**
-     * Handle non-STUDENT user creation (original logic)
-     */
-    private ResponseEntity<?> handleNonStudentUserCreation(UserCreationDTO userCreationDTO) {
-        try {
-            // Ngăn chặn việc tạo user PARENT hoặc STUDENT nếu có username/password/email
-            if ("PARENT".equalsIgnoreCase(userCreationDTO.getRoleName()) || "STUDENT".equalsIgnoreCase(userCreationDTO.getRoleName())) {
+            // Prevent creating PARENT users with username/password/email
+            if ("PARENT".equalsIgnoreCase(userCreationDTO.getRoleName())) {
                 if ((userCreationDTO.getUsername() != null && !userCreationDTO.getUsername().trim().isEmpty()) ||
                     (userCreationDTO.getPassword() != null && !userCreationDTO.getPassword().trim().isEmpty()) ||
                     (userCreationDTO.getEmail() != null && !userCreationDTO.getEmail().trim().isEmpty())) {
@@ -136,7 +88,7 @@ public class AdminUserController {
                     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
                 }
             } else {
-                // Kiểm tra username duy nhất cho các role khác PARENT và STUDENT
+                // Check username requirements for other roles (ADMIN, SCHOOLNURSE, MANAGER)
                 if (userCreationDTO.getUsername() == null || userCreationDTO.getUsername().trim().isEmpty()) {
                     Map<String, Object> errorResponse = new HashMap<>();
                     errorResponse.put("error", "Validation failed");
@@ -145,7 +97,7 @@ public class AdminUserController {
                     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
                 }
 
-                // Kiểm tra username đã tồn tại chưa
+                // Check if username already exists
                 if (authService.usernameExists(userCreationDTO.getUsername())) {
                     Map<String, Object> errorResponse = new HashMap<>();
                     errorResponse.put("error", "Validation failed");

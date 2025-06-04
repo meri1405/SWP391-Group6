@@ -307,43 +307,19 @@ const Login = () => {
             navigate("/");
         }
       } else {
-        // Handle error responses
-        let errorMessage = "Tên đăng nhập hoặc mật khẩu không đúng";
+        // Handle error responses with simplified message
+        let errorMessage = "Tên đăng nhập hoặc mật khẩu không hợp lệ";
 
-        try {
-          const contentType = response.headers.get("content-type");
-          if (contentType && contentType.includes("application/json")) {
-            const errorData = await response.json();
-            errorMessage = errorData.message || errorMessage;
-          } else {
-            errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-          }
-        } catch (parseError) {
-          console.log("Error parsing response:", parseError.message);
-          errorMessage = `Lỗi server (${response.status})`;
-        }
-
+        // For all authentication errors, just show the simple message
         setErrors({ username: errorMessage });
       }
     } catch (networkError) {
       console.log("Network error during login:", networkError.message);
 
-      // Check if it's a network connectivity issue
-      if (
-        networkError.message.includes("Failed to fetch") ||
-        networkError.message.includes("NetworkError")
-      ) {
-        setErrors({
-          username:
-            "Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.",
-        });
-      } else if (networkError.message.includes("non-JSON response")) {
-        setErrors({
-          username: "Server trả về phản hồi không hợp lệ. Vui lòng thử lại.",
-        });
-      } else {
-        setErrors({ username: "Tên đăng nhập hoặc mật khẩu không đúng." });
-      }
+      // For any network or connection errors, show the simple error message
+      setErrors({
+        username: "Tên đăng nhập hoặc mật khẩu không hợp lệ",
+      });
     } finally {
       setIndividualLoading("usernameLogin", false);
     }

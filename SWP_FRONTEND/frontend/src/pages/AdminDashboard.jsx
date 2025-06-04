@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Layout, Menu, Breadcrumb, Spin, message } from "antd";
+import { Layout, Menu, Breadcrumb, Spin, message, notification } from "antd";
 import { useAuth } from "../contexts/AuthContext";
 import dayjs from "dayjs";
 import {
@@ -50,7 +50,6 @@ import {
   getAdminProfile,
   updateAdminProfile,
 } from "../api/userApi";
-import { getAllStudents } from "../api/studentApi";
 
 const { Header, Sider, Content } = Layout;
 
@@ -72,750 +71,552 @@ const UserManagement = ({
   handleSaveUser,
   userFormInstance,
   handleRoleChange,
-  students,
-}) => (
-  <div className="user-management">
-    <div className="section-header">
-      <h2>Quản lý người dùng</h2>
-      <Button
-        type="primary"
-        icon={<PlusOutlined />}
-        onClick={openAddUserModal}
-        size="large"
-      >
-        Thêm người dùng
-      </Button>
-    </div>
-    <div className="filters-section">
-      <div className="search-bar">
-        <input
-          type="text"
-          placeholder="Tìm kiếm theo tên hoặc email..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-        <button className="btn-search">Tìm kiếm</button>
-      </div>
-
-      <div className="filter-bar">
-        <select
-          value={filterRole}
-          onChange={(e) => setFilterRole(e.target.value)}
-          className="role-filter"
+}) => {
+  return (
+    <div className="user-management">
+      <div className="section-header">
+        <h2>Quản lý người dùng</h2>
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={openAddUserModal}
+          size="large"
         >
-          <option value="all">Tất cả vai trò</option>
-          <option value="PARENT">Phụ huynh</option>
-          <option value="STUDENT">Học sinh</option>
-          <option value="SCHOOLNURSE">Y tá</option>
-          <option value="ADMIN">Quản trị viên</option>
-        </select>
+          Thêm người dùng
+        </Button>
       </div>
-    </div>
-    <div className="users-stats">
-      <span>
-        Hiển thị {filteredUsers.length} / {users.length} người dùng
-      </span>
-    </div>
-    <div className="table-container">
-      <table className="data-table">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Họ</th>
-            <th>Tên</th>
-            <th>Email</th>
-            <th>Tên đăng nhập</th>
-            <th>Số điện thoại</th>
-            <th>Vai trò</th>
-            <th>Trạng thái</th>
-            <th>Ngày tạo</th>
-            <th>Thao tác</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filteredUsers.map((user, index) => (
-            <tr key={user.id || user.userId || `user-${index}`}>
-              <td>{user.id || user.userId}</td>
-              <td>{user.lastName || ""}</td>
-              <td>{user.firstName || ""}</td>
-              <td>{user.email || "-"}</td>
-              <td>{user.username || "-"}</td>
-              <td>{user.phone || "-"}</td>
-              <td>
-                <span className={`role-badge ${user.roleName?.toLowerCase()}`}>
-                  {user.roleName}
-                </span>
-              </td>
-              <td>
-                <span
-                  className={`status ${user.enabled ? "active" : "inactive"}`}
-                >
-                  {user.enabled ? "Hoạt động" : "Không hoạt động"}
-                </span>
-              </td>
-              <td>
-                {user.createdAt
-                  ? new Date(user.createdAt).toLocaleDateString("vi-VN")
-                  : "N/A"}
-              </td>
-              <td>
-                <Space size="small">
-                  <Button
-                    type="primary"
-                    icon={<EyeOutlined />}
-                    size="small"
-                    onClick={() => openViewUserModal(user)}
-                    title="Xem chi tiết"
-                  />
-                  <Popconfirm
-                    title="Xác nhận thay đổi trạng thái"
-                    description={`Bạn có muốn ${
-                      user.enabled ? "vô hiệu hóa" : "kích hoạt lại"
-                    } người dùng ${user.firstName} ${user.lastName}?`}
-                    onConfirm={() => handleDeleteUser(user)}
-                    okText={user.enabled ? "Vô hiệu hóa" : "Kích hoạt"}
-                    cancelText="Hủy"
-                    okType={user.enabled ? "danger" : "primary"}
-                  >
-                    <Button
-                      type={user.enabled ? "primary" : "default"}
-                      danger={user.enabled}
-                      icon={user.enabled ? <CloseOutlined /> : <SaveOutlined />}
-                      size="small"
-                      title={user.enabled ? "Vô hiệu hóa" : "Kích hoạt lại"}
-                    />
-                  </Popconfirm>
-                </Space>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {filteredUsers.length === 0 && (
-        <div className="no-data">
-          <p>Không tìm thấy người dùng nào phù hợp với tiêu chí tìm kiếm.</p>
+      <div className="filters-section">
+        <div className="search-bar">
+          <input
+            type="text"
+            placeholder="Tìm kiếm theo tên hoặc email..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          <button className="btn-search">Tìm kiếm</button>
         </div>
-      )}
-    </div>
-    {/* User Modal */}
-    <Modal
-      title={
-        modalMode === "add"
-          ? "Thêm người dùng mới"
-          : modalMode === "view"
-          ? "Thông tin người dùng"
-          : "Chỉnh sửa người dùng"
-      }
-      open={showUserModal}
-      onCancel={() => setShowUserModal(false)}
-      footer={
-        modalMode === "view"
-          ? [
-              <Button key="view-close" onClick={() => setShowUserModal(false)}>
-                Đóng
-              </Button>,
-            ]
-          : [
-              <Button key="form-cancel" onClick={() => setShowUserModal(false)}>
-                Hủy
-              </Button>,
-              <Button key="form-submit" type="primary" onClick={handleSaveUser}>
-                {modalMode === "add" ? "Thêm" : "Cập nhật"}
-              </Button>,
-            ]
-      }
-      width={900}
-      destroyOnClose
-    >
-      {modalMode === "view" ? (
-        <Descriptions bordered column={2} size="middle">
-          <Descriptions.Item label="ID người dùng" span={1}>
-            {selectedUser?.id}
-          </Descriptions.Item>
-          <Descriptions.Item label="Họ" span={1}>
-            {selectedUser?.firstName || "Chưa cập nhật"}
-          </Descriptions.Item>
-          <Descriptions.Item label="Tên" span={1}>
-            {selectedUser?.lastName || "Chưa cập nhật"}
-          </Descriptions.Item>
-          <Descriptions.Item label="Email" span={1}>
-            {selectedUser?.email || "Chưa cập nhật"}
-          </Descriptions.Item>
-          {/* Conditional phone field - only show for non-student roles */}
-          {selectedUser?.roleName !== "STUDENT" &&
-            selectedUser?.role !== "STUDENT" && (
-              <Descriptions.Item label="Số điện thoại" span={1}>
-                {selectedUser?.phone || "Chưa cập nhật"}
-              </Descriptions.Item>
-            )}
-          <Descriptions.Item label="Ngày sinh" span={1}>
-            {selectedUser?.dob
-              ? dayjs(selectedUser.dob).format("DD/MM/YYYY")
-              : "Chưa cập nhật"}
-          </Descriptions.Item>
-          <Descriptions.Item label="Giới tính" span={1}>
-            {selectedUser?.gender === "M"
-              ? "Nam"
-              : selectedUser?.gender === "F"
-              ? "Nữ"
-              : "Chưa cập nhật"}
-          </Descriptions.Item>
-          {/* Role-specific fields */}
-          {(selectedUser?.roleName === "PARENT" ||
-            selectedUser?.role === "PARENT") && (
-            <Descriptions.Item label="Nghề nghiệp" span={1}>
-              {selectedUser?.jobTitle && selectedUser.jobTitle.trim() !== ""
-                ? selectedUser.jobTitle
+
+        <div className="filter-bar">
+          <select
+            value={filterRole}
+            onChange={(e) => setFilterRole(e.target.value)}
+            className="role-filter"
+          >
+            <option value="all">Tất cả vai trò</option>
+            <option value="PARENT">Phụ huynh</option>
+            <option value="SCHOOLNURSE">Y tá</option>
+            <option value="MANAGER">Quản lý</option>
+            <option value="ADMIN">Quản trị viên</option>
+          </select>
+        </div>
+      </div>
+      <div className="users-stats">
+        <span>
+          Hiển thị {filteredUsers.length} / {users.length} người dùng
+        </span>
+      </div>
+      <div className="table-container">
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Họ</th>
+              <th>Tên</th>
+              <th>Email</th>
+              <th>Tên đăng nhập</th>
+              <th>Số điện thoại</th>
+              <th>Vai trò</th>
+              <th>Trạng thái</th>
+              <th>Ngày tạo</th>
+              <th>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredUsers.map((user, index) => (
+              <tr key={user.id || user.userId || `user-${index}`}>
+                <td>{user.id || user.userId}</td>
+                <td>{user.lastName || ""}</td>
+                <td>{user.firstName || ""}</td>
+                <td>{user.email || "-"}</td>
+                <td>{user.username || "-"}</td>
+                <td>{user.phone || "-"}</td>
+                <td>
+                  <span
+                    className={`role-badge ${user.roleName?.toLowerCase()}`}
+                  >
+                    {user.roleName}
+                  </span>
+                </td>
+                <td>
+                  <span
+                    className={`status ${user.enabled ? "active" : "inactive"}`}
+                  >
+                    {user.enabled ? "Hoạt động" : "Không hoạt động"}
+                  </span>
+                </td>
+                <td>
+                  {user.createdAt
+                    ? new Date(user.createdAt).toLocaleDateString("vi-VN")
+                    : "N/A"}
+                </td>
+                <td>
+                  <Space size="small">
+                    <Button
+                      type="primary"
+                      icon={<EyeOutlined />}
+                      size="small"
+                      onClick={() => openViewUserModal(user)}
+                      title="Xem chi tiết"
+                    />
+                    <Popconfirm
+                      title="Xác nhận thay đổi trạng thái"
+                      description={`Bạn có muốn ${
+                        user.enabled ? "vô hiệu hóa" : "kích hoạt lại"
+                      } người dùng ${user.firstName} ${user.lastName}?`}
+                      onConfirm={() => handleDeleteUser(user)}
+                      okText={user.enabled ? "Vô hiệu hóa" : "Kích hoạt"}
+                      cancelText="Hủy"
+                      okType={user.enabled ? "danger" : "primary"}
+                    >
+                      <Button
+                        type={user.enabled ? "primary" : "default"}
+                        danger={user.enabled}
+                        icon={
+                          user.enabled ? <CloseOutlined /> : <SaveOutlined />
+                        }
+                        size="small"
+                        title={user.enabled ? "Vô hiệu hóa" : "Kích hoạt lại"}
+                      />
+                    </Popconfirm>
+                  </Space>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {filteredUsers.length === 0 && (
+          <div className="no-data">
+            <p>Không tìm thấy người dùng nào phù hợp với tiêu chí tìm kiếm.</p>
+          </div>
+        )}
+      </div>
+      {/* User Modal */}
+      <Modal
+        title={
+          modalMode === "add"
+            ? "Thêm người dùng mới"
+            : modalMode === "view"
+            ? "Thông tin người dùng"
+            : "Chỉnh sửa người dùng"
+        }
+        open={showUserModal}
+        onCancel={() => setShowUserModal(false)}
+        footer={
+          modalMode === "view"
+            ? [
+                <Button
+                  key="view-close"
+                  onClick={() => setShowUserModal(false)}
+                >
+                  Đóng
+                </Button>,
+              ]
+            : [
+                <Button
+                  key="form-cancel"
+                  onClick={() => setShowUserModal(false)}
+                >
+                  Hủy
+                </Button>,
+                <Button
+                  key="form-submit"
+                  type="primary"
+                  onClick={handleSaveUser}
+                >
+                  {modalMode === "add" ? "Thêm" : "Cập nhật"}
+                </Button>,
+              ]
+        }
+        width={900}
+        destroyOnClose
+      >
+        {modalMode === "view" ? (
+          <Descriptions bordered column={2} size="middle">
+            <Descriptions.Item label="ID người dùng" span={1}>
+              {selectedUser?.id}
+            </Descriptions.Item>
+            <Descriptions.Item label="Họ" span={1}>
+              {selectedUser?.firstName || "Chưa cập nhật"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Tên" span={1}>
+              {selectedUser?.lastName || "Chưa cập nhật"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Email" span={1}>
+              {selectedUser?.email || "Chưa cập nhật"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Số điện thoại" span={1}>
+              {selectedUser?.phone || "Chưa cập nhật"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Ngày sinh" span={1}>
+              {selectedUser?.dob
+                ? dayjs(selectedUser.dob).format("DD/MM/YYYY")
                 : "Chưa cập nhật"}
             </Descriptions.Item>
-          )}
-          {(selectedUser?.roleName === "STUDENT" ||
-            selectedUser?.role === "STUDENT") && (
-            <>
-              <Descriptions.Item label="Lớp" span={1}>
-                {selectedUser?.className || "Chưa cập nhật"}
+            <Descriptions.Item label="Giới tính" span={1}>
+              {selectedUser?.gender === "M"
+                ? "Nam"
+                : selectedUser?.gender === "F"
+                ? "Nữ"
+                : "Chưa cập nhật"}
+            </Descriptions.Item>
+            {/* Role-specific fields */}
+            {(selectedUser?.roleName === "PARENT" ||
+              selectedUser?.role === "PARENT") && (
+              <Descriptions.Item label="Nghề nghiệp" span={1}>
+                {selectedUser?.jobTitle && selectedUser.jobTitle.trim() !== ""
+                  ? selectedUser.jobTitle
+                  : "Chưa cập nhật"}
               </Descriptions.Item>
-              <Descriptions.Item label="Nơi sinh" span={1}>
-                {selectedUser?.birthPlace || "Chưa cập nhật"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Quốc tịch" span={1}>
-                {selectedUser?.citizenship || "Chưa cập nhật"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Nhóm máu" span={1}>
-                {selectedUser?.bloodType || "Chưa cập nhật"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Tình trạng" span={1}>
-                <Tag color={selectedUser?.isDisabled ? "red" : "green"}>
-                  {selectedUser?.isDisabled ? "Đã thôi học" : "Đang đi học"}
-                </Tag>
-              </Descriptions.Item>
-            </>
-          )}
-          {(selectedUser?.roleName === "SCHOOLNURSE" ||
-            selectedUser?.role === "SCHOOLNURSE" ||
-            selectedUser?.roleName === "ADMIN" ||
-            selectedUser?.role === "ADMIN") && (
-            <>
-              <Descriptions.Item label="Email" span={1}>
-                {selectedUser?.email || "Chưa cập nhật"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Tên đăng nhập" span={1}>
-                {selectedUser?.username || "Chưa cập nhật"}
-              </Descriptions.Item>
-            </>
-          )}
-          <Descriptions.Item label="Vai trò" span={1}>
-            <Tag
-              color={
-                selectedUser?.roleName === "PARENT" ||
-                selectedUser?.role === "PARENT"
-                  ? "blue"
-                  : selectedUser?.roleName === "STUDENT" ||
-                    selectedUser?.role === "STUDENT"
-                  ? "green"
-                  : selectedUser?.roleName === "SCHOOLNURSE" ||
-                    selectedUser?.role === "SCHOOLNURSE"
-                  ? "purple"
-                  : "red"
-              }
-            >
-              {(selectedUser?.roleName === "PARENT" ||
-                selectedUser?.role === "PARENT") &&
-                "Phụ huynh"}
-              {(selectedUser?.roleName === "STUDENT" ||
-                selectedUser?.role === "STUDENT") &&
-                "Học sinh"}
-              {(selectedUser?.roleName === "SCHOOLNURSE" ||
-                selectedUser?.role === "SCHOOLNURSE") &&
-                "Y tá"}
-              {(selectedUser?.roleName === "ADMIN" ||
-                selectedUser?.role === "ADMIN") &&
-                "Quản trị viên"}
-            </Tag>
-          </Descriptions.Item>
-          <Descriptions.Item label="Trạng thái" span={1}>
-            <Tag color={selectedUser?.enabled ? "success" : "error"}>
-              {selectedUser?.enabled ? "Hoạt động" : "Không hoạt động"}
-            </Tag>
-          </Descriptions.Item>
-          <Descriptions.Item label="Ngày tạo" span={1}>
-            {selectedUser?.createdAt}
-          </Descriptions.Item>
-          <Descriptions.Item label="Địa chỉ" span={2}>
-            {selectedUser?.address && selectedUser.address.trim() !== ""
-              ? selectedUser.address
-              : "Chưa cập nhật"}
-          </Descriptions.Item>
-        </Descriptions>
-      ) : (
-        <Form
-          form={userFormInstance}
-          layout="vertical"
-          initialValues={{
-            role: "PARENT",
-            username: "",
-            password: "",
-            email: "",
-            jobTitle: "",
-            firstName: "",
-            lastName: "",
-            phone: "",
-            address: "",
-            gender: "",
-            dob: null,
-            studentIds: [],
-            className: "",
-            birthPlace: "",
-            citizenship: "",
-            bloodType: "",
-            isDisabled: false,
-          }}
-        >
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "16px",
+            )}
+            {(selectedUser?.roleName === "SCHOOLNURSE" ||
+              selectedUser?.role === "SCHOOLNURSE" ||
+              selectedUser?.roleName === "MANAGER" ||
+              selectedUser?.role === "MANAGER" ||
+              selectedUser?.roleName === "ADMIN" ||
+              selectedUser?.role === "ADMIN") && (
+              <>
+                <Descriptions.Item label="Email" span={1}>
+                  {selectedUser?.email || "Chưa cập nhật"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Tên đăng nhập" span={1}>
+                  {selectedUser?.username || "Chưa cập nhật"}
+                </Descriptions.Item>
+              </>
+            )}
+            <Descriptions.Item label="Vai trò" span={1}>
+              <Tag
+                color={
+                  selectedUser?.roleName === "PARENT" ||
+                  selectedUser?.role === "PARENT"
+                    ? "blue"
+                    : selectedUser?.roleName === "SCHOOLNURSE" ||
+                      selectedUser?.role === "SCHOOLNURSE"
+                    ? "purple"
+                    : selectedUser?.roleName === "MANAGER" ||
+                      selectedUser?.role === "MANAGER"
+                    ? "orange"
+                    : "red"
+                }
+              >
+                {(selectedUser?.roleName === "PARENT" ||
+                  selectedUser?.role === "PARENT") &&
+                  "Phụ huynh"}
+                {(selectedUser?.roleName === "SCHOOLNURSE" ||
+                  selectedUser?.role === "SCHOOLNURSE") &&
+                  "Y tá"}
+                {(selectedUser?.roleName === "MANAGER" ||
+                  selectedUser?.role === "MANAGER") &&
+                  "Quản lý"}
+                {(selectedUser?.roleName === "ADMIN" ||
+                  selectedUser?.role === "ADMIN") &&
+                  "Quản trị viên"}
+              </Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="Trạng thái" span={1}>
+              <Tag color={selectedUser?.enabled ? "success" : "error"}>
+                {selectedUser?.enabled ? "Hoạt động" : "Không hoạt động"}
+              </Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="Ngày tạo" span={1}>
+              {selectedUser?.createdAt}
+            </Descriptions.Item>
+            <Descriptions.Item label="Địa chỉ" span={2}>
+              {selectedUser?.address && selectedUser.address.trim() !== ""
+                ? selectedUser.address
+                : "Chưa cập nhật"}
+            </Descriptions.Item>
+          </Descriptions>
+        ) : (
+          <Form
+            form={userFormInstance}
+            layout="vertical"
+            initialValues={{
+              role: "PARENT",
+              username: "",
+              password: "",
+              email: "",
+              jobTitle: "",
+              firstName: "",
+              lastName: "",
+              phone: "",
+              address: "",
+              gender: "",
+              dob: null,
             }}
           >
-            <Form.Item
-              label="Họ"
-              name="lastName"
-              rules={[
-                { required: true, message: "Vui lòng nhập họ!" },
-                { min: 2, message: "Họ phải có ít nhất 2 ký tự!" },
-              ]}
-            >
-              <Input placeholder="Nhập họ" />
-            </Form.Item>
-            <Form.Item
-              label="Tên"
-              name="firstName"
-              rules={[
-                { required: true, message: "Vui lòng nhập tên!" },
-                { min: 2, message: "Tên phải có ít nhất 2 ký tự!" },
-              ]}
-            >
-              <Input placeholder="Nhập tên" />
-            </Form.Item>
-            {/* Conditional phone field - only show for non-student roles */}
-            <Form.Item
-              noStyle
-              shouldUpdate={(prevValues, currentValues) =>
-                prevValues.role !== currentValues.role
-              }
-            >
-              {({ getFieldValue }) => {
-                const selectedRole = getFieldValue("role");
-                return selectedRole !== "STUDENT" ? (
-                  <Form.Item
-                    label="Số điện thoại"
-                    name="phone"
-                    rules={[
-                      {
-                        required: true,
-                        message: "Vui lòng nhập số điện thoại!",
-                      },
-                      {
-                        pattern: /^\d{10}$/,
-                        message: "Số điện thoại phải có 10 chữ số!",
-                      },
-                    ]}
-                  >
-                    <Input placeholder="Nhập số điện thoại" />
-                  </Form.Item>
-                ) : null;
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "16px",
               }}
-            </Form.Item>
-            <Form.Item
-              label="Ngày sinh"
-              name="dob"
-              rules={[{ required: true, message: "Vui lòng chọn ngày sinh!" }]}
             >
-              <DatePicker
-                style={{ width: "100%" }}
-                placeholder="Chọn ngày sinh"
-                format="DD/MM/YYYY"
+              <Form.Item
+                label="Họ"
+                name="lastName"
+                rules={[
+                  { required: true, message: "Vui lòng nhập họ!" },
+                  { min: 2, message: "Họ phải có ít nhất 2 ký tự!" },
+                ]}
+              >
+                <Input placeholder="Nhập họ" />
+              </Form.Item>
+              <Form.Item
+                label="Tên"
+                name="firstName"
+                rules={[
+                  { required: true, message: "Vui lòng nhập tên!" },
+                  { min: 2, message: "Tên phải có ít nhất 2 ký tự!" },
+                ]}
+              >
+                <Input placeholder="Nhập tên" />
+              </Form.Item>
+              {/* Phone field - required for all remaining roles */}
+              <Form.Item
+                label="Số điện thoại"
+                name="phone"
+                rules={[
+                  {
+                    required: true,
+                    message: "Vui lòng nhập số điện thoại!",
+                  },
+                  {
+                    pattern: /^\d{10}$/,
+                    message: "Số điện thoại phải có 10 chữ số!",
+                  },
+                ]}
+              >
+                <Input placeholder="Nhập số điện thoại" />
+              </Form.Item>
+              <Form.Item
+                label="Ngày sinh"
+                name="dob"
+                rules={[
+                  { required: true, message: "Vui lòng chọn ngày sinh!" },
+                ]}
+              >
+                <DatePicker
+                  style={{ width: "100%" }}
+                  placeholder="Chọn ngày sinh"
+                  format="DD/MM/YYYY"
+                />
+              </Form.Item>
+              <Form.Item
+                label="Giới tính"
+                name="gender"
+                rules={[
+                  { required: true, message: "Vui lòng chọn giới tính!" },
+                ]}
+              >
+                <Select placeholder="Chọn giới tính">
+                  <Select.Option key="M" value="M">
+                    Nam
+                  </Select.Option>
+                  <Select.Option key="F" value="F">
+                    Nữ
+                  </Select.Option>
+                </Select>
+              </Form.Item>
+              {/* Conditional job title field - show for parent role */}
+              <Form.Item
+                noStyle
+                shouldUpdate={(prevValues, currentValues) =>
+                  prevValues.role !== currentValues.role
+                }
+              >
+                {({ getFieldValue }) => {
+                  const selectedRole = getFieldValue("role");
+                  const shouldShow = selectedRole === "PARENT";
+
+                  return shouldShow ? (
+                    <Form.Item
+                      label="Nghề nghiệp"
+                      name="jobTitle"
+                      rules={[
+                        {
+                          required: true,
+                          message: "Vui lòng nhập nghề nghiệp!",
+                        },
+                      ]}
+                    >
+                      <Input placeholder="Nhập nghề nghiệp" />
+                    </Form.Item>
+                  ) : null;
+                }}
+              </Form.Item>
+              {/* Conditional email field - only show for nurse, manager and admin roles */}
+              <Form.Item
+                noStyle
+                shouldUpdate={(prevValues, currentValues) =>
+                  prevValues.role !== currentValues.role
+                }
+              >
+                {({ getFieldValue }) => {
+                  const selectedRole = getFieldValue("role");
+                  return selectedRole === "SCHOOLNURSE" ||
+                    selectedRole === "MANAGER" ||
+                    selectedRole === "ADMIN" ? (
+                    <Form.Item
+                      label="Email"
+                      name="email"
+                      rules={[
+                        { required: true, message: "Vui lòng nhập email!" },
+                        { type: "email", message: "Email không hợp lệ!" },
+                      ]}
+                    >
+                      <Input placeholder="Nhập email" />
+                    </Form.Item>
+                  ) : null;
+                }}
+              </Form.Item>
+
+              {/* Conditional username field - only show for nurse, manager and admin roles */}
+              <Form.Item
+                noStyle
+                shouldUpdate={(prevValues, currentValues) =>
+                  prevValues.role !== currentValues.role
+                }
+              >
+                {({ getFieldValue }) => {
+                  const selectedRole = getFieldValue("role");
+                  return selectedRole === "SCHOOLNURSE" ||
+                    selectedRole === "MANAGER" ||
+                    selectedRole === "ADMIN" ? (
+                    <Form.Item
+                      label="Tên đăng nhập"
+                      name="username"
+                      rules={[
+                        {
+                          required: true,
+                          message: "Vui lòng nhập tên đăng nhập!",
+                        },
+                        {
+                          min: 3,
+                          message: "Tên đăng nhập phải có ít nhất 3 ký tự!",
+                        },
+                      ]}
+                    >
+                      <Input placeholder="Nhập tên đăng nhập" />
+                    </Form.Item>
+                  ) : null;
+                }}
+              </Form.Item>
+
+              {/* Conditional password field - only show for nurse, manager and admin roles */}
+              <Form.Item
+                noStyle
+                shouldUpdate={(prevValues, currentValues) =>
+                  prevValues.role !== currentValues.role
+                }
+              >
+                {({ getFieldValue }) => {
+                  const selectedRole = getFieldValue("role");
+                  return selectedRole === "SCHOOLNURSE" ||
+                    selectedRole === "MANAGER" ||
+                    selectedRole === "ADMIN" ? (
+                    <Form.Item
+                      label={
+                        modalMode === "edit"
+                          ? "Mật khẩu mới (để trống nếu không đổi)"
+                          : "Mật khẩu"
+                      }
+                      name="password"
+                      rules={[
+                        {
+                          required: modalMode === "add",
+                          message: "Vui lòng nhập mật khẩu!",
+                        },
+                        {
+                          min: 6,
+                          message: "Mật khẩu phải có ít nhất 6 ký tự!",
+                        },
+                      ]}
+                    >
+                      <Input.Password
+                        placeholder={
+                          modalMode === "edit"
+                            ? "Để trống nếu không đổi mật khẩu"
+                            : "Nhập mật khẩu"
+                        }
+                      />
+                    </Form.Item>
+                  ) : null;
+                }}
+              </Form.Item>
+              <Form.Item
+                label="Vai trò"
+                name="role"
+                rules={[{ required: true, message: "Vui lòng chọn vai trò!" }]}
+              >
+                <Select
+                  placeholder="Chọn vai trò"
+                  onChange={(value) =>
+                    handleRoleChange(value, userFormInstance)
+                  }
+                >
+                  <Select.Option key="PARENT" value="PARENT">
+                    Phụ huynh
+                  </Select.Option>
+                  <Select.Option key="SCHOOLNURSE" value="SCHOOLNURSE">
+                    Y tá
+                  </Select.Option>
+                  <Select.Option key="MANAGER" value="MANAGER">
+                    Quản lý
+                  </Select.Option>
+                  <Select.Option key="ADMIN" value="ADMIN">
+                    Quản trị viên
+                  </Select.Option>
+                </Select>
+              </Form.Item>
+              {/* Status field - required for all roles */}
+              <Form.Item
+                label="Trạng thái"
+                name="status"
+                rules={[
+                  {
+                    required: true,
+                    message: "Vui lòng chọn trạng thái!",
+                  },
+                ]}
+              >
+                <Select placeholder="Chọn trạng thái">
+                  <Select.Option key="ACTIVE" value="ACTIVE">
+                    Hoạt động
+                  </Select.Option>
+                  <Select.Option key="INACTIVE" value="INACTIVE">
+                    Không hoạt động
+                  </Select.Option>
+                </Select>
+              </Form.Item>
+            </div>
+            <Form.Item
+              label="Địa chỉ"
+              name="address"
+              rules={[{ required: true, message: "Vui lòng nhập địa chỉ!" }]}
+            >
+              <Input.TextArea
+                placeholder="Nhập địa chỉ"
+                rows={3}
+                showCount
+                maxLength={200}
               />
             </Form.Item>
-            <Form.Item
-              label="Giới tính"
-              name="gender"
-              rules={[{ required: true, message: "Vui lòng chọn giới tính!" }]}
-            >
-              <Select placeholder="Chọn giới tính">
-                <Select.Option key="M" value="M">
-                  Nam
-                </Select.Option>
-                <Select.Option key="F" value="F">
-                  Nữ
-                </Select.Option>
-              </Select>
-            </Form.Item>
-            {/* Conditional job title field - show for parent, nurse and admin roles */}
-            <Form.Item
-              noStyle
-              shouldUpdate={(prevValues, currentValues) =>
-                prevValues.role !== currentValues.role
-              }
-            >
-              {({ getFieldValue }) => {
-                const selectedRole = getFieldValue("role");
-                console.log("jobTitle field - selectedRole:", selectedRole);
-                const shouldShow = selectedRole === "PARENT";
-                console.log("jobTitle field - shouldShow:", shouldShow);
-
-                return shouldShow ? (
-                  <Form.Item
-                    label="Nghề nghiệp"
-                    name="jobTitle"
-                    rules={[
-                      {
-                        required: true,
-                        message: "Vui lòng nhập nghề nghiệp!",
-                      },
-                    ]}
-                  >
-                    <Input placeholder="Nhập nghề nghiệp" />
-                  </Form.Item>
-                ) : null;
-              }}
-            </Form.Item>
-            {/* Conditional email field - only show for nurse and admin roles */}
-            <Form.Item
-              noStyle
-              shouldUpdate={(prevValues, currentValues) =>
-                prevValues.role !== currentValues.role
-              }
-            >
-              {({ getFieldValue }) => {
-                const selectedRole = getFieldValue("role");
-                return selectedRole === "SCHOOLNURSE" ||
-                  selectedRole === "ADMIN" ? (
-                  <Form.Item
-                    label="Email"
-                    name="email"
-                    rules={[
-                      { required: true, message: "Vui lòng nhập email!" },
-                      { type: "email", message: "Email không hợp lệ!" },
-                    ]}
-                  >
-                    <Input placeholder="Nhập email" />
-                  </Form.Item>
-                ) : null;
-              }}
-            </Form.Item>
-
-            {/* Conditional username field - only show for nurse and admin roles */}
-            <Form.Item
-              noStyle
-              shouldUpdate={(prevValues, currentValues) =>
-                prevValues.role !== currentValues.role
-              }
-            >
-              {({ getFieldValue }) => {
-                const selectedRole = getFieldValue("role");
-                return selectedRole === "SCHOOLNURSE" ||
-                  selectedRole === "ADMIN" ? (
-                  <Form.Item
-                    label="Tên đăng nhập"
-                    name="username"
-                    rules={[
-                      {
-                        required: true,
-                        message: "Vui lòng nhập tên đăng nhập!",
-                      },
-                      {
-                        min: 3,
-                        message: "Tên đăng nhập phải có ít nhất 3 ký tự!",
-                      },
-                    ]}
-                  >
-                    <Input placeholder="Nhập tên đăng nhập" />
-                  </Form.Item>
-                ) : null;
-              }}
-            </Form.Item>
-
-            {/* Conditional password field - only show for nurse and admin roles */}
-            <Form.Item
-              noStyle
-              shouldUpdate={(prevValues, currentValues) =>
-                prevValues.role !== currentValues.role
-              }
-            >
-              {({ getFieldValue }) => {
-                const selectedRole = getFieldValue("role");
-                return selectedRole === "SCHOOLNURSE" ||
-                  selectedRole === "ADMIN" ? (
-                  <Form.Item
-                    label={
-                      modalMode === "edit"
-                        ? "Mật khẩu mới (để trống nếu không đổi)"
-                        : "Mật khẩu"
-                    }
-                    name="password"
-                    rules={[
-                      {
-                        required: modalMode === "add",
-                        message: "Vui lòng nhập mật khẩu!",
-                      },
-                      {
-                        min: 6,
-                        message: "Mật khẩu phải có ít nhất 6 ký tự!",
-                      },
-                    ]}
-                  >
-                    <Input.Password
-                      placeholder={
-                        modalMode === "edit"
-                          ? "Để trống nếu không đổi mật khẩu"
-                          : "Nhập mật khẩu"
-                      }
-                    />
-                  </Form.Item>
-                ) : null;
-              }}
-            </Form.Item>
-            <Form.Item
-              label="Vai trò"
-              name="role"
-              rules={[{ required: true, message: "Vui lòng chọn vai trò!" }]}
-            >
-              <Select
-                placeholder="Chọn vai trò"
-                onChange={(value) => handleRoleChange(value, userFormInstance)}
-              >
-                <Select.Option key="PARENT" value="PARENT">
-                  Phụ huynh
-                </Select.Option>
-                <Select.Option key="STUDENT" value="STUDENT">
-                  Học sinh
-                </Select.Option>
-                <Select.Option key="SCHOOLNURSE" value="SCHOOLNURSE">
-                  Y tá
-                </Select.Option>
-                <Select.Option key="ADMIN" value="ADMIN">
-                  Quản trị viên
-                </Select.Option>
-              </Select>
-            </Form.Item>
-            {/* Conditional status field - only show for non-student roles */}
-            <Form.Item
-              noStyle
-              shouldUpdate={(prevValues, currentValues) =>
-                prevValues.role !== currentValues.role
-              }
-            >
-              {({ getFieldValue }) => {
-                const selectedRole = getFieldValue("role");
-                return selectedRole !== "STUDENT" ? (
-                  <Form.Item
-                    label="Trạng thái"
-                    name="status"
-                    rules={[
-                      {
-                        required: true,
-                        message: "Vui lòng chọn trạng thái!",
-                      },
-                    ]}
-                  >
-                    <Select placeholder="Chọn trạng thái">
-                      <Select.Option key="ACTIVE" value="ACTIVE">
-                        Hoạt động
-                      </Select.Option>
-                      <Select.Option key="INACTIVE" value="INACTIVE">
-                        Không hoạt động
-                      </Select.Option>
-                    </Select>
-                  </Form.Item>
-                ) : null;
-              }}
-            </Form.Item>
-          </div>
-          <Form.Item
-            label="Địa chỉ"
-            name="address"
-            rules={[{ required: true, message: "Vui lòng nhập địa chỉ!" }]}
-          >
-            <Input.TextArea
-              placeholder="Nhập địa chỉ"
-              rows={3}
-              showCount
-              maxLength={200}
-            />
-          </Form.Item>
-          <Form.Item
-            noStyle
-            shouldUpdate={(prevValues, currentValues) =>
-              prevValues.role !== currentValues.role
-            }
-          >
-            {({ getFieldValue }) => {
-              const selectedRole = getFieldValue("role");
-
-              if (selectedRole === "PARENT") {
-                return (
-                  <Form.Item
-                    label="Chọn học sinh"
-                    name="studentIds"
-                    rules={[
-                      {
-                        required: true,
-                        message: "Vui lòng chọn ít nhất một học sinh!",
-                      },
-                    ]}
-                  >
-                    <Select
-                      mode="multiple"
-                      placeholder="Chọn học sinh"
-                      loading={students.length === 0}
-                      showSearch
-                      filterOption={(input, option) =>
-                        option?.children
-                          ?.toLowerCase()
-                          .includes(input.toLowerCase())
-                      }
-                    >
-                      {students
-                        .filter(
-                          (student) =>
-                            student.studentID != null &&
-                            student.studentID !== undefined
-                        )
-                        .map((student, index) => (
-                          <Select.Option
-                            key={
-                              student.studentID || `student-fallback-${index}`
-                            }
-                            value={student.studentID}
-                          >
-                            {student.lastName} {student.firstName} - Lớp{" "}
-                            {student.className || "N/A"}
-                          </Select.Option>
-                        ))}
-                    </Select>
-                  </Form.Item>
-                );
-              }
-
-              if (selectedRole === "STUDENT") {
-                return (
-                  <>
-                    <div
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "1fr 1fr",
-                        gap: "16px",
-                        marginTop: "16px",
-                      }}
-                    >
-                      <Form.Item
-                        label="Lớp"
-                        name="className"
-                        rules={[
-                          { required: true, message: "Vui lòng nhập lớp!" },
-                        ]}
-                      >
-                        <Input placeholder="Ví dụ: 5B" />
-                      </Form.Item>
-
-                      <Form.Item
-                        label="Nơi sinh"
-                        name="birthPlace"
-                        rules={[
-                          {
-                            required: true,
-                            message: "Vui lòng nhập nơi sinh!",
-                          },
-                        ]}
-                      >
-                        <Input placeholder="Ví dụ: Bình Thuận" />
-                      </Form.Item>
-
-                      <Form.Item
-                        label="Quốc tịch"
-                        name="citizenship"
-                        rules={[
-                          {
-                            required: true,
-                            message: "Vui lòng nhập quốc tịch!",
-                          },
-                        ]}
-                      >
-                        <Input placeholder="Ví dụ: Vietnamese" />
-                      </Form.Item>
-
-                      <Form.Item
-                        label="Nhóm máu"
-                        name="bloodType"
-                        rules={[
-                          {
-                            required: true,
-                            message: "Vui lòng chọn nhóm máu!",
-                          },
-                        ]}
-                      >
-                        <Select placeholder="Chọn nhóm máu">
-                          <Select.Option key="A+" value="A+">
-                            A+
-                          </Select.Option>
-                          <Select.Option key="A-" value="A-">
-                            A-
-                          </Select.Option>
-                          <Select.Option key="B+" value="B+">
-                            B+
-                          </Select.Option>
-                          <Select.Option key="B-" value="B-">
-                            B-
-                          </Select.Option>
-                          <Select.Option key="AB+" value="AB+">
-                            AB+
-                          </Select.Option>
-                          <Select.Option key="AB-" value="AB-">
-                            AB-
-                          </Select.Option>
-                          <Select.Option key="O+" value="O+">
-                            O+
-                          </Select.Option>
-                          <Select.Option key="O-" value="O-">
-                            O-
-                          </Select.Option>
-                        </Select>
-                      </Form.Item>
-
-                      <Form.Item
-                        label="Tình trạng"
-                        name="isDisabled"
-                        rules={[
-                          {
-                            required: true,
-                            message: "Vui lòng chọn tình trạng!",
-                          },
-                        ]}
-                      >
-                        <Select placeholder="Chọn tình trạng">
-                          <Select.Option key="active" value={false}>
-                            Đang đi học
-                          </Select.Option>
-                          <Select.Option key="disabled" value={true}>
-                            Đã thôi học
-                          </Select.Option>
-                        </Select>
-                      </Form.Item>
-                    </div>
-                  </>
-                );
-              }
-
-              return null;
-            }}
-          </Form.Item>
-        </Form>
-      )}
-    </Modal>
-  </div>
-);
+          </Form>
+        )}
+      </Modal>
+    </div>
+  );
+};
 
 // Admin Profile Component - moved outside main component
 const AdminProfile = ({ userInfo: initialUserInfo }) => {
@@ -1454,64 +1255,60 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
+  // Configure notification placement and style
+  useEffect(() => {
+    notification.config({
+      placement: "topRight",
+      duration: 4.5,
+      style: {
+        marginTop: 60, // Account for header height
+      },
+    });
+
+    // Configure message component for better display
+    message.config({
+      top: 80, // Position from top
+      duration: 3,
+      maxCount: 3,
+    });
+  }, []);
+
+  // Helper function to translate role names to Vietnamese
+  const getRoleNameInVietnamese = (role) => {
+    switch (role) {
+      case "ADMIN":
+        return "Quản trị viên";
+      case "MANAGER":
+        return "Quản lý";
+      case "SCHOOLNURSE":
+        return "Y tá";
+      case "PARENT":
+        return "Phụ huynh";
+      default:
+        return role;
+    }
+  };
+
   // Missing state variables being added
   const [loading, setLoading] = useState(false);
-  const [students, setStudents] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterRole, setFilterRole] = useState("all");
   const [showUserModal, setShowUserModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [modalMode, setModalMode] = useState("add"); // "add", "edit", "view"
-
-  const menuItems = [
-    {
-      key: "users",
-      icon: <TeamOutlined />,
-      label: "Quản lý người dùng",
-    },
-    {
-      key: "profile",
-      icon: <UserOutlined />,
-      label: "Hồ sơ cá nhân",
-    },
-    {
-      key: "settings",
-      icon: <SettingOutlined />,
-      label: "Cài đặt",
-    },
-  ];
-
-  const handleMenuClick = (e) => {
-    const tabKey = e.key;
-    setActiveSection(tabKey);
-    navigate(`/admin/dashboard?tab=${tabKey}`);
-  };
-
-  const getBreadcrumbItems = () => {
-    const currentItem = menuItems.find((item) => item.key === activeSection);
-    return [
-      {
-        title: "Admin Dashboard",
-      },
-      {
-        title: currentItem?.label || "Quản lý người dùng",
-      },
-    ];
-  };
-
-  const { user, isAuthenticated, isStaff } = useAuth();
-  // User Management States
+  const [users, setUsers] = useState([]);
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalParents: 0,
     totalStudents: 0,
   });
 
-  // Users state
-  const [users, setUsers] = useState([]);
-
   // Ant Design form instances
-  const [userFormInstance] = Form.useForm(); // Load users from API
+  const [userFormInstance] = Form.useForm();
+
+  const { user, isAuthenticated, isStaff } = useAuth();
+
+  // Load users from API
   useEffect(() => {
     const fetchUsers = async () => {
       if (isAuthenticated && isStaff()) {
@@ -1549,23 +1346,6 @@ const AdminDashboard = () => {
     fetchUsers();
   }, [isAuthenticated, isStaff]);
 
-  // Load students for parent assignment
-  useEffect(() => {
-    const fetchStudents = async () => {
-      if (isAuthenticated && isStaff()) {
-        try {
-          const studentsData = await getAllStudents();
-          setStudents(Array.isArray(studentsData) ? studentsData : []);
-        } catch (error) {
-          console.error("Failed to fetch students:", error);
-          // Don't show error message as students are optional for some roles
-        }
-      }
-    };
-
-    fetchStudents();
-  }, [isAuthenticated, isStaff]);
-
   useEffect(() => {
     // Redirect if not authenticated or not an admin
     if (!isAuthenticated) {
@@ -1597,6 +1377,14 @@ const AdminDashboard = () => {
     }
   }, [searchParams]);
 
+  const getBreadcrumbItems = () => {
+    const currentItem = menuItems.find((item) => item.key === activeSection);
+    return [
+      { title: "Dashboard" },
+      { title: currentItem?.label || "Quản lý người dùng" },
+    ];
+  };
+
   // User Management Functions
   const resetUserForm = () => {
     console.log("Resetting user form...");
@@ -1609,7 +1397,6 @@ const AdminDashboard = () => {
       // Set initial default values explicitly to ensure proper field registration
       const initialValues = {
         role: "PARENT",
-        // Remove default status value to force user selection
         username: "",
         password: "",
         email: "",
@@ -1620,12 +1407,6 @@ const AdminDashboard = () => {
         address: "",
         gender: "",
         dob: null,
-        studentIds: [],
-        className: "",
-        birthPlace: "",
-        citizenship: "",
-        bloodType: "",
-        isDisabled: false,
       };
 
       // Set each field value explicitly
@@ -1645,45 +1426,32 @@ const AdminDashboard = () => {
       password: "",
       email: "",
       jobTitle: "",
-      studentIds: [],
-      className: "",
-      birthPlace: "",
-      citizenship: "",
-      bloodType: "",
-      isDisabled: false,
       status: undefined, // Clear status field
     };
 
-    console.log("Clearing all role-specific fields with proper defaults");
+    console.log("Clearing role-specific fields with proper defaults");
 
     // Set role-specific defaults
     if (newRole === "PARENT") {
-      // Don't set default status - let user choose
       fieldsToUpdate.jobTitle = "";
       console.log("Set PARENT defaults: jobTitle=''");
     } else if (newRole === "ADMIN") {
-      // For ADMIN, no jobTitle field shown to user
       fieldsToUpdate.username = "";
       fieldsToUpdate.password = "";
       fieldsToUpdate.email = "";
       console.log("Set ADMIN defaults: username='', password='', email=''");
     } else if (newRole === "SCHOOLNURSE") {
-      // For SCHOOLNURSE, no jobTitle field shown to user
       fieldsToUpdate.username = "";
       fieldsToUpdate.password = "";
       fieldsToUpdate.email = "";
       console.log(
         "Set SCHOOLNURSE defaults: username='', password='', email=''"
       );
-    } else if (newRole === "STUDENT") {
-      fieldsToUpdate.isDisabled = false;
-      fieldsToUpdate.className = "";
-      fieldsToUpdate.birthPlace = "";
-      fieldsToUpdate.citizenship = "";
-      fieldsToUpdate.bloodType = "";
-      console.log(
-        "Set STUDENT defaults: isDisabled=false, all student fields=''"
-      );
+    } else if (newRole === "MANAGER") {
+      fieldsToUpdate.username = "";
+      fieldsToUpdate.password = "";
+      fieldsToUpdate.email = "";
+      console.log("Set MANAGER defaults: username='', password='', email=''");
     }
 
     console.log("fieldsToUpdate before setFieldsValue:", fieldsToUpdate);
@@ -1691,14 +1459,10 @@ const AdminDashboard = () => {
     // Update all fields at once
     form.setFieldsValue(fieldsToUpdate);
 
-    // Debug: Check if jobTitle was set correctly
+    // Debug: Check if fields were set correctly
     setTimeout(() => {
       const currentValues = form.getFieldsValue();
       console.log("After setFieldsValue - all form values:", currentValues);
-      console.log(
-        "After setFieldsValue - jobTitle value:",
-        currentValues.jobTitle
-      );
     }, 100);
 
     console.log("Role-specific fields initialized for:", newRole);
@@ -1740,73 +1504,9 @@ const AdminDashboard = () => {
     setShowUserModal(true);
   };
 
-  const openEditUserModal = (user) => {
-    setSelectedUser(user);
-    setModalMode("edit");
-
-    // Format user data for the form
-    let formData = {
-      firstName: user.firstName,
-      lastName: user.lastName,
-      phone: user.phone,
-      dob: user.dob ? dayjs(user.dob) : null,
-      gender: user.gender,
-      address: user.address,
-      role: user.roleName || user.role,
-    };
-
-    // Add role-specific fields
-    if (user.roleName === "PARENT" || user.role === "PARENT") {
-      formData.jobTitle = user.jobTitle;
-      formData.studentIds = user.studentIds || [];
-      // Add status for non-student roles
-      formData.status = user.status;
-    } else if (user.roleName === "STUDENT" || user.role === "STUDENT") {
-      formData.className = user.className;
-      formData.birthPlace = user.birthPlace;
-      formData.citizenship = user.citizenship;
-      formData.bloodType = user.bloodType;
-      formData.isDisabled = user.isDisabled;
-      // Students don't have username and password - they don't login to the system
-      // Students use isDisabled instead of status
-    } else if (
-      user.roleName === "SCHOOLNURSE" ||
-      user.role === "SCHOOLNURSE" ||
-      user.roleName === "ADMIN" ||
-      user.role === "ADMIN"
-    ) {
-      // For SCHOOLNURSE and ADMIN roles
-      formData.email = user.email;
-      formData.username = user.username;
-      // Note: We don't pre-fill password for security reasons
-      formData.password = "";
-      // Add status field for non-student roles
-      formData.status = user.status;
-
-      // jobTitle not needed for ADMIN or SCHOOLNURSE since fields are auto-set
-    }
-
-    userFormInstance.setFieldsValue(formData);
-    setShowUserModal(true);
-  };
-
   const handleSaveUser = async () => {
     try {
-      // First, get all field values before validation
-      const allFieldValues = userFormInstance.getFieldsValue();
-      console.log("ALL FIELD VALUES (before validation):", allFieldValues);
-
       const values = await userFormInstance.validateFields();
-
-      // DEBUG: Log form values to identify null fields
-      console.log("Form values received:", values);
-      console.log("Role:", values.role);
-      console.log("Username:", values.username);
-      console.log("Password:", values.password);
-      console.log("Email:", values.email);
-      console.log("JobTitle:", values.jobTitle);
-      console.log("Status:", values.status);
-      console.log("All form keys:", Object.keys(values));
 
       // Manual validation for jobTitle if it's missing but required
       if (
@@ -1818,68 +1518,11 @@ const AdminDashboard = () => {
       }
 
       // Check if critical fields are missing or undefined
-      if (values.role === "SCHOOLNURSE" || values.role === "ADMIN") {
-        const missingFields = [];
-        if (!values.username || values.username.trim() === "")
-          missingFields.push("username");
-        if (!values.password || values.password.trim() === "")
-          missingFields.push("password");
-        if (!values.email || values.email.trim() === "")
-          missingFields.push("email");
-        // Remove jobTitle validation for ADMIN since field is no longer shown
-
-        if (missingFields.length > 0) {
-          console.error("MISSING REQUIRED FIELDS:", missingFields);
-          console.error("Form values causing issue:", {
-            username: values.username,
-            password: values.password,
-            email: values.email,
-            jobTitle: values.jobTitle,
-          });
-        }
-      }
-
-      // Check status field for non-student roles
       if (
-        values.role !== "STUDENT" &&
-        (!values.status || values.status.trim() === "")
+        values.role === "SCHOOLNURSE" ||
+        values.role === "ADMIN" ||
+        values.role === "MANAGER"
       ) {
-        message.error("Vui lòng chọn trạng thái cho người dùng!");
-        return;
-      }
-
-      // Format the data for the backend API
-      let userData = {
-        firstName: values.firstName,
-        lastName: values.lastName,
-        dob: values.dob ? values.dob.format("YYYY-MM-DD") : null,
-        gender: values.gender,
-        address: values.address,
-        role: values.role,
-      };
-
-      // Add phone field only for non-student roles
-      if (values.role !== "STUDENT") {
-        userData.phone = values.phone;
-      }
-
-      // Add role-specific fields
-      if (values.role === "PARENT") {
-        userData.jobTitle = values.jobTitle;
-        userData.studentIds = values.studentIds || [];
-        // Add status field for non-student roles
-        userData.status = values.status;
-      } else if (values.role === "STUDENT") {
-        userData.className = values.className;
-        userData.birthPlace = values.birthPlace;
-        userData.citizenship = values.citizenship;
-        userData.bloodType = values.bloodType;
-        userData.isDisabled = values.isDisabled;
-        // Students don't have username and password - they don't login to the system
-      } else if (values.role === "SCHOOLNURSE" || values.role === "ADMIN") {
-        // For SCHOOLNURSE and ADMIN roles
-
-        // VALIDATION: Check required fields for SCHOOLNURSE/ADMIN
         if (!values.username || values.username.trim() === "") {
           message.error("Tên đăng nhập là bắt buộc cho vai trò " + values.role);
           return;
@@ -1892,24 +1535,45 @@ const AdminDashboard = () => {
           message.error("Email là bắt buộc cho vai trò " + values.role);
           return;
         }
+      }
 
+      // Check status field for all roles
+      if (!values.status || values.status.trim() === "") {
+        message.error("Vui lòng chọn trạng thái cho người dùng!");
+        return;
+      }
+
+      // Format the data for the backend API
+      let userData = {
+        firstName: values.firstName,
+        lastName: values.lastName,
+        dob: values.dob ? values.dob.format("YYYY-MM-DD") : null,
+        gender: values.gender,
+        address: values.address,
+        role: values.role,
+        phone: values.phone,
+      };
+
+      // Add role-specific fields
+      if (values.role === "PARENT") {
+        userData.jobTitle = values.jobTitle;
+        userData.status = values.status;
+      } else if (
+        values.role === "SCHOOLNURSE" ||
+        values.role === "ADMIN" ||
+        values.role === "MANAGER"
+      ) {
         userData.email = values.email;
         userData.username = values.username;
         userData.password = values.password;
-        // Add status field for non-student roles
         userData.status = values.status;
 
         if (values.role === "SCHOOLNURSE") {
-          // Automatically set jobTitle for SCHOOLNURSE
           userData.jobTitle = "Y tá";
-          console.log(
-            "SCHOOLNURSE data prepared with auto jobTitle:",
-            userData
-          );
         } else if (values.role === "ADMIN") {
-          // Automatically set jobTitle for ADMIN
           userData.jobTitle = "Quản trị viên";
-          console.log("ADMIN data prepared with auto jobTitle:", userData);
+        } else if (values.role === "MANAGER") {
+          userData.jobTitle = "Quản lý";
         }
       }
 
@@ -1939,11 +1603,6 @@ const AdminDashboard = () => {
             gender: userData.gender,
             address: userData.address,
             jobTitle: userData.jobTitle,
-            className: userData.className,
-            birthPlace: userData.birthPlace,
-            citizenship: userData.citizenship,
-            bloodType: userData.bloodType,
-            isDisabled: userData.isDisabled,
             createdAt: new Date().toISOString(),
             ...newUser, // Keep any additional fields from API response
           };
@@ -1964,41 +1623,35 @@ const AdminDashboard = () => {
             return newStats;
           });
 
-          message.success("Thêm người dùng thành công!");
+          // Show enhanced success notification
+          notification.success({
+            message: "Thêm người dùng thành công!",
+            description: `Đã thêm thành công ${getRoleNameInVietnamese(
+              userData.role
+            )} "${userData.firstName} ${userData.lastName}" vào hệ thống.`,
+            style: {
+              backgroundColor: "#f6ffed",
+              border: "1px solid #b7eb8f",
+            },
+          });
 
           // Close modal and reset form
           setShowUserModal(false);
           resetUserForm();
         } catch (error) {
           console.error("Error creating user:", error);
-          message.error("Lỗi khi thêm người dùng: " + error.message);
-        } finally {
-          setLoading(false);
-        }
-      } else if (modalMode === "edit") {
-        setLoading(true);
-        try {
-          console.log("Calling updateUser API...");
-          const updatedUser = await updateUser(selectedUser.id, userData);
-          console.log("User updated successfully:", updatedUser);
 
-          // Update users list with the updated user
-          setUsers((prev) => {
-            const updatedUsers = prev.map((u) =>
-              u.id === selectedUser.id ? updatedUser : u
-            );
-            console.log("Updated users list:", updatedUsers);
-            return updatedUsers;
+          // Show enhanced error notification
+          notification.error({
+            message: "Thất bại khi thêm người dùng",
+            description: `Thất bại khi thêm ${getRoleNameInVietnamese(
+              userData.role
+            )}: ${error.message}`,
+            style: {
+              backgroundColor: "#fff2f0",
+              border: "1px solid #ffccc7",
+            },
           });
-
-          message.success("Cập nhật người dùng thành công!");
-
-          // Close modal and reset form
-          setShowUserModal(false);
-          resetUserForm();
-        } catch (error) {
-          console.error("Error updating user:", error);
-          message.error("Lỗi khi cập nhật người dùng: " + error.message);
         } finally {
           setLoading(false);
         }
@@ -2050,6 +1703,7 @@ const AdminDashboard = () => {
           justifyContent: "center",
           alignItems: "center",
           height: "100vh",
+          background: "#f4f6fb",
         }}
       >
         <Spin size="large" />
@@ -2089,7 +1743,6 @@ const AdminDashboard = () => {
             handleSaveUser={handleSaveUser}
             userFormInstance={userFormInstance}
             handleRoleChange={handleRoleChange}
-            students={students}
           />
         );
       case "profile":
@@ -2115,15 +1768,48 @@ const AdminDashboard = () => {
             handleSaveUser={handleSaveUser}
             userFormInstance={userFormInstance}
             handleRoleChange={handleRoleChange}
-            students={students}
           />
         );
     }
   };
 
+  const menuItems = [
+    {
+      key: "users",
+      icon: <TeamOutlined />,
+      label: "Quản lý người dùng",
+    },
+    {
+      key: "profile",
+      icon: <UserOutlined />,
+      label: "Hồ sơ cá nhân",
+    },
+    {
+      key: "settings",
+      icon: <SettingOutlined />,
+      label: "Cài đặt",
+    },
+  ];
+
+  const handleMenuClick = (e) => {
+    const tabKey = e.key;
+    setActiveSection(tabKey);
+    navigate(`/admin/dashboard?tab=${tabKey}`);
+  };
+
   return (
-    <Layout style={{ minHeight: "100vh" }}>
+    <Layout
+      style={{
+        minHeight: "calc(100vh - 140px)",
+        background: "#f4f6fb",
+        margin: "90px 20px 30px 20px",
+        borderRadius: "16px",
+        overflow: "hidden",
+        boxShadow: "0 4px 20px 0 rgba(0,0,0,0.08)",
+      }}
+    >
       <Sider
+        width={240}
         collapsed={collapsed}
         theme="light"
         className="admin-sidebar"
@@ -2154,16 +1840,16 @@ const AdminDashboard = () => {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              border: "2px solid #fa8c16",
+              border: "2px solid #ff6b35",
             }}
           >
-            <UserOutlined style={{ fontSize: 32, color: "#fa8c16" }} />
+            <SettingOutlined style={{ fontSize: 32, color: "#ff6b35" }} />
           </div>
           {!collapsed && (
             <span
               style={{
                 fontWeight: 600,
-                color: "#fa8c16",
+                color: "#ff6b35",
                 fontSize: 18,
                 marginTop: 12,
                 borderRadius: 20,
@@ -2175,16 +1861,14 @@ const AdminDashboard = () => {
             </span>
           )}
         </div>
-
         <Menu
           theme="light"
-          selectedKeys={[activeSection]}
           mode="inline"
-          items={menuItems}
+          selectedKeys={[activeSection]}
           onClick={handleMenuClick}
+          items={menuItems}
           style={{ border: "none", fontWeight: 500, fontSize: 16 }}
         />
-
         {/* Custom Sidebar Trigger Button */}
         <div
           className="custom-sidebar-trigger"
@@ -2207,7 +1891,6 @@ const AdminDashboard = () => {
           {!collapsed && <span className="trigger-text">Thu gọn</span>}
         </div>
       </Sider>
-
       <Layout style={{ marginLeft: 0 }}>
         <Header
           style={{
@@ -2229,13 +1912,13 @@ const AdminDashboard = () => {
             />
             <h1
               style={{
-                color: "#fa8c16",
+                color: "#ff6b35",
                 margin: 0,
                 fontSize: 28,
                 fontWeight: 700,
               }}
             >
-              Bảng điều khiển quản trị
+              Bảng điều khiển quản trị viên
             </h1>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
@@ -2248,17 +1931,16 @@ const AdminDashboard = () => {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                border: "1px solid #fa8c16",
+                border: "1px solid #ff6b35",
               }}
             >
-              <UserOutlined style={{ fontSize: 20, color: "#fa8c16" }} />
+              <UserOutlined style={{ fontSize: 20, color: "#ff6b35" }} />
             </div>
             <span style={{ fontWeight: 500, fontSize: 16 }}>
-              {userInfo?.firstName || ""} {userInfo?.lastName || ""}
+              {userInfo?.lastName || ""} {userInfo?.firstName || ""}
             </span>
           </div>
         </Header>
-
         <Content
           style={{
             margin: "16px 24px 24px 24px",

@@ -63,36 +63,30 @@ export const createUser = async (userData) => {
   try {
     console.log("🔧 userApi.createUser received userData:", userData);
 
+    // Block STUDENT role creation entirely
+    if (userData.role === "STUDENT") {
+      throw new Error(
+        "STUDENT creation is not supported through this endpoint."
+      );
+    }
+
     // Format data for backend
     const requestData = {
-      username: userData.username, // Don't convert to null if empty string
-      password: userData.password, // Don't convert to null if empty string
+      username: userData.username,
+      password: userData.password,
       firstName: userData.firstName,
       lastName: userData.lastName,
-      dob: userData.dob || userData.dateOfBirth, // Handle both field names
+      dob: userData.dob || userData.dateOfBirth,
       gender: userData.gender,
-      email: userData.email, // Don't convert to null if empty string
+      email: userData.email,
       address: userData.address,
       jobTitle: userData.jobTitle,
       roleName: userData.role,
-      status: userData.status, // Add status field
+      status: userData.status,
+      phone: userData.phone, // All supported roles (PARENT, SCHOOLNURSE, MANAGER, ADMIN) have phone
     };
 
     console.log("🔧 Formatted requestData:", requestData);
-
-    // Only add phone number for non-STUDENT roles
-    if (userData.role !== "STUDENT") {
-      requestData.phone = userData.phone;
-    }
-
-    // Add STUDENT-specific fields if the role is STUDENT
-    if (userData.role === "STUDENT") {
-      requestData.className = userData.className;
-      requestData.birthPlace = userData.birthPlace;
-      requestData.citizenship = userData.citizenship;
-      requestData.bloodType = userData.bloodType;
-      requestData.isDisabled = userData.isDisabled || false;
-    }
 
     // Add PARENT-specific fields
     if (userData.role === "PARENT") {
