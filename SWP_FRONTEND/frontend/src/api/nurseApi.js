@@ -302,5 +302,60 @@ export const nurseApi = {
       }
       throw error;
     }
-  }
+  },
+
+  // Vaccination Rule Endpoints
+  getAllVaccinationRules: async (token) => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/api/nurse/vaccination-rules`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Could not fetch vaccination rules');
+    }
+  },
+
+  createVaccinationRule: async (token, ruleData) => {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/api/nurse/vaccination-rules`, ruleData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Could not create vaccination rule');
+    }
+  },
+
+  getVaccinationRuleById: async (token, id) => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/api/nurse/vaccination-rules/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Could not fetch vaccination rule');
+    }
+  },
+
+  updateVaccinationRule: async (token, id, ruleData) => {
+    try {
+      const response = await axios.put(`${API_BASE_URL}/api/nurse/vaccination-rules/${id}`, ruleData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Could not update vaccination rule');
+    }
+  },
+
+  deleteVaccinationRule: async (token, id) => {
+    try {
+      await axios.delete(`${API_BASE_URL}/api/nurse/vaccination-rules/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Could not delete vaccination rule');
+    }
+  },
 };

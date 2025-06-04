@@ -1,6 +1,6 @@
 package group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto;
 
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.MedicationStatus;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.MedicationStatus;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -25,5 +25,5 @@ public class MedicationScheduleDTO {
     private Long studentId;
     private String studentName;
     private String className;
-    private int dosage;
+    private double dosage;
 }

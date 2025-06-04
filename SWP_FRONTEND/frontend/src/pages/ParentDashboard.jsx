@@ -21,6 +21,7 @@ import PhysicalMental from '../components/dashboard/PhysicalMental';
 import MedicationManagement from '../components/dashboard/MedicationManagement';
 import VaccinationSchedule from '../components/dashboard/VaccinationSchedule';
 import Profile from '../components/dashboard/Profile';
+import HealthProfileDeclaration from '../components/dashboard/HealthProfileDeclaration';
 
 const { Header, Sider, Content } = Layout;
 
@@ -30,7 +31,6 @@ const ParentDashboard = () => {
   const [collapsed, setCollapsed] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-
   const menuItems = [
     {
       key: 'overview',
@@ -41,6 +41,11 @@ const ParentDashboard = () => {
       key: 'notifications',
       icon: <BellOutlined />,
       label: 'Thông báo',
+    },
+    {
+      key: 'health-profile-declaration',
+      icon: <MedicineBoxOutlined />,
+      label: 'Khai báo hồ sơ sức khỏe',
     },
     {
       key: 'health-history',
@@ -143,15 +148,16 @@ const ParentDashboard = () => {
     console.log("Updated user info:", mergedUserInfo);
     setUserInfo(mergedUserInfo);
   };
-  
-  const renderContent = () => {
+    const renderContent = () => {
     switch (activeSection) {
       case 'overview':
         return <Overview userInfo={userInfo} />;
       case 'notifications':
         return <Notifications />;
+      case 'health-profile-declaration':
+        return <HealthProfileDeclaration />;
       case 'health-history':
-        return <HealthHistory />;      case 'physical-mental':
+        return <HealthHistory />;case 'physical-mental':
         return <PhysicalMental />;
       case 'medication':
         return <MedicationManagement userInfo={userInfo} />;

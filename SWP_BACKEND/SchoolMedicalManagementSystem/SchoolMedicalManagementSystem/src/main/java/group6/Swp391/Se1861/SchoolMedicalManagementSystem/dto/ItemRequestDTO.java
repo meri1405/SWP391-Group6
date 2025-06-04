@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -27,14 +28,12 @@ public class ItemRequestDTO {
     private String purpose;
 
     @NotBlank(message = "Item type is required")
-    private String itemType; // PRESCRIPTION, OTC, SUPPLEMENT
-
-    @NotNull(message = "Dosage is required")
-    @Min(value = 1, message = "Dosage must be at least 1")
-    private Integer dosage;
+    private String itemType; // PRESCRIPTION, OTC, SUPPLEMENT    @NotNull(message = "Dosage is required")
+    @DecimalMin(value = "0.1", message = "Dosage must be at least 0.1")
+    private Double dosage;
 
     @NotNull(message = "Frequency is required")
-    @Min(value = 1, message = "Frequency must be at least 1")
+    @Min(value = 0, message = "Frequency must be at least 0.1")
     private Integer frequency;
 
     @Size(max = 500, message = "Note cannot exceed 500 characters")

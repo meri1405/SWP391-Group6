@@ -3,7 +3,7 @@ package group6.Swp391.Se1861.SchoolMedicalManagementSystem.controller;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.Student;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.MedicationSchedule;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.MedicationStatus;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.MedicationStatus;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.UserRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.StudentRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.MedicationScheduleRepository;
@@ -217,9 +217,7 @@ public class ParentController {
             errorResponse.put("message", "An error occurred while updating the profile: " + e.getMessage());
             return ResponseEntity.internalServerError().body(errorResponse);
         }
-    }
-
-    /**
+    }    /**
      * Get medication schedules for all children of the parent
      */
     @GetMapping("/medication-schedules")
@@ -231,8 +229,13 @@ public class ParentController {
             // Get all students of this parent
             List<Student> parentStudents = studentRepository.findByParents(parent);
 
+            // Always return student list in response, even if no schedules
+            Map<String, Object> response = new HashMap<>();
+            
             if (parentStudents.isEmpty()) {
-                return ResponseEntity.ok(List.of());
+                response.put("schedules", List.of());
+                response.put("students", List.of());
+                return ResponseEntity.ok(response);
             }
             
             List<Long> studentIds = parentStudents.stream()
@@ -240,13 +243,18 @@ public class ParentController {
                     .collect(Collectors.toList());
             
             List<MedicationSchedule> schedules = new ArrayList<>();
-
+            
             // Fetch all schedules for each student ID
             for (Long studentId : studentIds) {
                 List<MedicationSchedule> studentSchedules = medicationScheduleRepository
                     .findByItemRequestMedicationRequestStudentStudentID(studentId);
                 schedules.addAll(studentSchedules);
             }
+
+            // Filter by APPROVED medication request status first
+            schedules = schedules.stream()
+                .filter(schedule -> "APPROVED".equals(schedule.getItemRequest().getMedicationRequest().getStatus()))
+                .collect(Collectors.toList());
 
             // Filter by date and status if provided
             if (date != null && !date.isEmpty()) {
@@ -263,7 +271,21 @@ public class ParentController {
                     .collect(Collectors.toList());
             }
             
-            return ResponseEntity.ok(medicationScheduleService.convertToScheduleDTOList(schedules));
+            // Prepare student information
+            List<Map<String, Object>> studentInfo = parentStudents.stream()
+                .map(student -> {
+                    Map<String, Object> studentMap = new HashMap<>();
+                    studentMap.put("id", student.getStudentID());
+                    studentMap.put("name", student.getLastName() + " " + student.getFirstName());
+                    studentMap.put("className", student.getClassName());
+                    return studentMap;
+                })
+                .collect(Collectors.toList());
+            
+            response.put("schedules", medicationScheduleService.convertToScheduleDTOList(schedules));
+            response.put("students", studentInfo);
+            
+            return ResponseEntity.ok(response);
             
         } catch (Exception e) {
             Map<String, Object> errorResponse = new HashMap<>();
@@ -271,9 +293,7 @@ public class ParentController {
             errorResponse.put("message", e.getMessage());
             return ResponseEntity.internalServerError().body(errorResponse);
         }
-    }
-
-    /**
+    }    /**
      * Get medication schedules for a specific child
      */
     @GetMapping("/students/{studentId}/medication-schedules")
@@ -292,9 +312,19 @@ public class ParentController {
                 return ResponseEntity.status(403).body(errorResponse);
             }
             
+            // Get student information
+            Student student = studentRepository.findById(studentId).orElse(null);
+            
+            Map<String, Object> response = new HashMap<>();
+            
             // Fetch all schedules for this student
             List<MedicationSchedule> schedules = medicationScheduleRepository
                 .findByItemRequestMedicationRequestStudentStudentID(studentId);
+
+            // Filter by APPROVED medication request status first
+            schedules = schedules.stream()
+                .filter(schedule -> "APPROVED".equals(schedule.getItemRequest().getMedicationRequest().getStatus()))
+                .collect(Collectors.toList());
 
             // Filter by date and status if provided
             if (date != null && !date.isEmpty()) {
@@ -311,7 +341,18 @@ public class ParentController {
                     .collect(Collectors.toList());
             }
             
-            return ResponseEntity.ok(medicationScheduleService.convertToScheduleDTOList(schedules));
+            // Prepare student information
+            if (student != null) {
+                Map<String, Object> studentInfo = new HashMap<>();
+                studentInfo.put("id", student.getStudentID());
+                studentInfo.put("name", student.getLastName() + " " + student.getFirstName());
+                studentInfo.put("className", student.getClassName());
+                response.put("student", studentInfo);
+            }
+            
+            response.put("schedules", medicationScheduleService.convertToScheduleDTOList(schedules));
+            
+            return ResponseEntity.ok(response);
             
         } catch (Exception e) {
             Map<String, Object> errorResponse = new HashMap<>();

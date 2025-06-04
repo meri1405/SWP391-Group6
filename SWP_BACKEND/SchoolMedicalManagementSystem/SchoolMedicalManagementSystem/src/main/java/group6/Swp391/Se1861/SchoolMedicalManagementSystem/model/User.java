@@ -94,6 +94,12 @@ public class User implements UserDetails, OAuth2User {
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL)
     private List<MedicationRequest> parentMedicationRequests;
 
+    @OneToMany(mappedBy = "nurse", cascade = CascadeType.ALL)
+    private List<HealthProfile> healthProfilesNurse;
+
+    @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL)
+    private List<HealthProfile> healthProfilesParent;
+
     @Transient
     private Map<String, Object> attributes;
 
