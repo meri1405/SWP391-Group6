@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { API_ENDPOINTS, API_BASE_URL, logCorsInfo, isDevelopment } from "../utils/api";
+import {
+  API_ENDPOINTS,
+  API_BASE_URL,
+  logCorsInfo,
+  isDevelopment,
+} from "../utils/api";
 import "../styles/Login.css";
 
 const Login = () => {
@@ -37,7 +42,9 @@ const Login = () => {
       ...prev,
       [key]: value,
     }));
-  };  const handlePhoneLogin = async (e) => {
+  };
+
+  const handlePhoneLogin = async (e) => {
     e.preventDefault();
     setIndividualLoading("phoneOtp", true);
     setErrors({});
@@ -54,14 +61,16 @@ const Login = () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ phoneNumber }),
-      });      if (response.ok) {
+      });
+
+      if (response.ok) {
         setShowOtp(true);
         // Optional: Show success message
         console.log("OTP sent successfully to", phoneNumber);
       } else {
         // Handle different HTTP status codes
         let errorMessage = "Có lỗi xảy ra khi gửi OTP";
-        
+
         try {
           const errorData = await response.json();
           errorMessage = errorData.message || errorMessage;
@@ -69,25 +78,37 @@ const Login = () => {
           // If response body is not JSON, use status-based message
           console.log("Could not parse error response as JSON:", parseError);
           if (response.status === 401) {
-            errorMessage = "Chỉ tài khoản phụ huynh mới được phép đăng nhập bằng số điện thoại. Vui lòng đăng nhập bằng tài khoản nhân viên.";
+            errorMessage =
+              "Chỉ tài khoản phụ huynh mới được phép đăng nhập bằng số điện thoại. Vui lòng đăng nhập bằng tài khoản nhân viên.";
           } else if (response.status === 400) {
-            errorMessage = "Thông tin không hợp lệ. Vui lòng kiểm tra lại số điện thoại.";
+            errorMessage =
+              "Thông tin không hợp lệ. Vui lòng kiểm tra lại số điện thoại.";
           } else if (response.status === 404) {
             errorMessage = "Số điện thoại không tồn tại trong hệ thống.";
           }
         }
-        
+
         // Handle specific backend error messages
-        if (errorMessage.includes("Only parents can use OTP authentication") || 
-            errorMessage.includes("parents") || 
-            errorMessage.includes("PARENT")) {
-          errorMessage = "Chỉ tài khoản phụ huynh mới được phép đăng nhập bằng số điện thoại. Vui lòng đăng nhập bằng tài khoản nhân viên.";
-        } else if (errorMessage.includes("not found") || errorMessage.includes("không tồn tại")) {
+        if (
+          errorMessage.includes("Only parents can use OTP authentication") ||
+          errorMessage.includes("parents") ||
+          errorMessage.includes("PARENT")
+        ) {
+          errorMessage =
+            "Chỉ tài khoản phụ huynh mới được phép đăng nhập bằng số điện thoại. Vui lòng đăng nhập bằng tài khoản nhân viên.";
+        } else if (
+          errorMessage.includes("not found") ||
+          errorMessage.includes("không tồn tại")
+        ) {
           errorMessage = "Số điện thoại không tồn tại trong hệ thống.";
-        } else if (errorMessage.includes("authentication") || errorMessage.includes("unauthorized")) {
-          errorMessage = "Không có quyền truy cập. Vui lòng kiểm tra lại thông tin.";
+        } else if (
+          errorMessage.includes("authentication") ||
+          errorMessage.includes("unauthorized")
+        ) {
+          errorMessage =
+            "Không có quyền truy cập. Vui lòng kiểm tra lại thông tin.";
         }
-        
+
         setErrors({ phone: errorMessage });
       }
     } catch (networkError) {
@@ -97,6 +118,7 @@ const Login = () => {
       setIndividualLoading("phoneOtp", false);
     }
   };
+
   const handleOtpVerification = async (e) => {
     e.preventDefault();
     setIndividualLoading("otpVerify", true);
@@ -123,8 +145,9 @@ const Login = () => {
         // Check if the user role is PARENT
         if (userData.roleName !== "PARENT") {
           // If not PARENT, show error and go back to phone input screen
-          setErrors({ 
-            phone: "Số điện thoại này không phải tài khoản phụ huynh. Vui lòng đăng nhập bằng tài khoản nhân viên." 
+          setErrors({
+            phone:
+              "Số điện thoại này không phải tài khoản phụ huynh. Vui lòng đăng nhập bằng tài khoản nhân viên.",
           });
           setShowOtp(false); // Go back to phone input screen
           setOtp(""); // Clear OTP field
@@ -144,10 +167,11 @@ const Login = () => {
         };
 
         await login(transformedUserData);
-        navigate("/parent-dashboard");      } else {
+        navigate("/parent-dashboard");
+      } else {
         // Handle different HTTP status codes
         let errorMessage = "Mã OTP không đúng";
-        
+
         try {
           const errorData = await response.json();
           errorMessage = errorData.message || errorMessage;
@@ -155,31 +179,39 @@ const Login = () => {
           // If response body is not JSON, use status-based message
           console.log("Could not parse error response as JSON:", parseError);
           if (response.status === 401) {
-            errorMessage = "Chỉ tài khoản phụ huynh mới được phép đăng nhập bằng số điện thoại. Vui lòng đăng nhập bằng tài khoản nhân viên.";
+            errorMessage =
+              "Chỉ tài khoản phụ huynh mới được phép đăng nhập bằng số điện thoại. Vui lòng đăng nhập bằng tài khoản nhân viên.";
           } else if (response.status === 400) {
             errorMessage = "Mã OTP không đúng. Vui lòng kiểm tra lại.";
           } else if (response.status === 404) {
             errorMessage = "Số điện thoại không tồn tại trong hệ thống.";
           }
         }
-        
+
         // Handle specific backend error messages for OTP verification
-        if (errorMessage.includes("Only parents can use OTP authentication") || 
-            errorMessage.includes("parents") || 
-            errorMessage.includes("PARENT")) {
+        if (
+          errorMessage.includes("Only parents can use OTP authentication") ||
+          errorMessage.includes("parents") ||
+          errorMessage.includes("PARENT")
+        ) {
           // If backend returns this error during OTP verification, go back to phone input
-          setErrors({ 
-            phone: "Số điện thoại này không phải tài khoản phụ huynh. Vui lòng đăng nhập bằng tài khoản nhân viên." 
+          setErrors({
+            phone:
+              "Số điện thoại này không phải tài khoản phụ huynh. Vui lòng đăng nhập bằng tài khoản nhân viên.",
           });
           setShowOtp(false); // Go back to phone input screen
           setOtp(""); // Clear OTP field
           return;
-        } else if (errorMessage.includes("invalid") || errorMessage.includes("wrong") || errorMessage.includes("incorrect")) {
+        } else if (
+          errorMessage.includes("invalid") ||
+          errorMessage.includes("wrong") ||
+          errorMessage.includes("incorrect")
+        ) {
           errorMessage = "Mã OTP không đúng. Vui lòng kiểm tra lại.";
         } else if (errorMessage.includes("expired")) {
           errorMessage = "Mã OTP đã hết hạn. Vui lòng yêu cầu mã mới.";
         }
-        
+
         setErrors({ otp: errorMessage });
       }
     } catch (networkError) {
@@ -219,8 +251,12 @@ const Login = () => {
       // Simulate API delay for better UX
       await new Promise((resolve) => setTimeout(resolve, 800));
 
+      // Use the configured API endpoint
+      const loginUrl = API_ENDPOINTS.auth.login;
+      console.log("Attempting login to:", loginUrl);
+
       // API call for username/password login
-      const response = await fetch("/api/auth/login", {
+      const response = await fetch(loginUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -228,7 +264,15 @@ const Login = () => {
         body: JSON.stringify({ username, password }),
       });
 
+      console.log("Login response status:", response.status);
+      console.log("Login response headers:", [...response.headers.entries()]);
+
       if (response.ok) {
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+          throw new Error("Server returned non-JSON response");
+        }
+
         const userData = await response.json();
 
         // Add login method to track username/password login
@@ -263,39 +307,69 @@ const Login = () => {
             navigate("/");
         }
       } else {
-        const errorData = await response.json();
-        setErrors({
-          username:
-            errorData.message || "Tên đăng nhập hoặc mật khẩu không đúng",
-        });
+        // Handle error responses
+        let errorMessage = "Tên đăng nhập hoặc mật khẩu không đúng";
+
+        try {
+          const contentType = response.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            const errorData = await response.json();
+            errorMessage = errorData.message || errorMessage;
+          } else {
+            errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+          }
+        } catch (parseError) {
+          console.log("Error parsing response:", parseError.message);
+          errorMessage = `Lỗi server (${response.status})`;
+        }
+
+        setErrors({ username: errorMessage });
       }
     } catch (networkError) {
-      // Since API endpoint doesn't exist yet, simulate wrong credentials
-      console.log(
-        "API not available, simulating error response:",
-        networkError.message
-      );
-      setErrors({ username: "Tên đăng nhập hoặc mật khẩu không đúng." });
+      console.log("Network error during login:", networkError.message);
+
+      // Check if it's a network connectivity issue
+      if (
+        networkError.message.includes("Failed to fetch") ||
+        networkError.message.includes("NetworkError")
+      ) {
+        setErrors({
+          username:
+            "Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.",
+        });
+      } else if (networkError.message.includes("non-JSON response")) {
+        setErrors({
+          username: "Server trả về phản hồi không hợp lệ. Vui lòng thử lại.",
+        });
+      } else {
+        setErrors({ username: "Tên đăng nhập hoặc mật khẩu không đúng." });
+      }
     } finally {
       setIndividualLoading("usernameLogin", false);
     }
-  };  const handleGoogleLogin = async () => {
+  };
+
+  const handleGoogleLogin = async () => {
     setIndividualLoading("googleLogin", true);
     setErrors({});
 
     try {
       if (isDevelopment) {
         logCorsInfo(API_ENDPOINTS.auth.googleOAuth);
-      }      // Debug log to see the OAuth URL
+      }
+      // Debug log to see the OAuth URL
       console.log("=== Google OAuth Login ===");
-      console.log("API_ENDPOINTS.auth.googleOAuth:", API_ENDPOINTS.auth.googleOAuth);
+      console.log(
+        "API_ENDPOINTS.auth.googleOAuth:",
+        API_ENDPOINTS.auth.googleOAuth
+      );
       console.log("API_BASE_URL:", API_BASE_URL);
-      
+
       // Build absolute URL for OAuth
-      const oauthUrl = API_ENDPOINTS.auth.googleOAuth.startsWith('http') 
-        ? API_ENDPOINTS.auth.googleOAuth 
+      const oauthUrl = API_ENDPOINTS.auth.googleOAuth.startsWith("http")
+        ? API_ENDPOINTS.auth.googleOAuth
         : `http://localhost:8080${API_ENDPOINTS.auth.googleOAuth}`;
-      
+
       console.log("Final OAuth URL:", oauthUrl);
 
       // Redirect to Google OAuth endpoint

@@ -229,6 +229,7 @@ export const nurseApi = {
       throw error;
     }
   },
+
   updateScheduleStatus: async (scheduleId, status, note = "") => {
     try {
       const token = getStoredToken();
@@ -256,29 +257,75 @@ export const nurseApi = {
       throw error;
     }
   },
+
   updateScheduleNote: async (scheduleId, note) => {
     try {
       // Get a fresh token from storage and ensure it's valid
       const token = getStoredToken();
       if (!token) {
+        console.error("Authentication token not found or expired");
         throw new Error("No authentication token found");
       }
 
-      // Check if token is expired
-      if (isTokenExpired(token)) {
-        throw new Error("Token has expired");
-      }
-
+      // Create authenticated axios instance with interceptors
       const authAxios = createAuthAxios(token);
+
       console.log("Updating schedule note:", { scheduleId, note });
-      const response = await authAxios.put(
-        `/api/nurse/medications/schedules/${scheduleId}/note`,
-        {
-          note: note,
+
+      // Include retry logic directly in the function
+      try {
+        // Try the API call
+        const response = await authAxios.put(
+          `/api/nurse/medications/schedules/${scheduleId}/note`,
+          {
+            note: note,
+          }
+        );
+
+        console.log("Schedule note updated successfully:", response.data);
+        return response.data;
+      } catch (apiError) {
+        // If it's a 401 error, try one more time with a fresh token
+        if (apiError.response?.status === 401) {
+          console.log(
+            "Got 401 on note update, refreshing token and retrying..."
+          );
+
+          // Update the timestamp and get a fresh token
+          localStorage.setItem("loginTimestamp", Date.now().toString());
+          const refreshedToken = getStoredToken();
+
+          if (!refreshedToken) {
+            throw new Error("Could not refresh authentication token");
+          }
+
+          // Create new axios instance with fresh token
+          const refreshedAxios = axios.create({
+            baseURL: API_BASE_URL,
+            headers: {
+              Authorization: `Bearer ${refreshedToken}`,
+              "Content-Type": "application/json",
+            },
+          });
+
+          // Retry the API call with fresh token
+          const retryResponse = await refreshedAxios.put(
+            `/api/nurse/medications/schedules/${scheduleId}/note`,
+            {
+              note: note,
+            }
+          );
+
+          console.log(
+            "Schedule note updated successfully on retry:",
+            retryResponse.data
+          );
+          return retryResponse.data;
         }
-      );
-      console.log("Schedule note updated:", response.data);
-      return response.data;
+
+        // If it's not a 401 or retry failed, throw the error
+        throw apiError;
+      }
     } catch (error) {
       console.error("Error updating schedule note:", error);
       if (error.response) {

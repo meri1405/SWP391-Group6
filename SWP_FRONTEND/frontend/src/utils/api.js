@@ -6,15 +6,26 @@
 const useProxy = import.meta.env.DEV;
 
 // Base URL from environment variables
-export const API_BASE_URL = useProxy ? '' : import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+export const API_BASE_URL = useProxy
+  ? ""
+  : import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
 export const API_ENDPOINTS = {
   // Auth endpoints
   auth: {
-    requestOtp: `${API_BASE_URL}${import.meta.env.VITE_API_AUTH_REQUEST_OTP}`,
-    verifyOtp: `${API_BASE_URL}${import.meta.env.VITE_API_AUTH_VERIFY_OTP}`,
+    login: `${API_BASE_URL}${
+      import.meta.env.VITE_API_AUTH_LOGIN || "/api/auth/login"
+    }`,
+    requestOtp: `${API_BASE_URL}${
+      import.meta.env.VITE_API_AUTH_REQUEST_OTP || "/api/auth/request-otp"
+    }`,
+    verifyOtp: `${API_BASE_URL}${
+      import.meta.env.VITE_API_AUTH_VERIFY_OTP || "/api/auth/verify-otp"
+    }`,
     // OAuth2 endpoints
-    googleOAuth: `${API_BASE_URL}${import.meta.env.VITE_API_OAUTH2_GOOGLE}`,
+    googleOAuth: `${API_BASE_URL}${
+      import.meta.env.VITE_API_OAUTH2_GOOGLE || "/oauth2/authorize/google"
+    }`,
   },
   // Add other endpoint categories as needed
 };
@@ -41,12 +52,12 @@ export const apiRequest = async (endpoint, options = {}) => {
     // Set default headers if not provided
     if (!options.headers) {
       options.headers = {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       };
     }
-    
+
     // Add auth token if available
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     if (token && !options.headers.Authorization) {
       options.headers.Authorization = `Bearer ${token}`;
     }
@@ -58,20 +69,41 @@ export const apiRequest = async (endpoint, options = {}) => {
 
     // Make the request
     const response = await fetch(endpoint, options);
-    
+
     // Handle response
     if (response.ok) {
-      return response.json();
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        return response.json();
+      }
+      return response.text();
     }
-    
+
     // Handle error responses
-    const errorData = await response.json();
-    return Promise.reject(errorData);
+    try {
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        const errorData = await response.json();
+        return Promise.reject(errorData);
+      } else {
+        // If response is not JSON, create error object
+        return Promise.reject({
+          message: `HTTP ${response.status}: ${response.statusText}`,
+          status: response.status,
+        });
+      }
+    } catch (parseError) {
+      return Promise.reject({
+        message: `HTTP ${response.status}: ${response.statusText}`,
+        status: response.status,
+        originalError: parseError,
+      });
+    }
   } catch (error) {
-    console.error('API request failed:', error);
+    console.error("API request failed:", error);
     return Promise.reject({
-      message: 'Không thể kết nối đến server. Vui lòng thử lại.',
-      originalError: error
+      message: "Không thể kết nối đến server. Vui lòng thử lại.",
+      originalError: error,
     });
   }
 };
@@ -80,5 +112,5 @@ export default {
   API_BASE_URL,
   API_ENDPOINTS,
   apiRequest,
-  isDevelopment
+  isDevelopment,
 };
