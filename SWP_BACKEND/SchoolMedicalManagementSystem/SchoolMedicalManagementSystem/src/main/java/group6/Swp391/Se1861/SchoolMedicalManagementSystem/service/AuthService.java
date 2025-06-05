@@ -352,4 +352,18 @@ public class AuthService {
         }
         return passwordEncoder.matches(rawPassword, encodedPassword);
     }
+
+    /**
+     * Logout the user by invalidating their token
+     *
+     * @param authHeader The Authorization header containing the JWT token
+     */
+    public void logout(String authHeader) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            // Add the token to a blacklist or invalidate it
+            // This can be implemented in JwtUtil
+            jwtUtil.invalidateToken(token);
+        }
+    }
 }

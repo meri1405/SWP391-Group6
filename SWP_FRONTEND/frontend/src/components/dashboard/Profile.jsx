@@ -26,6 +26,7 @@ import {
 import { useAuth } from "../../contexts/AuthContext";
 import { parentApi } from "../../api/parentApi";
 import "../../styles/Profile.css";
+import dayjs from 'dayjs';
 
 const Profile = ({ userInfo, onProfileUpdate }) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -511,7 +512,7 @@ const Profile = ({ userInfo, onProfileUpdate }) => {
                     <CalendarOutlined className="info-icon" />
                     <div>
                       <label>Ngày sinh</label>
-                      <span>{formData.dateOfBirth || "1990-01-15"}</span>
+                      <span>{dayjs(formData.dateOfBirth).format('DD/MM/YYYY') || "N/A"}</span>
                     </div>
                   </div>
                   <div className="info-item">
@@ -585,11 +586,11 @@ const Profile = ({ userInfo, onProfileUpdate }) => {
                   >
                     <Card.Meta
                       avatar={<Avatar icon={<UserOutlined />} />}
-                      title={`${student.firstName} ${student.lastName}`}
+                      title={`${student.lastName} ${student.firstName}`}
                       description={
                         <div>
                           <p>Lớp: {student.className || "N/A"}</p>
-                          <p>Sinh năm: {student.birthYear || "N/A"}</p>
+                          <p>Sinh năm: {dayjs(student.dob).format('DD/MM/YYYY') || "N/A"}</p>
                           <Tag color="green">Đang học</Tag>
                         </div>
                       }

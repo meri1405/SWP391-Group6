@@ -26,10 +26,29 @@ export const getAllUsers = async () => {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const data = await response.json();
-    console.log("Raw API data received:", data);
+    // Get response as text first to debug JSON issues
+    const responseText = await response.text();
+    console.log("Raw response text:", responseText);
+
+    // Try to parse JSON
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error("JSON parse error:", parseError);
+      console.error("Response text that failed to parse:", responseText);
+      throw new Error(`Invalid JSON response: ${parseError.message}`);
+    }
+
+    console.log("Parsed API data:", data);
+    console.log("Data type:", typeof data);
     console.log("Data is array:", Array.isArray(data));
-    console.log("Data length:", data.length);
+    
+    if (Array.isArray(data)) {
+      console.log("Data length:", data.length);
+    } else if (data && typeof data === 'object') {
+      console.log("Data keys:", Object.keys(data));
+    }
 
     // Return the users array from the response
     return data.users || data;
@@ -240,6 +259,29 @@ export const updateAdminProfile = async (profileData) => {
     return data.profile || data;
   } catch (error) {
     console.error("Error updating admin profile:", error);
+    throw error;
+  }
+};
+
+// Logout user
+export const logout = async (token) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/logout`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error during logout:", error);
     throw error;
   }
 };
