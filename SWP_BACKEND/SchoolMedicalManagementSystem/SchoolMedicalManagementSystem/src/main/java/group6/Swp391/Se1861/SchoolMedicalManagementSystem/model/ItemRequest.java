@@ -28,7 +28,7 @@ public class ItemRequest {
     private String itemType;
 
     @Column(name = "dosage", nullable = false)
-    private int dosage;
+    private double dosage;
 
     @Column(name = "frequency", nullable = false)
     private int frequency;

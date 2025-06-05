@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.MedicationScheduleDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.exception.UnauthorizedAccessException;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.*;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.MedicationStatus;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.MedicationScheduleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -187,9 +188,7 @@ public class MedicationScheduleService {
                 .stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
-    }
-
-    /**
+    }    /**
      * Get schedules for a specific date filtered by approving nurse
      * @param date The date to check
      * @param nurse The nurse who approved the requests
@@ -199,12 +198,11 @@ public class MedicationScheduleService {
         return medicationScheduleRepository.findAll().stream()
                 .filter(schedule -> schedule.getScheduledDate().equals(date)
                         && schedule.getItemRequest().getMedicationRequest().getNurse() != null
-                        && schedule.getItemRequest().getMedicationRequest().getNurse().getId().equals(nurse.getId()))
+                        && schedule.getItemRequest().getMedicationRequest().getNurse().getId().equals(nurse.getId())
+                        && "APPROVED".equals(schedule.getItemRequest().getMedicationRequest().getStatus()))
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
-    }
-
-    /**
+    }    /**
      * Get schedules for a specific date and status filtered by approving nurse
      * @param date The date to check
      * @param status The status to filter by
@@ -214,12 +212,11 @@ public class MedicationScheduleService {
     public List<MedicationScheduleDTO> getSchedulesByDateAndStatusAndNurse(LocalDate date, MedicationStatus status, User nurse) {
         return medicationScheduleRepository.findByScheduledDateAndStatus(date, status).stream()
                 .filter(schedule -> schedule.getItemRequest().getMedicationRequest().getNurse() != null
-                        && schedule.getItemRequest().getMedicationRequest().getNurse().getId().equals(nurse.getId()))
+                        && schedule.getItemRequest().getMedicationRequest().getNurse().getId().equals(nurse.getId())
+                        && "APPROVED".equals(schedule.getItemRequest().getMedicationRequest().getStatus()))
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
-    }
-
-    /**
+    }    /**
      * Get schedules for a student filtered by approving nurse
      * @param studentId The student ID
      * @param nurse The nurse who approved the requests
@@ -228,7 +225,8 @@ public class MedicationScheduleService {
     public List<MedicationScheduleDTO> getSchedulesForStudentAndNurse(Long studentId, User nurse) {
         return medicationScheduleRepository.findByItemRequestMedicationRequestStudentStudentID(studentId).stream()
                 .filter(schedule -> schedule.getItemRequest().getMedicationRequest().getNurse() != null
-                        && schedule.getItemRequest().getMedicationRequest().getNurse().getId().equals(nurse.getId()))
+                        && schedule.getItemRequest().getMedicationRequest().getNurse().getId().equals(nurse.getId())
+                        && "APPROVED".equals(schedule.getItemRequest().getMedicationRequest().getStatus()))
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }

@@ -1,5 +1,6 @@
 package group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto;
 
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.Student;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -26,8 +27,10 @@ public class UserCreationDTO {
     private String email;
     private String address;
     private String jobTitle;
-    private String roleName;
-    
+    private String roleName;// For parents, list of students they are associated with
     // PARENT-specific fields
     private List<Long> studentIds; // Used for parent-student relationships
 }
+
+
+

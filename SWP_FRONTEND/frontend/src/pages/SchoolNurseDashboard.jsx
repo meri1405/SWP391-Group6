@@ -19,6 +19,7 @@ import {
 } from '@ant-design/icons';
 import NurseMedicationRequests from '../components/dashboard/NurseMedicationRequests';
 import NurseMedicationSchedules from '../components/dashboard/NurseMedicationSchedules';
+import VaccinationRuleManagement from '../components/dashboard/VaccinationRuleManagement';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -88,11 +89,15 @@ const SchoolNurseDashboard = () => {
       key: 'inventory',
       icon: <InboxOutlined />,
       label: 'Giám sát tồn kho',
-    },
-    {
+    },    {
       key: 'vaccination',
       icon: <CalendarOutlined />,
       label: 'Chiến dịch tiêm chủng',
+    },
+    {
+      key: 'vaccination-rule-management',
+      icon: <MedicineBoxOutlined />,
+      label: 'Quản lý quy tắc tiêm chủng',
     },
     {
       key: 'health-check',
@@ -288,9 +293,10 @@ const SchoolNurseDashboard = () => {
       case "medical-events":
         return <MedicalEvents />;
       case "inventory":
-        return <Inventory />;
-      case "vaccination":
+        return <Inventory />;      case "vaccination":
         return <Vaccination />;
+      case "vaccination-rule-management":
+        return <VaccinationRuleManagement />;
       case "health-check":
         return <HealthCheck />;
       case "health-records":

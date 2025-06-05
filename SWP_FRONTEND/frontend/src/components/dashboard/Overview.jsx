@@ -153,19 +153,20 @@ const Overview = ({ userInfo: externalUserInfo }) => {
         <>
           {/* Health Summary Cards */}
           <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-            <Col xs={24} sm={12} lg={6}>
-              <Card 
+            <Col xs={24} sm={12} lg={6}>              <Card 
                 style={{ 
                   textAlign: 'center', 
                   borderTop: '3px solid #1976d2',
                   height: '100%'
                 }}
-                bodyStyle={{ 
-                  padding: '16px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center'
+                styles={{ 
+                  body: { 
+                    padding: '16px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }
                 }}
               >
                 <Avatar 
@@ -189,17 +190,18 @@ const Overview = ({ userInfo: externalUserInfo }) => {
               </Card>
             </Col>
             
-            <Col xs={24} sm={12} lg={6}>
-              <Card 
+            <Col xs={24} sm={12} lg={6}>              <Card 
                 style={{ 
                   borderTop: '3px solid #2196f3',
                   height: '100%'
                 }}
-                bodyStyle={{ 
-                  padding: '16px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'center'
+                styles={{ 
+                  body: { 
+                    padding: '16px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center'
+                  }
                 }}
               >
                 <div>
@@ -216,17 +218,18 @@ const Overview = ({ userInfo: externalUserInfo }) => {
               </Card>
             </Col>
             
-            <Col xs={24} sm={12} lg={6}>
-              <Card 
+            <Col xs={24} sm={12} lg={6}>              <Card 
                 style={{ 
                   borderTop: '3px solid #4caf50',
                   height: '100%'
                 }}
-                bodyStyle={{ 
-                  padding: '16px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'center'
+                styles={{ 
+                  body: { 
+                    padding: '16px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center'
+                  }
                 }}
               >
                 <div>
@@ -241,17 +244,18 @@ const Overview = ({ userInfo: externalUserInfo }) => {
           </Card>
         </Col>
         
-        <Col xs={24} sm={12} lg={6}>
-          <Card 
+        <Col xs={24} sm={12} lg={6}>          <Card 
             style={{ 
               borderTop: '3px solid #ff9800',
               height: '100%'
             }}
-            bodyStyle={{ 
-              padding: '16px',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center'
+            styles={{ 
+              body: { 
+                padding: '16px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center'
+              }
             }}
           >            <div>
               <Text type="secondary" style={{ fontSize: 14 }}>Quốc tịch</Text>

@@ -106,7 +106,64 @@ export const parentApi = {
       console.error("Error updating parent profile:", error);
       throw error;
     }
-  }, // Get medication requests for parent's students
+  },
+
+  // Health Profile endpoints
+  createHealthProfile: async (healthProfileData, token = getTokenFromStorage()) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.post('/api/parent/health-profiles', healthProfileData);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating health profile:', error);
+      throw error;
+    }
+  },
+
+  getHealthProfile: async (profileId, token = getTokenFromStorage()) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.get(`/api/parent/health-profiles/${profileId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching health profile:', error);
+      throw error;
+    }
+  },
+
+  updateHealthProfile: async (profileId, healthProfileData, token = getTokenFromStorage()) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.put(`/api/parent/health-profiles/${profileId}`, healthProfileData);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating health profile:', error);
+      throw error;    }
+  },
+
+  getHealthProfilesByStudentId: async (studentId, token = getTokenFromStorage()) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.get(`/api/parent/students/${studentId}/health-profiles`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching health profiles by student ID:', error);
+      throw error;
+    }
+  },
+
+  deleteHealthProfile: async (profileId, token = getTokenFromStorage()) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.delete(`/api/parent/health-profiles/${profileId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error deleting health profile:', error);
+      throw error;
+    }
+  },
+
+  // Get medication requests for parent's students
   getMedicationRequests: async (token) => {
     try {
       const authAxios = createAuthAxios(token);

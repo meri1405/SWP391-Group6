@@ -130,19 +130,36 @@ const NurseMedicationSchedules = () => {const { refreshSession } = useAuth();
                 data = await nurseApi.getSchedulesByDate(params);
             }
             
+            // Backend already filters for APPROVED requests only
+            // Additional frontend validation and user feedback
             if (!Array.isArray(data)) {
-                console.error('Unexpected data format:', data);
-                setSchedules([]);
-                setStudents([]);
-                return;
+                console.warn('Unexpected data format received:', data);
+                data = [];
             }
             
-            setSchedules(data);
+            // Validate schedule data integrity
+            const validSchedules = data.filter(schedule => {
+                const isValid = schedule && 
+                       schedule.studentId && 
+                       schedule.studentName && 
+                       schedule.medicationName &&
+                       schedule.scheduledDate &&
+                       schedule.scheduledTime &&
+                       schedule.status;
+                
+                if (!isValid) {
+                    console.warn('Invalid schedule data found:', schedule);
+                }
+                
+                return isValid;
+            });
+            
+            setSchedules(validSchedules);
             
             // Extract unique students for filter, with null checks
             const uniqueStudents = [...new Map(
-                data
-                    .filter(schedule => schedule && schedule.studentId && schedule.studentName) // Filter out invalid entries
+                validSchedules
+                    .filter(schedule => schedule.studentId && schedule.studentName) // Filter out invalid entries
                     .map(schedule => [
                         schedule.studentId, 
                         {
@@ -154,10 +171,29 @@ const NurseMedicationSchedules = () => {const { refreshSession } = useAuth();
             ).values()];
             
             setStudents(uniqueStudents);
+
+            // Show informative message if no approved schedules found
+            if (validSchedules.length === 0) {
+                const selectedDateStr = selectedDate ? selectedDate.format('DD/MM/YYYY') : 'hôm nay';
+                if (selectedStudent) {
+                    message.info('Không có lịch uống thuốc được duyệt nào cho học sinh này');
+                } else {
+                    message.info(`Không có lịch uống thuốc được duyệt nào cho ngày ${selectedDateStr}`);
+                }
+            }
         
         } catch (error) {
             console.error('Error loading schedules:', error);
-            message.error('Không thể tải danh sách lịch uống thuốc');
+            
+            // Enhanced error handling
+            if (error.response?.status === 404) {
+                message.info('Không tìm thấy lịch uống thuốc được duyệt');
+            } else if (error.response?.status === 403) {
+                message.error('Không có quyền truy cập thông tin này');
+            } else {
+                message.error('Không thể tải danh sách lịch uống thuốc. Vui lòng thử lại sau.');
+            }
+            
             setSchedules([]);
             setStudents([]);
         } finally {

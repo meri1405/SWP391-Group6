@@ -59,30 +59,56 @@ const ParentMedicationSchedules = ({ userInfo }) => {
         try {
             setLoading(true);
             refreshSession();
-            
-            let data;
+              let data;
             
             if (selectedStudent) {
                 data = await parentApi.getChildMedicationSchedules(selectedStudent);
             } else {
+                // Ensure we always have a valid date
+                const dateToUse = selectedDate || dayjs();
                 const params = {
-                    date: selectedDate.format('YYYY-MM-DD'),
+                    date: dateToUse.format('YYYY-MM-DD'),
                     status: selectedStatus === 'ALL' ? undefined : selectedStatus
                 };
                 data = await parentApi.getAllChildrenMedicationSchedules(params);
             }
             
-            setSchedules(data);
+            // Handle new response structure from backend
+            let schedulesArray = [];
+            let studentsArray = [];
             
-            // Extract unique students for filter
-            const uniqueStudents = [...new Map(
-                data.map(schedule => [schedule.studentId, {
-                id: schedule.studentId,
-                name: schedule.studentName,
-                className: schedule.className
-                }])
-            ).values()];
-            setStudents(uniqueStudents);
+            if (selectedStudent) {
+                // For single student, data might still be in old format
+                if (data && data.schedules && data.students) {
+                    schedulesArray = Array.isArray(data.schedules) ? data.schedules : [];
+                    studentsArray = Array.isArray(data.students) ? data.students : [];
+                } else {
+                    // Fallback to old format if needed
+                    schedulesArray = Array.isArray(data) ? data : [];
+                    // Extract students from schedules for backward compatibility
+                    const uniqueStudents = [...new Map(
+                        schedulesArray.map(schedule => [schedule.studentId, {
+                            id: schedule.studentId,
+                            name: schedule.studentName,
+                            className: schedule.className
+                        }])
+                    ).values()];
+                    studentsArray = uniqueStudents;
+                }
+            } else {
+                // For all children, backend now returns {schedules: [], students: []}
+                if (data && typeof data === 'object') {
+                    schedulesArray = Array.isArray(data.schedules) ? data.schedules : [];
+                    studentsArray = Array.isArray(data.students) ? data.students : [];
+                } else {
+                    // Fallback to old format if needed
+                    schedulesArray = Array.isArray(data) ? data : [];
+                    studentsArray = [];
+                }
+            }
+            
+            setSchedules(schedulesArray);
+            setStudents(studentsArray);
             
         } catch (error) {
             console.error('Error loading schedules:', error);
@@ -103,7 +129,7 @@ const ParentMedicationSchedules = ({ userInfo }) => {
 
     // Function to process data for row merging
     const processDataForMerging = (data) => {
-        if (!data || data.length === 0) return [];
+        if (!data || !Array.isArray(data) || data.length === 0) return [];
 
         // Group by student, date, and time for merging student cells only
         const groups = {};
@@ -234,6 +260,11 @@ const ParentMedicationSchedules = ({ userInfo }) => {
     ];
 
     const getStatusSummary = () => {
+        // Ensure schedules is an array before calling reduce
+        if (!Array.isArray(schedules)) {
+            return {};
+        }
+        
         const summary = schedules.reduce((acc, schedule) => {
             acc[schedule.status] = (acc[schedule.status] || 0) + 1;
             return acc;

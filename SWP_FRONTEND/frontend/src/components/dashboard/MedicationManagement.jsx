@@ -325,11 +325,10 @@ const MedicationManagement = () => {
           };
 
           const processedItem = {
-            ...(item.id && typeof item.id === 'number' && item.id > 0 ? { id: item.id } : {}),
-            itemName: item.itemName,
+            ...(item.id && typeof item.id === 'number' && item.id > 0 ? { id: item.id } : {}),            itemName: item.itemName,
             purpose: item.purpose,
             itemType: item.itemType,
-            dosage: parseInt(item.dosage, 10),
+            dosage: parseFloat(item.dosage),
             frequency: parseInt(item.frequency, 10),
             // Properly separate note and schedule time JSON with a clear marker
             note: noteStr ? `${noteStr} scheduleTimeJson:${JSON.stringify(scheduleTimeJson)}` : `scheduleTimeJson:${JSON.stringify(scheduleTimeJson)}`,
@@ -934,9 +933,7 @@ const MedicationManagement = () => {
                             <Option value="INJECTION">Tiêm</Option>
                             <Option value="OTHER">Khác</Option>
                           </Select>
-                        </Form.Item>
-                        
-                        <Form.Item
+                        </Form.Item>                          <Form.Item
                           {...restField}
                           name={[name, 'dosage']}
                           label="Liều lượng"
@@ -945,10 +942,19 @@ const MedicationManagement = () => {
                             { 
                               pattern: /^[0-9]*\.?[0-9]+$/, 
                               message: 'Vui lòng nhập số hợp lệ' 
+                            },
+                            {
+                              validator: (_, value) => {
+                                const num = parseFloat(value);
+                                if (isNaN(num) || num < 0.1) {
+                                  return Promise.reject(new Error('Liều lượng phải ít nhất là 0.1'));
+                                }
+                                return Promise.resolve();
+                              }
                             }
                           ]}
                         >
-                          <Input placeholder="Ví dụ: 1, 5, 10" />
+                          <Input placeholder="Ví dụ: 0.5, 1.5, 5.0, 10" />
                         </Form.Item>
                       </div>                      <div className="form-row">
                         <Form.Item
