@@ -7,6 +7,7 @@ import React, {
   useCallback,
 } from "react";
 import axios from "axios";
+import { logout as apiLogout } from "../api/userApi";
 
 const AuthContext = createContext();
 
@@ -25,22 +26,39 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const logoutTimerRef = useRef(null);
+  const logoutTimerRef = useRef(null);  const logout = useCallback(async () => {
+    try {
+      const token = localStorage.getItem("token");
+      
+      // Call backend logout endpoint if token exists
+      if (token) {
+        try {
+          await apiLogout(token);
+          console.log("Backend logout successful");
+        } catch (error) {
+          console.error("Backend logout failed:", error);
+          // Continue with frontend logout even if backend fails
+        }
+      }
+    } catch (error) {
+      console.error("Error during logout:", error);
+    } finally {
+      // Clear all authentication data regardless of backend response
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      localStorage.removeItem("loginTimestamp");
 
-  const logout = useCallback(() => {
-    // Clear all authentication data
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    localStorage.removeItem("loginTimestamp");
+      // Clear timeout if it exists
+      if (logoutTimerRef.current) {
+        clearTimeout(logoutTimerRef.current);
+        logoutTimerRef.current = null;
+      }
 
-    // Clear timeout if it exists
-    if (logoutTimerRef.current) {
-      clearTimeout(logoutTimerRef.current);
-      logoutTimerRef.current = null;
+      // Update state
+      setUser(null);
+      
+      console.log("Frontend logout completed");
     }
-
-    // Update state
-    setUser(null);
   }, []);
 
   // Khởi tạo session timeout timer
