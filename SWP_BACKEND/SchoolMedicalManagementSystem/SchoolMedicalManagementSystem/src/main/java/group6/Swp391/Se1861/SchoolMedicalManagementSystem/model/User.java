@@ -101,9 +101,6 @@ public class User implements UserDetails, OAuth2User {
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL)
     private List<HealthProfile> healthProfilesParent;
 
-    @Transient
-    @JsonIgnore  // Prevent circular reference during JSON serialization
-    private List<MedicationRequest> parentMedicationRequests;    
     
     @Transient
     @JsonIgnore  // Prevent serialization of OAuth2 attributes

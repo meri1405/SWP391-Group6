@@ -119,6 +119,13 @@ public class AdminUserController {
             newUser.setEmail(userCreationDTO.getEmail());
             newUser.setAddress(userCreationDTO.getAddress());
             newUser.setJobTitle(userCreationDTO.getJobTitle());
+            
+            // Set enabled status based on status field from frontend
+            if (userCreationDTO.getStatus() != null) {
+                newUser.setEnabled("ACTIVE".equalsIgnoreCase(userCreationDTO.getStatus()));
+            } else {
+                newUser.setEnabled(true); // Default to enabled if no status specified
+            }
 
             // Use the createUserByAdmin method which applies role-specific validation
             User createdUser = authService.createUserByAdmin(newUser, userCreationDTO.getRoleName());
