@@ -49,7 +49,7 @@ import {
   toggleUserStatus,
   getAdminProfile,
   updateAdminProfile,
-} from "../api/userApi";
+} from "../api/adminApi";
 
 const { Header, Sider, Content } = Layout;
 
@@ -119,7 +119,7 @@ const UserManagement = ({
         <table className="data-table">
           <thead>
             <tr>
-              <th>ID</th>
+              <th>STT</th>
               <th>Họ</th>
               <th>Tên</th>
               <th>Email</th>
@@ -134,7 +134,7 @@ const UserManagement = ({
           <tbody>
             {filteredUsers.map((user, index) => (
               <tr key={user.id || user.userId || `user-${index}`}>
-                <td>{user.id || user.userId}</td>
+                <td>{index + 1}</td>
                 <td>{user.lastName || ""}</td>
                 <td>{user.firstName || ""}</td>
                 <td>{user.email || "-"}</td>
@@ -242,7 +242,7 @@ const UserManagement = ({
       >
         {modalMode === "view" ? (
           <Descriptions bordered column={2} size="middle">
-            <Descriptions.Item label="ID người dùng" span={1}>
+            <Descriptions.Item label="ID hệ thống" span={1}>
               {selectedUser?.id}
             </Descriptions.Item>
             <Descriptions.Item label="Họ" span={1}>
@@ -1255,22 +1255,38 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
+  // Antd v5 notification context
+  const [api, contextHolder] = notification.useNotification();
+
   // Configure notification placement and style
   useEffect(() => {
+    console.log("Configuring notification...");
     notification.config({
       placement: "topRight",
       duration: 4.5,
-      style: {
-        marginTop: 60, // Account for header height
+      top: 90, // Account for header height
+      maxCount: 1, // Only show 1 notification at a time to avoid overlap
+      getContainer: () => {
+        console.log("Notification getContainer called");
+        return document.body;
       },
     });
 
     // Configure message component for better display
     message.config({
-      top: 80, // Position from top
+      top: 100, // Position from top
       duration: 3,
       maxCount: 3,
+      getContainer: () => {
+        console.log("Message getContainer called");
+        return document.body;
+      },
     });
+
+    console.log("Notification and message configured");
+
+    // Test multiple notification positions
+    // No test notifications on component mount
   }, []);
 
   // Helper function to translate role names to Vietnamese
@@ -1584,7 +1600,9 @@ const AdminDashboard = () => {
       if (modalMode === "add") {
         setLoading(true);
         try {
-          console.log("Calling createUser API...");
+          console.log("Starting createUser process");
+          console.log("Calling createUser API with data:", userData);
+
           const newUser = await createUser(userData);
           console.log("New user created successfully:", newUser);
 
@@ -1625,33 +1643,37 @@ const AdminDashboard = () => {
             return newStats;
           });
 
-          // Show enhanced success notification
-          notification.success({
-            message: "Thêm người dùng thành công!",
-            description: `Đã thêm thành công ${getRoleNameInVietnamese(
-              userData.role
-            )} "${userData.firstName} ${userData.lastName}" vào hệ thống.`,
+          // Clear any existing notifications first to avoid overlapping
+          api.destroy();
+
+          // Show simple success notification
+          api.success({
+            message: `Đã thêm thành công ${userData.lastName} ${userData.firstName}`,
+            duration: 5,
             style: {
-              backgroundColor: "#f6ffed",
-              border: "1px solid #b7eb8f",
+              fontSize: "14px",
+              padding: "8px 16px",
             },
           });
 
           // Close modal and reset form
           setShowUserModal(false);
           resetUserForm();
+
+          console.log("createUser process completed successfully");
         } catch (error) {
           console.error("Error creating user:", error);
 
-          // Show enhanced error notification
-          notification.error({
-            message: "Thất bại khi thêm người dùng",
-            description: `Thất bại khi thêm ${getRoleNameInVietnamese(
-              userData.role
-            )}: ${error.message}`,
+          // Clear any existing notifications first
+          api.destroy();
+
+          // Show simple error notification
+          api.error({
+            message: `Lỗi tạo user: ${error.message}`,
+            duration: 5,
             style: {
-              backgroundColor: "#fff2f0",
-              border: "1px solid #ffccc7",
+              fontSize: "14px",
+              padding: "8px 16px",
             },
           });
         } finally {
@@ -1812,140 +1834,143 @@ const AdminDashboard = () => {
   };
 
   return (
-    <Layout
-      style={{
-        minHeight: "calc(100vh - 140px)",
-        background: "#f4f6fb",
-        margin: "90px 20px 30px 20px",
-        borderRadius: "16px",
-        overflow: "hidden",
-        boxShadow: "0 4px 20px 0 rgba(0,0,0,0.08)",
-      }}
-    >
-      <Sider
-        width={240}
-        collapsed={collapsed}
-        theme="light"
-        className="admin-sidebar"
+    <>
+      {contextHolder}
+      <Layout
         style={{
-          borderRight: "1px solid #f0f0f0",
-          background: "#fff",
-          zIndex: 10,
-          paddingTop: 24,
-          position: "relative",
+          minHeight: "calc(100vh - 140px)",
+          background: "#f4f6fb",
+          margin: "90px 20px 30px 20px",
+          borderRadius: "16px",
+          overflow: "hidden",
+          boxShadow: "0 4px 20px 0 rgba(0,0,0,0.08)",
         }}
-        trigger={null}
       >
-        <div
+        <Sider
+          width={240}
+          collapsed={collapsed}
+          theme="light"
+          className="admin-sidebar"
           style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            marginBottom: 24,
-            marginTop: 8,
+            borderRight: "1px solid #f0f0f0",
+            background: "#fff",
+            zIndex: 10,
+            paddingTop: 24,
+            position: "relative",
           }}
+          trigger={null}
         >
           <div
             style={{
-              width: 60,
-              height: 60,
-              borderRadius: "50%",
-              background: "#fff2e8",
               display: "flex",
+              flexDirection: "column",
               alignItems: "center",
-              justifyContent: "center",
-              border: "2px solid #ff6b35",
+              marginBottom: 24,
+              marginTop: 8,
             }}
           >
-            <SettingOutlined style={{ fontSize: 32, color: "#ff6b35" }} />
-          </div>
-          {!collapsed && (
-            <span
-              style={{
-                fontWeight: 600,
-                color: "#ff6b35",
-                fontSize: 18,
-                marginTop: 12,
-                borderRadius: 20,
-                padding: "4px 12px",
-                background: "#fff2e8",
-              }}
-            >
-              Quản trị viên
-            </span>
-          )}
-        </div>
-        <Menu
-          theme="light"
-          mode="inline"
-          selectedKeys={[activeSection]}
-          onClick={handleMenuClick}
-          items={getMenuItems()}
-          style={{ border: "none", fontWeight: 500, fontSize: 16 }}
-        />
-      </Sider>
-      <Layout style={{ marginLeft: 0 }}>
-        <Header
-          style={{
-            background: "#fff",
-            padding: "16px 32px",
-            height: "auto",
-            lineHeight: "normal",
-            minHeight: 80,
-            display: "flex",
-            alignItems: "center",
-            borderBottom: "1px solid #f0f0f0",
-            boxShadow: "0 2px 8px 0 rgba(0,0,0,0.05)",
-          }}
-        >
-          <div style={{ flex: 1 }}>
-            <Breadcrumb
-              items={getBreadcrumbItems()}
-              style={{ fontSize: 14, marginBottom: 4 }}
-            />
-            <h1
-              style={{
-                color: "#ff6b35",
-                margin: 0,
-                fontSize: 28,
-                fontWeight: 700,
-              }}
-            >
-              Bảng điều khiển quản trị viên
-            </h1>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
             <div
               style={{
-                width: 40,
-                height: 40,
+                width: 60,
+                height: 60,
                 borderRadius: "50%",
                 background: "#fff2e8",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                border: "1px solid #ff6b35",
+                border: "2px solid #ff6b35",
               }}
             >
-              <UserOutlined style={{ fontSize: 20, color: "#ff6b35" }} />
+              <SettingOutlined style={{ fontSize: 32, color: "#ff6b35" }} />
             </div>
-            <span style={{ fontWeight: 500, fontSize: 16 }}>
-              {userInfo?.lastName || ""} {userInfo?.firstName || ""}
-            </span>
+            {!collapsed && (
+              <span
+                style={{
+                  fontWeight: 600,
+                  color: "#ff6b35",
+                  fontSize: 18,
+                  marginTop: 12,
+                  borderRadius: 20,
+                  padding: "4px 12px",
+                  background: "#fff2e8",
+                }}
+              >
+                Quản trị viên
+              </span>
+            )}
           </div>
-        </Header>
-        <Content
-          style={{
-            margin: "16px 24px 24px 24px",
-            padding: 0,
-            minHeight: "calc(100vh - 260px)",
-            background: "transparent",
-          }}
-        >
-          {renderContent()}
-        </Content>
+          <Menu
+            theme="light"
+            mode="inline"
+            selectedKeys={[activeSection]}
+            onClick={handleMenuClick}
+            items={getMenuItems()}
+            style={{ border: "none", fontWeight: 500, fontSize: 16 }}
+          />
+        </Sider>
+        <Layout style={{ marginLeft: 0 }}>
+          <Header
+            style={{
+              background: "#fff",
+              padding: "16px 32px",
+              height: "auto",
+              lineHeight: "normal",
+              minHeight: 80,
+              display: "flex",
+              alignItems: "center",
+              borderBottom: "1px solid #f0f0f0",
+              boxShadow: "0 2px 8px 0 rgba(0,0,0,0.05)",
+            }}
+          >
+            <div style={{ flex: 1 }}>
+              <Breadcrumb
+                items={getBreadcrumbItems()}
+                style={{ fontSize: 14, marginBottom: 4 }}
+              />
+              <h1
+                style={{
+                  color: "#ff6b35",
+                  margin: 0,
+                  fontSize: 28,
+                  fontWeight: 700,
+                }}
+              >
+                Bảng điều khiển quản trị viên
+              </h1>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+              <div
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: "50%",
+                  background: "#fff2e8",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  border: "1px solid #ff6b35",
+                }}
+              >
+                <UserOutlined style={{ fontSize: 20, color: "#ff6b35" }} />
+              </div>
+              <span style={{ fontWeight: 500, fontSize: 16 }}>
+                {userInfo?.lastName || ""} {userInfo?.firstName || ""}
+              </span>
+            </div>
+          </Header>
+          <Content
+            style={{
+              margin: "16px 24px 24px 24px",
+              padding: 0,
+              minHeight: "calc(100vh - 260px)",
+              background: "transparent",
+            }}
+          >
+            {renderContent()}
+          </Content>
+        </Layout>
       </Layout>
-    </Layout>
+    </>
   );
 };
 

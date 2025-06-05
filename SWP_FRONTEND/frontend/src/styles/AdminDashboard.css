@@ -992,3 +992,48 @@
 }
 
 /* ADMIN DASHBOARD LAYOUT - PARENT DASHBOARD STYLE */
+
+/* Notification and Message positioning */
+.ant-notification {
+  z-index: 9999 !important;
+  position: fixed !important;
+}
+
+.ant-notification-notice {
+  z-index: 9999 !important;
+}
+
+.ant-message {
+  z-index: 9999 !important;
+  position: fixed !important;
+}
+
+/* Custom notification styles - smaller size */
+.ant-notification-notice {
+  max-width: 300px !important;
+  min-height: auto !important;
+  padding: 12px 16px !important;
+  margin-bottom: 8px !important;
+}
+
+.ant-notification-notice-message {
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  margin-bottom: 0 !important;
+  line-height: 1.4 !important;
+}
+
+.ant-notification-notice-description {
+  display: none !important; /* Hide description to keep it simple */
+}
+
+.ant-notification-notice-icon {
+  font-size: 16px !important;
+  margin-top: 2px !important;
+}
+
+.ant-notification-notice-close {
+  font-size: 12px !important;
+  top: 8px !important;
+  right: 8px !important;
+}
