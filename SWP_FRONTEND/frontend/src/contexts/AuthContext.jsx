@@ -1,4 +1,11 @@
-import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+} from "react";
 import axios from "axios";
 
 const AuthContext = createContext();
@@ -25,13 +32,13 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     localStorage.removeItem("loginTimestamp");
-    
+
     // Clear timeout if it exists
     if (logoutTimerRef.current) {
       clearTimeout(logoutTimerRef.current);
       logoutTimerRef.current = null;
     }
-    
+
     // Update state
     setUser(null);
   }, []);
@@ -42,7 +49,7 @@ export const AuthProvider = ({ children }) => {
     if (logoutTimerRef.current) {
       clearTimeout(logoutTimerRef.current);
     }
-    
+
     // Set new timer for 30 minutes
     logoutTimerRef.current = setTimeout(() => {
       console.log("Session timeout (30 minutes) - logging out");
@@ -50,71 +57,97 @@ export const AuthProvider = ({ children }) => {
     }, SESSION_TIMEOUT);
   }, [logout]);
 
+  // Initialize auth state from localStorage
   useEffect(() => {
-    // Check for stored authentication data on app start
-    const token = localStorage.getItem("token");
-    const userData = localStorage.getItem("user");
-    const loginTimestamp = localStorage.getItem("loginTimestamp");
-
-    if (token && userData) {
+    const initializeAuth = async () => {
       try {
-        const parsedUser = JSON.parse(userData);
-        
-        // Check if the session has already expired
-        if (loginTimestamp) {
-          const elapsed = Date.now() - parseInt(loginTimestamp, 10);
-          if (elapsed >= SESSION_TIMEOUT) {
-            // Session expired, clear data
-            console.log("Session expired on reload");
+        const token = localStorage.getItem("token");
+        const userData = localStorage.getItem("user");
+        const loginTimestamp = localStorage.getItem("loginTimestamp");
+
+        console.log("Initializing auth state...");
+        console.log("Token exists:", !!token);
+        console.log("User data exists:", !!userData);
+        console.log("Login timestamp:", loginTimestamp);
+
+        if (token && userData) {
+          // Check if token is expired
+          if (isTokenExpired(token)) {
+            console.log(
+              "Token is expired during initialization - clearing storage"
+            );
             localStorage.removeItem("token");
             localStorage.removeItem("user");
             localStorage.removeItem("loginTimestamp");
-          } else {
-            // Session still valid, restore user and start timer
-            setUser(parsedUser);
-            // Start timer with remaining time
-            const remainingTime = SESSION_TIMEOUT - elapsed;
-            logoutTimerRef.current = setTimeout(() => {
-              console.log("Session timeout (remaining time) - logging out");
-              logout();
-            }, remainingTime);
+            setLoading(false);
+            return;
           }
-        } else {
-          // No timestamp, treat as new login
+
+          // Parse user data
+          const parsedUser = JSON.parse(userData);
+          console.log("Restoring user session:", parsedUser);
+
+          // Restore user session
           setUser(parsedUser);
+
+          // Update timestamp to refresh session
           localStorage.setItem("loginTimestamp", Date.now().toString());
           startLogoutTimer();
+
+          console.log("Auth state restored successfully");
+        } else {
+          console.log("No valid session found");
         }
       } catch (error) {
-        console.error("Error parsing user data:", error);
+        console.error("Error initializing auth state:", error);
+        // Clear potentially corrupted data
         localStorage.removeItem("token");
         localStorage.removeItem("user");
         localStorage.removeItem("loginTimestamp");
-      }
-    }
-    setLoading(false);
-    
-    // Cleanup timer on unmount
-    return () => {
-      if (logoutTimerRef.current) {        clearTimeout(logoutTimerRef.current);
+      } finally {
+        setLoading(false);
       }
     };
-  }, [startLogoutTimer, logout]);  const login = (authResponse) => {
+
+    initializeAuth();
+
+    // Cleanup timer on unmount
+    return () => {
+      if (logoutTimerRef.current) {
+        clearTimeout(logoutTimerRef.current);
+      }
+    };
+  }, [startLogoutTimer]);
+
+  const login = (authResponse) => {
     console.log("Login called with:", authResponse);
     const { token, ...userInfo } = authResponse;
-    
-    // Lưu thông tin đăng nhập vào localStorage
+
+    // Validate required fields
+    if (!token) {
+      console.error("No token provided in login response");
+      throw new Error("Invalid login response - missing token");
+    }
+
+    // Check if token is valid
+    if (isTokenExpired(token)) {
+      console.error("Received expired token");
+      throw new Error("Received expired authentication token");
+    }
+
+    // Save authentication data to localStorage
     localStorage.setItem("token", token);
     localStorage.setItem("user", JSON.stringify(userInfo));
-    
-    // Lưu thời điểm đăng nhập
     localStorage.setItem("loginTimestamp", Date.now().toString());
-    
+
     // Update state
     setUser(userInfo);
     console.log("User set to:", userInfo);
-      // Start the logout timer (30 minutes)
+
+    // Start the logout timer (30 minutes)
     startLogoutTimer();
+
+    console.log("Login completed successfully");
   };
 
   const isParent = () => {
@@ -132,13 +165,13 @@ export const AuthProvider = ({ children }) => {
   // Function to check if token is expired
   const isTokenExpired = (token) => {
     if (!token) return true;
-    
+
     try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
+      const payload = JSON.parse(atob(token.split(".")[1]));
       const currentTime = Date.now() / 1000;
       return payload.exp < currentTime;
     } catch (error) {
-      console.error('Error parsing token:', error);
+      console.error("Error parsing token:", error);
       return true;
     }
   };
@@ -149,23 +182,23 @@ export const AuthProvider = ({ children }) => {
       return token;
     }
     return null;
-  };  // Function to refresh the session timer
+  }; // Function to refresh the session timer
   const refreshSession = useCallback(() => {
     try {
       const token = localStorage.getItem("token");
-      
+
       // If no token exists, return false immediately
       if (!token) {
         console.log("No token found during refresh - logging out");
         logout();
         return false;
       }
-      
+
       // Check if token is valid and not expired
       try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
+        const payload = JSON.parse(atob(token.split(".")[1]));
         const currentTime = Date.now() / 1000;
-        
+
         // If token is expired, logout and return false
         if (payload.exp < currentTime) {
           console.log("Token expired during refresh - logging out");
@@ -177,7 +210,7 @@ export const AuthProvider = ({ children }) => {
         logout();
         return false;
       }
-      
+
       // Token is valid, refresh the session timestamp
       console.log("Refreshing session timer");
       localStorage.setItem("loginTimestamp", Date.now().toString());
@@ -192,7 +225,7 @@ export const AuthProvider = ({ children }) => {
   // Set up axios interceptors for authentication
   useEffect(() => {
     console.log("Setting up axios interceptors");
-    
+
     // Request interceptor - Add token to all requests
     const requestInterceptor = axios.interceptors.request.use(
       (config) => {
@@ -200,7 +233,7 @@ export const AuthProvider = ({ children }) => {
         if (token) {
           // Add token to request headers
           config.headers.Authorization = `Bearer ${token}`;
-          
+
           // Always refresh session when making API calls
           refreshSession();
         }
@@ -210,7 +243,7 @@ export const AuthProvider = ({ children }) => {
         return Promise.reject(error);
       }
     );
-    
+
     // Response interceptor - Handle 401 errors
     const responseInterceptor = axios.interceptors.response.use(
       (response) => response,
@@ -223,7 +256,7 @@ export const AuthProvider = ({ children }) => {
         return Promise.reject(error);
       }
     );
-    
+
     // Clean up interceptors when component unmounts
     return () => {
       axios.interceptors.request.eject(requestInterceptor);
@@ -237,14 +270,18 @@ export const AuthProvider = ({ children }) => {
 
     // List of events to monitor for user activity
     const activityEvents = [
-      'mousedown', 'keydown', 'touchstart', 
-      'scroll', 'click', 'mousemove'
+      "mousedown",
+      "keydown",
+      "touchstart",
+      "scroll",
+      "click",
+      "mousemove",
     ];
-    
+
     // Throttle function to avoid refreshing too frequently
     let lastRefresh = Date.now();
     const THROTTLE_DELAY = 5 * 60 * 1000; // 5 minutes
-    
+
     const activityHandler = () => {
       const now = Date.now();
       if (now - lastRefresh > THROTTLE_DELAY) {
@@ -252,19 +289,20 @@ export const AuthProvider = ({ children }) => {
         lastRefresh = now;
       }
     };
-    
+
     // Add event listeners
-    activityEvents.forEach(event => {
+    activityEvents.forEach((event) => {
       window.addEventListener(event, activityHandler, { passive: true });
     });
-    
+
     // Cleanup
     return () => {
-      activityEvents.forEach(event => {
+      activityEvents.forEach((event) => {
         window.removeEventListener(event, activityHandler);
       });
     };
-  }, [user, refreshSession]);  const value = {
+  }, [user, refreshSession]);
+  const value = {
     user,
     login,
     logout,

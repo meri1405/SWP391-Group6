@@ -1,7 +1,6 @@
 package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.ParentDTO;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.StudentCreationDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.StudentDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.Student;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
@@ -11,10 +10,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -36,49 +33,6 @@ public class StudentService {
         return students.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
-    }
-
-    /**
-     * Create a new student with parent relationships (admin only)
-     * @param studentCreationDTO the student creation data
-     * @return the created student as DTO
-     * @throws IllegalArgumentException if validation fails
-     */
-    @Transactional
-    public StudentDTO createStudentByAdmin(StudentCreationDTO studentCreationDTO) {
-        // Validate required fields
-        validateStudentData(studentCreationDTO);
-
-        // Create student entity
-        Student student = new Student();
-        student.setFirstName(studentCreationDTO.getFirstName());
-        student.setLastName(studentCreationDTO.getLastName());
-        student.setDob(studentCreationDTO.getDob());
-        student.setGender(studentCreationDTO.getGender());
-        student.setClassName(studentCreationDTO.getClassName());
-        student.setBirthPlace(studentCreationDTO.getBirthPlace());
-        student.setAddress(studentCreationDTO.getAddress());
-        student.setCitizenship(studentCreationDTO.getCitizenship());
-        student.setBloodType(studentCreationDTO.getBloodType());
-        student.setDisabled(studentCreationDTO.isDisabled());
-
-        // Initialize parents set
-        student.setParents(new HashSet<>());
-
-        // Save student first
-        Student savedStudent = studentRepository.save(student);
-
-        // Add parent relationships if specified
-        if (studentCreationDTO.getParentIds() != null && !studentCreationDTO.getParentIds().isEmpty()) {
-            for (Long parentId : studentCreationDTO.getParentIds()) {
-                addParentToStudentInternal(savedStudent, parentId);
-            }
-            // Refresh student entity to get updated relationships
-            savedStudent = studentRepository.findByIdWithParents(savedStudent.getStudentID())
-                    .orElse(savedStudent);
-        }
-
-        return convertToDTO(savedStudent);
     }
 
     /**
@@ -128,24 +82,24 @@ public class StudentService {
     public void removeParentFromStudent(Long studentId, Long parentId) {
         Student student = studentRepository.findByIdWithParents(studentId)
                 .orElseThrow(() -> new IllegalArgumentException("Student not found with id: " + studentId));
-
+        
         User parent = userRepository.findById(parentId)
                 .orElseThrow(() -> new IllegalArgumentException("Parent not found with id: " + parentId));
-
-        // Verify parent has PARENT role
-        if (!"PARENT".equalsIgnoreCase(parent.getRole().getRoleName())) {
+        
+        // Check if parent has PARENT role
+        if (!parent.getRole().getRoleName().equals("PARENT")) {
             throw new IllegalArgumentException("User with id " + parentId + " is not a parent");
         }
-
+        
         // Check if relationship exists
         if (!student.getParents().contains(parent)) {
-            throw new IllegalArgumentException("Parent-child relationship does not exist");
+            throw new IllegalArgumentException("Parent is not associated with this student");
         }
-
-        // Remove relationship from both sides
+        
+        // Remove the relationship from both sides
         student.getParents().remove(parent);
         parent.getStudents().remove(student);
-
+        
         // Save both entities
         studentRepository.save(student);
         userRepository.save(parent);
@@ -155,10 +109,16 @@ public class StudentService {
      * Check if a student is owned by a specific parent
      * @param studentId the student ID
      * @param parentId the parent ID
-     * @return true if the parent-child relationship exists
+     * @return true if the parent has access to the student
      */
     public boolean isStudentOwnedByParent(Long studentId, Long parentId) {
-        return studentRepository.isStudentOwnedByParent(studentId, parentId);
+        Optional<Student> student = studentRepository.findByIdWithParents(studentId);
+        if (student.isEmpty()) {
+            return false;
+        }
+        
+        return student.get().getParents().stream()
+                .anyMatch(parent -> parent.getId().equals(parentId));
     }
 
     /**
@@ -169,70 +129,24 @@ public class StudentService {
     private void addParentToStudentInternal(Student student, Long parentId) {
         User parent = userRepository.findById(parentId)
                 .orElseThrow(() -> new IllegalArgumentException("Parent not found with id: " + parentId));
-
-        // Verify parent has PARENT role
-        if (!"PARENT".equalsIgnoreCase(parent.getRole().getRoleName())) {
+        
+        // Check if parent has PARENT role
+        if (!parent.getRole().getRoleName().equals("PARENT")) {
             throw new IllegalArgumentException("User with id " + parentId + " is not a parent");
         }
-
+        
         // Check if relationship already exists
         if (student.getParents().contains(parent)) {
-            throw new IllegalArgumentException("Parent-child relationship already exists");
+            throw new IllegalArgumentException("Parent is already associated with this student");
         }
-
-        // Add relationship to both sides
+        
+        // Add the relationship
         student.getParents().add(parent);
-        if (parent.getStudents() == null) {
-            parent.setStudents(new HashSet<>());
-        }
         parent.getStudents().add(student);
-
+        
         // Save both entities
         studentRepository.save(student);
         userRepository.save(parent);
-    }
-
-    /**
-     * Validate student creation data
-     * @param studentCreationDTO the student data to validate
-     * @throws IllegalArgumentException if validation fails
-     */
-    private void validateStudentData(StudentCreationDTO studentCreationDTO) {
-        if (studentCreationDTO.getFirstName() == null || studentCreationDTO.getFirstName().trim().isEmpty()) {
-            throw new IllegalArgumentException("First name is required");
-        }
-        
-        if (studentCreationDTO.getLastName() == null || studentCreationDTO.getLastName().trim().isEmpty()) {
-            throw new IllegalArgumentException("Last name is required");
-        }
-        
-        if (studentCreationDTO.getDob() == null) {
-            throw new IllegalArgumentException("Date of birth is required");
-        }
-        
-        if (studentCreationDTO.getGender() == null || studentCreationDTO.getGender().trim().isEmpty()) {
-            throw new IllegalArgumentException("Gender is required");
-        }
-        
-        if (studentCreationDTO.getClassName() == null || studentCreationDTO.getClassName().trim().isEmpty()) {
-            throw new IllegalArgumentException("Class name is required");
-        }
-        
-        if (studentCreationDTO.getBirthPlace() == null || studentCreationDTO.getBirthPlace().trim().isEmpty()) {
-            throw new IllegalArgumentException("Birth place is required");
-        }
-        
-        if (studentCreationDTO.getAddress() == null || studentCreationDTO.getAddress().trim().isEmpty()) {
-            throw new IllegalArgumentException("Address is required");
-        }
-        
-        if (studentCreationDTO.getCitizenship() == null || studentCreationDTO.getCitizenship().trim().isEmpty()) {
-            throw new IllegalArgumentException("Citizenship is required");
-        }
-        
-        if (studentCreationDTO.getBloodType() == null || studentCreationDTO.getBloodType().trim().isEmpty()) {
-            throw new IllegalArgumentException("Blood type is required");
-        }
     }
 
     /**
