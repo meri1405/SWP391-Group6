@@ -294,11 +294,9 @@ const HealthProfileDeclaration = () => {
       console.log('Submitting health profile data:', healthProfileData);
       const response = await parentApi.createHealthProfile(healthProfileData);
       console.log('Health profile created successfully:', response);
-      
-      message.success('Hồ sơ sức khỏe đã được tạo thành công!');
+        message.success('Hồ sơ sức khỏe đã được tạo thành công!');
       
       // Refresh health profiles to show updated data
-      const studentId = selectedStudent.id || selectedStudent.studentID;
       if (studentId) {
         await fetchHealthProfiles(studentId);
       }
