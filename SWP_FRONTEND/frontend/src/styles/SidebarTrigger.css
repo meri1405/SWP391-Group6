@@ -7,9 +7,9 @@
   display: none !important;
 }
 
-/* Admin sidebar custom trigger button */
+/* Admin sidebar custom trigger button - Updated position */
 .admin-sidebar .custom-sidebar-trigger {
-  width: 100%;
+  width: calc(100% - 16px);
   height: 40px;
   background: transparent;
   color: rgba(0, 0, 0, 0.88);
@@ -23,9 +23,13 @@
   font-size: 14px;
   font-weight: 500;
   gap: 12px;
-  margin: 4px 0;
+  margin: 8px 8px 16px 8px !important;
   padding: 0 28px;
-  position: relative;
+  position: relative !important;
+  /* Remove any absolute positioning */
+  bottom: auto !important;
+  left: auto !important;
+  transform: none !important;
 }
 
 .admin-sidebar .custom-sidebar-trigger:hover {
@@ -88,6 +92,21 @@
   margin: 4px 0;
   padding: 0 28px;
   position: relative;
+}
+
+/* Override for AdminDashboard - ensure trigger button flows naturally after menu */
+.admin-sidebar .custom-sidebar-trigger,
+.ant-layout-sider.admin-sidebar .custom-sidebar-trigger,
+.ant-layout-sider-light.admin-sidebar .custom-sidebar-trigger {
+  position: relative !important;
+  bottom: auto !important;
+  left: auto !important;
+  right: auto !important;
+  top: auto !important;
+  transform: none !important;
+  width: calc(100% - 16px) !important;
+  margin: 8px 8px 16px 8px !important;
+  float: none !important;
 }
 
 .custom-sidebar-trigger:hover {
@@ -180,4 +199,20 @@
   outline: none;
   background: transparent;
   color: rgba(0, 0, 0, 0.88);
+}
+
+/* FINAL OVERRIDE - Ensure AdminDashboard sidebar trigger is positioned correctly */
+.admin-sidebar div.custom-sidebar-trigger,
+[class*="admin-sidebar"] div.custom-sidebar-trigger,
+.ant-layout-sider.admin-sidebar div.custom-sidebar-trigger {
+  position: static !important;
+  bottom: auto !important;
+  left: auto !important;
+  right: auto !important;
+  top: auto !important;
+  transform: none !important;
+  float: none !important;
+  display: flex !important;
+  margin: 8px 8px 16px 8px !important;
+  width: calc(100% - 16px) !important;
 }

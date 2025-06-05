@@ -238,7 +238,7 @@ const UserManagement = ({
               ]
         }
         width={900}
-        destroyOnClose
+        destroyOnHidden
       >
         {modalMode === "view" ? (
           <Descriptions bordered column={2} size="middle">
@@ -1378,7 +1378,9 @@ const AdminDashboard = () => {
   }, [searchParams]);
 
   const getBreadcrumbItems = () => {
-    const currentItem = menuItems.find((item) => item.key === activeSection);
+    const currentItem = getMenuItems().find(
+      (item) => item.key === activeSection
+    );
     return [
       { title: "Dashboard" },
       { title: currentItem?.label || "Quản lý người dùng" },
@@ -1773,7 +1775,7 @@ const AdminDashboard = () => {
     }
   };
 
-  const menuItems = [
+  const getMenuItems = () => [
     {
       key: "users",
       icon: <TeamOutlined />,
@@ -1789,10 +1791,22 @@ const AdminDashboard = () => {
       icon: <SettingOutlined />,
       label: "Cài đặt",
     },
+    {
+      key: "toggle-sidebar",
+      icon: collapsed ? <RightOutlined /> : <LeftOutlined />,
+      label: "Thu gọn",
+    },
   ];
 
   const handleMenuClick = (e) => {
     const tabKey = e.key;
+
+    // Handle sidebar toggle separately
+    if (tabKey === "toggle-sidebar") {
+      setCollapsed(!collapsed);
+      return;
+    }
+
     setActiveSection(tabKey);
     navigate(`/admin/dashboard?tab=${tabKey}`);
   };
@@ -1866,30 +1880,9 @@ const AdminDashboard = () => {
           mode="inline"
           selectedKeys={[activeSection]}
           onClick={handleMenuClick}
-          items={menuItems}
+          items={getMenuItems()}
           style={{ border: "none", fontWeight: 500, fontSize: 16 }}
         />
-        {/* Custom Sidebar Trigger Button */}
-        <div
-          className="custom-sidebar-trigger"
-          onClick={() => setCollapsed(!collapsed)}
-          tabIndex={0}
-          role="button"
-          aria-label={collapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              setCollapsed(!collapsed);
-            }
-          }}
-        >
-          {collapsed ? (
-            <RightOutlined className="icon-right" />
-          ) : (
-            <LeftOutlined className="icon-left" />
-          )}
-          {!collapsed && <span className="trigger-text">Thu gọn</span>}
-        </div>
       </Sider>
       <Layout style={{ marginLeft: 0 }}>
         <Header

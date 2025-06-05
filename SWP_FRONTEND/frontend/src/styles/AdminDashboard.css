@@ -922,15 +922,15 @@
   min-width: 0;
 }
 
-/* Sidebar trigger positioning */
-.custom-sidebar-trigger {
-  position: absolute !important;
-  bottom: 20px !important;
-  left: 50% !important;
-  transform: translateX(-50%) !important;
+/* Sidebar trigger positioning - Updated to flow naturally after menu */
+.admin-sidebar .custom-sidebar-trigger {
+  position: relative !important;
+  bottom: auto !important;
+  left: auto !important;
+  transform: none !important;
   width: calc(100% - 16px) !important;
-  margin: 0 8px !important;
-  z-index: 10 !important;
+  margin: 8px 8px 16px 8px !important;
+  z-index: auto !important;
 }
 
 /* Responsive Design */
