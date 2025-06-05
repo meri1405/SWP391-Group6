@@ -28,7 +28,7 @@ public class Allergies {
     @Enumerated(EnumType.STRING)
     private AllergiesStatus status;
 
-    @Column(name = "onsetDate", nullable = false)
+    @Column(name = "onsetDate", nullable = true)
     private LocalDate onsetDate;
 
     @ManyToOne
