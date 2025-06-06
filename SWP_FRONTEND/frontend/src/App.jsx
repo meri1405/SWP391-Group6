@@ -62,7 +62,7 @@ function App() {
               path="/manager-dashboard"
               element={
                 <ProtectedRoute allowedRoles={["MANAGER"]}>
-                  <AdminDashboard />
+                  <ManagerDashboard />
                 </ProtectedRoute>
               }
             />

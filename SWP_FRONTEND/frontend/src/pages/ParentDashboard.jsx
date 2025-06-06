@@ -22,6 +22,7 @@ import MedicationManagement from '../components/dashboard/MedicationManagement';
 import VaccinationSchedule from '../components/dashboard/VaccinationSchedule';
 import Profile from '../components/dashboard/Profile';
 import HealthProfileDeclaration from '../components/dashboard/HealthProfileDeclaration';
+import ApprovedHealthProfile from '../components/dashboard/ApprovedHealthProfile';
 
 const { Header, Sider, Content } = Layout;
 
@@ -51,11 +52,6 @@ const ParentDashboard = () => {
       key: 'health-history',
       icon: <FileTextOutlined />,
       label: 'Tiền sử sức khỏe',
-    },
-    {
-      key: 'physical-mental',
-      icon: <HeartOutlined />,
-      label: 'Thể lực và tinh thần',
     },
     {
       key: 'medication',
@@ -157,8 +153,7 @@ const ParentDashboard = () => {
       case 'health-profile-declaration':
         return <HealthProfileDeclaration />;
       case 'health-history':
-        return <HealthHistory />;case 'physical-mental':
-        return <PhysicalMental />;
+        return <ApprovedHealthProfile userInfo={userInfo} />;
       case 'medication':
         return <MedicationManagement userInfo={userInfo} />;
       case 'vaccination':

@@ -90,15 +90,16 @@ public class User implements UserDetails, OAuth2User {
 
     @OneToMany(mappedBy = "nurse", cascade = CascadeType.ALL)
     @JsonIgnore  // Prevent circular reference during JSON serialization
-    private List<MedicationRequest> nurseMedicationRequests;
-
-    @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL)
+    private List<MedicationRequest> nurseMedicationRequests;    @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL)
+    @JsonIgnore  // Prevent circular reference during JSON serialization
     private List<MedicationRequest> parentMedicationRequests;
 
     @OneToMany(mappedBy = "nurse", cascade = CascadeType.ALL)
+    @JsonIgnore  // Prevent circular reference during JSON serialization
     private List<HealthProfile> healthProfilesNurse;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL)
+    @JsonIgnore  // Prevent circular reference during JSON serialization
     private List<HealthProfile> healthProfilesParent;
     
     @Transient

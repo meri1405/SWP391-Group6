@@ -12,6 +12,7 @@ import {
 } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { parentApi } from '../../api/parentApi';
+import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -184,7 +185,7 @@ const Overview = ({ userInfo: externalUserInfo }) => {
                   <Text type="secondary" style={{ fontSize: 12, marginTop: 4 }}>
                     {selectedStudent.gender=== 'M' ? 'Nam' : 'Nữ'}
                     <br />
-                    {selectedStudent.dob}
+                    {dayjs(selectedStudent.dob).format('DD/MM/YYYY')}
                   </Text>
                 )}
               </Card>
@@ -291,7 +292,7 @@ const Overview = ({ userInfo: externalUserInfo }) => {
                 <Col span={12}>
                   <Text type="secondary">Ngày sinh:</Text>
                   <br />
-                  <Text>{selectedStudent.dob}</Text>
+                  <Text>{dayjs(selectedStudent.dob).format('DD/MM/YYYY')}</Text>
                 </Col>
                 <Col span={12}>
                   <Text type="secondary">Giới tính:</Text>
@@ -341,7 +342,7 @@ const Overview = ({ userInfo: externalUserInfo }) => {
                   <Col span={12}>
                     <Text type="secondary">Ngày sinh:</Text>
                     <br />
-                    <Text>{parentProfile.dateOfBirth || 'Chưa cập nhật'}</Text>
+                    <Text>{dayjs(parentProfile.dateOfBirth).format('DD/MM/YYYY') || 'Chưa cập nhật'}</Text>
                   </Col>
                   <Col span={24}>
                     <Text type="secondary">Địa chỉ:</Text>

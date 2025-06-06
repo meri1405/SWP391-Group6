@@ -5,14 +5,14 @@ import io.jsonwebtoken.security.Keys;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import java.security.Key;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
 @Component
@@ -82,17 +82,25 @@ public class JwtUtil {
                 .setExpiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
-    }
-
-    // Validate token
+    }    // Validate token
     public Boolean validateToken(String token, UserDetails userDetails) {
+        // Check if token is blacklisted
+        if (blacklistedTokens.contains(token)) {
+            logger.warn("JWT token is blacklisted");
+            return false;
+        }
+        
         final String username = extractUsername(token);
         return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
-    }
-
-    // Validate token without UserDetails
+    }// Validate token without UserDetails
     public boolean validateToken(String token) {
         try {
+            // Check if token is blacklisted
+            if (blacklistedTokens.contains(token)) {
+                logger.warn("JWT token is blacklisted");
+                return false;
+            }
+
             Jwts.parserBuilder().setSigningKey(getSigningKey()).build().parseClaimsJws(token);
 
             // If parsing succeeds, also check if the token has expired
@@ -116,5 +124,39 @@ public class JwtUtil {
             logger.error("JWT validation error: {}", e.getMessage());
         }
         return false;
+    }
+
+    // Add a set to store invalidated tokens
+    private final Set<String> blacklistedTokens = Collections.newSetFromMap(new ConcurrentHashMap<>());
+
+    /**
+     * Invalidate a token by adding it to the blacklist
+     *
+     * @param token The token to invalidate
+     */
+    public void invalidateToken(String token) {
+        blacklistedTokens.add(token);
+    }
+
+    /**
+     * Clean up expired tokens from the blacklist
+     * This method should be scheduled to run periodically
+     */
+    @Scheduled(fixedRate = 3600000) // Run every hour
+    public void cleanupExpiredTokens() {
+        Iterator<String> iterator = blacklistedTokens.iterator();
+        while (iterator.hasNext()) {
+            String token = iterator.next();
+            try {
+                Claims claims = Jwts.parser().setSigningKey(jwtSecret).parseClaimsJws(token).getBody();
+                Date expiration = claims.getExpiration();
+                if (expiration.before(new Date())) {
+                    iterator.remove();
+                }
+            } catch (Exception e) {
+                // If we can't parse the token, it's invalid, so remove it
+                iterator.remove();
+            }
+        }
     }
 }

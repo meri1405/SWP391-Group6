@@ -62,4 +62,14 @@ public class AuthController {
         AuthResponse authResponse = authService.processOAuth2Login(authentication);
         return ResponseEntity.ok(authResponse);
     }
+
+    /**
+     * Logout user by invalidating token
+     * Token expiration time is set to 30 minutes
+     */
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(@RequestHeader("Authorization") String token) {
+        authService.logout(token);
+        return ResponseEntity.ok(new MessageResponse("Logged out successfully"));
+    }
 }
