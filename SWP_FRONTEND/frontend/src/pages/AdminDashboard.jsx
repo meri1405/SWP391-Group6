@@ -53,6 +53,95 @@ import {
 
 const { Header, Sider, Content } = Layout;
 
+// Validation helper functions
+const validateVietnamesePhoneNumber = (phone) => {
+  const phoneRegex = /^(0[3|5|7|8|9])[0-9]{8}$/;
+  return phoneRegex.test(phone);
+};
+
+const validateVietnameseName = (name) => {
+  const nameRegex = /^[a-zA-ZÀ-ỹ\s]+$/;
+  return nameRegex.test(name) && name.trim() === name && !/\s{2,}/.test(name);
+};
+
+const validateEmail = (email) => {
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  return emailRegex.test(email) && !email.includes(" ");
+};
+
+const validateUsername = (username) => {
+  const usernameRegex = /^[a-zA-Z][a-zA-Z0-9_]*$/;
+  return (
+    usernameRegex.test(username) &&
+    username.length >= 3 &&
+    username.length <= 30
+  );
+};
+
+const validatePassword = (password) => {
+  const hasLower = /[a-z]/.test(password);
+  const hasUpper = /[A-Z]/.test(password);
+  const hasNumber = /\d/.test(password);
+  const hasSpecial = /[@$!%*?&]/.test(password);
+  const hasValidLength = password.length >= 8 && password.length <= 50;
+  const noSpaces = !password.includes(" ");
+
+  return (
+    hasLower &&
+    hasUpper &&
+    hasNumber &&
+    hasSpecial &&
+    hasValidLength &&
+    noSpaces
+  );
+};
+
+// Helper function to check password strength
+const getPasswordStrength = (password) => {
+  if (!password) return { score: 0, text: "", color: "" };
+
+  let score = 0;
+  let feedback = [];
+
+  // Length check
+  if (password.length >= 8) score += 1;
+  else feedback.push("ít nhất 8 ký tự");
+
+  // Lowercase check
+  if (/[a-z]/.test(password)) score += 1;
+  else feedback.push("chữ thường");
+
+  // Uppercase check
+  if (/[A-Z]/.test(password)) score += 1;
+  else feedback.push("chữ hoa");
+
+  // Number check
+  if (/\d/.test(password)) score += 1;
+  else feedback.push("số");
+
+  // Special character check
+  if (/[@$!%*?&]/.test(password)) score += 1;
+  else feedback.push("ký tự đặc biệt");
+
+  const strengthLevels = [
+    { text: "Rất yếu", color: "#ff4d4f" },
+    { text: "Yếu", color: "#ff7a45" },
+    { text: "Trung bình", color: "#ffa940" },
+    { text: "Khá", color: "#52c41a" },
+    { text: "Mạnh", color: "#389e0d" },
+  ];
+
+  return {
+    score,
+    text: strengthLevels[score] ? strengthLevels[score].text : "Rất yếu",
+    color: strengthLevels[score] ? strengthLevels[score].color : "#ff4d4f",
+    feedback:
+      feedback.length > 0
+        ? `Cần thêm: ${feedback.join(", ")}`
+        : "Mật khẩu mạnh!",
+  };
+};
+
 // User Management Component - moved outside main component
 const UserManagement = ({
   filteredUsers,
@@ -71,7 +160,9 @@ const UserManagement = ({
   handleSaveUser,
   userFormInstance,
   handleRoleChange,
+  loading,
 }) => {
+  const [currentPassword, setCurrentPassword] = useState("");
   return (
     <div className="user-management">
       <div className="section-header">
@@ -210,7 +301,10 @@ const UserManagement = ({
             : "Chỉnh sửa người dùng"
         }
         open={showUserModal}
-        onCancel={() => setShowUserModal(false)}
+        onCancel={() => {
+          setShowUserModal(false);
+          setCurrentPassword("");
+        }}
         footer={
           modalMode === "view"
             ? [
@@ -232,6 +326,7 @@ const UserManagement = ({
                   key="form-submit"
                   type="primary"
                   onClick={handleSaveUser}
+                  loading={loading}
                 >
                   {modalMode === "add" ? "Thêm" : "Cập nhật"}
                 </Button>,
@@ -337,281 +432,650 @@ const UserManagement = ({
             </Descriptions.Item>
           </Descriptions>
         ) : (
-          <Form
-            form={userFormInstance}
-            layout="vertical"
-            initialValues={{
-              role: "PARENT",
-              username: "",
-              password: "",
-              email: "",
-              jobTitle: "",
-              firstName: "",
-              lastName: "",
-              phone: "",
-              address: "",
-              gender: "",
-              dob: null,
-            }}
-          >
+          <div>
+            {/* Validation Guidelines */}
             <div
               style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: "16px",
+                marginBottom: "24px",
+                padding: "16px",
+                backgroundColor: "#f6ffed",
+                border: "1px solid #b7eb8f",
+                borderRadius: "8px",
               }}
             >
-              <Form.Item
-                label="Họ"
-                name="lastName"
-                rules={[
-                  { required: true, message: "Vui lòng nhập họ!" },
-                  { min: 2, message: "Họ phải có ít nhất 2 ký tự!" },
-                ]}
-              >
-                <Input placeholder="Nhập họ" />
-              </Form.Item>
-              <Form.Item
-                label="Tên"
-                name="firstName"
-                rules={[
-                  { required: true, message: "Vui lòng nhập tên!" },
-                  { min: 2, message: "Tên phải có ít nhất 2 ký tự!" },
-                ]}
-              >
-                <Input placeholder="Nhập tên" />
-              </Form.Item>
-              {/* Phone field - required for all remaining roles */}
-              <Form.Item
-                label="Số điện thoại"
-                name="phone"
-                rules={[
-                  {
-                    required: true,
-                    message: "Vui lòng nhập số điện thoại!",
-                  },
-                  {
-                    pattern: /^\d{10}$/,
-                    message: "Số điện thoại phải có 10 chữ số!",
-                  },
-                ]}
-              >
-                <Input placeholder="Nhập số điện thoại" />
-              </Form.Item>
-              <Form.Item
-                label="Ngày sinh"
-                name="dob"
-                rules={[
-                  { required: true, message: "Vui lòng chọn ngày sinh!" },
-                ]}
-              >
-                <DatePicker
-                  style={{ width: "100%" }}
-                  placeholder="Chọn ngày sinh"
-                  format="DD/MM/YYYY"
-                />
-              </Form.Item>
-              <Form.Item
-                label="Giới tính"
-                name="gender"
-                rules={[
-                  { required: true, message: "Vui lòng chọn giới tính!" },
-                ]}
-              >
-                <Select placeholder="Chọn giới tính">
-                  <Select.Option key="M" value="M">
-                    Nam
-                  </Select.Option>
-                  <Select.Option key="F" value="F">
-                    Nữ
-                  </Select.Option>
-                </Select>
-              </Form.Item>
-              {/* Conditional job title field - show for parent role */}
-              <Form.Item
-                noStyle
-                shouldUpdate={(prevValues, currentValues) =>
-                  prevValues.role !== currentValues.role
-                }
-              >
-                {({ getFieldValue }) => {
-                  const selectedRole = getFieldValue("role");
-                  const shouldShow = selectedRole === "PARENT";
+              <h4 style={{ margin: "0 0 12px 0", color: "#389e0d" }}>
+                📋 Hướng dẫn nhập thông tin
+              </h4>
+              <div style={{ fontSize: "13px", color: "#52c41a" }}>
+                <div style={{ marginBottom: "8px" }}>
+                  <strong>Thông tin bắt buộc cho tất cả vai trò:</strong>
+                  <ul style={{ margin: "4px 0", paddingLeft: "20px" }}>
+                    <li>Họ và tên: 2-50 ký tự, chỉ chữ cái tiếng Việt</li>
+                    <li>
+                      Số điện thoại: 10 số, bắt đầu bằng 03, 05, 07, 08, 09
+                    </li>
+                    <li>Ngày sinh: Tuổi từ 16-100</li>
+                    <li>Địa chỉ: 10-200 ký tự</li>
+                  </ul>
+                </div>
+                <div>
+                  <strong>Thông tin bổ sung theo vai trò:</strong>
+                  <ul style={{ margin: "4px 0", paddingLeft: "20px" }}>
+                    <li>
+                      <strong>Phụ huynh:</strong> Nghề nghiệp (2-100 ký tự)
+                    </li>
+                    <li>
+                      <strong>Y tá/Quản lý/Admin:</strong> Email, tên đăng nhập
+                      (3-30 ký tự), mật khẩu mạnh (8+ ký tự)
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
 
-                  return shouldShow ? (
-                    <Form.Item
-                      label="Nghề nghiệp"
-                      name="jobTitle"
-                      rules={[
-                        {
-                          required: true,
-                          message: "Vui lòng nhập nghề nghiệp!",
-                        },
-                      ]}
-                    >
-                      <Input placeholder="Nhập nghề nghiệp" />
-                    </Form.Item>
-                  ) : null;
+            <Form
+              form={userFormInstance}
+              layout="vertical"
+              initialValues={{
+                role: "PARENT",
+                username: "",
+                password: "",
+                email: "",
+                jobTitle: "",
+                firstName: "",
+                lastName: "",
+                phone: "",
+                address: "",
+                gender: "",
+                dob: null,
+              }}
+            >
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "16px",
                 }}
-              </Form.Item>
-              {/* Conditional email field - only show for nurse, manager and admin roles */}
-              <Form.Item
-                noStyle
-                shouldUpdate={(prevValues, currentValues) =>
-                  prevValues.role !== currentValues.role
-                }
               >
-                {({ getFieldValue }) => {
-                  const selectedRole = getFieldValue("role");
-                  return selectedRole === "SCHOOLNURSE" ||
-                    selectedRole === "MANAGER" ||
-                    selectedRole === "ADMIN" ? (
-                    <Form.Item
-                      label="Email"
-                      name="email"
-                      rules={[
-                        { required: true, message: "Vui lòng nhập email!" },
-                        { type: "email", message: "Email không hợp lệ!" },
-                      ]}
-                    >
-                      <Input placeholder="Nhập email" />
-                    </Form.Item>
-                  ) : null;
-                }}
-              </Form.Item>
-
-              {/* Conditional username field - only show for nurse, manager and admin roles */}
-              <Form.Item
-                noStyle
-                shouldUpdate={(prevValues, currentValues) =>
-                  prevValues.role !== currentValues.role
-                }
-              >
-                {({ getFieldValue }) => {
-                  const selectedRole = getFieldValue("role");
-                  return selectedRole === "SCHOOLNURSE" ||
-                    selectedRole === "MANAGER" ||
-                    selectedRole === "ADMIN" ? (
-                    <Form.Item
-                      label="Tên đăng nhập"
-                      name="username"
-                      rules={[
-                        {
-                          required: true,
-                          message: "Vui lòng nhập tên đăng nhập!",
-                        },
-                        {
-                          min: 3,
-                          message: "Tên đăng nhập phải có ít nhất 3 ký tự!",
-                        },
-                      ]}
-                    >
-                      <Input placeholder="Nhập tên đăng nhập" />
-                    </Form.Item>
-                  ) : null;
-                }}
-              </Form.Item>
-
-              {/* Conditional password field - only show for nurse, manager and admin roles */}
-              <Form.Item
-                noStyle
-                shouldUpdate={(prevValues, currentValues) =>
-                  prevValues.role !== currentValues.role
-                }
-              >
-                {({ getFieldValue }) => {
-                  const selectedRole = getFieldValue("role");
-                  return selectedRole === "SCHOOLNURSE" ||
-                    selectedRole === "MANAGER" ||
-                    selectedRole === "ADMIN" ? (
-                    <Form.Item
-                      label={
-                        modalMode === "edit"
-                          ? "Mật khẩu mới (để trống nếu không đổi)"
-                          : "Mật khẩu"
-                      }
-                      name="password"
-                      rules={[
-                        {
-                          required: modalMode === "add",
-                          message: "Vui lòng nhập mật khẩu!",
-                        },
-                        {
-                          min: 6,
-                          message: "Mật khẩu phải có ít nhất 6 ký tự!",
-                        },
-                      ]}
-                    >
-                      <Input.Password
-                        placeholder={
-                          modalMode === "edit"
-                            ? "Để trống nếu không đổi mật khẩu"
-                            : "Nhập mật khẩu"
+                <Form.Item
+                  label="Họ"
+                  name="lastName"
+                  rules={[
+                    { required: true, message: "Vui lòng nhập họ!" },
+                    { min: 2, message: "Họ phải có ít nhất 2 ký tự!" },
+                    { max: 50, message: "Họ không được quá 50 ký tự!" },
+                    {
+                      pattern: /^[a-zA-ZÀ-ỹ\s]+$/,
+                      message: "Họ chỉ được chứa chữ cái và khoảng trắng!",
+                    },
+                    {
+                      validator: (_, value) => {
+                        if (value && value.trim() !== value) {
+                          return Promise.reject(
+                            new Error(
+                              "Không được có khoảng trắng thừa ở đầu hoặc cuối!"
+                            )
+                          );
                         }
-                      />
-                    </Form.Item>
-                  ) : null;
-                }}
-              </Form.Item>
-              <Form.Item
-                label="Vai trò"
-                name="role"
-                rules={[{ required: true, message: "Vui lòng chọn vai trò!" }]}
-              >
-                <Select
-                  placeholder="Chọn vai trò"
-                  onChange={(value) =>
-                    handleRoleChange(value, userFormInstance)
+                        if (value && /\s{2,}/.test(value)) {
+                          return Promise.reject(
+                            new Error(
+                              "Không được có nhiều khoảng trắng liên tiếp!"
+                            )
+                          );
+                        }
+                        return Promise.resolve();
+                      },
+                    },
+                  ]}
+                >
+                  <Input placeholder="Nhập họ" />
+                </Form.Item>
+                <Form.Item
+                  label="Tên"
+                  name="firstName"
+                  rules={[
+                    { required: true, message: "Vui lòng nhập tên!" },
+                    { min: 2, message: "Tên phải có ít nhất 2 ký tự!" },
+                    { max: 50, message: "Tên không được quá 50 ký tự!" },
+                    {
+                      pattern: /^[a-zA-ZÀ-ỹ\s]+$/,
+                      message: "Tên chỉ được chứa chữ cái và khoảng trắng!",
+                    },
+                    {
+                      validator: (_, value) => {
+                        if (value && value.trim() !== value) {
+                          return Promise.reject(
+                            new Error(
+                              "Không được có khoảng trắng thừa ở đầu hoặc cuối!"
+                            )
+                          );
+                        }
+                        if (value && /\s{2,}/.test(value)) {
+                          return Promise.reject(
+                            new Error(
+                              "Không được có nhiều khoảng trắng liên tiếp!"
+                            )
+                          );
+                        }
+                        return Promise.resolve();
+                      },
+                    },
+                  ]}
+                >
+                  <Input placeholder="Nhập tên" />
+                </Form.Item>
+                {/* Phone field - required for all remaining roles */}
+                <Form.Item
+                  label="Số điện thoại"
+                  name="phone"
+                  rules={[
+                    {
+                      required: true,
+                      message: "Vui lòng nhập số điện thoại!",
+                    },
+                    {
+                      pattern: /^(0[3|5|7|8|9])[0-9]{8}$/,
+                      message:
+                        "Số điện thoại không hợp lệ! (Ví dụ: 0901234567)",
+                    },
+                    {
+                      validator: (_, value) => {
+                        if (value && value.length !== 10) {
+                          return Promise.reject(
+                            new Error("Số điện thoại phải có đúng 10 chữ số!")
+                          );
+                        }
+                        return Promise.resolve();
+                      },
+                    },
+                  ]}
+                >
+                  <Input
+                    placeholder="Nhập số điện thoại (VD: 0901234567)"
+                    maxLength={10}
+                    onKeyPress={(e) => {
+                      // Only allow numbers
+                      if (!/[0-9]/.test(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
+                  />
+                </Form.Item>
+                <Form.Item
+                  label="Ngày sinh"
+                  name="dob"
+                  rules={[
+                    { required: true, message: "Vui lòng chọn ngày sinh!" },
+                    {
+                      validator: (_, value) => {
+                        if (!value) return Promise.resolve();
+
+                        const today = new Date();
+                        const birthDate = new Date(value);
+                        let age = today.getFullYear() - birthDate.getFullYear();
+                        const monthDiff =
+                          today.getMonth() - birthDate.getMonth();
+
+                        if (
+                          monthDiff < 0 ||
+                          (monthDiff === 0 &&
+                            today.getDate() < birthDate.getDate())
+                        ) {
+                          age--;
+                        }
+
+                        if (birthDate > today) {
+                          return Promise.reject(
+                            new Error(
+                              "Ngày sinh không thể lớn hơn ngày hiện tại!"
+                            )
+                          );
+                        }
+
+                        if (age < 16) {
+                          return Promise.reject(
+                            new Error("Tuổi phải từ 16 trở lên!")
+                          );
+                        }
+
+                        if (age > 100) {
+                          return Promise.reject(
+                            new Error("Tuổi không thể lớn hơn 100!")
+                          );
+                        }
+
+                        return Promise.resolve();
+                      },
+                    },
+                  ]}
+                >
+                  <DatePicker
+                    style={{ width: "100%" }}
+                    placeholder="Chọn ngày sinh"
+                    format="DD/MM/YYYY"
+                    disabledDate={(current) => {
+                      // Disable future dates and dates more than 100 years ago
+                      return (
+                        current &&
+                        (current > new Date() ||
+                          current <
+                            new Date().setFullYear(
+                              new Date().getFullYear() - 100
+                            ))
+                      );
+                    }}
+                  />
+                </Form.Item>
+                <Form.Item
+                  label="Giới tính"
+                  name="gender"
+                  rules={[
+                    { required: true, message: "Vui lòng chọn giới tính!" },
+                  ]}
+                >
+                  <Select placeholder="Chọn giới tính">
+                    <Select.Option key="M" value="M">
+                      Nam
+                    </Select.Option>
+                    <Select.Option key="F" value="F">
+                      Nữ
+                    </Select.Option>
+                  </Select>
+                </Form.Item>
+                {/* Conditional job title field - show for parent role */}
+                <Form.Item
+                  noStyle
+                  shouldUpdate={(prevValues, currentValues) =>
+                    prevValues.role !== currentValues.role
                   }
                 >
-                  <Select.Option key="PARENT" value="PARENT">
-                    Phụ huynh
-                  </Select.Option>
-                  <Select.Option key="SCHOOLNURSE" value="SCHOOLNURSE">
-                    Y tá
-                  </Select.Option>
-                  <Select.Option key="MANAGER" value="MANAGER">
-                    Quản lý
-                  </Select.Option>
-                  <Select.Option key="ADMIN" value="ADMIN">
-                    Quản trị viên
-                  </Select.Option>
-                </Select>
-              </Form.Item>
-              {/* Status field - required for all roles */}
+                  {({ getFieldValue }) => {
+                    const selectedRole = getFieldValue("role");
+                    const shouldShow = selectedRole === "PARENT";
+
+                    return shouldShow ? (
+                      <Form.Item
+                        label="Nghề nghiệp"
+                        name="jobTitle"
+                        rules={[
+                          {
+                            required: true,
+                            message: "Vui lòng nhập nghề nghiệp!",
+                          },
+                          {
+                            min: 2,
+                            message: "Nghề nghiệp phải có ít nhất 2 ký tự!",
+                          },
+                          {
+                            max: 100,
+                            message: "Nghề nghiệp không được quá 100 ký tự!",
+                          },
+                          {
+                            pattern: /^[a-zA-ZÀ-ỹ0-9\s.,/-]+$/,
+                            message:
+                              "Nghề nghiệp chỉ được chứa chữ cái, số và các ký tự . , / -",
+                          },
+                          {
+                            validator: (_, value) => {
+                              if (value && value.trim() !== value) {
+                                return Promise.reject(
+                                  new Error(
+                                    "Không được có khoảng trắng thừa ở đầu hoặc cuối!"
+                                  )
+                                );
+                              }
+                              return Promise.resolve();
+                            },
+                          },
+                        ]}
+                      >
+                        <Input placeholder="Nhập nghề nghiệp (VD: Kỹ sư, Giáo viên)" />
+                      </Form.Item>
+                    ) : null;
+                  }}
+                </Form.Item>
+                {/* Conditional email field - only show for nurse, manager and admin roles */}
+                <Form.Item
+                  noStyle
+                  shouldUpdate={(prevValues, currentValues) =>
+                    prevValues.role !== currentValues.role
+                  }
+                >
+                  {({ getFieldValue }) => {
+                    const selectedRole = getFieldValue("role");
+                    return selectedRole === "SCHOOLNURSE" ||
+                      selectedRole === "MANAGER" ||
+                      selectedRole === "ADMIN" ? (
+                      <Form.Item
+                        label="Email"
+                        name="email"
+                        rules={[
+                          { required: true, message: "Vui lòng nhập email!" },
+                          { type: "email", message: "Email không hợp lệ!" },
+                          {
+                            max: 100,
+                            message: "Email không được quá 100 ký tự!",
+                          },
+                          {
+                            pattern:
+                              /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+                            message: "Định dạng email không hợp lệ!",
+                          },
+                          {
+                            validator: (_, value) => {
+                              if (value && value.trim() !== value) {
+                                return Promise.reject(
+                                  new Error(
+                                    "Email không được có khoảng trắng ở đầu hoặc cuối!"
+                                  )
+                                );
+                              }
+                              if (value && value.includes(" ")) {
+                                return Promise.reject(
+                                  new Error(
+                                    "Email không được chứa khoảng trắng!"
+                                  )
+                                );
+                              }
+                              return Promise.resolve();
+                            },
+                          },
+                        ]}
+                      >
+                        <Input placeholder="Nhập email (VD: example@gmail.com)" />
+                      </Form.Item>
+                    ) : null;
+                  }}
+                </Form.Item>
+
+                {/* Conditional username field - only show for nurse, manager and admin roles */}
+                <Form.Item
+                  noStyle
+                  shouldUpdate={(prevValues, currentValues) =>
+                    prevValues.role !== currentValues.role
+                  }
+                >
+                  {({ getFieldValue }) => {
+                    const selectedRole = getFieldValue("role");
+                    return selectedRole === "SCHOOLNURSE" ||
+                      selectedRole === "MANAGER" ||
+                      selectedRole === "ADMIN" ? (
+                      <Form.Item
+                        label="Tên đăng nhập"
+                        name="username"
+                        rules={[
+                          {
+                            required: true,
+                            message: "Vui lòng nhập tên đăng nhập!",
+                          },
+                          {
+                            min: 3,
+                            message: "Tên đăng nhập phải có ít nhất 3 ký tự!",
+                          },
+                          {
+                            max: 30,
+                            message: "Tên đăng nhập không được quá 30 ký tự!",
+                          },
+                          {
+                            pattern: /^[a-zA-Z0-9_]+$/,
+                            message:
+                              "Tên đăng nhập chỉ được chứa chữ cái, số và dấu gạch dưới!",
+                          },
+                          {
+                            pattern: /^[a-zA-Z]/,
+                            message: "Tên đăng nhập phải bắt đầu bằng chữ cái!",
+                          },
+                          {
+                            validator: (_, value) => {
+                              if (value && value.includes(" ")) {
+                                return Promise.reject(
+                                  new Error(
+                                    "Tên đăng nhập không được chứa khoảng trắng!"
+                                  )
+                                );
+                              }
+                              if (value && /^[0-9]/.test(value)) {
+                                return Promise.reject(
+                                  new Error(
+                                    "Tên đăng nhập không được bắt đầu bằng số!"
+                                  )
+                                );
+                              }
+                              return Promise.resolve();
+                            },
+                          },
+                        ]}
+                      >
+                        <Input placeholder="Nhập tên đăng nhập (VD: user123)" />
+                      </Form.Item>
+                    ) : null;
+                  }}
+                </Form.Item>
+
+                {/* Conditional password field - only show for nurse, manager and admin roles */}
+                <Form.Item
+                  noStyle
+                  shouldUpdate={(prevValues, currentValues) =>
+                    prevValues.role !== currentValues.role
+                  }
+                >
+                  {({ getFieldValue }) => {
+                    const selectedRole = getFieldValue("role");
+                    return selectedRole === "SCHOOLNURSE" ||
+                      selectedRole === "MANAGER" ||
+                      selectedRole === "ADMIN" ? (
+                      <Form.Item
+                        label={
+                          modalMode === "edit"
+                            ? "Mật khẩu mới (để trống nếu không đổi)"
+                            : "Mật khẩu"
+                        }
+                        name="password"
+                        rules={[
+                          {
+                            required: modalMode === "add",
+                            message: "Vui lòng nhập mật khẩu!",
+                          },
+                          {
+                            min: 8,
+                            message: "Mật khẩu phải có ít nhất 8 ký tự!",
+                          },
+                          {
+                            max: 50,
+                            message: "Mật khẩu không được quá 50 ký tự!",
+                          },
+                          {
+                            pattern:
+                              /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
+                            message:
+                              "Mật khẩu phải chứa ít nhất 1 chữ thường, 1 chữ hoa, 1 số và 1 ký tự đặc biệt!",
+                          },
+                          {
+                            validator: (_, value) => {
+                              if (value && value.includes(" ")) {
+                                return Promise.reject(
+                                  new Error(
+                                    "Mật khẩu không được chứa khoảng trắng!"
+                                  )
+                                );
+                              }
+                              if (value && value.trim() !== value) {
+                                return Promise.reject(
+                                  new Error(
+                                    "Mật khẩu không được có khoảng trắng ở đầu hoặc cuối!"
+                                  )
+                                );
+                              }
+                              return Promise.resolve();
+                            },
+                          },
+                        ]}
+                        hasFeedback
+                      >
+                        <div>
+                          <Input.Password
+                            placeholder={
+                              modalMode === "edit"
+                                ? "Để trống nếu không đổi mật khẩu"
+                                : "Nhập mật khẩu (8+ ký tự, bao gồm chữ hoa, thường, số, ký tự đặc biệt)"
+                            }
+                            onChange={(e) => setCurrentPassword(e.target.value)}
+                          />
+                          {currentPassword && modalMode === "add" && (
+                            <div style={{ marginTop: "8px" }}>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "8px",
+                                  fontSize: "12px",
+                                }}
+                              >
+                                <span>Độ mạnh:</span>
+                                <span
+                                  style={{
+                                    color:
+                                      getPasswordStrength(currentPassword)
+                                        .color,
+                                    fontWeight: "bold",
+                                  }}
+                                >
+                                  {getPasswordStrength(currentPassword).text}
+                                </span>
+                              </div>
+                              <div
+                                style={{
+                                  width: "100%",
+                                  height: "4px",
+                                  backgroundColor: "#f0f0f0",
+                                  borderRadius: "2px",
+                                  marginTop: "4px",
+                                  overflow: "hidden",
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    width: `${
+                                      (getPasswordStrength(currentPassword)
+                                        .score /
+                                        5) *
+                                      100
+                                    }%`,
+                                    height: "100%",
+                                    backgroundColor:
+                                      getPasswordStrength(currentPassword)
+                                        .color,
+                                    transition: "all 0.3s ease",
+                                  }}
+                                />
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: "11px",
+                                  color: "#666",
+                                  marginTop: "4px",
+                                }}
+                              >
+                                {getPasswordStrength(currentPassword).feedback}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </Form.Item>
+                    ) : null;
+                  }}
+                </Form.Item>
+                <Form.Item
+                  label="Vai trò"
+                  name="role"
+                  rules={[
+                    { required: true, message: "Vui lòng chọn vai trò!" },
+                  ]}
+                >
+                  <Select
+                    placeholder="Chọn vai trò"
+                    onChange={(value) =>
+                      handleRoleChange(value, userFormInstance)
+                    }
+                  >
+                    <Select.Option key="PARENT" value="PARENT">
+                      Phụ huynh
+                    </Select.Option>
+                    <Select.Option key="SCHOOLNURSE" value="SCHOOLNURSE">
+                      Y tá
+                    </Select.Option>
+                    <Select.Option key="MANAGER" value="MANAGER">
+                      Quản lý
+                    </Select.Option>
+                    <Select.Option key="ADMIN" value="ADMIN">
+                      Quản trị viên
+                    </Select.Option>
+                  </Select>
+                </Form.Item>
+                {/* Status field - required for all roles */}
+                <Form.Item
+                  label="Trạng thái"
+                  name="status"
+                  rules={[
+                    {
+                      required: true,
+                      message: "Vui lòng chọn trạng thái!",
+                    },
+                  ]}
+                >
+                  <Select placeholder="Chọn trạng thái">
+                    <Select.Option key="ACTIVE" value="ACTIVE">
+                      Hoạt động
+                    </Select.Option>
+                    <Select.Option key="INACTIVE" value="INACTIVE">
+                      Không hoạt động
+                    </Select.Option>
+                  </Select>
+                </Form.Item>
+              </div>
               <Form.Item
-                label="Trạng thái"
-                name="status"
+                label="Địa chỉ"
+                name="address"
                 rules={[
+                  { required: true, message: "Vui lòng nhập địa chỉ!" },
+                  { min: 10, message: "Địa chỉ phải có ít nhất 10 ký tự!" },
+                  { max: 200, message: "Địa chỉ không được quá 200 ký tự!" },
                   {
-                    required: true,
-                    message: "Vui lòng chọn trạng thái!",
+                    pattern: /^[a-zA-ZÀ-ỹ0-9\s.,/\-()]+$/,
+                    message:
+                      "Địa chỉ chỉ được chứa chữ cái, số và các ký tự . , / - ( )",
+                  },
+                  {
+                    validator: (_, value) => {
+                      if (value && value.trim() !== value) {
+                        return Promise.reject(
+                          new Error(
+                            "Không được có khoảng trắng thừa ở đầu hoặc cuối!"
+                          )
+                        );
+                      }
+                      if (value && /\s{3,}/.test(value)) {
+                        return Promise.reject(
+                          new Error(
+                            "Không được có quá 2 khoảng trắng liên tiếp!"
+                          )
+                        );
+                      }
+                      return Promise.resolve();
+                    },
                   },
                 ]}
               >
-                <Select placeholder="Chọn trạng thái">
-                  <Select.Option key="ACTIVE" value="ACTIVE">
-                    Hoạt động
-                  </Select.Option>
-                  <Select.Option key="INACTIVE" value="INACTIVE">
-                    Không hoạt động
-                  </Select.Option>
-                </Select>
+                <Input.TextArea
+                  placeholder="Nhập địa chỉ đầy đủ (VD: 123 Đường ABC, Phường XYZ, Quận 1, TP.HCM)"
+                  rows={3}
+                  showCount
+                  maxLength={200}
+                />
               </Form.Item>
-            </div>
-            <Form.Item
-              label="Địa chỉ"
-              name="address"
-              rules={[{ required: true, message: "Vui lòng nhập địa chỉ!" }]}
-            >
-              <Input.TextArea
-                placeholder="Nhập địa chỉ"
-                rows={3}
-                showCount
-                maxLength={200}
-              />
-            </Form.Item>
-          </Form>
+            </Form>
+          </div>
         )}
       </Modal>
     </div>
@@ -1767,6 +2231,7 @@ const AdminDashboard = () => {
             handleSaveUser={handleSaveUser}
             userFormInstance={userFormInstance}
             handleRoleChange={handleRoleChange}
+            loading={loading}
           />
         );
       case "profile":
@@ -1792,6 +2257,7 @@ const AdminDashboard = () => {
             handleSaveUser={handleSaveUser}
             userFormInstance={userFormInstance}
             handleRoleChange={handleRoleChange}
+            loading={loading}
           />
         );
     }
