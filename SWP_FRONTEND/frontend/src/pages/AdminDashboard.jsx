@@ -2347,7 +2347,7 @@ const AdminDashboard = () => {
                 border: "2px solid #ff6b35",
               }}
             >
-              <SettingOutlined style={{ fontSize: 32, color: "#ff6b35" }} />
+              <SettingOutlined style={{ fontSize:  32, color: "#ff6b35" }} />
             </div>
             {!collapsed && (
               <span

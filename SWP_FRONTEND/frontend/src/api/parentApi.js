@@ -345,4 +345,45 @@ export const parentApi = {
       throw error;
     }
   },
+
+  // Get approved health profiles for student
+  getApprovedHealthProfiles: async (studentId, token) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.get(`/api/parent/students/${studentId}/health-profiles/approved`);
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching approved health profiles:", error);
+      
+      // Mock approved profiles for development
+      return [
+        {
+          id: 1,
+          weight: 45.5,
+          height: 160.0,
+          note: 'Học sinh khỏe mạnh',
+          status: 'APPROVED',
+          nurseNote: 'Hồ sơ đã được kiểm tra và duyệt',
+          schoolNurseFullName: 'Nguyễn Thị Mai',
+          createdAt: '2024-01-15T10:30:00Z',
+          updatedAt: '2024-01-20T14:20:00Z',
+          allergies: [
+            {
+              id: 1,
+              allergen: 'Phấn hoa',
+              severity: 'MILD',
+              symptoms: 'Hắt hơi, chảy nước mũ',
+              onsetDate: '2023-03-15'
+            }
+          ],
+          chronicDiseases: [],
+          infectiousDiseases: [],
+          treatments: [],
+          vaccinationHistory: [],
+          vision: [],
+          hearing: []
+        }
+      ];
+    }
+  },
 };
