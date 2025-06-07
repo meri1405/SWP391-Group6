@@ -47,6 +47,7 @@ import {
 import { Bar, Doughnut } from "react-chartjs-2";
 import '../styles/SchoolNurseDashboard.css';
 import '../styles/SidebarTrigger.css';
+import NurseHealthProfiles from "../components/dashboard/NurseHealthProfiles";
 
 ChartJS.register(
   CategoryScale,
@@ -1268,12 +1269,7 @@ const SchoolNurseDashboard = () => {
     </div>
   );
 
-  const HealthRecords = () => (
-    <div className="nurse-content-card">
-      <h2 className="nurse-section-title">Hồ sơ y tế học sinh</h2>
-      <p>Component đang được phát triển...</p>
-    </div>
-  );
+  const HealthRecords = () => <NurseHealthProfiles />;
 
   const BlogManagement = () => (
     <div className="nurse-content-card">

@@ -69,38 +69,42 @@ const ApprovedHealthProfile = () => {
     fetchStudentsData();
   }, [getToken]);
 
-  const fetchApprovedHealthProfiles = async (studentId) => {
-    setProfilesLoading(true);
-    try {
-      const token = getToken();
-      const response = await parentApi.getHealthProfilesByStudentId(studentId, token);
+  useEffect(() => {
+    const loadApprovedProfiles = async () => {
+      if (!selectedStudent) return;
       
-      // Filter only APPROVED profiles
-      const approvedOnly = (response || []).filter(profile => profile.status === 'APPROVED');
-      setApprovedProfiles(approvedOnly);
-      
-      // Auto-select the most recent approved profile if available
-      if (approvedOnly.length > 0) {
-        const mostRecent = approvedOnly.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))[0];
-        setSelectedProfile(mostRecent);
-      } else {
-        setSelectedProfile(null);
+      try {
+        setProfilesLoading(true);
+        const studentId = selectedStudent.id || selectedStudent.studentID;
+        
+        // Use the new API to get approved profiles
+        const profiles = await parentApi.getApprovedHealthProfiles(studentId, getToken());
+        setApprovedProfiles(profiles || []);
+        
+        // Auto-select the latest profile
+        if (profiles && profiles.length > 0) {
+          const latestProfile = profiles.sort((a, b) => 
+            dayjs(b.updatedAt).unix() - dayjs(a.updatedAt).unix()
+          )[0];
+          setSelectedProfile(latestProfile);
+        }
+      } catch (error) {
+        console.error('Error loading approved profiles:', error);
+        message.error('Không thể tải hồ sơ sức khỏe đã duyệt');
+        setApprovedProfiles([]);
+      } finally {
+        setProfilesLoading(false);
       }
-    } catch (error) {
-      console.error('Error fetching approved health profiles:', error);
-      message.error('Không thể tải hồ sơ sức khỏe đã duyệt');
-      setApprovedProfiles([]);
-      setSelectedProfile(null);
-    } finally {
-      setProfilesLoading(false);
-    }
-  };
+    };
+
+    loadApprovedProfiles();
+  }, [selectedStudent, getToken]);
 
   const handleStudentSelect = (studentId) => {
     const student = students.find(s => s.id === studentId || s.studentID === studentId);
     if (student) {
       setSelectedStudent(student);
-      fetchApprovedHealthProfiles(studentId);
+      // fetchApprovedHealthProfiles(studentId);
     }
   };
 
@@ -115,9 +119,21 @@ const ApprovedHealthProfile = () => {
     setDetailModalVisible(true);
   };
 
-  const renderBasicInfo = (profile) => (
-    <Card title="Thông tin cơ bản" className="approved-health-card">
-      <Descriptions column={2} bordered>
+  // Helper function for BMI category
+  const getBMICategory = (weight, height) => {
+    const bmi = weight / Math.pow(height / 100, 2);
+    if (bmi < 18.5) return 'Thiếu cân';
+    if (bmi < 25) return 'Bình thường';
+    if (bmi < 30) return 'Thừa cân';
+    return 'Béo phì';
+  };
+
+  // Update renderBasicInfo to show nurse information
+  const renderBasicInfo = (profile) => {
+    if (!profile) return null;
+
+    return (
+      <Descriptions bordered size="small" column={2}>
         <Descriptions.Item label="Cân nặng" span={1}>
           {profile.weight} kg
         </Descriptions.Item>
@@ -125,22 +141,36 @@ const ApprovedHealthProfile = () => {
           {profile.height} cm
         </Descriptions.Item>
         <Descriptions.Item label="BMI" span={1}>
-          {((profile.weight / ((profile.height/100) ** 2)).toFixed(1))}
+          {(profile.weight / Math.pow(profile.height / 100, 2)).toFixed(1)}
         </Descriptions.Item>
-        <Descriptions.Item label="Ngày cập nhật" span={1}>
+        <Descriptions.Item label="Phân loại BMI" span={1}>
+          {getBMICategory(profile.weight, profile.height)}
+        </Descriptions.Item>
+        <Descriptions.Item label="Ngày tạo" span={1}>
+          {dayjs(profile.createdAt).format('DD/MM/YYYY')}
+        </Descriptions.Item>
+        <Descriptions.Item label="Ngày duyệt" span={1}>
           {dayjs(profile.updatedAt).format('DD/MM/YYYY')}
         </Descriptions.Item>
-        <Descriptions.Item label="Trạng thái" span={2}>
-          <Tag color="green">Đã duyệt</Tag>
+        <Descriptions.Item label="Y tá duyệt" span={1}>
+          {profile.schoolNurseFullName || 'N/A'}
         </Descriptions.Item>
-        {profile.note && (
-          <Descriptions.Item label="Ghi chú" span={2}>
-            {profile.note}
+        <Descriptions.Item label="Trạng thái" span={1}>
+          <Tag color="success">Đã duyệt</Tag>
+        </Descriptions.Item>
+        <Descriptions.Item label="Ghi chú của phụ huynh" span={2}>
+          {profile.note || 'Không có ghi chú'}
+        </Descriptions.Item>
+        {profile.nurseNote && (
+          <Descriptions.Item label="Ghi chú của Y tá" span={2}>
+            <Text style={{ fontStyle: 'italic', color: '#1890ff' }}>
+              {profile.nurseNote}
+            </Text>
           </Descriptions.Item>
         )}
       </Descriptions>
-    </Card>
-  );
+    );
+  };
 
   const renderAllergies = (allergies) => (
     <Card title="Dị ứng" className="approved-health-card">
