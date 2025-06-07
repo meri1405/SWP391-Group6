@@ -79,21 +79,24 @@ const validateUsername = (username) => {
 };
 
 const validatePassword = (password) => {
-  const hasLower = /[a-z]/.test(password);
-  const hasUpper = /[A-Z]/.test(password);
-  const hasNumber = /\d/.test(password);
-  const hasSpecial = /[@$!%*?&]/.test(password);
+  if (!password) return false;
+
+  // Kiểm tra độ dài và khoảng trắng
   const hasValidLength = password.length >= 8 && password.length <= 50;
   const noSpaces = !password.includes(" ");
 
-  return (
-    hasLower &&
-    hasUpper &&
-    hasNumber &&
-    hasSpecial &&
-    hasValidLength &&
-    noSpaces
-  );
+  if (!hasValidLength || !noSpaces) return false;
+
+  // Tính score dựa trên các tiêu chí
+  let score = 0;
+  if (password.length >= 8) score += 1;
+  if (/[a-z]/.test(password)) score += 1;
+  if (/[A-Z]/.test(password)) score += 1;
+  if (/\d/.test(password)) score += 1;
+  if (/[@$!%*?&]/.test(password)) score += 1;
+
+  // Chấp nhận mật khẩu từ "Trung bình" trở lên (score >= 3)
+  return score >= 3;
 };
 
 // Helper function to check password strength
@@ -136,9 +139,11 @@ const getPasswordStrength = (password) => {
     text: strengthLevels[score] ? strengthLevels[score].text : "Rất yếu",
     color: strengthLevels[score] ? strengthLevels[score].color : "#ff4d4f",
     feedback:
-      feedback.length > 0
-        ? `Cần thêm: ${feedback.join(", ")}`
-        : "Mật khẩu mạnh!",
+      score >= 3
+        ? score === 5
+          ? "Mật khẩu mạnh!"
+          : "Mật khẩu đạt yêu cầu!"
+        : `Cần thêm: ${feedback.join(", ")}`,
   };
 };
 
@@ -466,7 +471,8 @@ const UserManagement = ({
                     </li>
                     <li>
                       <strong>Y tá/Quản lý/Admin:</strong> Email, tên đăng nhập
-                      (3-30 ký tự), mật khẩu mạnh (8+ ký tự)
+                      (3-30 ký tự), mật khẩu độ mạnh từ 'Trung bình' trở lên (8+
+                      ký tự)
                     </li>
                   </ul>
                 </div>
@@ -886,27 +892,33 @@ const UserManagement = ({
                             message: "Mật khẩu không được quá 50 ký tự!",
                           },
                           {
-                            pattern:
-                              /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
-                            message:
-                              "Mật khẩu phải chứa ít nhất 1 chữ thường, 1 chữ hoa, 1 số và 1 ký tự đặc biệt!",
-                          },
-                          {
                             validator: (_, value) => {
-                              if (value && value.includes(" ")) {
+                              if (!value) return Promise.resolve();
+
+                              if (value.includes(" ")) {
                                 return Promise.reject(
                                   new Error(
                                     "Mật khẩu không được chứa khoảng trắng!"
                                   )
                                 );
                               }
-                              if (value && value.trim() !== value) {
+
+                              if (value.trim() !== value) {
                                 return Promise.reject(
                                   new Error(
                                     "Mật khẩu không được có khoảng trắng ở đầu hoặc cuối!"
                                   )
                                 );
                               }
+
+                              if (!validatePassword(value)) {
+                                return Promise.reject(
+                                  new Error(
+                                    "Mật khẩu phải đạt độ mạnh 'Trung bình' trở lên (cần ít nhất 3/5 tiêu chí: chữ thường, chữ hoa, số, ký tự đặc biệt)!"
+                                  )
+                                );
+                              }
+
                               return Promise.resolve();
                             },
                           },
@@ -918,7 +930,7 @@ const UserManagement = ({
                             placeholder={
                               modalMode === "edit"
                                 ? "Để trống nếu không đổi mật khẩu"
-                                : "Nhập mật khẩu (8+ ký tự, bao gồm chữ hoa, thường, số, ký tự đặc biệt)"
+                                : "Nhập mật khẩu (8+ ký tự, độ mạnh từ 'Trung bình' trở lên)"
                             }
                             onChange={(e) => setCurrentPassword(e.target.value)}
                           />
@@ -926,55 +938,8 @@ const UserManagement = ({
                             <div style={{ marginTop: "8px" }}>
                               <div
                                 style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: "8px",
                                   fontSize: "12px",
-                                }}
-                              >
-                                <span>Độ mạnh:</span>
-                                <span
-                                  style={{
-                                    color:
-                                      getPasswordStrength(currentPassword)
-                                        .color,
-                                    fontWeight: "bold",
-                                  }}
-                                >
-                                  {getPasswordStrength(currentPassword).text}
-                                </span>
-                              </div>
-                              <div
-                                style={{
-                                  width: "100%",
-                                  height: "4px",
-                                  backgroundColor: "#f0f0f0",
-                                  borderRadius: "2px",
-                                  marginTop: "4px",
-                                  overflow: "hidden",
-                                }}
-                              >
-                                <div
-                                  style={{
-                                    width: `${
-                                      (getPasswordStrength(currentPassword)
-                                        .score /
-                                        5) *
-                                      100
-                                    }%`,
-                                    height: "100%",
-                                    backgroundColor:
-                                      getPasswordStrength(currentPassword)
-                                        .color,
-                                    transition: "all 0.3s ease",
-                                  }}
-                                />
-                              </div>
-                              <div
-                                style={{
-                                  fontSize: "11px",
                                   color: "#666",
-                                  marginTop: "4px",
                                 }}
                               >
                                 {getPasswordStrength(currentPassword).feedback}
