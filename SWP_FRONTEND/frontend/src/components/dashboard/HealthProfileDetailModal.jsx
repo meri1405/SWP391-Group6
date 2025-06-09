@@ -23,15 +23,18 @@ import {
   UserOutlined,
   CalendarOutlined
 } from '@ant-design/icons';
+import { useAuth } from '../../contexts/AuthContext';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
 const { TabPane } = Tabs;
 
 const HealthProfileDetailModal = ({ visible, onClose, healthProfile }) => {
+  const { user } = useAuth();  // Get authenticated user
+  
   if (!healthProfile) return null;
 
-  const student = healthProfile.student;  // Debug log để kiểm tra dữ liệu
+  const student = healthProfile.student;// Debug log để kiểm tra dữ liệu
   console.log('HealthProfile in modal:', healthProfile);
   console.log('Student in modal:', student);
   console.log('Student keys:', student ? Object.keys(student) : 'no student');
@@ -48,11 +51,10 @@ const HealthProfileDetailModal = ({ visible, onClose, healthProfile }) => {
     : student?.fullName || student?.name || healthProfile.studentName || healthProfile.student?.fullName || 'N/A';
   
   console.log('Computed student name:', studentName);
-  
-  // Compute parent name from parents array
-  const parentName = student?.parents && student.parents.length > 0 
-    ? `${student.parents[0].lastName || ''} ${student.parents[0].firstName || ''}`.trim()
-    : student?.parentFullName || student?.parentName || healthProfile.parentFullName || healthProfile.parentName || 'N/A';
+    // Compute parent name from authenticated user (current logged-in parent)
+  const parentName = user && user.firstName && user.lastName 
+    ? `${user.lastName} ${user.firstName}`.trim()
+    : user?.fullName || 'N/A';
   
   console.log('Computed parent name:', parentName);
   const getStatusTag = (status) => {
