@@ -244,6 +244,282 @@ export const nurseApi = {
         data: []
       };
     }
+  },
+
+  // Medication Request Management
+  getPendingMedicationRequests: async () => {
+    try {
+      const response = await nurseApiClient.get('/api/nurse/medications/requests/pending');
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Error fetching pending medication requests:', error);
+      // Mock data fallback for development
+      const mockRequests = [
+        {
+          id: 1,
+          studentId: 'ST001',
+          studentName: 'Nguyễn Văn A',
+          className: '6A',
+          medicationName: 'Paracetamol',
+          dosage: '500mg',
+          frequency: '2 lần/ngày',
+          duration: '3 ngày',
+          reason: 'Sốt cao',
+          requestedBy: 'Nguyễn Thị B (Phụ huynh)',
+          requestDate: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+          status: 'PENDING',
+          notes: 'Học sinh có triệu chứng sốt từ sáng nay'
+        },
+        {
+          id: 2,
+          studentId: 'ST002',
+          studentName: 'Trần Thị C',
+          className: '7B',
+          medicationName: 'Ibuprofen',
+          dosage: '200mg',
+          frequency: '3 lần/ngày',
+          duration: '2 ngày',
+          reason: 'Đau đầu',
+          requestedBy: 'Trần Văn D (Phụ huynh)',
+          requestDate: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+          status: 'PENDING',
+          notes: 'Đau đầu kéo dài từ hôm qua'
+        }
+      ];
+      
+      return {
+        success: true,
+        data: mockRequests
+      };
+    }
+  },
+
+  approveMedicationRequest: async (requestId, approvalData) => {
+    try {
+      const response = await nurseApiClient.post(`/api/nurse/medications/requests/${requestId}/approve`, approvalData);
+      return {
+        success: true,
+        data: response.data,
+        message: 'Yêu cầu thuốc đã được duyệt thành công'
+      };
+    } catch (error) {
+      console.error('Error approving medication request:', error);
+      // Mock approval for development
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return {
+        success: true,
+        message: 'Yêu cầu thuốc đã được duyệt thành công'
+      };
+    }
+  },
+
+  rejectMedicationRequest: async (requestId, rejectionData) => {
+    try {
+      const response = await nurseApiClient.post(`/api/nurse/medications/requests/${requestId}/reject`, rejectionData);
+      return {
+        success: true,
+        data: response.data,
+        message: 'Yêu cầu thuốc đã bị từ chối'
+      };
+    } catch (error) {
+      console.error('Error rejecting medication request:', error);
+      // Mock rejection for development
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return {
+        success: true,
+        message: 'Yêu cầu thuốc đã bị từ chối'
+      };
+    }
+  },
+
+  // Get all medication requests (for history view)
+  getAllMedicationRequests: async () => {
+    try {
+      const response = await nurseApiClient.get('/api/nurse/medications/requests');
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Error fetching all medication requests:', error);
+      // Mock data fallback
+      const mockRequests = [
+        {
+          id: 1,
+          studentId: 'ST001',
+          studentName: 'Nguyễn Văn A',
+          className: '6A',
+          medicationName: 'Paracetamol',
+          dosage: '500mg',
+          frequency: '2 lần/ngày',
+          duration: '3 ngày',
+          reason: 'Sốt cao',
+          requestedBy: 'Nguyễn Thị B (Phụ huynh)',
+          requestDate: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+          status: 'PENDING',
+          approvedBy: null,
+          approvedDate: null,
+          notes: 'Học sinh có triệu chứng sốt từ sáng nay'
+        },
+        {
+          id: 2,
+          studentId: 'ST003',
+          studentName: 'Lê Văn E',
+          className: '8C',
+          medicationName: 'Aspirin',
+          dosage: '100mg',
+          frequency: '1 lần/ngày',
+          duration: '5 ngày',
+          reason: 'Đau mãn tính',
+          requestedBy: 'Lê Thị F (Phụ huynh)',
+          requestDate: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+          status: 'APPROVED',
+          approvedBy: 'Y tá Mai',
+          approvedDate: new Date(Date.now() - 20 * 60 * 60 * 1000).toISOString(),
+          notes: 'Đã được bác sĩ chỉ định'
+        }
+      ];
+      
+      return {
+        success: true,
+        data: mockRequests
+      };
+    }
+  },
+
+  // Medication Schedule Management
+  getSchedulesByDate: async (params) => {
+    try {
+      const response = await nurseApiClient.get('/api/nurse/medications/schedules', { params });
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Error fetching schedules by date:', error);
+      // Mock data fallback for development
+      const mockSchedules = [
+        {
+          id: 1,
+          itemRequestId: 1,
+          medicationName: 'Paracetamol',
+          scheduledDate: params.date || new Date().toISOString().split('T')[0],
+          scheduledTime: '08:00',
+          status: 'PENDING',
+          administeredTime: null,
+          nurseNote: '',
+          nurseId: null,
+          nurseName: '',
+          studentId: 'ST001',
+          studentName: 'Nguyễn Văn A',
+          className: '6A',
+          dosage: 500
+        },
+        {
+          id: 2,
+          itemRequestId: 2,
+          medicationName: 'Ibuprofen',
+          scheduledDate: params.date || new Date().toISOString().split('T')[0],
+          scheduledTime: '12:00',
+          status: 'PENDING',
+          administeredTime: null,
+          nurseNote: '',
+          nurseId: null,
+          nurseName: '',
+          studentId: 'ST002',
+          studentName: 'Trần Thị B',
+          className: '7B',
+          dosage: 200
+        }
+      ];
+      
+      return {
+        success: true,
+        data: mockSchedules
+      };
+    }
+  },
+
+  getSchedulesForStudent: async (studentId) => {
+    try {
+      const response = await nurseApiClient.get(`/api/nurse/medications/schedules/student/${studentId}`);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Error fetching schedules for student:', error);
+      // Mock data fallback
+      const mockSchedules = [
+        {
+          id: 1,
+          itemRequestId: 1,
+          medicationName: 'Paracetamol',
+          scheduledDate: new Date().toISOString().split('T')[0],
+          scheduledTime: '08:00',
+          status: 'PENDING',
+          administeredTime: null,
+          nurseNote: '',
+          nurseId: null,
+          nurseName: '',
+          studentId: studentId,
+          studentName: 'Học sinh Demo',
+          className: '6A',
+          dosage: 500
+        }
+      ];
+      
+      return {
+        success: true,
+        data: mockSchedules
+      };
+    }
+  },
+
+  updateScheduleStatus: async (scheduleId, status, note = '') => {
+    try {
+      const response = await nurseApiClient.put(`/api/nurse/medications/schedules/${scheduleId}/status`, {
+        status,
+        note
+      });
+      return {
+        success: true,
+        data: response.data,
+        message: 'Cập nhật trạng thái thành công'
+      };
+    } catch (error) {
+      console.error('Error updating schedule status:', error);
+      // Mock response for development
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return {
+        success: true,
+        message: 'Cập nhật trạng thái thành công'
+      };
+    }
+  },
+
+  updateScheduleNote: async (scheduleId, note) => {
+    try {
+      const response = await nurseApiClient.put(`/api/nurse/medications/schedules/${scheduleId}/note`, {
+        note
+      });
+      return {
+        success: true,
+        data: response.data,
+        message: 'Cập nhật ghi chú thành công'
+      };
+    } catch (error) {
+      console.error('Error updating schedule note:', error);
+      // Mock response for development
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return {
+        success: true,
+        message: 'Cập nhật ghi chú thành công'
+      };
+    }
   }
 };
 

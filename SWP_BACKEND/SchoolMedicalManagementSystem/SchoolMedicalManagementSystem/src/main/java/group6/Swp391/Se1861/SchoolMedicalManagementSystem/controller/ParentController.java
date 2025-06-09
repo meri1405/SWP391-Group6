@@ -224,10 +224,9 @@ public class ParentController {
     public ResponseEntity<?> getAllChildrenMedicationSchedules(
             @AuthenticationPrincipal User parent,
             @RequestParam(required = false) String date,
-            @RequestParam(required = false) String status) {
-        try {
+            @RequestParam(required = false) String status) {        try {
             // Get all students of this parent
-            List<Student> parentStudents = studentRepository.findByParents(parent);
+            List<Student> parentStudents = studentRepository.findByParent(parent);
 
             // Always return student list in response, even if no schedules
             Map<String, Object> response = new HashMap<>();

@@ -17,10 +17,10 @@ import {
   Modal,
   List,
   Spin,
-  Alert,
-  Table,
+  Alert,  Table,
   Popconfirm,
-  Checkbox
+  Checkbox,
+  Radio
 } from 'antd';
 import {
   PlusOutlined,
@@ -91,10 +91,9 @@ const HealthProfileDeclaration = () => {
   const [allergies, setAllergies] = useState([]);
   const [chronicDiseases, setChronicDiseases] = useState([]);
   const [infectiousDiseases, setInfectiousDiseases] = useState([]);
-  const [treatments, setTreatments] = useState([]);
-  const [vaccinationHistory, setVaccinationHistory] = useState([]);
+  const [treatments, setTreatments] = useState([]);  const [vaccinationHistory, setVaccinationHistory] = useState([]);
   const [vaccinationRules, setVaccinationRules] = useState([]);
-  const [selectedVaccinationRules, setSelectedVaccinationRules] = useState([]);
+  const [selectedVaccinationRule, setSelectedVaccinationRule] = useState(null);
   const [showVaccinationRules, setShowVaccinationRules] = useState(false);
   const [visionData, setVisionData] = useState([]);
   const [hearingData, setHearingData] = useState([]);
@@ -136,18 +135,18 @@ const HealthProfileDeclaration = () => {
       message.error('Không thể tải danh sách quy tắc tiêm chủng');
     }
   };
-
-  const handleRuleSelection = (ruleId, checked) => {
-    if (checked) {
-      const rule = vaccinationRules.find(r => r.id === ruleId);
-      if (rule && !selectedVaccinationRules.find(r => r.id === ruleId)) {
-        setSelectedVaccinationRules([...selectedVaccinationRules, rule]);
-      }
+  const handleRuleSelection = (ruleId) => {
+    if (selectedVaccinationRule && selectedVaccinationRule.id === ruleId) {
+      // If clicking the same rule, deselect it
+      setSelectedVaccinationRule(null);
     } else {
-      setSelectedVaccinationRules(selectedVaccinationRules.filter(r => r.id !== ruleId));
+      // Select the new rule
+      const rule = vaccinationRules.find(r => r.id === ruleId);
+      if (rule) {
+        setSelectedVaccinationRule(rule);
+      }
     }
   };
-
   const handleRuleSelectionForForm = (rule, form) => {
     // Auto-fill form with selected vaccination rule information
     form.setFieldsValue({
@@ -156,31 +155,31 @@ const HealthProfileDeclaration = () => {
       notes: rule.description || ''
     });
     
-    // Add to selected rules for tracking
-    if (!selectedVaccinationRules.find(r => r.id === rule.id)) {
-      setSelectedVaccinationRules([...selectedVaccinationRules, rule]);
+    // Set as selected rule for tracking
+    setSelectedVaccinationRule(rule);
+  };  const _addSelectedRulesToHistory = () => {
+    if (!selectedVaccinationRule) {
+      message.warning('Vui lòng chọn một quy tắc tiêm chủng');
+      return;
     }
-  };
 
-  const _addSelectedRulesToHistory = () => {
-    const newEntries = selectedVaccinationRules.map(rule => ({
-      vaccineName: rule.name,
-      doseNumber: rule.doesNumber || 1,
+    const newEntry = {
+      vaccineName: selectedVaccinationRule.name,
+      doseNumber: selectedVaccinationRule.doesNumber || 1,
       dateOfVaccination: null,
       manufacturer: '',
       placeOfVaccination: '',
       administeredBy: '',
-      notes: rule.description || '',
-      status: 'PENDING'
-    }));
+      notes: selectedVaccinationRule.description || '',
+      status: 'PENDING',
+      ruleId: selectedVaccinationRule.id
+    };
     
-    newEntries.forEach(entry => {
-      setVaccinationHistory(prev => [...prev, { ...entry, id: Date.now() + Math.random() }]);
-    });
+    setVaccinationHistory(prev => [...prev, { ...newEntry, id: Date.now() + Math.random() }]);
     
-    setSelectedVaccinationRules([]);
+    setSelectedVaccinationRule(null);
     setShowVaccinationRules(false);
-    message.success(`Đã thêm ${newEntries.length} mục tiêm chủng từ quy tắc`);
+    message.success('Đã thêm mục tiêm chủng từ quy tắc');
   };
 
   const handleStudentSelect = (studentId) => {
@@ -441,15 +440,22 @@ const HealthProfileDeclaration = () => {
       placeOfVaccination: vaccinationData.placeOfVaccination,
       administeredBy: vaccinationData.administeredBy,
       notes: vaccinationData.notes,
-      status: true
+      status: true,
+      // Include ruleId if a rule is selected
+      ruleId: selectedVaccinationRule?.id || null
     };
     
     // Debug logging to check the new vaccination object
     console.log('New vaccination object created:', newVaccination);
     console.log('New vaccination dateOfVaccination:', newVaccination.dateOfVaccination);
+    console.log('New vaccination ruleId:', newVaccination.ruleId);
     
     setVaccinationHistory([...vaccinationHistory, newVaccination]);
     setVaccinationModalVisible(false);
+    
+    // Clear selected rule after adding vaccination
+    setSelectedVaccinationRule(null);
+    setShowVaccinationRules(false);
   };
   const handleRemoveVaccination = (id) => {
     setVaccinationHistory(vaccinationHistory.filter(vaccination => 
@@ -645,17 +651,26 @@ const HealthProfileDeclaration = () => {
     }
     setTreatmentModalVisible(false);
   };
-
   const handleUpdateVaccination = (vaccinationData) => {
     if (editingVaccination) {
       // Edit existing vaccination
+      const updatedVaccinationData = {
+        ...vaccinationData,
+        // Include ruleId if a rule is selected, otherwise preserve existing ruleId or set to null
+        ruleId: selectedVaccinationRule?.id || vaccinationData.ruleId || null
+      };
+      
       setVaccinationHistory(vaccinationHistory.map(vaccination => 
         (vaccination.id || vaccination.tempId) === (editingVaccination.id || editingVaccination.tempId)
-          ? { ...vaccination, ...vaccinationData }
+          ? { ...vaccination, ...updatedVaccinationData }
           : vaccination
       ));
       setEditingVaccination(null);
       message.success('Cập nhật tiêm chủng thành công');
+      
+      // Clear selected rule after updating vaccination
+      setSelectedVaccinationRule(null);
+      setShowVaccinationRules(false);
     } else {
       // Add new vaccination (existing logic)
       handleAddVaccination(vaccinationData);
@@ -1795,7 +1810,7 @@ const HealthProfileDeclaration = () => {
         onSubmit={handleUpdateTreatment}
         initialData={editingTreatment}
         isEdit={!!editingTreatment}
-      />{/* Vaccination Modal */}      <VaccinationModal
+      />      {/* Vaccination Modal */}      <VaccinationModal
           open={vaccinationModalVisible}
           onCancel={() => {
             setVaccinationModalVisible(false);
@@ -1805,7 +1820,7 @@ const HealthProfileDeclaration = () => {
           initialData={editingVaccination}
           isEdit={!!editingVaccination}
           vaccinationRules={vaccinationRules}
-          selectedVaccinationRules={selectedVaccinationRules}
+          selectedVaccinationRule={selectedVaccinationRule}
           showVaccinationRules={showVaccinationRules}          onFetchVaccinationRules={fetchVaccinationRules}
           onRuleSelection={handleRuleSelection}
           onRuleSelectionForForm={handleRuleSelectionForForm}
@@ -2421,7 +2436,7 @@ const VaccinationModal = ({
   onCancel, 
   onSubmit, 
   vaccinationRules,
-  selectedVaccinationRules,
+  selectedVaccinationRule,
   showVaccinationRules,
   onFetchVaccinationRules,
   onRuleSelection,
@@ -2484,41 +2499,43 @@ const VaccinationModal = ({
           {isEdit ? "Cập nhật" : "Thêm"}
         </Button>
       ]}
-    >
-      {showVaccinationRules && (
+    >      {showVaccinationRules && (
         <div style={{ marginBottom: 16, padding: 16, border: '1px solid #d9d9d9', borderRadius: 6 }}>
-          <h4>Chọn quy tắc tiêm chủng:</h4>
-          <div style={{ maxHeight: 200, overflowY: 'auto' }}>
-            {vaccinationRules.map(rule => (
-              <div key={rule.id} style={{ marginBottom: 12, padding: 8, border: '1px solid #f0f0f0', borderRadius: 4 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div style={{ flex: 1 }}>
-                    <Checkbox
-                      checked={selectedVaccinationRules.some(r => r.id === rule.id)}
-                      onChange={(e) => onRuleSelection(rule.id, e.target.checked)}
-                    >
-                      <strong>{rule.name}</strong> - Liều {rule.doesNumber || 1}
-                      {rule.isMandatory && <span style={{ color: 'red' }}> (Bắt buộc)</span>}
-                    </Checkbox>
-                    <div style={{ fontSize: '12px', color: '#666', marginLeft: 24 }}>
-                      {rule.description}
-                      {rule.minAge !== undefined && rule.maxAge !== undefined && (
-                        <span> | Độ tuổi: {rule.minAge}-{rule.maxAge} tháng</span>
-                      )}
+          <h4>Chọn quy tắc tiêm chủng (chỉ được chọn 1 quy tắc):</h4>
+          <Radio.Group 
+            value={selectedVaccinationRule?.id || null} 
+            onChange={(e) => onRuleSelection(e.target.value)}
+            style={{ width: '100%' }}
+          >
+            <div style={{ maxHeight: 200, overflowY: 'auto' }}>
+              {vaccinationRules.map(rule => (
+                <div key={rule.id} style={{ marginBottom: 12, padding: 8, border: '1px solid #f0f0f0', borderRadius: 4 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{ flex: 1 }}>
+                      <Radio value={rule.id}>
+                        <strong>{rule.name}</strong> - Liều {rule.doesNumber || 1}
+                        {rule.isMandatory && <span style={{ color: 'red' }}> (Bắt buộc)</span>}
+                      </Radio>
+                      <div style={{ fontSize: '12px', color: '#666', marginLeft: 24 }}>
+                        {rule.description}
+                        {rule.minAge !== undefined && rule.maxAge !== undefined && (
+                          <span> | Độ tuổi: {rule.minAge}-{rule.maxAge} tháng</span>
+                        )}
+                      </div>
                     </div>
+                    <Button 
+                      type="primary" 
+                      size="small"
+                      onClick={() => onRuleSelectionForForm(rule, form)}
+                      style={{ marginLeft: 8 }}
+                    >
+                      Thêm vào form
+                    </Button>
                   </div>
-                  <Button 
-                    type="primary" 
-                    size="small"
-                    onClick={() => onRuleSelectionForForm(rule, form)}
-                    style={{ marginLeft: 8 }}
-                  >
-                    Thêm vào form
-                  </Button>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </Radio.Group>
 
         </div>
       )}

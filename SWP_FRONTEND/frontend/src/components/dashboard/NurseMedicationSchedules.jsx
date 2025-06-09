@@ -108,10 +108,10 @@ const NurseMedicationSchedules = () => {const { refreshSession } = useAuth();
             refreshSession();
             
             let data;
-            
-            if (selectedStudent) {
+              if (selectedStudent) {
                 // If a student is selected, get all their schedules
-                data = await nurseApi.getSchedulesForStudent(selectedStudent);
+                const response = await nurseApi.getSchedulesForStudent(selectedStudent);
+                data = response.success ? response.data : [];
             } else {
                 // Otherwise, filter by date and status
                 // Ensure date is valid before formatting
@@ -127,7 +127,8 @@ const NurseMedicationSchedules = () => {const { refreshSession } = useAuth();
                     params.status = selectedStatus;
                 }
                 
-                data = await nurseApi.getSchedulesByDate(params);
+                const response = await nurseApi.getSchedulesByDate(params);
+                data = response.success ? response.data : [];
             }
             
             // Backend already filters for APPROVED requests only
@@ -216,22 +217,24 @@ const NurseMedicationSchedules = () => {const { refreshSession } = useAuth();
             const timeRemaining = getTimeUntilSchedule(schedule.scheduledDate, schedule.scheduledTime);
             message.warning(`Chỉ có thể cập nhật trạng thái từ thời gian uống thuốc trở đi. Còn lại: ${timeRemaining}`);
             return;
-        }
-
-        try {
+        }        try {
             refreshSession(); // Refresh session timer
-            await nurseApi.updateScheduleStatus(scheduleId, newStatus);
-        
-            // Update local state optimistically
-            setSchedules(prevSchedules => 
-                prevSchedules.map(schedule => 
-                schedule.id === scheduleId 
-                    ? { ...schedule, status: newStatus }
-                    : schedule
-                )
-            );
-        
-            message.success('Cập nhật trạng thái thành công');
+            const response = await nurseApi.updateScheduleStatus(scheduleId, newStatus);
+            
+            if (response.success) {
+                // Update local state optimistically
+                setSchedules(prevSchedules => 
+                    prevSchedules.map(schedule => 
+                    schedule.id === scheduleId 
+                        ? { ...schedule, status: newStatus }
+                        : schedule
+                    )
+                );
+            
+                message.success(response.message || 'Cập nhật trạng thái thành công');
+            } else {
+                message.error('Có lỗi xảy ra khi cập nhật trạng thái');
+            }
         } catch (error) {
             console.error('Error updating status:', error);
             if (error.response?.status === 401) {
@@ -287,32 +290,35 @@ const NurseMedicationSchedules = () => {const { refreshSession } = useAuth();
                 setLoading(false);
                 return;
             }
+              // Call the API to update the note
+            const response = await nurseApi.updateScheduleNote(editingScheduleId, currentNote);
             
-            // Call the API to update the note
-            await nurseApi.updateScheduleNote(editingScheduleId, currentNote);
-            
-            // Update local states optimistically
-            setSchedules(prevSchedules => 
-                prevSchedules.map(schedule => 
-                    schedule.id === editingScheduleId 
-                        ? { ...schedule, nurseNote: currentNote }
-                        : schedule
-                )
-            );
+            if (response.success) {
+                // Update local states optimistically
+                setSchedules(prevSchedules => 
+                    prevSchedules.map(schedule => 
+                        schedule.id === editingScheduleId 
+                            ? { ...schedule, nurseNote: currentNote }
+                            : schedule
+                    )
+                );
 
-            // Update selectedSchedule if we're editing from detail modal
-            if (selectedSchedule && selectedSchedule.id === editingScheduleId) {
-                setSelectedSchedule(prev => ({
-                    ...prev,
-                    nurseNote: currentNote
-                }));
+                // Update selectedSchedule if we're editing from detail modal
+                if (selectedSchedule && selectedSchedule.id === editingScheduleId) {
+                    setSelectedSchedule(prev => ({
+                        ...prev,
+                        nurseNote: currentNote
+                    }));
+                }
+                
+                message.success(response.message || 'Cập nhật ghi chú thành công');
+                setEditNoteModalVisible(false);
+                
+                // Reload schedules to ensure fresh data from the server
+                loadSchedules();
+            } else {
+                message.error('Có lỗi xảy ra khi cập nhật ghi chú');
             }
-            
-            message.success('Cập nhật ghi chú thành công');
-            setEditNoteModalVisible(false);
-            
-            // Reload schedules to ensure fresh data from the server
-            loadSchedules();
         } catch (error) {
             console.error('Error updating note:', error);
             
@@ -366,7 +372,7 @@ const NurseMedicationSchedules = () => {const { refreshSession } = useAuth();
         // Process groups to add rowSpan information for student column only
         const processedData = [];
         Object.entries(groups)
-            .filter(([_, group]) => Array.isArray(group) && group.length > 0)
+            .filter(([, group]) => Array.isArray(group) && group.length > 0)
             .sort(([keyA], [keyB]) => keyA.localeCompare(keyB)) // Ensure consistent ordering
             .forEach(([key, group]) => {
                 group.forEach((item, groupIndex) => {
