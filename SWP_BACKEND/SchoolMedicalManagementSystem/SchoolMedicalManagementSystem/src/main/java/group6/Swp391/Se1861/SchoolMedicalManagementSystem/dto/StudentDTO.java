@@ -22,5 +22,6 @@ public class StudentDTO {
     private String citizenship;
     private String bloodType;
     private boolean isDisabled;
-    private List<ParentDTO> parents;
+    private Long motherId;
+    private Long fatherId;
 }

@@ -45,7 +45,9 @@ public class User implements UserDetails, OAuth2User {
     private LocalDate dob;
 
     @Column(name = "gender", nullable = false, length = 1)
-    private String gender;    @Column(name = "phone", nullable = true, unique = true)
+    private String gender;
+
+    @Column(name = "phone", nullable = true, unique = true)
     private String phone;
 
     @Column(name = "email")
@@ -70,15 +72,15 @@ public class User implements UserDetails, OAuth2User {
 
     @ManyToOne
     @JoinColumn(name = "roleID") // FK tới Role.id
-    private Role role;    @ManyToMany
-    @JoinTable(
-            name = "student_parent",
-            joinColumns = @JoinColumn(name = "parent_id"), // vì User giữ role parent, nên joinColumns là parent_id
-            inverseJoinColumns = @JoinColumn(name = "student_id",
-            referencedColumnName = "studentID") // vì Student giữ role student, nên inverseJoinColumns là student_id
-    )
+    private Role role;
+
+    @OneToMany(mappedBy = "mother", cascade = CascadeType.ALL)
     @JsonIgnore  // Prevent circular reference during JSON serialization
-    private Set<Student> students;
+    private List<Student> childrenAsMother;
+
+    @OneToMany(mappedBy = "father", cascade = CascadeType.ALL)
+    @JsonIgnore  // Prevent circular reference during JSON serialization
+    private List<Student> childrenAsFather;
 
     @OneToMany(mappedBy = "createdBy", cascade = CascadeType.ALL)
     @JsonIgnore  // Prevent circular reference during JSON serialization
@@ -101,7 +103,7 @@ public class User implements UserDetails, OAuth2User {
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL)
     @JsonIgnore  // Prevent circular reference during JSON serialization
     private List<HealthProfile> healthProfilesParent;
-    
+
     @Transient
     @JsonIgnore  // Prevent serialization of OAuth2 attributes
     private Map<String, Object> attributes;

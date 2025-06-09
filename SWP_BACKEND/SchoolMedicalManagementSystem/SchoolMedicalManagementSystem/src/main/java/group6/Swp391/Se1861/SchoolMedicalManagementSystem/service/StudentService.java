@@ -1,6 +1,5 @@
 package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service;
 
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.ParentDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.StudentDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.Student;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
@@ -11,7 +10,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -21,15 +19,13 @@ public class StudentService {
     private StudentRepository studentRepository;
     
     @Autowired
-    private UserRepository userRepository;
-
-    /**
+    private UserRepository userRepository;    /**
      * Get all students associated with a parent
      * @param parent the authenticated parent user
      * @return list of students associated with the parent
      */
     public List<StudentDTO> getStudentsByParent(User parent) {
-        List<Student> students = studentRepository.findByParentsWithParents(parent);
+        List<Student> students = studentRepository.findByParentWithParents(parent);
         return students.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -56,30 +52,15 @@ public class StudentService {
         Student student = studentRepository.findByIdWithParents(studentId)
                 .orElseThrow(() -> new IllegalArgumentException("Student not found with id: " + studentId));
         return convertToDTO(student);
-    }
-
-    /**
+    }    /**
      * Add parent to existing student (admin only)
      * @param studentId the student ID
      * @param parentId the parent ID
+     * @param parentType either "father" or "mother"
      * @throws IllegalArgumentException if student or parent not found, or relationship already exists
      */
     @Transactional
-    public void addParentToStudent(Long studentId, Long parentId) {
-        Student student = studentRepository.findByIdWithParents(studentId)
-                .orElseThrow(() -> new IllegalArgumentException("Student not found with id: " + studentId));
-        
-        addParentToStudentInternal(student, parentId);
-    }
-
-    /**
-     * Remove parent from student (admin only)
-     * @param studentId the student ID
-     * @param parentId the parent ID
-     * @throws IllegalArgumentException if student or parent not found, or relationship doesn't exist
-     */
-    @Transactional
-    public void removeParentFromStudent(Long studentId, Long parentId) {
+    public void addParentToStudent(Long studentId, Long parentId, String parentType) {
         Student student = studentRepository.findByIdWithParents(studentId)
                 .orElseThrow(() -> new IllegalArgumentException("Student not found with id: " + studentId));
         
@@ -91,65 +72,58 @@ public class StudentService {
             throw new IllegalArgumentException("User with id " + parentId + " is not a parent");
         }
         
-        // Check if relationship exists
-        if (!student.getParents().contains(parent)) {
-            throw new IllegalArgumentException("Parent is not associated with this student");
+        // Set parent based on type
+        if ("father".equalsIgnoreCase(parentType)) {
+            if (student.getFather() != null) {
+                throw new IllegalArgumentException("Student already has a father assigned");
+            }
+            student.setFather(parent);
+        } else if ("mother".equalsIgnoreCase(parentType)) {
+            if (student.getMother() != null) {
+                throw new IllegalArgumentException("Student already has a mother assigned");
+            }
+            student.setMother(parent);
+        } else {
+            throw new IllegalArgumentException("Parent type must be either 'father' or 'mother'");
         }
         
-        // Remove the relationship from both sides
-        student.getParents().remove(parent);
-        parent.getStudents().remove(student);
-        
-        // Save both entities
         studentRepository.save(student);
-        userRepository.save(parent);
-    }
-
-    /**
+    }    /**
+     * Remove parent from student (admin only)
+     * @param studentId the student ID
+     * @param parentType either "father" or "mother"
+     * @throws IllegalArgumentException if student not found, or relationship doesn't exist
+     */
+    @Transactional
+    public void removeParentFromStudent(Long studentId, String parentType) {
+        Student student = studentRepository.findByIdWithParents(studentId)
+                .orElseThrow(() -> new IllegalArgumentException("Student not found with id: " + studentId));
+        
+        // Remove parent based on type
+        if ("father".equalsIgnoreCase(parentType)) {
+            if (student.getFather() == null) {
+                throw new IllegalArgumentException("Student does not have a father assigned");
+            }
+            student.setFather(null);
+        } else if ("mother".equalsIgnoreCase(parentType)) {
+            if (student.getMother() == null) {
+                throw new IllegalArgumentException("Student does not have a mother assigned");
+            }
+            student.setMother(null);
+        } else {
+            throw new IllegalArgumentException("Parent type must be either 'father' or 'mother'");
+        }
+        
+        studentRepository.save(student);
+    }    /**
      * Check if a student is owned by a specific parent
      * @param studentId the student ID
      * @param parentId the parent ID
      * @return true if the parent has access to the student
      */
     public boolean isStudentOwnedByParent(Long studentId, Long parentId) {
-        Optional<Student> student = studentRepository.findByIdWithParents(studentId);
-        if (student.isEmpty()) {
-            return false;
-        }
-        
-        return student.get().getParents().stream()
-                .anyMatch(parent -> parent.getId().equals(parentId));
-    }
-
-    /**
-     * Internal method to add parent to student
-     * @param student the student entity
-     * @param parentId the parent ID
-     */
-    private void addParentToStudentInternal(Student student, Long parentId) {
-        User parent = userRepository.findById(parentId)
-                .orElseThrow(() -> new IllegalArgumentException("Parent not found with id: " + parentId));
-        
-        // Check if parent has PARENT role
-        if (!parent.getRole().getRoleName().equals("PARENT")) {
-            throw new IllegalArgumentException("User with id " + parentId + " is not a parent");
-        }
-        
-        // Check if relationship already exists
-        if (student.getParents().contains(parent)) {
-            throw new IllegalArgumentException("Parent is already associated with this student");
-        }
-        
-        // Add the relationship
-        student.getParents().add(parent);
-        parent.getStudents().add(student);
-        
-        // Save both entities
-        studentRepository.save(student);
-        userRepository.save(parent);
-    }
-
-    /**
+        return studentRepository.isStudentOwnedByParent(studentId, parentId);
+    }    /**
      * Convert Student entity to StudentDTO
      */
     private StudentDTO convertToDTO(Student student) {
@@ -166,28 +140,13 @@ public class StudentService {
         dto.setBloodType(student.getBloodType());
         dto.setDisabled(student.isDisabled());
         
-        // Convert parents to ParentDTO list
-        if (student.getParents() != null) {
-            List<ParentDTO> parentDTOs = student.getParents().stream()
-                    .map(this::convertParentToDTO)
-                    .collect(Collectors.toList());
-            dto.setParents(parentDTOs);
+        // Set father and mother IDs
+        if (student.getFather() != null) {
+            dto.setFatherId(student.getFather().getId());
         }
-        
-        return dto;
-    }
-    
-    /**
-     * Convert User (parent) entity to ParentDTO
-     */
-    private ParentDTO convertParentToDTO(User parent) {
-        ParentDTO dto = new ParentDTO();
-        if (parent.getRole().getRoleName().equalsIgnoreCase("PARENT")) {
-            dto.setId(parent.getId());
-            dto.setFirstName(parent.getFirstName());
-            dto.setLastName(parent.getLastName());
-            dto.setPhone(parent.getPhone());
+        if (student.getMother() != null) {
+            dto.setMotherId(student.getMother().getId());
         }
-        return dto;
+          return dto;
     }
 }

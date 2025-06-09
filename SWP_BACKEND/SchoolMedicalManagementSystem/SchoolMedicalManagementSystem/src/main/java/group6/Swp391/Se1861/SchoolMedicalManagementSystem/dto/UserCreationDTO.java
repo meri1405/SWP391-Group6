@@ -28,11 +28,7 @@ public class UserCreationDTO {
     private String address;
     private String jobTitle;
     private String roleName;
-    private String status; // Status field: "ACTIVE" or "INACTIVE"
-    
-    // For parents, list of students they are associated with
-    // PARENT-specific fields
-    private List<Long> studentIds; // Used for parent-student relationships
+    private String status;
 }
 
 
