@@ -79,21 +79,24 @@ const validateUsername = (username) => {
 };
 
 const validatePassword = (password) => {
-  const hasLower = /[a-z]/.test(password);
-  const hasUpper = /[A-Z]/.test(password);
-  const hasNumber = /\d/.test(password);
-  const hasSpecial = /[@$!%*?&]/.test(password);
+  if (!password) return false;
+
+  // Kiểm tra độ dài và khoảng trắng
   const hasValidLength = password.length >= 8 && password.length <= 50;
   const noSpaces = !password.includes(" ");
 
-  return (
-    hasLower &&
-    hasUpper &&
-    hasNumber &&
-    hasSpecial &&
-    hasValidLength &&
-    noSpaces
-  );
+  if (!hasValidLength || !noSpaces) return false;
+
+  // Tính score dựa trên các tiêu chí
+  let score = 0;
+  if (password.length >= 8) score += 1;
+  if (/[a-z]/.test(password)) score += 1;
+  if (/[A-Z]/.test(password)) score += 1;
+  if (/\d/.test(password)) score += 1;
+  if (/[@$!%*?&]/.test(password)) score += 1;
+
+  // Chấp nhận mật khẩu từ "Trung bình" trở lên (score >= 3)
+  return score >= 3;
 };
 
 // Helper function to check password strength
@@ -136,9 +139,11 @@ const getPasswordStrength = (password) => {
     text: strengthLevels[score] ? strengthLevels[score].text : "Rất yếu",
     color: strengthLevels[score] ? strengthLevels[score].color : "#ff4d4f",
     feedback:
-      feedback.length > 0
-        ? `Cần thêm: ${feedback.join(", ")}`
-        : "Mật khẩu mạnh!",
+      score >= 3
+        ? score === 5
+          ? "Mật khẩu mạnh!"
+          : "Mật khẩu đạt yêu cầu!"
+        : `Cần thêm: ${feedback.join(", ")}`,
   };
 };
 
@@ -194,7 +199,6 @@ const UserManagement = ({
             className="role-filter"
           >
             <option value="all">Tất cả vai trò</option>
-            <option value="PARENT">Phụ huynh</option>
             <option value="SCHOOLNURSE">Y tá</option>
             <option value="MANAGER">Quản lý</option>
             <option value="ADMIN">Quản trị viên</option>
@@ -365,14 +369,6 @@ const UserManagement = ({
                 : "Chưa cập nhật"}
             </Descriptions.Item>
             {/* Role-specific fields */}
-            {(selectedUser?.roleName === "PARENT" ||
-              selectedUser?.role === "PARENT") && (
-              <Descriptions.Item label="Nghề nghiệp" span={1}>
-                {selectedUser?.jobTitle && selectedUser.jobTitle.trim() !== ""
-                  ? selectedUser.jobTitle
-                  : "Chưa cập nhật"}
-              </Descriptions.Item>
-            )}
             {(selectedUser?.roleName === "SCHOOLNURSE" ||
               selectedUser?.role === "SCHOOLNURSE" ||
               selectedUser?.roleName === "MANAGER" ||
@@ -391,11 +387,8 @@ const UserManagement = ({
             <Descriptions.Item label="Vai trò" span={1}>
               <Tag
                 color={
-                  selectedUser?.roleName === "PARENT" ||
-                  selectedUser?.role === "PARENT"
-                    ? "blue"
-                    : selectedUser?.roleName === "SCHOOLNURSE" ||
-                      selectedUser?.role === "SCHOOLNURSE"
+                  selectedUser?.roleName === "SCHOOLNURSE" ||
+                  selectedUser?.role === "SCHOOLNURSE"
                     ? "purple"
                     : selectedUser?.roleName === "MANAGER" ||
                       selectedUser?.role === "MANAGER"
@@ -403,9 +396,6 @@ const UserManagement = ({
                     : "red"
                 }
               >
-                {(selectedUser?.roleName === "PARENT" ||
-                  selectedUser?.role === "PARENT") &&
-                  "Phụ huynh"}
                 {(selectedUser?.roleName === "SCHOOLNURSE" ||
                   selectedUser?.role === "SCHOOLNURSE") &&
                   "Y tá"}
@@ -462,11 +452,9 @@ const UserManagement = ({
                   <strong>Thông tin bổ sung theo vai trò:</strong>
                   <ul style={{ margin: "4px 0", paddingLeft: "20px" }}>
                     <li>
-                      <strong>Phụ huynh:</strong> Nghề nghiệp (2-100 ký tự)
-                    </li>
-                    <li>
                       <strong>Y tá/Quản lý/Admin:</strong> Email, tên đăng nhập
-                      (3-30 ký tự), mật khẩu mạnh (8+ ký tự)
+                      (3-30 ký tự), mật khẩu độ mạnh từ 'Trung bình' trở lên (8+
+                      ký tự)
                     </li>
                   </ul>
                 </div>
@@ -477,7 +465,7 @@ const UserManagement = ({
               form={userFormInstance}
               layout="vertical"
               initialValues={{
-                role: "PARENT",
+                role: "SCHOOLNURSE",
                 username: "",
                 password: "",
                 email: "",
@@ -488,6 +476,7 @@ const UserManagement = ({
                 address: "",
                 gender: "",
                 dob: null,
+                status: "ACTIVE",
               }}
             >
               <div
@@ -683,58 +672,7 @@ const UserManagement = ({
                     </Select.Option>
                   </Select>
                 </Form.Item>
-                {/* Conditional job title field - show for parent role */}
-                <Form.Item
-                  noStyle
-                  shouldUpdate={(prevValues, currentValues) =>
-                    prevValues.role !== currentValues.role
-                  }
-                >
-                  {({ getFieldValue }) => {
-                    const selectedRole = getFieldValue("role");
-                    const shouldShow = selectedRole === "PARENT";
 
-                    return shouldShow ? (
-                      <Form.Item
-                        label="Nghề nghiệp"
-                        name="jobTitle"
-                        rules={[
-                          {
-                            required: true,
-                            message: "Vui lòng nhập nghề nghiệp!",
-                          },
-                          {
-                            min: 2,
-                            message: "Nghề nghiệp phải có ít nhất 2 ký tự!",
-                          },
-                          {
-                            max: 100,
-                            message: "Nghề nghiệp không được quá 100 ký tự!",
-                          },
-                          {
-                            pattern: /^[a-zA-ZÀ-ỹ0-9\s.,/-]+$/,
-                            message:
-                              "Nghề nghiệp chỉ được chứa chữ cái, số và các ký tự . , / -",
-                          },
-                          {
-                            validator: (_, value) => {
-                              if (value && value.trim() !== value) {
-                                return Promise.reject(
-                                  new Error(
-                                    "Không được có khoảng trắng thừa ở đầu hoặc cuối!"
-                                  )
-                                );
-                              }
-                              return Promise.resolve();
-                            },
-                          },
-                        ]}
-                      >
-                        <Input placeholder="Nhập nghề nghiệp (VD: Kỹ sư, Giáo viên)" />
-                      </Form.Item>
-                    ) : null;
-                  }}
-                </Form.Item>
                 {/* Conditional email field - only show for nurse, manager and admin roles */}
                 <Form.Item
                   noStyle
@@ -886,27 +824,33 @@ const UserManagement = ({
                             message: "Mật khẩu không được quá 50 ký tự!",
                           },
                           {
-                            pattern:
-                              /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
-                            message:
-                              "Mật khẩu phải chứa ít nhất 1 chữ thường, 1 chữ hoa, 1 số và 1 ký tự đặc biệt!",
-                          },
-                          {
                             validator: (_, value) => {
-                              if (value && value.includes(" ")) {
+                              if (!value) return Promise.resolve();
+
+                              if (value.includes(" ")) {
                                 return Promise.reject(
                                   new Error(
                                     "Mật khẩu không được chứa khoảng trắng!"
                                   )
                                 );
                               }
-                              if (value && value.trim() !== value) {
+
+                              if (value.trim() !== value) {
                                 return Promise.reject(
                                   new Error(
                                     "Mật khẩu không được có khoảng trắng ở đầu hoặc cuối!"
                                   )
                                 );
                               }
+
+                              if (!validatePassword(value)) {
+                                return Promise.reject(
+                                  new Error(
+                                    "Mật khẩu phải đạt độ mạnh 'Trung bình' trở lên (cần ít nhất 3/5 tiêu chí: chữ thường, chữ hoa, số, ký tự đặc biệt)!"
+                                  )
+                                );
+                              }
+
                               return Promise.resolve();
                             },
                           },
@@ -918,7 +862,7 @@ const UserManagement = ({
                             placeholder={
                               modalMode === "edit"
                                 ? "Để trống nếu không đổi mật khẩu"
-                                : "Nhập mật khẩu (8+ ký tự, bao gồm chữ hoa, thường, số, ký tự đặc biệt)"
+                                : "Nhập mật khẩu (8+ ký tự, độ mạnh từ 'Trung bình' trở lên)"
                             }
                             onChange={(e) => setCurrentPassword(e.target.value)}
                           />
@@ -926,55 +870,8 @@ const UserManagement = ({
                             <div style={{ marginTop: "8px" }}>
                               <div
                                 style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: "8px",
                                   fontSize: "12px",
-                                }}
-                              >
-                                <span>Độ mạnh:</span>
-                                <span
-                                  style={{
-                                    color:
-                                      getPasswordStrength(currentPassword)
-                                        .color,
-                                    fontWeight: "bold",
-                                  }}
-                                >
-                                  {getPasswordStrength(currentPassword).text}
-                                </span>
-                              </div>
-                              <div
-                                style={{
-                                  width: "100%",
-                                  height: "4px",
-                                  backgroundColor: "#f0f0f0",
-                                  borderRadius: "2px",
-                                  marginTop: "4px",
-                                  overflow: "hidden",
-                                }}
-                              >
-                                <div
-                                  style={{
-                                    width: `${
-                                      (getPasswordStrength(currentPassword)
-                                        .score /
-                                        5) *
-                                      100
-                                    }%`,
-                                    height: "100%",
-                                    backgroundColor:
-                                      getPasswordStrength(currentPassword)
-                                        .color,
-                                    transition: "all 0.3s ease",
-                                  }}
-                                />
-                              </div>
-                              <div
-                                style={{
-                                  fontSize: "11px",
                                   color: "#666",
-                                  marginTop: "4px",
                                 }}
                               >
                                 {getPasswordStrength(currentPassword).feedback}
@@ -999,9 +896,6 @@ const UserManagement = ({
                       handleRoleChange(value, userFormInstance)
                     }
                   >
-                    <Select.Option key="PARENT" value="PARENT">
-                      Phụ huynh
-                    </Select.Option>
                     <Select.Option key="SCHOOLNURSE" value="SCHOOLNURSE">
                       Y tá
                     </Select.Option>
@@ -1010,26 +904,6 @@ const UserManagement = ({
                     </Select.Option>
                     <Select.Option key="ADMIN" value="ADMIN">
                       Quản trị viên
-                    </Select.Option>
-                  </Select>
-                </Form.Item>
-                {/* Status field - required for all roles */}
-                <Form.Item
-                  label="Trạng thái"
-                  name="status"
-                  rules={[
-                    {
-                      required: true,
-                      message: "Vui lòng chọn trạng thái!",
-                    },
-                  ]}
-                >
-                  <Select placeholder="Chọn trạng thái">
-                    <Select.Option key="ACTIVE" value="ACTIVE">
-                      Hoạt động
-                    </Select.Option>
-                    <Select.Option key="INACTIVE" value="INACTIVE">
-                      Không hoạt động
                     </Select.Option>
                   </Select>
                 </Form.Item>
@@ -1762,8 +1636,6 @@ const AdminDashboard = () => {
         return "Quản lý";
       case "SCHOOLNURSE":
         return "Y tá";
-      case "PARENT":
-        return "Phụ huynh";
       default:
         return role;
     }
@@ -1878,7 +1750,7 @@ const AdminDashboard = () => {
 
       // Set initial default values explicitly to ensure proper field registration
       const initialValues = {
-        role: "PARENT",
+        role: "SCHOOLNURSE",
         username: "",
         password: "",
         email: "",
@@ -1889,6 +1761,7 @@ const AdminDashboard = () => {
         address: "",
         gender: "",
         dob: null,
+        status: "ACTIVE",
       };
 
       // Set each field value explicitly
@@ -1908,16 +1781,13 @@ const AdminDashboard = () => {
       password: "",
       email: "",
       jobTitle: "",
-      status: undefined, // Clear status field
+      status: "ACTIVE", // Keep status as ACTIVE
     };
 
     console.log("Clearing role-specific fields with proper defaults");
 
     // Set role-specific defaults
-    if (newRole === "PARENT") {
-      fieldsToUpdate.jobTitle = "";
-      console.log("Set PARENT defaults: jobTitle=''");
-    } else if (newRole === "ADMIN") {
+    if (newRole === "ADMIN") {
       fieldsToUpdate.username = "";
       fieldsToUpdate.password = "";
       fieldsToUpdate.email = "";
@@ -1990,15 +1860,6 @@ const AdminDashboard = () => {
     try {
       const values = await userFormInstance.validateFields();
 
-      // Manual validation for jobTitle if it's missing but required
-      if (
-        values.role === "PARENT" &&
-        (!values.jobTitle || values.jobTitle.trim() === "")
-      ) {
-        message.error("Vui lòng nhập nghề nghiệp!");
-        return;
-      }
-
       // Check if critical fields are missing or undefined
       if (
         values.role === "SCHOOLNURSE" ||
@@ -2019,11 +1880,8 @@ const AdminDashboard = () => {
         }
       }
 
-      // Check status field for all roles
-      if (!values.status || values.status.trim() === "") {
-        message.error("Vui lòng chọn trạng thái cho người dùng!");
-        return;
-      }
+      // Set status to ACTIVE by default for all new users
+      values.status = "ACTIVE";
 
       // Format the data for the backend API
       let userData = {
@@ -2036,27 +1894,18 @@ const AdminDashboard = () => {
         phone: values.phone,
       };
 
-      // Add role-specific fields
-      if (values.role === "PARENT") {
-        userData.jobTitle = values.jobTitle;
-        userData.status = values.status;
-      } else if (
-        values.role === "SCHOOLNURSE" ||
-        values.role === "ADMIN" ||
-        values.role === "MANAGER"
-      ) {
-        userData.email = values.email;
-        userData.username = values.username;
-        userData.password = values.password;
-        userData.status = values.status;
+      // Add role-specific fields for all roles
+      userData.email = values.email;
+      userData.username = values.username;
+      userData.password = values.password;
+      userData.status = values.status;
 
-        if (values.role === "SCHOOLNURSE") {
-          userData.jobTitle = "Y tá";
-        } else if (values.role === "ADMIN") {
-          userData.jobTitle = "Quản trị viên";
-        } else if (values.role === "MANAGER") {
-          userData.jobTitle = "Quản lý";
-        }
+      if (values.role === "SCHOOLNURSE") {
+        userData.jobTitle = "Y tá";
+      } else if (values.role === "ADMIN") {
+        userData.jobTitle = "Quản trị viên";
+      } else if (values.role === "MANAGER") {
+        userData.jobTitle = "Quản lý";
       }
 
       console.log("Final userData to be sent to API:", userData);
