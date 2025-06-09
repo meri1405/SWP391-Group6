@@ -199,7 +199,6 @@ const UserManagement = ({
             className="role-filter"
           >
             <option value="all">Tất cả vai trò</option>
-            <option value="PARENT">Phụ huynh</option>
             <option value="SCHOOLNURSE">Y tá</option>
             <option value="MANAGER">Quản lý</option>
             <option value="ADMIN">Quản trị viên</option>
@@ -370,14 +369,6 @@ const UserManagement = ({
                 : "Chưa cập nhật"}
             </Descriptions.Item>
             {/* Role-specific fields */}
-            {(selectedUser?.roleName === "PARENT" ||
-              selectedUser?.role === "PARENT") && (
-              <Descriptions.Item label="Nghề nghiệp" span={1}>
-                {selectedUser?.jobTitle && selectedUser.jobTitle.trim() !== ""
-                  ? selectedUser.jobTitle
-                  : "Chưa cập nhật"}
-              </Descriptions.Item>
-            )}
             {(selectedUser?.roleName === "SCHOOLNURSE" ||
               selectedUser?.role === "SCHOOLNURSE" ||
               selectedUser?.roleName === "MANAGER" ||
@@ -396,11 +387,8 @@ const UserManagement = ({
             <Descriptions.Item label="Vai trò" span={1}>
               <Tag
                 color={
-                  selectedUser?.roleName === "PARENT" ||
-                  selectedUser?.role === "PARENT"
-                    ? "blue"
-                    : selectedUser?.roleName === "SCHOOLNURSE" ||
-                      selectedUser?.role === "SCHOOLNURSE"
+                  selectedUser?.roleName === "SCHOOLNURSE" ||
+                  selectedUser?.role === "SCHOOLNURSE"
                     ? "purple"
                     : selectedUser?.roleName === "MANAGER" ||
                       selectedUser?.role === "MANAGER"
@@ -408,9 +396,6 @@ const UserManagement = ({
                     : "red"
                 }
               >
-                {(selectedUser?.roleName === "PARENT" ||
-                  selectedUser?.role === "PARENT") &&
-                  "Phụ huynh"}
                 {(selectedUser?.roleName === "SCHOOLNURSE" ||
                   selectedUser?.role === "SCHOOLNURSE") &&
                   "Y tá"}
@@ -467,9 +452,6 @@ const UserManagement = ({
                   <strong>Thông tin bổ sung theo vai trò:</strong>
                   <ul style={{ margin: "4px 0", paddingLeft: "20px" }}>
                     <li>
-                      <strong>Phụ huynh:</strong> Nghề nghiệp (2-100 ký tự)
-                    </li>
-                    <li>
                       <strong>Y tá/Quản lý/Admin:</strong> Email, tên đăng nhập
                       (3-30 ký tự), mật khẩu độ mạnh từ 'Trung bình' trở lên (8+
                       ký tự)
@@ -483,7 +465,7 @@ const UserManagement = ({
               form={userFormInstance}
               layout="vertical"
               initialValues={{
-                role: "PARENT",
+                role: "SCHOOLNURSE",
                 username: "",
                 password: "",
                 email: "",
@@ -494,6 +476,7 @@ const UserManagement = ({
                 address: "",
                 gender: "",
                 dob: null,
+                status: "ACTIVE",
               }}
             >
               <div
@@ -689,58 +672,7 @@ const UserManagement = ({
                     </Select.Option>
                   </Select>
                 </Form.Item>
-                {/* Conditional job title field - show for parent role */}
-                <Form.Item
-                  noStyle
-                  shouldUpdate={(prevValues, currentValues) =>
-                    prevValues.role !== currentValues.role
-                  }
-                >
-                  {({ getFieldValue }) => {
-                    const selectedRole = getFieldValue("role");
-                    const shouldShow = selectedRole === "PARENT";
 
-                    return shouldShow ? (
-                      <Form.Item
-                        label="Nghề nghiệp"
-                        name="jobTitle"
-                        rules={[
-                          {
-                            required: true,
-                            message: "Vui lòng nhập nghề nghiệp!",
-                          },
-                          {
-                            min: 2,
-                            message: "Nghề nghiệp phải có ít nhất 2 ký tự!",
-                          },
-                          {
-                            max: 100,
-                            message: "Nghề nghiệp không được quá 100 ký tự!",
-                          },
-                          {
-                            pattern: /^[a-zA-ZÀ-ỹ0-9\s.,/-]+$/,
-                            message:
-                              "Nghề nghiệp chỉ được chứa chữ cái, số và các ký tự . , / -",
-                          },
-                          {
-                            validator: (_, value) => {
-                              if (value && value.trim() !== value) {
-                                return Promise.reject(
-                                  new Error(
-                                    "Không được có khoảng trắng thừa ở đầu hoặc cuối!"
-                                  )
-                                );
-                              }
-                              return Promise.resolve();
-                            },
-                          },
-                        ]}
-                      >
-                        <Input placeholder="Nhập nghề nghiệp (VD: Kỹ sư, Giáo viên)" />
-                      </Form.Item>
-                    ) : null;
-                  }}
-                </Form.Item>
                 {/* Conditional email field - only show for nurse, manager and admin roles */}
                 <Form.Item
                   noStyle
@@ -964,9 +896,6 @@ const UserManagement = ({
                       handleRoleChange(value, userFormInstance)
                     }
                   >
-                    <Select.Option key="PARENT" value="PARENT">
-                      Phụ huynh
-                    </Select.Option>
                     <Select.Option key="SCHOOLNURSE" value="SCHOOLNURSE">
                       Y tá
                     </Select.Option>
@@ -975,26 +904,6 @@ const UserManagement = ({
                     </Select.Option>
                     <Select.Option key="ADMIN" value="ADMIN">
                       Quản trị viên
-                    </Select.Option>
-                  </Select>
-                </Form.Item>
-                {/* Status field - required for all roles */}
-                <Form.Item
-                  label="Trạng thái"
-                  name="status"
-                  rules={[
-                    {
-                      required: true,
-                      message: "Vui lòng chọn trạng thái!",
-                    },
-                  ]}
-                >
-                  <Select placeholder="Chọn trạng thái">
-                    <Select.Option key="ACTIVE" value="ACTIVE">
-                      Hoạt động
-                    </Select.Option>
-                    <Select.Option key="INACTIVE" value="INACTIVE">
-                      Không hoạt động
                     </Select.Option>
                   </Select>
                 </Form.Item>
@@ -1727,8 +1636,6 @@ const AdminDashboard = () => {
         return "Quản lý";
       case "SCHOOLNURSE":
         return "Y tá";
-      case "PARENT":
-        return "Phụ huynh";
       default:
         return role;
     }
@@ -1843,7 +1750,7 @@ const AdminDashboard = () => {
 
       // Set initial default values explicitly to ensure proper field registration
       const initialValues = {
-        role: "PARENT",
+        role: "SCHOOLNURSE",
         username: "",
         password: "",
         email: "",
@@ -1854,6 +1761,7 @@ const AdminDashboard = () => {
         address: "",
         gender: "",
         dob: null,
+        status: "ACTIVE",
       };
 
       // Set each field value explicitly
@@ -1873,16 +1781,13 @@ const AdminDashboard = () => {
       password: "",
       email: "",
       jobTitle: "",
-      status: undefined, // Clear status field
+      status: "ACTIVE", // Keep status as ACTIVE
     };
 
     console.log("Clearing role-specific fields with proper defaults");
 
     // Set role-specific defaults
-    if (newRole === "PARENT") {
-      fieldsToUpdate.jobTitle = "";
-      console.log("Set PARENT defaults: jobTitle=''");
-    } else if (newRole === "ADMIN") {
+    if (newRole === "ADMIN") {
       fieldsToUpdate.username = "";
       fieldsToUpdate.password = "";
       fieldsToUpdate.email = "";
@@ -1955,15 +1860,6 @@ const AdminDashboard = () => {
     try {
       const values = await userFormInstance.validateFields();
 
-      // Manual validation for jobTitle if it's missing but required
-      if (
-        values.role === "PARENT" &&
-        (!values.jobTitle || values.jobTitle.trim() === "")
-      ) {
-        message.error("Vui lòng nhập nghề nghiệp!");
-        return;
-      }
-
       // Check if critical fields are missing or undefined
       if (
         values.role === "SCHOOLNURSE" ||
@@ -1984,11 +1880,8 @@ const AdminDashboard = () => {
         }
       }
 
-      // Check status field for all roles
-      if (!values.status || values.status.trim() === "") {
-        message.error("Vui lòng chọn trạng thái cho người dùng!");
-        return;
-      }
+      // Set status to ACTIVE by default for all new users
+      values.status = "ACTIVE";
 
       // Format the data for the backend API
       let userData = {
@@ -2001,27 +1894,18 @@ const AdminDashboard = () => {
         phone: values.phone,
       };
 
-      // Add role-specific fields
-      if (values.role === "PARENT") {
-        userData.jobTitle = values.jobTitle;
-        userData.status = values.status;
-      } else if (
-        values.role === "SCHOOLNURSE" ||
-        values.role === "ADMIN" ||
-        values.role === "MANAGER"
-      ) {
-        userData.email = values.email;
-        userData.username = values.username;
-        userData.password = values.password;
-        userData.status = values.status;
+      // Add role-specific fields for all roles
+      userData.email = values.email;
+      userData.username = values.username;
+      userData.password = values.password;
+      userData.status = values.status;
 
-        if (values.role === "SCHOOLNURSE") {
-          userData.jobTitle = "Y tá";
-        } else if (values.role === "ADMIN") {
-          userData.jobTitle = "Quản trị viên";
-        } else if (values.role === "MANAGER") {
-          userData.jobTitle = "Quản lý";
-        }
+      if (values.role === "SCHOOLNURSE") {
+        userData.jobTitle = "Y tá";
+      } else if (values.role === "ADMIN") {
+        userData.jobTitle = "Quản trị viên";
+      } else if (values.role === "MANAGER") {
+        userData.jobTitle = "Quản lý";
       }
 
       console.log("Final userData to be sent to API:", userData);
@@ -2312,7 +2196,7 @@ const AdminDashboard = () => {
                 border: "2px solid #ff6b35",
               }}
             >
-              <SettingOutlined style={{ fontSize:  32, color: "#ff6b35" }} />
+              <SettingOutlined style={{ fontSize: 32, color: "#ff6b35" }} />
             </div>
             {!collapsed && (
               <span
