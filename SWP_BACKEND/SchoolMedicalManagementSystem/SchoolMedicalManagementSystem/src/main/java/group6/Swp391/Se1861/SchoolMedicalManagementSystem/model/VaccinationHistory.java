@@ -37,13 +37,15 @@ public class VaccinationHistory {
     private String administeredBy;
 
     @Column(name = "notes", nullable = true)
-    private String notes;
-
-    @Column(name = "status", nullable = false)
+    private String notes;    @Column(name = "status", nullable = false)
     private boolean status;
 
     @ManyToOne
     @JoinColumn(name = "healthProfileId", nullable = false)
     private HealthProfile healthProfile;
+
+    @ManyToOne
+    @JoinColumn(name = "vaccinationRuleId", nullable = true)
+    private VaccinationRule vaccinationRule;
 
 }

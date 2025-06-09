@@ -41,10 +41,11 @@ public class ParentHealthProfileService {
     private VisionRepository visionRepository;
 
     @Autowired
-    private HearingRepository hearingRepository;
+    private HearingRepository hearingRepository;    @Autowired
+    private VaccinationHistoryRepository vaccinationHistoryRepository;
 
     @Autowired
-    private VaccinationHistoryRepository vaccinationHistoryRepository;
+    private VaccinationRuleRepository vaccinationRuleRepository;
 
     /**
      * Create a health profile for a child by a parent
@@ -71,8 +72,8 @@ public class ParentHealthProfileService {
         Student student = studentRepository.findById(healthProfileDTO.getStudentId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found"));
 
-        // Validate parent is related to student
-        if (parent.getStudents() == null || !parent.getStudents().contains(student)) {
+        // Validate parent is related to student        
+        if (!isParentRelatedToStudent(parent, student)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Parent is not associated with this student");
         }
 
@@ -179,9 +180,7 @@ public class ParentHealthProfileService {
                 hearing.setHealthProfile(savedProfile);
                 hearingRepository.save(hearing);
             }
-        }
-
-        // Create and save vaccination history if provided
+        }        // Create and save vaccination history if provided
         if (healthProfileDTO.getVaccinationHistory() != null) {
             for (VaccinationHistoryDTO vaccinationDTO : healthProfileDTO.getVaccinationHistory()) {
                 VaccinationHistory vaccination = new VaccinationHistory();
@@ -194,6 +193,14 @@ public class ParentHealthProfileService {
                 vaccination.setNotes(vaccinationDTO.getNotes());
                 vaccination.setStatus(vaccinationDTO.isStatus());
                 vaccination.setHealthProfile(savedProfile);
+                
+                // Set vaccination rule if provided
+                if (vaccinationDTO.getRuleId() != null) {
+                    VaccinationRule rule = vaccinationRuleRepository.findById(vaccinationDTO.getRuleId())
+                            .orElse(null);
+                    vaccination.setVaccinationRule(rule);
+                }
+                
                 vaccinationHistoryRepository.save(vaccination);
             }
         }
@@ -213,8 +220,7 @@ public class ParentHealthProfileService {
      * @param parentId ID of the parent user
      * @param profileId ID of the health profile
      * @return the health profile data
-     */
-    public HealthProfileDTO getHealthProfileById(Long parentId, Long profileId) {
+     */    public HealthProfileDTO getHealthProfileById(Long parentId, Long profileId) {
         // Validate parent exists
         User parent = userRepository.findById(parentId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Parent not found"));
@@ -229,7 +235,7 @@ public class ParentHealthProfileService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Health profile not found"));
 
         // Validate parent is related to student
-        if (parent.getStudents() == null || !parent.getStudents().contains(healthProfile.getStudent())) {
+        if (!isParentRelatedToStudent(parent, healthProfile.getStudent())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Parent is not associated with this student");
         }
 
@@ -251,14 +257,12 @@ public class ParentHealthProfileService {
         // Check if the user has PARENT role
         if (!parent.getRole().getRoleName().equals("PARENT")) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only parents can access health profiles");
-        }
-
-        // Validate student exists
+        }        // Validate student exists
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found"));
 
         // Validate parent is related to student
-        if (parent.getStudents() == null || !parent.getStudents().contains(student)) {
+        if (!isParentRelatedToStudent(parent, student)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Parent is not associated with this student");
         }
 
@@ -281,9 +285,7 @@ public class ParentHealthProfileService {
     public HealthProfileDTO updateHealthProfile(Long parentId, Long profileId, HealthProfileDTO healthProfileDTO) {
         // Validate parent exists
         User parent = userRepository.findById(parentId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Parent not found"));
-
-        // Check if the user has PARENT role
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Parent not found"));        // Check if the user has PARENT role
         if (!parent.getRole().getRoleName().equals("PARENT")) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only parents can update health profiles");
         }
@@ -293,7 +295,7 @@ public class ParentHealthProfileService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Health profile not found"));
 
         // Validate parent is related to student
-        if (parent.getStudents() == null || !parent.getStudents().contains(healthProfile.getStudent())) {
+        if (!isParentRelatedToStudent(parent, healthProfile.getStudent())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Parent is not associated with this student");
         }
 
@@ -634,8 +636,7 @@ public class ParentHealthProfileService {
                               (existing.getVaccineName().equalsIgnoreCase(vaccinationDTO.getVaccineName()) &&
                                existing.getDoseNumber() == vaccinationDTO.getDoseNumber() &&
                                existing.getDateOfVaccination().equals(vaccinationDTO.getDateOfVaccination())))) {
-                    
-                    // Create new vaccination record
+                      // Create new vaccination record
                     VaccinationHistory newVaccination = new VaccinationHistory();
                     newVaccination.setVaccineName(vaccinationDTO.getVaccineName());
                     newVaccination.setDoseNumber(vaccinationDTO.getDoseNumber());
@@ -647,6 +648,13 @@ public class ParentHealthProfileService {
                     newVaccination.setStatus(vaccinationDTO.isStatus());
                     newVaccination.setHealthProfile(updatedProfile);
                     
+                    // Set vaccination rule if provided
+                    if (vaccinationDTO.getRuleId() != null) {
+                        VaccinationRule rule = vaccinationRuleRepository.findById(vaccinationDTO.getRuleId())
+                                .orElse(null);
+                        newVaccination.setVaccinationRule(rule);
+                    }
+                    
                     // Save new vaccination record
                     VaccinationHistory savedVaccination = vaccinationHistoryRepository.save(newVaccination);
                     updatedVaccinations.add(savedVaccination);
@@ -657,8 +665,7 @@ public class ParentHealthProfileService {
                                 (existing.getVaccineName().equalsIgnoreCase(vaccinationDTO.getVaccineName()) &&
                                  existing.getDoseNumber() == vaccinationDTO.getDoseNumber() &&
                                  existing.getDateOfVaccination().equals(vaccinationDTO.getDateOfVaccination())))
-                        .findFirst().orElse(null);
-                      if (existingVaccination != null) {
+                        .findFirst().orElse(null);                      if (existingVaccination != null) {
                         // Update fields if they have changed
                         existingVaccination.setManufacturer(vaccinationDTO.getManufacturer());
                         existingVaccination.setDateOfVaccination(vaccinationDTO.getDateOfVaccination());
@@ -666,6 +673,16 @@ public class ParentHealthProfileService {
                         existingVaccination.setAdministeredBy(vaccinationDTO.getAdministeredBy());
                         existingVaccination.setNotes(vaccinationDTO.getNotes());
                         existingVaccination.setStatus(vaccinationDTO.isStatus());
+                        
+                        // Update vaccination rule if provided
+                        if (vaccinationDTO.getRuleId() != null) {
+                            VaccinationRule rule = vaccinationRuleRepository.findById(vaccinationDTO.getRuleId())
+                                    .orElse(null);
+                            existingVaccination.setVaccinationRule(rule);
+                        } else {
+                            existingVaccination.setVaccinationRule(null);
+                        }
+                        
                         vaccinationHistoryRepository.save(existingVaccination);
                     }
                 }
@@ -700,7 +717,7 @@ public class ParentHealthProfileService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Health profile not found"));
 
         // Validate parent is related to student
-        if (parent.getStudents() == null || !parent.getStudents().contains(healthProfile.getStudent())) {
+        if (!isParentRelatedToStudent(parent, healthProfile.getStudent())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Parent is not associated with this student");
         }
 
@@ -871,10 +888,17 @@ public class ParentHealthProfileService {
                         vaccinationDTO.setVaccineName(vaccination.getVaccineName());
                         vaccinationDTO.setDoseNumber(vaccination.getDoseNumber());
                         vaccinationDTO.setManufacturer(vaccination.getManufacturer());
-                        vaccinationDTO.setDateOfVaccination(vaccination.getDateOfVaccination());                        vaccinationDTO.setPlaceOfVaccination(vaccination.getPlaceOfVaccination());
+                        vaccinationDTO.setDateOfVaccination(vaccination.getDateOfVaccination());
+                        vaccinationDTO.setPlaceOfVaccination(vaccination.getPlaceOfVaccination());
                         vaccinationDTO.setAdministeredBy(vaccination.getAdministeredBy());
                         vaccinationDTO.setNotes(vaccination.getNotes());
                         vaccinationDTO.setStatus(vaccination.isStatus());
+                        
+                        // Include vaccination rule ID if rule is associated
+                        if (vaccination.getVaccinationRule() != null) {
+                            vaccinationDTO.setRuleId(vaccination.getVaccinationRule().getId());
+                        }
+                        
                         return vaccinationDTO;
                     })
                     .collect(Collectors.toList());
@@ -882,5 +906,17 @@ public class ParentHealthProfileService {
         }
 
         return dto;
+    }
+
+    /**
+     * Check if a parent is related to a student
+     * @param parent The parent user
+     * @param student The student
+     * @return true if the parent is related to the student, false otherwise
+     */
+    private boolean isParentRelatedToStudent(User parent, Student student) {
+        // Check if the parent is either the mother or father of the student
+        return (student.getMother() != null && student.getMother().getId().equals(parent.getId())) ||
+               (student.getFather() != null && student.getFather().getId().equals(parent.getId()));
     }
 }

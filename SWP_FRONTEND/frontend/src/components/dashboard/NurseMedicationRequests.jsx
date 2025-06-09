@@ -23,7 +23,6 @@ import {
   MedicineBoxOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { useAuth } from '../../contexts/AuthContext';
 import { nurseApi } from '../../api/nurseApi';
 import '../../styles/NurseMedicationComponents.css';
 
@@ -31,7 +30,6 @@ const { TextArea } = Input;
 const { Title, Text } = Typography;
 
 const NurseMedicationRequests = () => {
-  const { getToken } = useAuth();
   const [loading, setLoading] = useState(false);
   const [medicationRequests, setMedicationRequests] = useState([]);
   const [selectedRequest, setSelectedRequest] = useState(null);
@@ -39,34 +37,44 @@ const NurseMedicationRequests = () => {
   const [rejectModalVisible, setRejectModalVisible] = useState(false);
   const [rejectNote, setRejectNote] = useState('');
   const [rejectionLoading, setRejectionLoading] = useState(false);
-
   const fetchPendingRequests = useCallback(async () => {
     try {
       setLoading(true);
-      const token = getToken();
-      const requests = await nurseApi.getPendingMedicationRequests(token);
-      setMedicationRequests(requests);
+      const response = await nurseApi.getPendingMedicationRequests();
+      if (response.success) {
+        setMedicationRequests(response.data);
+      } else {
+        message.error('Không thể tải danh sách yêu cầu thuốc');
+      }
     } catch (error) {
       console.error('Error fetching pending requests:', error);
       message.error('Không thể tải danh sách yêu cầu thuốc');
     } finally {
       setLoading(false);
     }
-  }, [getToken]);
+  }, []);
 
   useEffect(() => {
     fetchPendingRequests();
-  }, [fetchPendingRequests]);
-  const handleApprove = async (requestId) => {
+  }, [fetchPendingRequests]);  const handleApprove = async (requestId) => {
     try {
       setLoading(true);
-      await nurseApi.approveMedicationRequest(requestId);
-      message.success('Đã duyệt yêu cầu thuốc thành công');
+      const response = await nurseApi.approveMedicationRequest(requestId, {
+        approvedBy: 'Current Nurse', // This should come from auth context
+        approvedDate: new Date().toISOString(),
+        notes: 'Approved by nurse'
+      });
       
-      // Update local state
-      setMedicationRequests(prev => 
-        prev.filter(req => req.id !== requestId)
-      );
+      if (response.success) {
+        message.success(response.message || 'Đã duyệt yêu cầu thuốc thành công');
+        
+        // Update local state
+        setMedicationRequests(prev => 
+          prev.filter(req => req.id !== requestId)
+        );
+      } else {
+        message.error('Có lỗi xảy ra khi duyệt yêu cầu');
+      }
     } catch (error) {
       console.error('Error approving request:', error);
       message.error('Có lỗi xảy ra khi duyệt yêu cầu');
@@ -80,24 +88,34 @@ const NurseMedicationRequests = () => {
     setRejectNote('');
     setRejectModalVisible(true);
   };
-
   const handleReject = async () => {
     if (!rejectNote.trim()) {
       message.error('Vui lòng nhập lý do từ chối');
       return;
-    }    try {
+    }
+    
+    try {
       setRejectionLoading(true);
-      await nurseApi.rejectMedicationRequest(selectedRequest.id, rejectNote);
-      message.success('Đã từ chối yêu cầu thuốc');
+      const response = await nurseApi.rejectMedicationRequest(selectedRequest.id, {
+        rejectedBy: 'Current Nurse', // This should come from auth context
+        rejectedDate: new Date().toISOString(),
+        rejectionReason: rejectNote.trim()
+      });
       
-      // Update local state
-      setMedicationRequests(prev => 
-        prev.filter(req => req.id !== selectedRequest.id)
-      );
-      
-      setRejectModalVisible(false);
-      setSelectedRequest(null);
-      setRejectNote('');
+      if (response.success) {
+        message.success(response.message || 'Đã từ chối yêu cầu thuốc');
+        
+        // Update local state
+        setMedicationRequests(prev => 
+          prev.filter(req => req.id !== selectedRequest.id)
+        );
+        
+        setRejectModalVisible(false);
+        setSelectedRequest(null);
+        setRejectNote('');
+      } else {
+        message.error('Có lỗi xảy ra khi từ chối yêu cầu');
+      }
     } catch (error) {
       console.error('Error rejecting request:', error);
       message.error('Có lỗi xảy ra khi từ chối yêu cầu');

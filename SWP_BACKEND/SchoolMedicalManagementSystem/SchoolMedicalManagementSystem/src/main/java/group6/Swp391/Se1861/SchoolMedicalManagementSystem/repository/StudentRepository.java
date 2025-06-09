@@ -13,22 +13,23 @@ import java.util.Optional;
 @Repository
 public interface StudentRepository extends JpaRepository<Student, Long> {
 
-    // Find all students associated with a specific parent
-    List<Student> findByParents(User parent);
+    // Find all students associated with a specific parent (father or mother)
+    @Query("SELECT s FROM Student s WHERE s.father = :parent OR s.mother = :parent")
+    List<Student> findByParent(@Param("parent") User parent);
     
-    // Find all students associated with a specific parent with eager loading of parents
-    @Query("SELECT DISTINCT s FROM Student s LEFT JOIN FETCH s.parents WHERE :parent MEMBER OF s.parents")
-    List<Student> findByParentsWithParents(@Param("parent") User parent);
+    // Find all students associated with a specific parent with eager loading of father and mother
+    @Query("SELECT DISTINCT s FROM Student s LEFT JOIN FETCH s.father LEFT JOIN FETCH s.mother WHERE s.father = :parent OR s.mother = :parent")
+    List<Student> findByParentWithParents(@Param("parent") User parent);
 
     // Check if a student belongs to a specific parent
-    @Query("SELECT CASE WHEN COUNT(s) > 0 THEN true ELSE false END FROM Student s JOIN s.parents p WHERE s.studentID = :studentId AND p.id = :parentId")
+    @Query("SELECT CASE WHEN COUNT(s) > 0 THEN true ELSE false END FROM Student s WHERE s.studentID = :studentId AND (s.father.id = :parentId OR s.mother.id = :parentId)")
     boolean isStudentOwnedByParent(@Param("studentId") Long studentId, @Param("parentId") Long parentId);
 
-    // Find student by ID with eager loading of parents
-    @Query("SELECT s FROM Student s LEFT JOIN FETCH s.parents WHERE s.studentID = :id")
+    // Find student by ID with eager loading of father and mother
+    @Query("SELECT s FROM Student s LEFT JOIN FETCH s.father LEFT JOIN FETCH s.mother WHERE s.studentID = :id")
     Optional<Student> findByIdWithParents(@Param("id") Long id);
     
-    // Find all students with eager loading of parents
-    @Query("SELECT DISTINCT s FROM Student s LEFT JOIN FETCH s.parents")
+    // Find all students with eager loading of father and mother
+    @Query("SELECT DISTINCT s FROM Student s LEFT JOIN FETCH s.father LEFT JOIN FETCH s.mother")
     List<Student> findAllWithParents();
 }

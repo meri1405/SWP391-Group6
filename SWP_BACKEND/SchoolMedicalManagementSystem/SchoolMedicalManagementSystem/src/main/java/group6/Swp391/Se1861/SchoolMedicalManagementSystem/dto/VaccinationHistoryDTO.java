@@ -20,4 +20,5 @@ public class VaccinationHistoryDTO {
     private String notes;
     private boolean status;
     private Long healthProfileId;
+    private Long ruleId;
 }
