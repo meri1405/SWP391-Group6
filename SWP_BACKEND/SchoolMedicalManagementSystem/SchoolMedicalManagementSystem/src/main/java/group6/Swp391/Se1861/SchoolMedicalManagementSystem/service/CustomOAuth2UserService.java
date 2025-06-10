@@ -1,6 +1,5 @@
 package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service;
 
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.Role;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.RoleRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.UserRepository;
@@ -15,8 +14,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.context.annotation.Lazy;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;
 
