@@ -22,9 +22,21 @@ import java.util.Map;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Controller dành cho phụ huynh
+ * Cung cấp các API để phụ huynh quản lý thông tin cá nhân và theo dõi con em
+ * 
+ * Chức năng chính:
+ * - Xem và cập nhật thông tin cá nhân phụ huynh
+ * - Theo dõi lịch uống thuốc của con
+ * - Xem thông tin học sinh (con em)
+ * - Quản lý yêu cầu thuốc
+ * 
+ * Bảo mật: Chỉ cho phép truy cập với vai trò PARENT
+ */
 @RestController
 @RequestMapping("/api/parent")
-@PreAuthorize("hasRole('PARENT')")  // Only parents can access these endpoints
+@PreAuthorize("hasRole('PARENT')")  // Chỉ phụ huynh mới có thể truy cập các endpoint này
 public class ParentController {
 
     @Autowired
@@ -40,8 +52,13 @@ public class ParentController {
     private MedicationScheduleService medicationScheduleService;
 
     /**
-     * Get parent profile information
-     */    @GetMapping("/profile")
+     * Lấy thông tin hồ sơ phụ huynh
+     * Trả về thông tin cá nhân của phụ huynh đang đăng nhập
+     * 
+     * @param parent Phụ huynh đã xác thực
+     * @return ResponseEntity chứa thông tin hồ sơ phụ huynh
+     */    
+    @GetMapping("/profile")
     public ResponseEntity<?> getParentProfile(@AuthenticationPrincipal User parent) {
         Map<String, Object> profile = new HashMap<>();
         profile.put("id", parent.getId());
@@ -51,9 +68,10 @@ public class ParentController {
         profile.put("email", parent.getEmail());
         profile.put("address", parent.getAddress());
         profile.put("jobTitle", parent.getJobTitle());
-          // Format the date to ISO format if it exists
+        
+        // Định dạng ngày sinh theo chuẩn ISO nếu tồn tại
         if (parent.getDob() != null) {
-            // Format the date in ISO format (YYYY-MM-DD)
+            // Định dạng ngày theo chuẩn ISO (YYYY-MM-DD)
             String formattedDate = parent.getDob().format(DateTimeFormatter.ISO_LOCAL_DATE);
             profile.put("dateOfBirth", formattedDate);
         } else {
@@ -64,13 +82,20 @@ public class ParentController {
         profile.put("role", parent.getRole().getRoleName());
         
         // Debug print
-        System.out.println("Returning parent profile with date of birth: " + 
+        System.out.println("Trả về hồ sơ phụ huynh với ngày sinh: " + 
                           (parent.getDob() != null ? parent.getDob().toString() : "null") + 
-                          " and job title: " + parent.getJobTitle());
+                          " và nghề nghiệp: " + parent.getJobTitle());
         
         return ResponseEntity.ok(profile);
-    }/**
-     * Update parent profile information
+    }
+
+    /**
+     * Cập nhật thông tin hồ sơ phụ huynh
+     * Cho phép phụ huynh chỉnh sửa thông tin cá nhân
+     * 
+     * @param profileData Dữ liệu hồ sơ cần cập nhật
+     * @param parent Phụ huynh đã xác thực
+     * @return ResponseEntity với thông tin đã cập nhật hoặc lỗi
      */
     @PutMapping("/profile")
     public ResponseEntity<?> updateParentProfile(
@@ -78,10 +103,10 @@ public class ParentController {
             @AuthenticationPrincipal User parent) {
         
         try {
-            // Update the parent's information with the provided data
+            // Cập nhật thông tin phụ huynh với dữ liệu được cung cấp
             boolean updated = false;
 
-            // Update firstName if provided
+            // Cập nhật tên nếu được cung cấp
             if (profileData.containsKey("firstName") && profileData.get("firstName") != null) {
                 String firstName = profileData.get("firstName").toString().trim();
                 if (!firstName.isEmpty()) {
@@ -90,7 +115,7 @@ public class ParentController {
                 }
             }
 
-            // Update lastName if provided
+            // Cập nhật họ nếu được cung cấp
             if (profileData.containsKey("lastName") && profileData.get("lastName") != null) {
                 String lastName = profileData.get("lastName").toString().trim();
                 if (!lastName.isEmpty()) {
@@ -99,73 +124,77 @@ public class ParentController {
                 }
             }
 
-            // Update phone if provided
+            // Cập nhật số điện thoại nếu được cung cấp
             if (profileData.containsKey("phone") && profileData.get("phone") != null) {
                 String phone = profileData.get("phone").toString().trim();
                 if (!phone.isEmpty()) {
-                    // Check if phone number is already in use by another user
+                    // Kiểm tra số điện thoại đã được sử dụng bởi người dùng khác chưa
                     if (userRepository.findByPhone(phone).isPresent() && 
                         !userRepository.findByPhone(phone).get().getId().equals(parent.getId())) {
                         Map<String, Object> errorResponse = new HashMap<>();
-                        errorResponse.put("error", "Phone number already in use");
-                        errorResponse.put("message", "This phone number is already registered to another user");
+                        errorResponse.put("error", "Số điện thoại đã được sử dụng");
+                        errorResponse.put("message", "Số điện thoại này đã được đăng ký bởi người dùng khác");
                         return ResponseEntity.badRequest().body(errorResponse);
                     }
                     parent.setPhone(phone);
                     updated = true;
                 }
-            }            // Update address if provided
+            }            
+            
+            // Cập nhật địa chỉ nếu được cung cấp
             if (profileData.containsKey("address")) {
                 String address = profileData.get("address") != null ? 
                     profileData.get("address").toString().trim() : "";
                 parent.setAddress(address);
-                System.out.println("Address updated to: " + address);
+                System.out.println("Địa chỉ được cập nhật thành: " + address);
                 updated = true;
             }
             
-            // Update jobTitle if provided
+            // Cập nhật nghề nghiệp nếu được cung cấp
             if (profileData.containsKey("jobTitle")) {
                 String jobTitle = profileData.get("jobTitle") != null ? 
                     profileData.get("jobTitle").toString().trim() : 
-                    "PARENT";  // Default value if null
+                    "PARENT";  // Giá trị mặc định nếu null
                 parent.setJobTitle(jobTitle);
-                System.out.println("Job title updated to: " + jobTitle);
+                System.out.println("Nghề nghiệp được cập nhật thành: " + jobTitle);
                 updated = true;
-            }            // Update dateOfBirth if provided
+            }            
+            
+            // Cập nhật ngày sinh nếu được cung cấp
             if (profileData.containsKey("dateOfBirth")) {
                 try {
                     String dobString = profileData.get("dateOfBirth") != null ? 
                         profileData.get("dateOfBirth").toString().trim() : "";
                     
                     if (!dobString.isEmpty()) {
-                        // Improved date parsing with better error handling
+                        // Cải thiện việc parse ngày với xử lý lỗi tốt hơn
                         LocalDate dob;
                         try {
-                            // Try ISO standard format first (YYYY-MM-DD)
+                            // Thử định dạng ISO chuẩn trước (YYYY-MM-DD)
                             dob = LocalDate.parse(dobString, DateTimeFormatter.ISO_LOCAL_DATE);
                         } catch (Exception e1) {
                             try {
-                                // Try alternate format as fallback
+                                // Thử định dạng thay thế làm fallback
                                 dob = LocalDate.parse(dobString, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
                             } catch (Exception e2) {
-                                throw new IllegalArgumentException("Could not parse date: " + dobString);
+                                throw new IllegalArgumentException("Không thể parse ngày: " + dobString);
                             }
                         }
                         
                         parent.setDob(dob);
-                        System.out.println("Date of birth updated to: " + dob);
+                        System.out.println("Ngày sinh được cập nhật thành: " + dob);
                         updated = true;
                     }
                 } catch (Exception e) {
-                    e.printStackTrace(); // Log the error for troubleshooting
+                    e.printStackTrace(); // Log lỗi để troubleshoot
                     Map<String, Object> errorResponse = new HashMap<>();
-                    errorResponse.put("error", "Invalid date format");
-                    errorResponse.put("message", "Date of birth must be in YYYY-MM-DD format. Error: " + e.getMessage());
+                    errorResponse.put("error", "Định dạng ngày không hợp lệ");
+                    errorResponse.put("message", "Ngày sinh phải theo định dạng YYYY-MM-DD. Lỗi: " + e.getMessage());
                     return ResponseEntity.badRequest().body(errorResponse);
                 }
             }
 
-            // Update gender if provided
+            // Cập nhật giới tính nếu được cung cấp
             if (profileData.containsKey("gender") && profileData.get("gender") != null) {
                 String gender = profileData.get("gender").toString().trim().toUpperCase();
                 if (gender.equals("M") || gender.equals("F")) {
@@ -173,20 +202,20 @@ public class ParentController {
                     updated = true;
                 } else if (!gender.isEmpty()) {
                     Map<String, Object> errorResponse = new HashMap<>();
-                    errorResponse.put("error", "Invalid gender");
-                    errorResponse.put("message", "Gender must be 'M' or 'F'");
+                    errorResponse.put("error", "Giới tính không hợp lệ");
+                    errorResponse.put("message", "Giới tính phải là 'M' hoặc 'F'");
                     return ResponseEntity.badRequest().body(errorResponse);
                 }
             }
 
-            // Save changes if any updates were made
+            // Lưu thay đổi nếu có cập nhật
             if (updated) {
                 userRepository.save(parent);
             }
 
-            // Return updated profile information
+            // Trả về thông tin hồ sơ đã cập nhật
             Map<String, Object> response = new HashMap<>();
-            response.put("message", "Profile updated successfully");
+            response.put("message", "Cập nhật hồ sơ thành công");
             
             Map<String, Object> updatedProfile = new HashMap<>();
             updatedProfile.put("id", parent.getId());
@@ -196,9 +225,10 @@ public class ParentController {
             updatedProfile.put("email", parent.getEmail());
             updatedProfile.put("address", parent.getAddress());
             updatedProfile.put("jobTitle", parent.getJobTitle());
-              // Format the date to ISO format
+            
+            // Định dạng ngày theo chuẩn ISO
             if (parent.getDob() != null) {
-                // Format the date in ISO format (YYYY-MM-DD)
+                // Định dạng ngày theo chuẩn ISO (YYYY-MM-DD)
                 String formattedDate = parent.getDob().format(DateTimeFormatter.ISO_LOCAL_DATE);
                 updatedProfile.put("dateOfBirth", formattedDate);
             } else {
@@ -209,7 +239,7 @@ public class ParentController {
             updatedProfile.put("role", parent.getRole().getRoleName());
             
             response.put("profile", updatedProfile);
-              return ResponseEntity.ok(response);
+            return ResponseEntity.ok(response);
             
         } catch (Exception e) {
             Map<String, Object> errorResponse = new HashMap<>();
