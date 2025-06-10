@@ -30,9 +30,7 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
     private final OtpService otpService;
-    private final AuthenticationManager authenticationManager;
-
-    @Autowired
+    private final AuthenticationManager authenticationManager;    @Autowired
     public AuthService(
             UserRepository userRepository,
             RoleRepository roleRepository,
@@ -69,20 +67,23 @@ public class AuthService {
                 user.getEmail(),
                 user.getRole().getRoleName()
         );
-    }
-
-    /**
+    }    /**
      * Request OTP for phone authentication
      */
     public boolean requestOtp(String phoneNumber) {
         return otpService.generateAndSendOtp(phoneNumber);
-    }
-
-    /**
+    }    /**
      * Authenticate with OTP
      */
     public AuthResponse authenticateWithOtp(String phoneNumber, String otp) {
-        boolean isValid = otpService.verifyOtp(phoneNumber, otp);
+        boolean isValid;
+        
+        // Special handling for Firebase verification
+        if ("FIREBASE_VERIFIED".equals(otp)) {
+            isValid = true; // Already verified by Firebase ID token
+        } else {
+            isValid = otpService.verifyOtp(phoneNumber, otp);
+        }
 
         if (!isValid) {
             throw new BadCredentialsException("Invalid OTP");

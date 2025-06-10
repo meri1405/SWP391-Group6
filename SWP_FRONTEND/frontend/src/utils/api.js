@@ -17,10 +17,17 @@ export const API_ENDPOINTS = {
       import.meta.env.VITE_API_AUTH_LOGIN || "/api/auth/login"
     }`,
     requestOtp: `${API_BASE_URL}${
-      import.meta.env.VITE_API_AUTH_REQUEST_OTP || "/api/auth/request-otp"
+      import.meta.env.VITE_API_AUTH_REQUEST_OTP || "/api/auth/parent/request-otp"
     }`,
     verifyOtp: `${API_BASE_URL}${
-      import.meta.env.VITE_API_AUTH_VERIFY_OTP || "/api/auth/verify-otp"
+      import.meta.env.VITE_API_AUTH_VERIFY_OTP || "/api/auth/parent/verify-otp"
+    }`,
+    // Firebase endpoints
+    firebaseConfig: `${API_BASE_URL}${
+      import.meta.env.VITE_API_AUTH_FIREBASE_CONFIG || "/api/auth/firebase-config"
+    }`,
+    verifyFirebaseOtp: `${API_BASE_URL}${
+      import.meta.env.VITE_API_AUTH_VERIFY_FIREBASE_OTP || "/api/auth/parent/verify-firebase-otp"
     }`,
     // OAuth2 endpoints
     googleOAuth: `${API_BASE_URL}${

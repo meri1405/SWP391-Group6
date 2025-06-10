@@ -40,4 +40,24 @@ public class ParentStudentHealthProfileController {
         List<HealthProfileDTO> healthProfiles = parentHealthProfileService.getHealthProfilesByStudentId(user.getId(), studentId);
         return ResponseEntity.ok(healthProfiles);
     }
+
+    /**
+     * Get approved health profiles by student ID
+     * @param user authenticated parent user
+     * @param studentId ID of the student
+     * @return list of approved health profiles for the student
+     */
+    @GetMapping("/{studentId}/health-profiles/approved")
+    public ResponseEntity<List<HealthProfileDTO>> getApprovedHealthProfilesByStudentId(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long studentId) {
+
+        // Verify user has PARENT role
+        if (user == null || !user.getRole().getRoleName().equals("PARENT")) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only parents can access health profiles");
+        }
+
+        List<HealthProfileDTO> approvedHealthProfiles = parentHealthProfileService.getApprovedHealthProfilesByStudentId(user.getId(), studentId);
+        return ResponseEntity.ok(approvedHealthProfiles);
+    }
 }
