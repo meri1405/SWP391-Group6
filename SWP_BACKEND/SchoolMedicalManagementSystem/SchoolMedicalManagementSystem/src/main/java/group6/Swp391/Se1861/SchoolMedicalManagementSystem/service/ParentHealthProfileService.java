@@ -257,7 +257,9 @@ public class ParentHealthProfileService {
         // Check if the user has PARENT role
         if (!parent.getRole().getRoleName().equals("PARENT")) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only parents can access health profiles");
-        }        // Validate student exists
+        }
+
+        // Validate student exists
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found"));
 
@@ -271,6 +273,45 @@ public class ParentHealthProfileService {
 
         // Convert to DTOs
         return healthProfiles.stream()
+                .map(this::convertToDetailedDTO)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get approved health profiles by student ID, ensuring the parent has access to them
+     * @param parentId ID of the parent user
+     * @param studentId ID of the student
+     * @return list of approved health profiles for the student
+     */
+    public List<HealthProfileDTO> getApprovedHealthProfilesByStudentId(Long parentId, Long studentId) {
+        // Validate parent exists
+        User parent = userRepository.findById(parentId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Parent not found"));
+
+        // Check if the user has PARENT role
+        if (!parent.getRole().getRoleName().equals("PARENT")) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only parents can access health profiles");
+        }
+
+        // Validate student exists
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found"));
+
+        // Validate parent is related to student
+        if (!isParentRelatedToStudent(parent, student)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Parent is not associated with this student");
+        }
+
+        // Get approved health profiles only
+        List<HealthProfile> healthProfiles = healthProfileRepository.findByStudentStudentIDAndParentId(studentId, parentId);
+        
+        // Filter for approved profiles only
+        List<HealthProfile> approvedProfiles = healthProfiles.stream()
+                .filter(profile -> profile.getStatus() == ProfileStatus.APPROVED)
+                .collect(Collectors.toList());
+
+        // Convert to DTOs
+        return approvedProfiles.stream()
                 .map(this::convertToDetailedDTO)
                 .collect(Collectors.toList());
     }

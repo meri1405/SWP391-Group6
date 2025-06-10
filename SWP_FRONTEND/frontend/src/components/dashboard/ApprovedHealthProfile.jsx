@@ -14,7 +14,8 @@ import {
   Alert,
   Space,
   Button,
-  Modal
+  Modal,
+  Typography
 } from 'antd';
 import {
   HeartOutlined,
@@ -30,7 +31,6 @@ import dayjs from 'dayjs';
 import '../../styles/ApprovedHealthProfile.css';
 
 const { Option } = Select;
-const { TabPane } = Tabs;
 
 const ApprovedHealthProfile = () => {
   const { getToken } = useAuth();
@@ -506,36 +506,50 @@ const ApprovedHealthProfile = () => {
                 selectedStudent.firstName && selectedStudent.lastName 
                   ? `${selectedStudent.lastName} ${selectedStudent.firstName}` 
                   : selectedStudent.name || 'Học sinh'
-              }`}>
-                <Tabs defaultActiveKey="basic" type="card">
-                  <TabPane tab="Thông tin cơ bản" key="basic">
-                    {renderBasicInfo(selectedProfile)}
-                  </TabPane>
-                  <TabPane tab="Dị ứng" key="allergies">
-                    {renderAllergies(selectedProfile.allergies)}
-                  </TabPane>
-                  <TabPane tab="Bệnh mãn tính" key="chronic">
-                    {renderChronicDiseases(selectedProfile.chronicDiseases)}
-                  </TabPane>
-                  <TabPane tab="Lịch sử điều trị" key="treatments">
-                    {renderTreatments(selectedProfile.treatments)}
-                  </TabPane>
-                  <TabPane tab="Thị lực" key="vision">
-                    {renderVisionData(selectedProfile.vision)}
-                  </TabPane>
-                  <TabPane tab="Thính lực" key="hearing">
-                    {renderHearingData(selectedProfile.hearing)}
-                  </TabPane>
-                </Tabs>
+              }`}>                <Tabs 
+                  defaultActiveKey="basic" 
+                  type="card"
+                  items={[
+                    {
+                      key: 'basic',
+                      label: 'Thông tin cơ bản',
+                      children: renderBasicInfo(selectedProfile)
+                    },
+                    {
+                      key: 'allergies',
+                      label: 'Dị ứng',
+                      children: renderAllergies(selectedProfile.allergies)
+                    },
+                    {
+                      key: 'chronic',
+                      label: 'Bệnh mãn tính',
+                      children: renderChronicDiseases(selectedProfile.chronicDiseases)
+                    },
+                    {
+                      key: 'treatments',
+                      label: 'Lịch sử điều trị',
+                      children: renderTreatments(selectedProfile.treatments)
+                    },
+                    {
+                      key: 'vision',
+                      label: 'Thị lực',
+                      children: renderVisionData(selectedProfile.vision)
+                    },
+                    {
+                      key: 'hearing',
+                      label: 'Thính lực',
+                      children: renderHearingData(selectedProfile.hearing)
+                    }
+                  ]}
+                />
               </Card>
             )}
           </>
         )}
 
-        {/* Detail Modal */}
-        <Modal
+        {/* Detail Modal */}        <Modal
           title="Chi tiết thông tin"
-          visible={detailModalVisible}
+          open={detailModalVisible}
           onCancel={() => setDetailModalVisible(false)}
           footer={null}
           width={600}

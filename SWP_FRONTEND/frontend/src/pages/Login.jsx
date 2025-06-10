@@ -7,6 +7,7 @@ import {
   logCorsInfo,
   isDevelopment,
 } from "../utils/api";
+import { sendOTP, verifyOTP, cleanupRecaptcha, initializeFirebase } from "../utils/firebase";
 import "../styles/Login.css";
 
 const Login = () => {
@@ -17,6 +18,7 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState({});
   const [searchParams] = useSearchParams();
+  const [confirmationResult, setConfirmationResult] = useState(null);
   // Separate loading states for each button
   const [loadingStates, setLoadingStates] = useState({
     phoneOtp: false,
@@ -27,7 +29,6 @@ const Login = () => {
 
   const { login } = useAuth();
   const navigate = useNavigate();
-
   // Check for OAuth2 error messages from URL parameters
   useEffect(() => {
     const error = searchParams.get("error");
@@ -36,6 +37,13 @@ const Login = () => {
     }
   }, [searchParams]);
 
+  // Cleanup Firebase resources on unmount
+  useEffect(() => {
+    return () => {
+      cleanupRecaptcha();
+    };
+  }, []);
+
   // Helper function to set individual loading state
   const setIndividualLoading = (key, value) => {
     setLoadingStates((prev) => ({
@@ -43,73 +51,84 @@ const Login = () => {
       [key]: value,
     }));
   };
-
   const handlePhoneLogin = async (e) => {
     e.preventDefault();
     setIndividualLoading("phoneOtp", true);
     setErrors({});
 
     try {
-      if (isDevelopment) {
-        logCorsInfo(API_ENDPOINTS.auth.requestOtp);
-      }
-
-      // API call to send OTP to phone number
-      const response = await fetch(API_ENDPOINTS.auth.requestOtp, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ phoneNumber }),
-      });
-
-      if (response.ok) {
+      // Initialize Firebase first
+      await initializeFirebase();
+      
+      // Try Firebase first for OTP sending
+      try {
+        console.log("Attempting to send OTP via Firebase to:", phoneNumber);
+        const result = await sendOTP(phoneNumber);
+        setConfirmationResult(result);
         setShowOtp(true);
-        // Optional: Show success message
-        console.log("OTP sent successfully to", phoneNumber);
-      } else {
-        // Handle different HTTP status codes
-        let errorMessage = "Có lỗi xảy ra khi gửi OTP";
+        console.log("Firebase OTP sent successfully to", phoneNumber);
+      } catch (firebaseError) {
+        console.log("Firebase OTP failed, falling back to backend:", firebaseError);
+        
+        // Fallback to backend OTP generation
+        if (isDevelopment) {
+          logCorsInfo(API_ENDPOINTS.auth.requestOtp);
+        }
 
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.message || errorMessage;
-        } catch (parseError) {
-          // If response body is not JSON, use status-based message
-          console.log("Could not parse error response as JSON:", parseError);
-          if (response.status === 401) {
+        const response = await fetch(API_ENDPOINTS.auth.requestOtp, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ phoneNumber }),
+        });
+
+        if (response.ok) {
+          setShowOtp(true);
+          console.log("Backend OTP sent successfully to", phoneNumber);
+        } else {
+          // Handle different HTTP status codes
+          let errorMessage = "Có lỗi xảy ra khi gửi OTP";
+
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.message || errorMessage;
+          } catch (parseError) {
+            console.log("Could not parse error response as JSON:", parseError);
+            if (response.status === 401) {
+              errorMessage =
+                "Chỉ tài khoản phụ huynh mới được phép đăng nhập bằng số điện thoại. Vui lòng đăng nhập bằng tài khoản nhân viên.";
+            } else if (response.status === 400) {
+              errorMessage =
+                "Thông tin không hợp lệ. Vui lòng kiểm tra lại số điện thoại.";
+            } else if (response.status === 404) {
+              errorMessage = "Số điện thoại không tồn tại trong hệ thống.";
+            }
+          }
+
+          // Handle specific backend error messages
+          if (
+            errorMessage.includes("Only parents can use OTP authentication") ||
+            errorMessage.includes("parents") ||
+            errorMessage.includes("PARENT")
+          ) {
             errorMessage =
               "Chỉ tài khoản phụ huynh mới được phép đăng nhập bằng số điện thoại. Vui lòng đăng nhập bằng tài khoản nhân viên.";
-          } else if (response.status === 400) {
-            errorMessage =
-              "Thông tin không hợp lệ. Vui lòng kiểm tra lại số điện thoại.";
-          } else if (response.status === 404) {
+          } else if (
+            errorMessage.includes("not found") ||
+            errorMessage.includes("không tồn tại")
+          ) {
             errorMessage = "Số điện thoại không tồn tại trong hệ thống.";
+          } else if (
+            errorMessage.includes("authentication") ||
+            errorMessage.includes("unauthorized")
+          ) {
+            errorMessage =
+              "Không có quyền truy cập. Vui lòng kiểm tra lại thông tin.";
           }
-        }
 
-        // Handle specific backend error messages
-        if (
-          errorMessage.includes("Only parents can use OTP authentication") ||
-          errorMessage.includes("parents") ||
-          errorMessage.includes("PARENT")
-        ) {
-          errorMessage =
-            "Chỉ tài khoản phụ huynh mới được phép đăng nhập bằng số điện thoại. Vui lòng đăng nhập bằng tài khoản nhân viên.";
-        } else if (
-          errorMessage.includes("not found") ||
-          errorMessage.includes("không tồn tại")
-        ) {
-          errorMessage = "Số điện thoại không tồn tại trong hệ thống.";
-        } else if (
-          errorMessage.includes("authentication") ||
-          errorMessage.includes("unauthorized")
-        ) {
-          errorMessage =
-            "Không có quyền truy cập. Vui lòng kiểm tra lại thông tin.";
+          setErrors({ phone: errorMessage });
         }
-
-        setErrors({ phone: errorMessage });
       }
     } catch (networkError) {
       console.error("Network error:", networkError);
@@ -118,24 +137,46 @@ const Login = () => {
       setIndividualLoading("phoneOtp", false);
     }
   };
-
   const handleOtpVerification = async (e) => {
     e.preventDefault();
     setIndividualLoading("otpVerify", true);
     setErrors({});
 
     try {
-      if (isDevelopment) {
-        logCorsInfo(API_ENDPOINTS.auth.verifyOtp);
+      let firebaseIdToken = null;
+      
+      // Try Firebase OTP verification first if we have a confirmation result
+      if (confirmationResult) {
+        try {
+          console.log("Attempting Firebase OTP verification");
+          const firebaseResult = await verifyOTP(confirmationResult, otp);
+          firebaseIdToken = firebaseResult.idToken;
+          console.log("Firebase OTP verification successful");
+        } catch (firebaseError) {
+          console.log("Firebase OTP verification failed, falling back to backend:", firebaseError);
+        }
       }
 
+      // Use Firebase verification endpoint if we have a token, otherwise use regular endpoint
+      const endpoint = firebaseIdToken ? 
+        API_ENDPOINTS.auth.verifyFirebaseOtp : 
+        API_ENDPOINTS.auth.verifyOtp;
+
+      if (isDevelopment) {
+        logCorsInfo(endpoint);
+      }
+
+      const requestBody = firebaseIdToken ? 
+        { phoneNumber, firebaseIdToken, otp } : 
+        { phoneNumber, otp };
+
       // API call to verify OTP and login
-      const response = await fetch(API_ENDPOINTS.auth.verifyOtp, {
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ phoneNumber, otp }),
+        body: JSON.stringify(requestBody),
       });
 
       if (response.ok) {
@@ -151,6 +192,8 @@ const Login = () => {
           });
           setShowOtp(false); // Go back to phone input screen
           setOtp(""); // Clear OTP field
+          cleanupRecaptcha(); // Clean up Firebase state
+          setConfirmationResult(null);
           return;
         }
 
@@ -163,7 +206,7 @@ const Login = () => {
           lastName: userData.lastName,
           email: userData.email,
           roleName: userData.roleName,
-          loginMethod: "phone", // Track that this is phone login
+          loginMethod: firebaseIdToken ? "firebase" : "phone", // Track login method
         };
 
         await login(transformedUserData);
@@ -423,10 +466,11 @@ const Login = () => {
                 </button>
                 <button
                   type="button"
-                  className="back-button"
-                  onClick={() => {
+                  className="back-button"                  onClick={() => {
                     setShowOtp(false);
                     setErrors({});
+                    cleanupRecaptcha();
+                    setConfirmationResult(null);
                   }}
                   disabled={loadingStates.otpVerify}
                 >
@@ -499,9 +543,10 @@ const Login = () => {
                 )}
               </div>
             </form>
-          </div>
-        </div>
+          </div>        </div>
       </div>
+      {/* reCAPTCHA container for Firebase */}
+      <div id="recaptcha-container"></div>
     </div>
   );
 };
