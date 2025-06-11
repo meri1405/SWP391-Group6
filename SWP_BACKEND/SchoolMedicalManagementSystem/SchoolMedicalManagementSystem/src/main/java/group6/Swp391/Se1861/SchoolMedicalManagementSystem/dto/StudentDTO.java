@@ -1,5 +1,6 @@
 package group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto;
 
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.Student;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -10,7 +11,7 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @NoArgsConstructor
 public class StudentDTO {
-    private Long studentID;
+    private Long id;
     private String firstName;
     private String lastName;
     private LocalDate dob;
@@ -23,4 +24,38 @@ public class StudentDTO {
     private boolean isDisabled;
     private Long motherId;
     private Long fatherId;
+    private String studentCode;
+    private Long parentId;
+
+    /**
+     * Create a StudentDTO from a Student entity
+     * @param student the student entity
+     * @return a new StudentDTO with basic information
+     */
+    public static StudentDTO fromStudent(Student student) {
+        if (student == null) {
+            return null;
+        }
+        
+        StudentDTO dto = new StudentDTO();
+        dto.setId(student.getStudentID());
+        dto.setFirstName(student.getFirstName());
+        dto.setLastName(student.getLastName());
+        dto.setClassName(student.getClassName());
+        dto.setStudentCode(String.valueOf(student.getStudentID()));
+        
+        if (student.getMother() != null) {
+            dto.setMotherId(student.getMother().getId());
+            dto.setParentId(student.getMother().getId());
+        }
+        
+        if (student.getFather() != null) {
+            dto.setFatherId(student.getFather().getId());
+            if (student.getMother() == null) {
+                dto.setParentId(student.getFather().getId());
+            }
+        }
+        
+        return dto;
+    }
 }

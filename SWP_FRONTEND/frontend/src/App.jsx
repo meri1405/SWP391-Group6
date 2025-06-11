@@ -74,6 +74,14 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/school-nurse-dashboard"
+              element={
+                <ProtectedRoute allowedRoles={["SCHOOLNURSE"]}>
+                  <SchoolNurseDashboard />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/admin" element={<Navigate to="/login" replace />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>          <Footer />
