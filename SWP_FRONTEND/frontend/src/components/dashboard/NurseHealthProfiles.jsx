@@ -1023,7 +1023,7 @@ const NurseHealthProfiles = () => {
               description={
                 <div>
                   <p>Bạn sắp từ chối hồ sơ sức khỏe của <strong>{selectedProfile.additionalFields?.student?.lastName} {selectedProfile.additionalFields?.student?.firstName}</strong> (Lớp {selectedProfile.additionalFields?.student?.className}).</p>
-                  <p>Lý do từ chối sẽ được gửi đến phụ huynh.</p>
+                  <p>Lý do từ chối sẽ được hiển thị cho phụ huynh trên trang khai báo hồ sơ y tế.</p>
                 </div>
               }
               type="warning"
