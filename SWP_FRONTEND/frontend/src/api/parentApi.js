@@ -386,4 +386,49 @@ export const parentApi = {
       ];
     }
   },
+
+  // Notification endpoints
+  getAllNotifications: async (token = getTokenFromStorage()) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.get('/api/notifications');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching all notifications:', error);
+      throw error;
+    }
+  },
+
+  getUnreadNotifications: async (token = getTokenFromStorage()) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.get('/api/notifications/unread');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching unread notifications:', error);
+      throw error;
+    }
+  },
+
+  getUnreadNotificationCount: async (token = getTokenFromStorage()) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.get('/api/notifications/unread/count');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching unread notification count:', error);
+      throw error;
+    }
+  },
+
+  markNotificationAsRead: async (notificationId, token = getTokenFromStorage()) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.put(`/api/notifications/${notificationId}/read`);
+      return response.data;
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+      throw error;
+    }
+  },
 };

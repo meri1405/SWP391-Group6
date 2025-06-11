@@ -29,11 +29,14 @@ public class JwtUtil {
     private Key getSigningKey() {
         byte[] keyBytes = jwtSecret.getBytes();
         return Keys.hmacShaKeyFor(keyBytes);
-    }
-
-    // Extract username from token
+    }    // Extract username from token
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
+    }
+
+    // Alias method for compatibility
+    public String getUserNameFromJwtToken(String token) {
+        return extractUsername(token);
     }
 
     // Extract expiration date from token
@@ -122,8 +125,12 @@ public class JwtUtil {
             logger.error("JWT claims string is empty: {}", e.getMessage());
         } catch (Exception e) {
             logger.error("JWT validation error: {}", e.getMessage());
-        }
-        return false;
+        }        return false;
+    }
+
+    // Alias method for compatibility
+    public boolean validateJwtToken(String token) {
+        return validateToken(token);
     }
 
     // Add a set to store invalidated tokens

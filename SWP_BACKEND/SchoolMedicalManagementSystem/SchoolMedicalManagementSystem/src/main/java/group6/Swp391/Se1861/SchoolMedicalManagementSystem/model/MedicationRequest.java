@@ -24,6 +24,9 @@ public class MedicationRequest {
     @Column(name = "note", nullable = false)
     private String note;
 
+    @Column(name = "nurseNote")
+    private String nurseNote;
+
     @Column(name = "startDate", nullable = false)
     private LocalDate startDate;
 

@@ -24,6 +24,9 @@ public class MedicationRequestDTO {
     @Size(max = 500, message = "Note cannot exceed 500 characters")
     private String note;
 
+    @Size(max = 500, message = "Nurse note cannot exceed 500 characters")
+    private String nurseNote;
+
     @NotNull(message = "Start date is required")
     private LocalDate startDate;
 

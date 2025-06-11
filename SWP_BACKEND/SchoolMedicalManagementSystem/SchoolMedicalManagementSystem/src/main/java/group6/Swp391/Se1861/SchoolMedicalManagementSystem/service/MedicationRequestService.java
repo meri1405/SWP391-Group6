@@ -18,26 +18,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.DateTimeException;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
-/**
- * Service xử lý yêu cầu thuốc trong hệ thống
- * Quản lý toàn bộ quy trình từ tạo yêu cầu đến phê duyệt
- * 
- * Quy trình xử lý:
- * 1. Phụ huynh tạo yêu cầu thuốc cho con
- * 2. Hệ thống tự động tạo lịch uống thuốc
- * 3. Y tá xem xét và phê duyệt/từ chối
- * 4. Tự động từ chối yêu cầu quá hạn (24h)
- * 
- * Chức năng chính:
- * - Tạo/cập nhật/xóa yêu cầu thuốc
- * - Phê duyệt/từ chối yêu cầu
- * - Quản lý lịch uống thuốc
- * - Kiểm soát quyền truy cập theo vai trò
- */
 @Service
 @RequiredArgsConstructor
 public class MedicationRequestService {
@@ -48,42 +35,39 @@ public class MedicationRequestService {
     private final MedicationScheduleService medicationScheduleService;
 
     /**
-     * Tạo yêu cầu thuốc mới từ phụ huynh
-     * 
-     * @param medicationRequestDTO Thông tin yêu cầu thuốc
-     * @param parent Phụ huynh đã xác thực
-     * @return Yêu cầu thuốc đã được tạo
-     * @throws UnauthorizedAccessException nếu phụ huynh không có quyền với học sinh này
-     * @throws ResourceNotFoundException nếu không tìm thấy học sinh
+     * Create a new medication request
+     * @param medicationRequestDTO the request data
+     * @param parent the authenticated parent user
+     * @return the created medication request
      */
     @Transactional
     public MedicationRequestDTO createMedicationRequest(MedicationRequestDTO medicationRequestDTO, User parent) {
-        // Xác minh học sinh thuộc quyền quản lý của phụ huynh
+        // Verify the student belongs to the parent
         Long studentId = medicationRequestDTO.getStudentId();
         if (!studentRepository.isStudentOwnedByParent(studentId, parent.getId())) {
-            throw new UnauthorizedAccessException("Bạn không có quyền tạo yêu cầu thuốc cho học sinh này");
+            throw new UnauthorizedAccessException("You are not authorized to create medication requests for this student");
         }
 
-        // Lấy thông tin học sinh
+        // Get student entity
         Student student = studentRepository.findById(studentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy học sinh với ID: " + studentId));
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found with id: " + studentId));
 
-        // Tạo yêu cầu thuốc
+        // Create medication request
         MedicationRequest medicationRequest = new MedicationRequest();
         medicationRequest.setRequestDate(LocalDate.now());
         medicationRequest.setStartDate(medicationRequestDTO.getStartDate());
         medicationRequest.setEndDate(medicationRequestDTO.getEndDate());
         medicationRequest.setNote(medicationRequestDTO.getNote());
-        medicationRequest.setStatus("PENDING"); // Trạng thái mặc định cho yêu cầu mới
-        medicationRequest.setConfirm(false); // Chưa được xác nhận ban đầu
+        medicationRequest.setStatus("PENDING"); // Default status for new requests
+        medicationRequest.setConfirm(false); // Not confirmed initially
         medicationRequest.setStudent(student);
         medicationRequest.setParent(parent);
-        medicationRequest.setNurse(null); // Y tá sẽ được gán khi xử lý yêu cầu
+        medicationRequest.setNurse(null); // Nurse will be assigned when processing the request
 
-        // Lưu yêu cầu thuốc trước để có ID
+        // Save the medication request first to get an ID
         MedicationRequest savedRequest = medicationRequestRepository.save(medicationRequest);
 
-        // Tạo danh sách thuốc yêu cầu
+        // Create item requests
         List<ItemRequest> itemRequests = new ArrayList<>();
         for (ItemRequestDTO itemDTO : medicationRequestDTO.getItemRequests()) {
             ItemRequest item = new ItemRequest();
@@ -94,7 +78,7 @@ public class MedicationRequestService {
             item.setFrequency(itemDTO.getFrequency());
             item.setNote(itemDTO.getNote());
 
-            // Tạo JSON với thời gian uống thuốc
+            // Create JSON with schedule times
             if (itemDTO.getScheduleTimes() != null && !itemDTO.getScheduleTimes().isEmpty()) {
                 ObjectMapper mapper = new ObjectMapper();
                 ObjectNode root = mapper.createObjectNode();
@@ -105,11 +89,11 @@ public class MedicationRequestService {
 
             item.setMedicationRequest(savedRequest);
             
-            // Lưu yêu cầu thuốc riêng lẻ
+            // Save the item request
             ItemRequest savedItem = itemRequestRepository.save(item);
 
-            // Tạo lịch uống thuốc ngay khi phụ huynh tạo yêu cầu
-            // Đảm bảo lịch có sẵn để y tá xem xét
+            // Generate medication schedules immediately when parent creates request
+            // This ensures schedules are available for nurse review
             medicationScheduleService.generateSchedules(
                 savedItem,
                 savedRequest.getStartDate(),
@@ -119,116 +103,99 @@ public class MedicationRequestService {
             itemRequests.add(savedItem);
         }
 
-        // Cập nhật yêu cầu thuốc với danh sách thuốc
+        // Update the medication request with the item requests
         savedRequest.setItemRequests(itemRequests);
         savedRequest = medicationRequestRepository.save(savedRequest);
 
-        // Chuyển đổi về DTO để trả về
+        // Convert back to DTO for response
         return convertToDTO(savedRequest);
     }
 
     /**
-     * Lấy tất cả yêu cầu thuốc của một phụ huynh
-     * 
-     * @param parent Phụ huynh đã xác thực
-     * @return Danh sách yêu cầu thuốc
+     * Get all medication requests for a parent
+     * @param parent the authenticated parent user
+     * @return list of medication requests
      */
     public List<MedicationRequestDTO> getParentMedicationRequests(User parent) {
         List<MedicationRequest> requests = medicationRequestRepository.findByParent(parent);
         return requests.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
-    }    
-    
-    /**
-     * Lấy yêu cầu thuốc cụ thể
-     * 
-     * @param requestId ID yêu cầu thuốc
-     * @param parent Phụ huynh đã xác thực
-     * @return Yêu cầu thuốc
-     * @throws ResourceNotFoundException nếu không tìm thấy yêu cầu
-     * @throws UnauthorizedAccessException nếu phụ huynh không có quyền xem yêu cầu này
+    }    /**
+     * Get a specific medication request
+     * @param requestId the request ID
+     * @param parent the authenticated parent user
+     * @return the medication request
      */
     public MedicationRequestDTO getMedicationRequest(Long requestId, User parent) {
         MedicationRequest request = medicationRequestRepository.findById(requestId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu thuốc với ID: " + requestId));
+                .orElseThrow(() -> new ResourceNotFoundException("Medication request not found with id: " + requestId));
 
-        // Xác minh phụ huynh sở hữu yêu cầu này
+        // Verify the parent owns this request
         if (!request.getParent().getId().equals(parent.getId())) {
-            throw new UnauthorizedAccessException("Bạn không có quyền xem yêu cầu thuốc này");
+            throw new UnauthorizedAccessException("You are not authorized to view this medication request");
         }
 
-        // Chuyển đổi thành DTO với thời gian uống thuốc thực tế từ lịch
+        // Convert to DTO with actual schedule times from medication schedules
         return convertToDTOWithScheduleTimes(request);
     }
 
     /**
-     * Y tá phê duyệt yêu cầu thuốc
-     * 
-     * @param requestId ID yêu cầu thuốc
-     * @param nurse Y tá phê duyệt yêu cầu
-     * @return Yêu cầu thuốc đã được cập nhật
-     * @throws ResourceNotFoundException nếu không tìm thấy yêu cầu
-     */    
-    @Transactional
-    public MedicationRequestDTO approveMedicationRequest(Long requestId, User nurse) {
+     * Nurse approves a medication request
+     * @param requestId the request ID
+     * @param nurse the nurse approving the request
+     * @return the updated medication request
+     */    @Transactional
+    public MedicationRequestDTO approveMedicationRequest(Long requestId, User nurse, String nurseNote) {
         MedicationRequest request = medicationRequestRepository.findById(requestId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu thuốc với ID: " + requestId));
+                .orElseThrow(() -> new ResourceNotFoundException("Medication request not found with id: " + requestId));
 
         request.setStatus("APPROVED");
         request.setConfirm(true);
         request.setNurse(nurse);
+        request.setNurseNote(nurseNote);
 
-        // Lịch đã được tạo khi phụ huynh tạo yêu cầu
-        // Không cần tạo lại lịch, chỉ cập nhật trạng thái yêu cầu
+        // Schedules are already generated when parent creates request
+        // No need to generate schedules again, just update the request status
 
         return convertToDTO(medicationRequestRepository.save(request));
     }
 
     /**
-     * Y tá từ chối yêu cầu thuốc
-     * 
-     * @param requestId ID yêu cầu thuốc
-     * @param nurse Y tá từ chối yêu cầu
-     * @param note Lý do từ chối
-     * @return Yêu cầu thuốc đã được cập nhật
-     * @throws ResourceNotFoundException nếu không tìm thấy yêu cầu
-     */    
-    @Transactional
+     * Nurse rejects a medication request
+     * @param requestId the request ID
+     * @param nurse the nurse rejecting the request
+     * @param note rejection reason
+     * @return the updated medication request
+     */    @Transactional
     public MedicationRequestDTO rejectMedicationRequest(Long requestId, User nurse, String note) {
         MedicationRequest request = medicationRequestRepository.findById(requestId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu thuốc với ID: " + requestId));
+                .orElseThrow(() -> new ResourceNotFoundException("Medication request not found with id: " + requestId));
 
         request.setStatus("REJECTED");
         request.setConfirm(true);
         request.setNurse(nurse);
-        request.setNote(note);
+        request.setNurseNote(note);
 
-        // Xóa tất cả lịch uống thuốc liên quan khi yêu cầu bị từ chối
+        // Delete all associated medication schedules when request is rejected
         for (ItemRequest itemRequest : request.getItemRequests()) {
             medicationScheduleService.deleteSchedulesForItemRequest(itemRequest.getId());
         }
 
         return convertToDTO(medicationRequestRepository.save(request));
-    }    
-    
-    /**
-     * Lấy tất cả yêu cầu thuốc đang chờ xử lý cho y tá xem xét
-     * 
-     * @return Danh sách yêu cầu thuốc đang chờ
+    }    /**
+     * Get all pending medication requests for nurse review
+     * @return list of pending medication requests
      */
     public List<MedicationRequestDTO> getPendingMedicationRequests() {
         List<MedicationRequest> requests = medicationRequestRepository.findByStatus("PENDING");
         return requests.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
-    }    
-    
-    /**
-     * Tự động từ chối yêu cầu thuốc đang chờ quá 24 giờ
-     * Method này sẽ được gọi bởi scheduled job
-     * 
-     * @return Số lượng yêu cầu đã bị từ chối tự động
+    }    /**
+     * Auto-reject medication requests that are pending for more than 24 hours
+     * This method should be called by a scheduled job
+     * @return number of auto-rejected requests
      */
     @Transactional
     public int autoRejectExpiredRequests() {
@@ -504,5 +471,15 @@ public class MedicationRequestService {
 
         dto.setItemRequests(itemDTOs);
         return dto;
+    }
+
+    /**
+     * Get a medication request by ID
+     * @param requestId the request ID
+     * @return the medication request entity
+     */
+    public MedicationRequest getMedicationRequestById(Long requestId) {
+        return medicationRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Medication request not found with id: " + requestId));
     }
 }

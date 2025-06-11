@@ -11,7 +11,6 @@ import {
   Descriptions, 
   Divider,
   Tooltip,
-  Popconfirm,
   Typography
 } from 'antd';
 import { 
@@ -31,11 +30,15 @@ const { Title, Text } = Typography;
 
 const NurseMedicationRequests = () => {
   const [loading, setLoading] = useState(false);
-  const [medicationRequests, setMedicationRequests] = useState([]);
-  const [selectedRequest, setSelectedRequest] = useState(null);
+  const [medicationRequests, setMedicationRequests] = useState([]);  const [selectedRequest, setSelectedRequest] = useState(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [approveModalVisible, setApproveModalVisible] = useState(false);
   const [rejectModalVisible, setRejectModalVisible] = useState(false);
+  const [approveNote, setApproveNote] = useState('');
   const [rejectNote, setRejectNote] = useState('');
+  const [approveCustomMessage, setApproveCustomMessage] = useState('');
+  const [rejectCustomMessage, setRejectCustomMessage] = useState('');
+  const [approvalLoading, setApprovalLoading] = useState(false);
   const [rejectionLoading, setRejectionLoading] = useState(false);
   const fetchPendingRequests = useCallback(async () => {
     try {
@@ -56,22 +59,27 @@ const NurseMedicationRequests = () => {
 
   useEffect(() => {
     fetchPendingRequests();
-  }, [fetchPendingRequests]);  const handleApprove = async (requestId) => {
+  }, [fetchPendingRequests]);  const handleApprove = async () => {
     try {
-      setLoading(true);
-      const response = await nurseApi.approveMedicationRequest(requestId, {
-        approvedBy: 'Current Nurse', // This should come from auth context
-        approvedDate: new Date().toISOString(),
-        notes: 'Approved by nurse'
-      });
+      setApprovalLoading(true);
+      const response = await nurseApi.approveMedicationRequest(
+        selectedRequest.id, 
+        approveNote.trim(), 
+        approveCustomMessage.trim()
+      );
       
       if (response.success) {
         message.success(response.message || 'Đã duyệt yêu cầu thuốc thành công');
         
         // Update local state
         setMedicationRequests(prev => 
-          prev.filter(req => req.id !== requestId)
+          prev.filter(req => req.id !== selectedRequest.id)
         );
+        
+        setApproveModalVisible(false);
+        setSelectedRequest(null);
+        setApproveNote('');
+        setApproveCustomMessage('');
       } else {
         message.error('Có lỗi xảy ra khi duyệt yêu cầu');
       }
@@ -79,15 +87,23 @@ const NurseMedicationRequests = () => {
       console.error('Error approving request:', error);
       message.error('Có lỗi xảy ra khi duyệt yêu cầu');
     } finally {
-      setLoading(false);
+      setApprovalLoading(false);
     }
   };
 
+  const showApproveModal = (request) => {
+    setSelectedRequest(request);
+    setApproveNote('');
+    setApproveCustomMessage('');
+    setApproveModalVisible(true);
+  };
   const showRejectModal = (request) => {
     setSelectedRequest(request);
     setRejectNote('');
+    setRejectCustomMessage('');
     setRejectModalVisible(true);
   };
+
   const handleReject = async () => {
     if (!rejectNote.trim()) {
       message.error('Vui lòng nhập lý do từ chối');
@@ -96,11 +112,11 @@ const NurseMedicationRequests = () => {
     
     try {
       setRejectionLoading(true);
-      const response = await nurseApi.rejectMedicationRequest(selectedRequest.id, {
-        rejectedBy: 'Current Nurse', // This should come from auth context
-        rejectedDate: new Date().toISOString(),
-        rejectionReason: rejectNote.trim()
-      });
+      const response = await nurseApi.rejectMedicationRequest(
+        selectedRequest.id, 
+        rejectNote.trim(), 
+        rejectCustomMessage.trim()
+      );
       
       if (response.success) {
         message.success(response.message || 'Đã từ chối yêu cầu thuốc');
@@ -113,6 +129,7 @@ const NurseMedicationRequests = () => {
         setRejectModalVisible(false);
         setSelectedRequest(null);
         setRejectNote('');
+        setRejectCustomMessage('');
       } else {
         message.error('Có lỗi xảy ra khi từ chối yêu cầu');
       }
@@ -194,21 +211,14 @@ const NurseMedicationRequests = () => {
               icon={<EyeOutlined />}
               onClick={() => showDetailModal(record)}
             />
+          </Tooltip>          <Tooltip title="Duyệt yêu cầu">
+            <Button 
+              type="link" 
+              icon={<CheckOutlined />}
+              style={{ color: '#52c41a' }}
+              onClick={() => showApproveModal(record)}
+            />
           </Tooltip>
-          <Popconfirm
-            title="Bạn có chắc muốn duyệt yêu cầu này không?"
-            onConfirm={() => handleApprove(record.id)}
-            okText="Có"
-            cancelText="Không"
-          >
-            <Tooltip title="Duyệt yêu cầu">
-              <Button 
-                type="link" 
-                icon={<CheckOutlined />}
-                style={{ color: '#52c41a' }}
-              />
-            </Tooltip>
-          </Popconfirm>
           <Tooltip title="Từ chối yêu cầu">
             <Button 
               type="link" 
@@ -275,8 +285,7 @@ const NurseMedicationRequests = () => {
               </Descriptions.Item>
               <Descriptions.Item label="Trạng thái" span={3}>
                 {getStatusTag(selectedRequest.status)}
-              </Descriptions.Item>
-              <Descriptions.Item label="Ghi chú" span={3}>
+              </Descriptions.Item>              <Descriptions.Item label="Ghi chú của phụ huynh" span={3}>
                 {selectedRequest.note || 'Không có ghi chú'}
               </Descriptions.Item>
             </Descriptions>
@@ -356,18 +365,69 @@ const NurseMedicationRequests = () => {
               <p>Không có thông tin thuốc</p>
             )}
           </div>
-        )}
+        )}      </Modal>
+
+      {/* Approve Modal */}
+      <Modal
+        title="Duyệt yêu cầu thuốc"
+        open={approveModalVisible}
+        onOk={handleApprove}
+        onCancel={() => {
+          setApproveModalVisible(false);
+          setSelectedRequest(null);
+          setApproveNote('');
+          setApproveCustomMessage('');
+        }}
+        okText="Duyệt"
+        cancelText="Hủy"
+        confirmLoading={approvalLoading}
+        okButtonProps={{ style: { backgroundColor: '#52c41a', borderColor: '#52c41a' } }}
+      >
+        <p>Bạn có chắc muốn duyệt yêu cầu thuốc này không?</p>
+        <p><strong>Học sinh:</strong> {selectedRequest?.studentName}</p>
+        <p><strong>Ngày yêu cầu:</strong> {selectedRequest && dayjs(selectedRequest.requestDate).format('DD/MM/YYYY')}</p>
+          <div style={{ marginTop: 16 }}>
+          <label style={{ display: 'block', marginBottom: 8, fontWeight: 'bold' }}>
+            Ghi chú của y tá khi duyệt (tùy chọn)
+          </label>
+          <TextArea
+            rows={3}
+            value={approveNote}
+            onChange={(e) => setApproveNote(e.target.value)}
+            placeholder="Nhập ghi chú của y tá về việc duyệt yêu cầu (nếu có)..."
+            maxLength={500}
+          />
+          <small style={{ color: '#666' }}>
+            Ghi chú này sẽ được lưu vào hồ sơ yêu cầu thuốc để theo dõi.
+          </small>
+        </div>
+
+        <div style={{ marginTop: 16 }}>
+          <label style={{ display: 'block', marginBottom: 8, fontWeight: 'bold' }}>
+            Thông báo gửi phụ huynh (tùy chọn)
+          </label>
+          <TextArea
+            rows={3}
+            value={approveCustomMessage}
+            onChange={(e) => setApproveCustomMessage(e.target.value)}
+            placeholder="Nhập thông báo tùy chỉnh gửi cho phụ huynh (nếu có). Để trống sẽ gửi thông báo mặc định..."
+            maxLength={500}
+          />
+          <small style={{ color: '#666' }}>
+            Nếu để trống, hệ thống sẽ gửi thông báo mặc định về việc duyệt yêu cầu thuốc.
+          </small>
+        </div>
       </Modal>
 
       {/* Reject Modal */}
       <Modal
         title="Từ chối yêu cầu thuốc"
         open={rejectModalVisible}
-        onOk={handleReject}
-        onCancel={() => {
+        onOk={handleReject}        onCancel={() => {
           setRejectModalVisible(false);
           setSelectedRequest(null);
           setRejectNote('');
+          setRejectCustomMessage('');
         }}
         okText="Từ chối"
         cancelText="Hủy"
@@ -376,11 +436,9 @@ const NurseMedicationRequests = () => {
       >
         <p>Bạn có chắc muốn từ chối yêu cầu thuốc này không?</p>
         <p><strong>Học sinh:</strong> {selectedRequest?.studentName}</p>
-        <p><strong>Ngày yêu cầu:</strong> {selectedRequest && dayjs(selectedRequest.requestDate).format('DD/MM/YYYY')}</p>
-        
-        <div style={{ marginTop: 16 }}>
+        <p><strong>Ngày yêu cầu:</strong> {selectedRequest && dayjs(selectedRequest.requestDate).format('DD/MM/YYYY')}</p>        <div style={{ marginTop: 16 }}>
           <label style={{ display: 'block', marginBottom: 8, fontWeight: 'bold' }}>
-            Lý do từ chối <span style={{ color: 'red' }}>*</span>
+            Ghi chú của y tá khi từ chối <span style={{ color: 'red' }}>*</span>
           </label>
           <TextArea
             rows={4}
@@ -389,6 +447,25 @@ const NurseMedicationRequests = () => {
             placeholder="Nhập lý do từ chối yêu cầu thuốc..."
             maxLength={500}
           />
+          <small style={{ color: '#666' }}>
+            Ghi chú này sẽ được lưu vào hồ sơ yêu cầu thuốc để theo dõi.
+          </small>
+        </div>
+
+        <div style={{ marginTop: 16 }}>
+          <label style={{ display: 'block', marginBottom: 8, fontWeight: 'bold' }}>
+            Thông báo gửi phụ huynh (tùy chọn)
+          </label>
+          <TextArea
+            rows={3}
+            value={rejectCustomMessage}
+            onChange={(e) => setRejectCustomMessage(e.target.value)}
+            placeholder="Nhập thông báo tùy chỉnh gửi cho phụ huynh (nếu có). Để trống sẽ gửi thông báo mặc định kèm lý do từ chối..."
+            maxLength={500}
+          />
+          <small style={{ color: '#666' }}>
+            Nếu để trống, hệ thống sẽ gửi thông báo mặc định kèm lý do từ chối.
+          </small>
         </div>
       </Modal>
     </div>
