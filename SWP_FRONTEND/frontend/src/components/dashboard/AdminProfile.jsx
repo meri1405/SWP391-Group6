@@ -25,7 +25,7 @@ import {
   Avatar,
 } from "antd";
 import { useAuth } from "../../contexts/AuthContext";
-import "../../styles/Profile.css";
+import "../../styles/AdminProfile.css";
 
 const AdminProfile = ({ userInfo, onProfileUpdate }) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -231,8 +231,8 @@ const AdminProfile = ({ userInfo, onProfileUpdate }) => {
   };
 
   return (
-    <div className="profile-container">
-      <div className="profile-header">
+    <div className="admin-profile-container">
+      <div className="admin-profile-header">
         <div className="header-content">
           <h2>
             <UserOutlined /> Hồ Sơ Quản Trị Viên
@@ -251,16 +251,16 @@ const AdminProfile = ({ userInfo, onProfileUpdate }) => {
 
       <div className="profile-content">
         <Card
-          className="profile-main-card"
+          className="admin-profile-main-card"
           title="Thông tin cá nhân"
           styles={{ body: { padding: "24px" } }}
         >
-          <div className="profile-avatar-section">
+          <div className="admin-avatar-section">
             <Avatar
               size={120}
               src={avatarUrl}
               icon={<UserOutlined />}
-              className="profile-avatar-large"
+              className="admin-profile-avatar-large"
             />
             {isEditing && (
               <Upload
@@ -290,10 +290,10 @@ const AdminProfile = ({ userInfo, onProfileUpdate }) => {
 
           {isEditing ? (
             <form onSubmit={handleSubmit} className="profile-form">
-              <div className="form-section">
+              <div className="admin-form-section">
                 <h4>Thông tin cơ bản</h4>
-                <div className="form-row">
-                  <div className="form-group">
+                <div className="admin-form-row">
+                  <div className="admin-form-group">
                     <label>Họ và tên đệm *</label>
                     <input
                       type="text"
@@ -304,10 +304,12 @@ const AdminProfile = ({ userInfo, onProfileUpdate }) => {
                       placeholder="Nhập họ và tên đệm"
                     />
                     {errors.lastName && (
-                      <span className="error-text">{errors.lastName}</span>
+                      <span className="admin-error-text">
+                        {errors.lastName}
+                      </span>
                     )}
                   </div>
-                  <div className="form-group">
+                  <div className="admin-form-group">
                     <label>Tên *</label>
                     <input
                       type="text"
@@ -318,13 +320,15 @@ const AdminProfile = ({ userInfo, onProfileUpdate }) => {
                       placeholder="Nhập tên"
                     />
                     {errors.firstName && (
-                      <span className="error-text">{errors.firstName}</span>
+                      <span className="admin-error-text">
+                        {errors.firstName}
+                      </span>
                     )}
                   </div>
                 </div>
 
-                <div className="form-row">
-                  <div className="form-group">
+                <div className="admin-form-row">
+                  <div className="admin-form-group">
                     <label>Email *</label>
                     <input
                       type="email"
@@ -335,10 +339,10 @@ const AdminProfile = ({ userInfo, onProfileUpdate }) => {
                       placeholder="admin@school.edu"
                     />
                     {errors.email && (
-                      <span className="error-text">{errors.email}</span>
+                      <span className="admin-error-text">{errors.email}</span>
                     )}
                   </div>
-                  <div className="form-group">
+                  <div className="admin-form-group">
                     <label>Số điện thoại *</label>
                     <input
                       type="tel"
@@ -349,13 +353,13 @@ const AdminProfile = ({ userInfo, onProfileUpdate }) => {
                       placeholder="0123456789"
                     />
                     {errors.phone && (
-                      <span className="error-text">{errors.phone}</span>
+                      <span className="admin-error-text">{errors.phone}</span>
                     )}
                   </div>
                 </div>
 
-                <div className="form-row">
-                  <div className="form-group">
+                <div className="admin-form-row">
+                  <div className="admin-form-group">
                     <label>Ngày sinh</label>
                     <input
                       type="date"
@@ -364,7 +368,7 @@ const AdminProfile = ({ userInfo, onProfileUpdate }) => {
                       onChange={handleChange}
                     />
                   </div>
-                  <div className="form-group">
+                  <div className="admin-form-group">
                     <label>Giới tính</label>
                     <select
                       name="gender"
@@ -378,10 +382,10 @@ const AdminProfile = ({ userInfo, onProfileUpdate }) => {
                 </div>
               </div>
 
-              <div className="form-section">
+              <div className="admin-form-section">
                 <h4>Thông tin công việc</h4>
-                <div className="form-row">
-                  <div className="form-group">
+                <div className="admin-form-row">
+                  <div className="admin-form-group">
                     <label>Chức vụ *</label>
                     <input
                       type="text"
@@ -392,10 +396,12 @@ const AdminProfile = ({ userInfo, onProfileUpdate }) => {
                       placeholder="Quản trị viên hệ thống"
                     />
                     {errors.jobTitle && (
-                      <span className="error-text">{errors.jobTitle}</span>
+                      <span className="admin-error-text">
+                        {errors.jobTitle}
+                      </span>
                     )}
                   </div>
-                  <div className="form-group">
+                  <div className="admin-form-group">
                     <label>Phòng ban</label>
                     <select
                       name="department"
@@ -410,8 +416,8 @@ const AdminProfile = ({ userInfo, onProfileUpdate }) => {
                   </div>
                 </div>
 
-                <div className="form-row">
-                  <div className="form-group">
+                <div className="admin-form-row">
+                  <div className="admin-form-group">
                     <label>Mã nhân viên</label>
                     <input
                       type="text"
@@ -421,7 +427,7 @@ const AdminProfile = ({ userInfo, onProfileUpdate }) => {
                       placeholder="ADMIN001"
                     />
                   </div>
-                  <div className="form-group">
+                  <div className="admin-form-group">
                     <label>Ngày bắt đầu làm việc</label>
                     <input
                       type="date"
@@ -433,9 +439,9 @@ const AdminProfile = ({ userInfo, onProfileUpdate }) => {
                 </div>
               </div>
 
-              <div className="form-section">
+              <div className="admin-form-section">
                 <h4>Thông tin liên hệ</h4>
-                <div className="form-group">
+                <div className="admin-form-group">
                   <label>Địa chỉ</label>
                   <input
                     type="text"
@@ -446,7 +452,7 @@ const AdminProfile = ({ userInfo, onProfileUpdate }) => {
                   />
                 </div>
 
-                <div className="form-group">
+                <div className="admin-form-group">
                   <label>Số điện thoại khẩn cấp</label>
                   <input
                     type="tel"
@@ -458,13 +464,14 @@ const AdminProfile = ({ userInfo, onProfileUpdate }) => {
                 </div>
               </div>
 
-              <div className="form-actions-enhanced">
+              <div className="admin-form-actions-enhanced">
                 <Button
                   type="primary"
                   htmlType="submit"
                   icon={<SaveOutlined />}
                   loading={loading}
                   size="large"
+                  className="admin-btn-primary"
                 >
                   Lưu thay đổi
                 </Button>
@@ -475,10 +482,10 @@ const AdminProfile = ({ userInfo, onProfileUpdate }) => {
             </form>
           ) : (
             <div className="profile-info-enhanced">
-              <div className="info-section">
+              <div className="admin-info-section">
                 <h4>Thông tin cơ bản</h4>
-                <div className="info-grid">
-                  <div className="info-item">
+                <div className="admin-info-grid">
+                  <div className="admin-info-item">
                     <UserOutlined className="info-icon" />
                     <div>
                       <label>Họ và tên</label>
@@ -487,28 +494,28 @@ const AdminProfile = ({ userInfo, onProfileUpdate }) => {
                       </span>
                     </div>
                   </div>
-                  <div className="info-item">
+                  <div className="admin-info-item">
                     <MailOutlined className="info-icon" />
                     <div>
                       <label>Email</label>
                       <span>{formData.email}</span>
                     </div>
                   </div>
-                  <div className="info-item">
+                  <div className="admin-info-item">
                     <PhoneOutlined className="info-icon" />
                     <div>
                       <label>Số điện thoại</label>
                       <span>{formData.phone}</span>
                     </div>
                   </div>
-                  <div className="info-item">
+                  <div className="admin-info-item">
                     <CalendarOutlined className="info-icon" />
                     <div>
                       <label>Ngày sinh</label>
                       <span>{formData.dateOfBirth || "Chưa cập nhật"}</span>
                     </div>
                   </div>
-                  <div className="info-item">
+                  <div className="admin-info-item">
                     <IdcardOutlined className="info-icon" />
                     <div>
                       <label>Giới tính</label>
@@ -520,31 +527,31 @@ const AdminProfile = ({ userInfo, onProfileUpdate }) => {
 
               <Divider />
 
-              <div className="info-section">
+              <div className="admin-info-section">
                 <h4>Thông tin công việc</h4>
-                <div className="info-grid">
-                  <div className="info-item">
+                <div className="admin-info-grid">
+                  <div className="admin-info-item">
                     <BankOutlined className="info-icon" />
                     <div>
                       <label>Chức vụ</label>
                       <span>{formData.jobTitle}</span>
                     </div>
                   </div>
-                  <div className="info-item">
+                  <div className="admin-info-item">
                     <SettingOutlined className="info-icon" />
                     <div>
                       <label>Phòng ban</label>
                       <span>{formData.department}</span>
                     </div>
                   </div>
-                  <div className="info-item">
+                  <div className="admin-info-item">
                     <IdcardOutlined className="info-icon" />
                     <div>
                       <label>Mã nhân viên</label>
                       <span>{formData.employeeId}</span>
                     </div>
                   </div>
-                  <div className="info-item">
+                  <div className="admin-info-item">
                     <CalendarOutlined className="info-icon" />
                     <div>
                       <label>Ngày bắt đầu</label>
@@ -556,17 +563,17 @@ const AdminProfile = ({ userInfo, onProfileUpdate }) => {
 
               <Divider />
 
-              <div className="info-section">
+              <div className="admin-info-section">
                 <h4>Thông tin liên hệ</h4>
-                <div className="info-grid">
-                  <div className="info-item full-width">
+                <div className="admin-info-grid">
+                  <div className="admin-info-item full-width">
                     <HomeOutlined className="info-icon" />
                     <div>
                       <label>Địa chỉ</label>
                       <span>{formData.address || "Chưa cập nhật"}</span>
                     </div>
                   </div>
-                  <div className="info-item full-width">
+                  <div className="admin-info-item full-width">
                     <PhoneOutlined className="info-icon" />
                     <div>
                       <label>Số điện thoại khẩn cấp</label>

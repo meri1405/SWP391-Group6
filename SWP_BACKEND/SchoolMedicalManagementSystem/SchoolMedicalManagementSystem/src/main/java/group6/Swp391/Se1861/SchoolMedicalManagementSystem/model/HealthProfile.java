@@ -1,10 +1,8 @@
 package group6.Swp391.Se1861.SchoolMedicalManagementSystem.model;
 
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.MedicationStatus;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.ProfileStatus;
 import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.context.annotation.Profile;
 
 import java.time.LocalDate;
 import java.util.Set;

@@ -10,6 +10,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * Controller xử lý xác thực người dùng
+ * Quản lý các chức năng đăng nhập, đăng xuất và xác thực OTP
+ */
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
@@ -24,7 +28,11 @@ public class AuthController {
     private String firebaseProjectId;
 
     /**
-     * Login with username and password (for admin, manager, schoolnurse)
+     * Đăng nhập bằng tên đăng nhập và mật khẩu
+     * Dành cho admin, manager, y tá trường học
+     * 
+     * @param loginRequest Thông tin đăng nhập (username, password)
+     * @return Token JWT và thông tin người dùng
      */
     @PostMapping("/login")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
@@ -36,21 +44,29 @@ public class AuthController {
     }
 
     /**
-     * Request OTP for phone authentication (for parents)
+     * Yêu cầu gửi mã OTP đến số điện thoại
+     * Dành cho phụ huynh đăng nhập bằng số điện thoại
+     * 
+     * @param otpRequest Yêu cầu chứa số điện thoại
+     * @return Thông báo kết quả gửi OTP
      */
     @PostMapping("/parent/request-otp")
     public ResponseEntity<?> requestOtp(@Valid @RequestBody OtpRequest otpRequest) {
         boolean success = authService.requestOtp(otpRequest.getPhoneNumber());
 
         if (success) {
-            return ResponseEntity.ok().body(new MessageResponse("OTP sent successfully"));
+            return ResponseEntity.ok().body(new MessageResponse("Gửi mã OTP thành công"));
         } else {
-            return ResponseEntity.internalServerError().body(new MessageResponse("Failed to send OTP"));
+            return ResponseEntity.internalServerError().body(new MessageResponse("Gửi mã OTP thất bại"));
         }
     }
 
     /**
-     * Verify OTP and authenticate parent
+     * Xác thực mã OTP và đăng nhập cho phụ huynh
+     * Kiểm tra mã OTP được gửi đến số điện thoại
+     * 
+     * @param request Yêu cầu chứa số điện thoại và mã OTP
+     * @return Token JWT và thông tin phụ huynh
      */
     @PostMapping("/parent/verify-otp")
     public ResponseEntity<?> verifyOtp(@Valid @RequestBody OtpVerificationRequest request) {
@@ -62,8 +78,11 @@ public class AuthController {
     }
 
     /**
-     * Handle OAuth2 authenticated users (Google login)
-     * This works with Spring Security's OAuth2 workflow
+     * Xử lý đăng nhập OAuth2 (Google login)
+     * Hoạt động với quy trình OAuth2 của Spring Security
+     * 
+     * @param authentication Token xác thực OAuth2
+     * @return Token JWT và thông tin người dùng
      */
     @GetMapping("/oauth2/callback")
     public ResponseEntity<?> oauth2Callback(OAuth2AuthenticationToken authentication) {
@@ -72,13 +91,16 @@ public class AuthController {
     }
 
     /**
-     * Logout user by invalidating token
-     * Token expiration time is set to 30 minutes
+     * Đăng xuất người dùng bằng cách vô hiệu hóa token
+     * Thời gian hết hạn token được thiết lập là 30 phút
+     * 
+     * @param token Token JWT từ header Authorization
+     * @return Thông báo đăng xuất thành công
      */
     @PostMapping("/logout")
     public ResponseEntity<?> logout(@RequestHeader("Authorization") String token) {
         authService.logout(token);
-        return ResponseEntity.ok(new MessageResponse("Logged out successfully"));
+        return ResponseEntity.ok(new MessageResponse("Đăng xuất thành công"));
     }
 
     /**
