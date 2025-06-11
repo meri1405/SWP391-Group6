@@ -1,69 +1,177 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
+import { parentApi } from '../../api/parentApi';
+import webSocketService from '../../services/webSocketService';
 import '../../styles/Notifications.css';
 
 const Notifications = () => {
   const [filter, setFilter] = useState('all');
-  
-  const notifications = [
-    {
-      id: 1,
-      type: 'vaccination',
-      title: 'Lịch tiêm phòng sắp tới',
-      message: 'Con em bạn Nguyễn Văn An có lịch tiêm phòng vào ngày 30/05/2025 lúc 8:00 AM. Vui lòng chuẩn bị đầy đủ giấy tờ và đưa trẻ đến đúng giờ.',
-      time: '2 giờ trước',
-      date: '2025-05-25',
-      read: false,
-      priority: 'high',
-      actionRequired: true
-    },
-    {
-      id: 2,
-      type: 'health',
-      title: 'Kết quả khám sức khỏe định kỳ',
-      message: 'Kết quả khám sức khỏe định kỳ của con em Nguyễn Thị Bình đã có. Tình trạng sức khỏe tổng thể tốt, cần theo dõi thêm về dinh dưỡng.',
-      time: '1 ngày trước',
-      date: '2025-05-24',
-      read: true,
-      priority: 'medium',
-      actionRequired: false
-    },
-    {
-      id: 3,
-      type: 'medication',
-      title: 'Nhắc nhở uống thuốc',
-      message: 'Đã đến giờ cho con em uống thuốc vitamin D. Liều lượng: 1 viên sau bữa sáng.',
-      time: '2 ngày trước',
-      date: '2025-05-23',
-      read: true,
-      priority: 'low',
-      actionRequired: true
-    },
-    {
-      id: 4,
-      type: 'general',
-      title: 'Thông báo từ y tá trường',
-      message: 'Trường tổ chức chương trình khám sức khỏe miễn phí cho học sinh vào tuần tới. Phụ huynh cần đăng ký trước.',
-      time: '3 ngày trước',
-      date: '2025-05-22',
-      read: false,
-      priority: 'medium',
-      actionRequired: true
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const { getToken } = useAuth();
+  // Load notifications on component mount
+  const loadNotifications = useCallback(async () => {
+    const token = getToken();
+    if (!token) return;
+    
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await parentApi.getAllNotifications(token);
+      
+      // Transform backend notification data to frontend format
+      const transformedNotifications = data.map(notification => ({
+        id: notification.id,
+        type: getNotificationType(notification),
+        title: notification.title,
+        message: notification.message,
+        time: formatTimeAgo(notification.createdAt),
+        date: notification.createdAt,
+        read: notification.read,
+        priority: determinePriority(notification),
+        actionRequired: determineActionRequired(notification),
+        medicationRequest: notification.medicationRequest,
+        medicationSchedule: notification.medicationSchedule
+      }));
+      
+      setNotifications(transformedNotifications);
+    } catch (error) {
+      console.error('Error loading notifications:', error);
+      setError('Không thể tải thông báo. Vui lòng thử lại.');
+    } finally {
+      setLoading(false);
     }
-  ];
+  }, [getToken]);
 
+  const setupWebSocketConnection = useCallback(async () => {
+    const token = getToken();
+    if (!token) return;
+
+    try {
+      // Connect to WebSocket
+      await webSocketService.connect(token);
+      
+      // Add message handler for real-time notifications
+      webSocketService.addMessageHandler('notifications', (newNotification) => {
+        console.log('Received real-time notification:', newNotification);
+        
+        // Transform the new notification
+        const transformedNotification = {
+          id: newNotification.id,
+          type: getNotificationType(newNotification),
+          title: newNotification.title,
+          message: newNotification.message,
+          time: 'Vừa xong',
+          date: newNotification.createdAt,
+          read: false,
+          priority: determinePriority(newNotification),
+          actionRequired: determineActionRequired(newNotification),
+          medicationRequest: newNotification.medicationRequest,
+          medicationSchedule: newNotification.medicationSchedule
+        };
+        
+        // Add new notification to the beginning of the list
+        setNotifications(prev => [transformedNotification, ...prev]);
+      });
+      
+    } catch (error) {
+      console.error('Error setting up WebSocket connection:', error);
+    }
+  }, [getToken]);
+
+  useEffect(() => {
+    loadNotifications();
+    setupWebSocketConnection();
+    
+    return () => {
+      // Cleanup WebSocket connection when component unmounts
+      webSocketService.removeMessageHandler('notifications');
+    };
+  }, [loadNotifications, setupWebSocketConnection]);
+
+  const getNotificationType = (notification) => {
+    if (notification.medicationRequest) {
+      return 'medication';
+    } else if (notification.medicationSchedule) {
+      return 'medication';
+    }
+    return 'general';
+  };
+
+  const determinePriority = (notification) => {
+    // Determine priority based on notification content
+    if (notification.title?.includes('từ chối') || notification.title?.includes('thất bại')) {
+      return 'high';
+    } else if (notification.title?.includes('duyệt') || notification.title?.includes('cập nhật')) {
+      return 'medium';
+    }
+    return 'low';
+  };
+
+  const determineActionRequired = (notification) => {
+    // Medication-related notifications usually require some action/attention
+    return notification.medicationRequest || notification.medicationSchedule;
+  };
+
+  const formatTimeAgo = (dateString) => {
+    if (!dateString) return 'Không xác định';
+    
+    const now = new Date();
+    const notificationDate = new Date(dateString);
+    const diffInMs = now - notificationDate;
+    const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+    const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+    const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+
+    if (diffInMinutes < 1) {
+      return 'Vừa xong';
+    } else if (diffInMinutes < 60) {
+      return `${diffInMinutes} phút trước`;
+    } else if (diffInHours < 24) {
+      return `${diffInHours} giờ trước`;
+    } else {
+      return `${diffInDays} ngày trước`;
+    }
+  };
   const filteredNotifications = notifications.filter(notification => {
     if (filter === 'all') return true;
     if (filter === 'unread') return !notification.read;
     if (filter === 'action') return notification.actionRequired;
     return notification.type === filter;
   });
-
-  const markAsRead = (id) => {
-    console.log('Marking notification as read:', id);
+  const markAsRead = async (id) => {
+    const token = getToken();
+    if (!token) return;
+    
+    try {
+      await parentApi.markNotificationAsRead(id, token);
+      setNotifications(prev => 
+        prev.map(notification => 
+          notification.id === id 
+            ? { ...notification, read: true }
+            : notification
+        )
+      );
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
   };
 
-  const confirmAction = (id) => {
-    console.log('Confirming action for notification:', id);
+  const confirmAction = (notification) => {
+    // Handle different types of confirmations based on notification type
+    if (notification.medicationRequest) {
+      // Redirect to medication request details
+      console.log('Viewing medication request:', notification.medicationRequest.id);
+    } else if (notification.medicationSchedule) {
+      // Redirect to medication schedule details
+      console.log('Viewing medication schedule:', notification.medicationSchedule.id);
+    }
+    
+    // Mark as read when action is taken
+    if (!notification.read) {
+      markAsRead(notification.id);
+    }
   };
 
   const getTypeIcon = (type) => {
@@ -83,7 +191,6 @@ const Notifications = () => {
       default: return '#2196f3';
     }
   };
-
   return (
     <div className="notifications">
       <div className="notifications-header">
@@ -108,18 +215,6 @@ const Notifications = () => {
             Cần xử lý ({notifications.filter(n => n.actionRequired).length})
           </button>
           <button 
-            className={filter === 'vaccination' ? 'active' : ''} 
-            onClick={() => setFilter('vaccination')}
-          >
-            Tiêm chủng
-          </button>
-          <button 
-            className={filter === 'health' ? 'active' : ''} 
-            onClick={() => setFilter('health')}
-          >
-            Sức khỏe
-          </button>
-          <button 
             className={filter === 'medication' ? 'active' : ''} 
             onClick={() => setFilter('medication')}
           >
@@ -128,59 +223,73 @@ const Notifications = () => {
         </div>
       </div>
 
-      <div className="notifications-list">
-        {filteredNotifications.map(notification => (
-          <div 
-            key={notification.id} 
-            className={`notification-card ${!notification.read ? 'unread' : ''}`}
-          >
-            <div className="notification-header">
-              <div className="notification-icon">
-                <i 
-                  className={getTypeIcon(notification.type)}
-                  style={{ color: getPriorityColor(notification.priority) }}
-                ></i>
+      {loading && (
+        <div className="loading-state">
+          <i className="fas fa-spinner fa-spin"></i>
+          <p>Đang tải thông báo...</p>
+        </div>
+      )}
+
+      {error && (
+        <div className="error-state">
+          <i className="fas fa-exclamation-triangle"></i>
+          <p>{error}</p>
+          <button onClick={loadNotifications} className="retry-btn">
+            Thử lại
+          </button>
+        </div>
+      )}
+
+      {!loading && !error && (
+        <div className="notifications-list">
+          {filteredNotifications.map(notification => (
+            <div 
+              key={notification.id} 
+              className={`notification-card ${!notification.read ? 'unread' : ''}`}
+            >
+              <div className="notification-header">
+                <div className="notification-icon">
+                  <i 
+                    className={getTypeIcon(notification.type)}
+                    style={{ color: getPriorityColor(notification.priority) }}
+                  ></i>
+                </div>
+                <div className="notification-meta">
+                  <h3>{notification.title}</h3>
+                  <span className="notification-time">{notification.time}</span>
+                  {notification.priority === 'high' && (
+                    <span className="priority-badge high">Khẩn cấp</span>
+                  )}
+                </div>
+                {!notification.read && <div className="unread-dot"></div>}
+              </div>              <div className="notification-body">
+                <p>{notification.message}</p>
               </div>
-              <div className="notification-meta">
-                <h3>{notification.title}</h3>
-                <span className="notification-time">{notification.time}</span>
-                {notification.priority === 'high' && (
-                  <span className="priority-badge high">Khẩn cấp</span>
+
+              <div className="notification-actions">
+                {!notification.read && (
+                  <button 
+                    className="action-btn secondary"
+                    onClick={() => markAsRead(notification.id)}
+                  >
+                    Đánh dấu đã đọc
+                  </button>
+                )}
+                {notification.actionRequired && (
+                  <button 
+                    className="action-btn primary"
+                    onClick={() => confirmAction(notification)}
+                  >
+                    Xem chi tiết
+                  </button>
                 )}
               </div>
-              {!notification.read && <div className="unread-dot"></div>}
             </div>
-            
-            <div className="notification-body">
-              <p>{notification.message}</p>
-            </div>
+          ))}
+        </div>
+      )}
 
-            <div className="notification-actions">
-              {!notification.read && (
-                <button 
-                  className="action-btn secondary"
-                  onClick={() => markAsRead(notification.id)}
-                >
-                  Đánh dấu đã đọc
-                </button>
-              )}
-              {notification.actionRequired && (
-                <button 
-                  className="action-btn primary"
-                  onClick={() => confirmAction(notification.id)}
-                >
-                  Xác nhận
-                </button>
-              )}
-              <button className="action-btn secondary">
-                Xem chi tiết
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {filteredNotifications.length === 0 && (
+      {!loading && !error && filteredNotifications.length === 0 && (
         <div className="no-notifications">
           <i className="fas fa-bell-slash"></i>
           <h3>Không có thông báo</h3>

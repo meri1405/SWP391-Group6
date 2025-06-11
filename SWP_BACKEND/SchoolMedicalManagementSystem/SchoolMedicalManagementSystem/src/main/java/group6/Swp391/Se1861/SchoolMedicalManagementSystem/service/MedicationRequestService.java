@@ -146,13 +146,14 @@ public class MedicationRequestService {
      * @param nurse the nurse approving the request
      * @return the updated medication request
      */    @Transactional
-    public MedicationRequestDTO approveMedicationRequest(Long requestId, User nurse) {
+    public MedicationRequestDTO approveMedicationRequest(Long requestId, User nurse, String nurseNote) {
         MedicationRequest request = medicationRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Medication request not found with id: " + requestId));
 
         request.setStatus("APPROVED");
         request.setConfirm(true);
         request.setNurse(nurse);
+        request.setNurseNote(nurseNote);
 
         // Schedules are already generated when parent creates request
         // No need to generate schedules again, just update the request status
@@ -174,7 +175,7 @@ public class MedicationRequestService {
         request.setStatus("REJECTED");
         request.setConfirm(true);
         request.setNurse(nurse);
-        request.setNote(note);
+        request.setNurseNote(note);
 
         // Delete all associated medication schedules when request is rejected
         for (ItemRequest itemRequest : request.getItemRequests()) {
@@ -470,5 +471,15 @@ public class MedicationRequestService {
 
         dto.setItemRequests(itemDTOs);
         return dto;
+    }
+
+    /**
+     * Get a medication request by ID
+     * @param requestId the request ID
+     * @return the medication request entity
+     */
+    public MedicationRequest getMedicationRequestById(Long requestId) {
+        return medicationRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Medication request not found with id: " + requestId));
     }
 }

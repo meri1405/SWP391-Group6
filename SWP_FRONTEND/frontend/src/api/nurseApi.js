@@ -295,11 +295,12 @@ export const nurseApi = {
         data: mockRequests
       };
     }
-  },
-
-  approveMedicationRequest: async (requestId, approvalData) => {
+  },  approveMedicationRequest: async (requestId, nurseNote = '', customMessage = '') => {
     try {
-      const response = await nurseApiClient.post(`/api/nurse/medications/requests/${requestId}/approve`, approvalData);
+      const response = await nurseApiClient.put(`/api/nurse/medications/requests/${requestId}/approve`, {
+        nurseNote: nurseNote,
+        customMessage: customMessage
+      });
       return {
         success: true,
         data: response.data,
@@ -316,9 +317,12 @@ export const nurseApi = {
     }
   },
 
-  rejectMedicationRequest: async (requestId, rejectionData) => {
+  rejectMedicationRequest: async (requestId, nurseNote = '', customMessage = '') => {
     try {
-      const response = await nurseApiClient.post(`/api/nurse/medications/requests/${requestId}/reject`, rejectionData);
+      const response = await nurseApiClient.put(`/api/nurse/medications/requests/${requestId}/reject`, {
+        nurseNote: nurseNote,
+        customMessage: customMessage
+      });
       return {
         success: true,
         data: response.data,
@@ -478,13 +482,16 @@ export const nurseApi = {
       };
     }
   },
-
-  updateScheduleStatus: async (scheduleId, status, note = '') => {
+  updateScheduleStatus: async (scheduleId, status, note = null) => {
     try {
-      const response = await nurseApiClient.put(`/api/nurse/medications/schedules/${scheduleId}/status`, {
-        status,
-        note
-      });
+      const requestBody = { status };
+      
+      // Only include note in request if it's provided and not empty
+      if (note && note.trim() !== '') {
+        requestBody.note = note;
+      }
+      
+      const response = await nurseApiClient.put(`/api/nurse/medications/schedules/${scheduleId}/status`, requestBody);
       return {
         success: true,
         data: response.data,

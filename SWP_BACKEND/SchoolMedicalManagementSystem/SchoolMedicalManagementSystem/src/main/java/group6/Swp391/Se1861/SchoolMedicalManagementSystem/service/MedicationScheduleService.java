@@ -3,6 +3,7 @@ package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.MedicationScheduleDTO;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.exception.ResourceNotFoundException;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.exception.UnauthorizedAccessException;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.*;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.MedicationStatus;
@@ -136,11 +137,14 @@ public class MedicationScheduleService {
         LocalDateTime now = LocalDateTime.now();
         if (scheduleDateTime.isAfter(now)) {
             throw new IllegalStateException("Cannot update status for future medication schedules");
-        }
-
-        schedule.setStatus(status);
+        }        schedule.setStatus(status);
         schedule.setNurse(nurse);
-        schedule.setNurseNote(note);
+        
+        // Only update note if a note is provided and not empty
+        // This preserves existing notes when updating status without a new note
+        if (note != null && !note.trim().isEmpty()) {
+            schedule.setNurseNote(note);
+        }
 
         if (status == MedicationStatus.TAKEN || status == MedicationStatus.SKIPPED) {
             schedule.setAdministeredTime(LocalTime.now());
@@ -339,5 +343,15 @@ public class MedicationScheduleService {
         return schedules.stream()
             .map(this::convertToScheduleDTO)
             .collect(Collectors.toList());
+    }
+
+    /**
+     * Get a medication schedule by ID
+     * @param scheduleId the schedule ID
+     * @return the medication schedule entity
+     */
+    public MedicationSchedule getMedicationScheduleById(Long scheduleId) {
+        return medicationScheduleRepository.findById(scheduleId)
+                .orElseThrow(() -> new ResourceNotFoundException("Medication schedule not found with id: " + scheduleId));
     }
 }
