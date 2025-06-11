@@ -19,22 +19,34 @@ import {
   Alert,
   Tooltip,
   Typography,
-  Divider
+  Divider,
+  Empty,
+  Badge,
+  Collapse
 } from 'antd';
 import {
   EyeOutlined,
   EditOutlined,
   CheckOutlined,
   CloseOutlined,
-  FileTextOutlined
+  FileTextOutlined,
+  HeartOutlined,
+  MedicineBoxOutlined,
+  CalendarOutlined,
+  AudioOutlined,
+  FileSearchOutlined
 } from '@ant-design/icons';
 import { nurseApi } from '../../api/nurseApi';
 import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+
+// Extend dayjs with relativeTime
+dayjs.extend(relativeTime);
 
 const { TextArea } = Input;
 const { Option } = Select;
-const { TabPane } = Tabs;
 const { Title, Text } = Typography;
+const { Panel } = Collapse;
 
 const NurseHealthProfiles = () => {
   const [healthProfiles, setHealthProfiles] = useState([]);
@@ -49,60 +61,74 @@ const NurseHealthProfiles = () => {
   const [approveForm] = Form.useForm();
   const [rejectForm] = Form.useForm();
   const [actionLoading, setActionLoading] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [activeTabKey, setActiveTabKey] = useState('pending');
 
   // Load health profiles
   const loadHealthProfiles = async () => {
-    console.log('=== Starting loadHealthProfiles ===');
-    
-    // Debug token và role ngay trước khi gọi API - SỬA ĐÂY
-    const token = localStorage.getItem('token'); // Đổi từ 'authToken' thành 'token'
-    
-    // Lấy role từ user object
-    let role = null;
-    try {
-      const userData = localStorage.getItem('user');
-      if (userData) {
-        const user = JSON.parse(userData);
-        role = user.roleName;
-      }
-    } catch (error) {
-      console.error('Error parsing user data:', error);
-    }
-    
-    console.log('Token before API call:', token);
-    console.log('Role before API call:', role);
-    
-    if (!token) {
-      console.error('No token available for API call');
-      message.error('Không có token xác thực. Vui lòng đăng nhập lại.');
-      return;
-    }
-    
-    if (role !== 'SCHOOLNURSE') {
-      console.error('Invalid role for API call:', role);
-      message.error('Bạn không có quyền truy cập chức năng này.');
-      return;
-    }
-    
     try {
       setLoading(true);
       console.log('Loading health profiles with status:', statusFilter);
-      const profiles = await nurseApi.getHealthProfiles(statusFilter);
-      console.log('Loaded profiles:', profiles);
-      setHealthProfiles(profiles || []);
-    } catch (error) {
-      console.error('Error loading health profiles:', error);
       
-      if (error.response?.status === 401) {
-        message.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
-      } else if (error.response?.status === 403) {
-        message.error('Bạn không có quyền truy cập chức năng này.');
-      } else if (error.response?.status === 404) {
-        message.warning('Không tìm thấy hồ sơ sức khỏe nào.');
-        setHealthProfiles([]);
+      // Check if user is logged in
+      const token = localStorage.getItem('token');
+    if (!token) {
+        console.error('No authentication token found');
+        message.error('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
+        window.location.href = '/login';
+      return;
+    }
+    
+      const response = await nurseApi.getHealthProfiles(statusFilter);
+      console.log('Loaded profiles response:', response);
+      
+      if (response.success) {
+        // Ensure profiles data is always an array
+        const profiles = response.data;
+        if (Array.isArray(profiles)) {
+          setHealthProfiles(profiles);
+        } else if (profiles && typeof profiles === 'object') {
+          // Handle case where API returns an object with data property
+          setHealthProfiles(Array.isArray(profiles.data) ? profiles.data : []);
       } else {
-        message.error('Không thể tải danh sách hồ sơ sức khỏe. Vui lòng thử lại.');
-      }
+      setHealthProfiles([]);
+        }
+        
+        // Check for pending profiles count if we're not already on pending tab
+        if (statusFilter !== 'PENDING') {
+          try {
+            const pendingResponse = await nurseApi.getHealthProfiles('PENDING');
+            if (pendingResponse.success) {
+              const pendingProfiles = pendingResponse.data;
+              setPendingCount(Array.isArray(pendingProfiles) ? pendingProfiles.length : 
+                            (pendingProfiles && Array.isArray(pendingProfiles.data)) ? 
+                            pendingProfiles.data.length : 0);
+            } else {
+              setPendingCount(0);
+            }
+          } catch (pendingError) {
+            console.error('Error fetching pending count:', pendingError);
+            setPendingCount(0);
+          }
+        } else {
+          // If we're on the pending tab, use the current profiles count
+          const profilesArray = Array.isArray(profiles) ? profiles : 
+                             (profiles && Array.isArray(profiles.data)) ? profiles.data : [];
+          setPendingCount(profilesArray.length);
+        }
+        
+        // Show success message if not using mock data
+        if (!response.message || !response.message.includes('mẫu')) {
+          message.success('Đã tải danh sách hồ sơ sức khỏe thành công');
+        }
+      } else {
+        console.error('Failed to load profiles:', response.message);
+        message.error(response.message || 'Không thể tải danh sách hồ sơ sức khỏe.');
+        setHealthProfiles([]);
+          }
+        } catch (error) {
+      console.error('Unexpected error loading health profiles:', error);
+      message.error('Không thể tải danh sách hồ sơ sức khỏe. Vui lòng thử lại sau.');
       setHealthProfiles([]);
     } finally {
       setLoading(false);
@@ -110,103 +136,82 @@ const NurseHealthProfiles = () => {
   };
 
   useEffect(() => {
-    console.log('=== NurseHealthProfiles Component Debug Info ===');
-    console.log('Current status filter:', statusFilter);
-    
-    // Kiểm tra token
-    const authToken = localStorage.getItem('token'); // Sửa từ 'authToken' thành 'token'
-    
-    // Lấy role từ user object thay vì userRole riêng
-    let userRole = null;
-    try {
-      const userData = localStorage.getItem('user');
-      if (userData) {
-        const user = JSON.parse(userData);
-        userRole = user.roleName; // Sử dụng roleName từ user object
-      }
-    } catch (error) {
-      console.error('Error parsing user data:', error);
-    }
-    
-    console.log('Auth token exists:', !!authToken);
-    console.log('Auth token value:', authToken);
-    console.log('User role from user object:', userRole);
-    console.log('Base URL: http://localhost:8080');
-    
-    // Nếu không có token, đợi một chút để AuthContext setup
-    if (!authToken) {
-      console.warn('No auth token found, waiting for auth context...');
-      const timer = setTimeout(() => {
-        const newToken = localStorage.getItem('token');
-        let newRole = null;
-        try {
-          const userData = localStorage.getItem('user');
-          if (userData) {
-            const user = JSON.parse(userData);
-            newRole = user.roleName;
-          }
-        } catch (error) {
-          console.error('Error parsing user data:', error);
-        }
-        
-        console.log('After waiting - Token exists:', !!newToken);
-        console.log('After waiting - User role:', newRole);
-        
-        if (newToken && newRole === 'SCHOOLNURSE') {
           loadHealthProfiles();
-        } else if (!newToken) {
-          message.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
-        } else if (newRole !== 'SCHOOLNURSE') {
-          message.error('Bạn không có quyền truy cập chức năng này.');
-        }
-      }, 1000);
-      
-      return () => clearTimeout(timer);
-    }
-    
-    // Kiểm tra role
-    if (userRole !== 'SCHOOLNURSE') {
-      console.warn('User role mismatch:', userRole);
-      message.error('Bạn không có quyền truy cập chức năng này.');
-      return;
-    }
-    
-    loadHealthProfiles();
   }, [statusFilter]);
+
+  const handleTabChange = (key) => {
+    setActiveTabKey(key);
+    
+    switch(key) {
+      case 'pending':
+        setStatusFilter('PENDING');
+        break;
+      case 'approved':
+        setStatusFilter('APPROVED');
+        break;
+      case 'rejected':
+        setStatusFilter('REJECTED');
+        break;
+      default:
+        setStatusFilter(null);
+    }
+  };
 
   // Table columns
   const columns = [
     {
       title: 'Học sinh',
       key: 'student',
-      render: (_, record) => (
+      render: (_, record) => {
+        const student = record.additionalFields?.student;
+        return (
         <div>
           <div style={{ fontWeight: 500 }}>
-            {record.student.lastName} {record.student.firstName}
+              {student?.lastName} {student?.firstName}
           </div>
           <div style={{ fontSize: '12px', color: '#666' }}>
-            Lớp: {record.student.className}
+              Lớp: {student?.className}
           </div>
         </div>
-      ),
+        );
+      },
     },
     {
       title: 'Phụ huynh',
       key: 'parent',
-      render: (_, record) => (
+      render: (_, record) => {
+        const parent = record.additionalFields?.parent;
+        return (
         <div>
-          <div>{record.parent.lastName} {record.parent.firstName}</div>
+            <div>{parent?.lastName} {parent?.firstName}</div>
           <div style={{ fontSize: '12px', color: '#666' }}>
-            {record.parent.phone}
+              {parent?.phone}
           </div>
         </div>
-      ),
+        );
+      },
+    },
+    {
+      title: 'Chỉ số cơ bản',
+      key: 'basicInfo',
+      render: (_, record) => (
+        <div>
+          <div>Chiều cao: {record.height} cm</div>
+          <div>Cân nặng: {record.weight} kg</div>
+          <div>BMI: {(record.weight / Math.pow(record.height / 100, 2)).toFixed(2)}</div>
+        </div>
+      )
     },
     {
       title: 'Ngày gửi',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      render: (date) => dayjs(date).format('DD/MM/YYYY HH:mm'),
+      render: (date) => (
+        <div>
+          <div>{dayjs(date).format('DD/MM/YYYY HH:mm')}</div>
+          <div style={{ fontSize: '12px', color: '#666' }}>{dayjs(date).fromNow()}</div>
+        </div>
+      ),
       sorter: (a, b) => dayjs(a.createdAt).unix() - dayjs(b.createdAt).unix(),
     },
     {
@@ -271,16 +276,19 @@ const NurseHealthProfiles = () => {
   const handleViewDetail = async (profile) => {
     try {
       setLoading(true);
-      const detailProfile = await nurseApi.getHealthProfileDetail(profile.id);
-      setSelectedProfile(detailProfile);
+      console.log(`Fetching details for profile ID: ${profile.id}`);
+      const response = await nurseApi.getHealthProfileDetail(profile.id);
+      
+      if (response.success && response.data) {
+        console.log('Profile details loaded successfully:', response.data);
+        setSelectedProfile(response.data);
       setDetailModalVisible(true);
-    } catch (error) {
-      console.error('Error loading detail:', error);
-      if (error.response?.status === 404) {
-        message.error('Không tìm thấy chi tiết hồ sơ này.');
       } else {
-        message.error('Không thể tải chi tiết hồ sơ.');
+        message.error(response.message || 'Không thể tải chi tiết hồ sơ sức khỏe.');
       }
+    } catch (error) {
+      console.error('Unexpected error loading profile detail:', error);
+      message.error('Đã xảy ra lỗi khi tải chi tiết hồ sơ. Vui lòng thử lại sau.');
     } finally {
       setLoading(false);
     }
@@ -308,11 +316,21 @@ const NurseHealthProfiles = () => {
   const handleApprove = (profile) => {
     setSelectedProfile(profile);
     setApproveModalVisible(true);
+    
+    // Clear form 
+    if (approveForm) {
+      approveForm.resetFields();
+    }
   };
 
   const handleReject = (profile) => {
     setSelectedProfile(profile);
     setRejectModalVisible(true);
+    
+    // Clear form
+    if (rejectForm) {
+      rejectForm.resetFields();
+    }
   };
 
   const handleSaveEdit = async () => {
@@ -320,25 +338,39 @@ const NurseHealthProfiles = () => {
       const values = await form.validateFields();
       setActionLoading(true);
       
-      const updatedProfile = {
-        ...selectedProfile,
-        ...values
+      // Create update payload with only the fields that need to be updated
+      const updatePayload = {
+        weight: values.weight,
+        height: values.height,
+        note: values.note
       };
       
-      await nurseApi.updateHealthProfile(selectedProfile.id, updatedProfile);
-      message.success('Cập nhật hồ sơ thành công');
+      console.log(`Updating profile ${selectedProfile.id} with data:`, updatePayload);
+      
+      const response = await nurseApi.updateHealthProfile(selectedProfile.id, updatePayload);
+      console.log('Profile update response:', response);
+      
+      if (response.success) {
+        message.success(response.message || 'Cập nhật hồ sơ thành công');
       setEditModalVisible(false);
       form.resetFields();
-      loadHealthProfiles();
+        
+        // Refresh the profile list
+        await loadHealthProfiles();
+        
+        // If the detail modal is still open, refresh the profile details
+        if (detailModalVisible) {
+          const refreshResponse = await nurseApi.getHealthProfileDetail(selectedProfile.id);
+          if (refreshResponse.success && refreshResponse.data) {
+            setSelectedProfile(refreshResponse.data);
+          }
+        }
+      } else {
+        message.error(response.message || 'Không thể cập nhật hồ sơ sức khỏe.');
+      }
     } catch (error) {
       console.error('Error updating profile:', error);
-      if (error.response?.status === 400) {
-        message.error('Dữ liệu không hợp lệ. Vui lòng kiểm tra lại.');
-      } else if (error.response?.status === 404) {
-        message.error('Không tìm thấy hồ sơ để cập nhật.');
-      } else {
-        message.error('Có lỗi xảy ra khi cập nhật hồ sơ.');
-      }
+      message.error('Có lỗi xảy ra khi cập nhật hồ sơ. Vui lòng thử lại sau.');
     } finally {
       setActionLoading(false);
     }
@@ -349,20 +381,28 @@ const NurseHealthProfiles = () => {
       const values = await approveForm.validateFields();
       setActionLoading(true);
       
-      await nurseApi.approveHealthProfile(selectedProfile.id, values.nurseNote);
-      message.success('Đã duyệt hồ sơ sức khỏe thành công');
+      console.log(`Approving profile ${selectedProfile.id} with note: ${values.nurseNote || 'none'}`);
+      const response = await nurseApi.approveHealthProfile(selectedProfile.id, values.nurseNote);
+      console.log('Profile approve response:', response);
+      
+      if (response.success) {
+        message.success(response.message || 'Đã duyệt hồ sơ sức khỏe thành công');
       setApproveModalVisible(false);
       approveForm.resetFields();
-      loadHealthProfiles();
+        
+        // Close detail modal if it was open
+        if (detailModalVisible) {
+          setDetailModalVisible(false);
+        }
+        
+        // Refresh the profiles list
+        await loadHealthProfiles();
+      } else {
+        message.error(response.message || 'Không thể duyệt hồ sơ sức khỏe.');
+      }
     } catch (error) {
       console.error('Error approving profile:', error);
-      if (error.response?.status === 400) {
-        message.error('Không thể duyệt hồ sơ này. Vui lòng kiểm tra trạng thái.');
-      } else if (error.response?.status === 404) {
-        message.error('Không tìm thấy hồ sơ để duyệt.');
-      } else {
-        message.error('Có lỗi xảy ra khi duyệt hồ sơ.');
-      }
+      message.error('Có lỗi xảy ra khi duyệt hồ sơ. Vui lòng thử lại sau.');
     } finally {
       setActionLoading(false);
     }
@@ -373,27 +413,35 @@ const NurseHealthProfiles = () => {
       const values = await rejectForm.validateFields();
       setActionLoading(true);
       
-      await nurseApi.rejectHealthProfile(selectedProfile.id, values.reason);
-      message.success('Đã từ chối hồ sơ sức khỏe');
+      console.log(`Rejecting profile ${selectedProfile.id} with reason: ${values.reason}`);
+      const response = await nurseApi.rejectHealthProfile(selectedProfile.id, values.reason);
+      console.log('Profile reject response:', response);
+      
+      if (response.success) {
+        message.success(response.message || 'Đã từ chối hồ sơ sức khỏe thành công');
       setRejectModalVisible(false);
       rejectForm.resetFields();
-      loadHealthProfiles();
+        
+        // Close detail modal if it was open
+        if (detailModalVisible) {
+          setDetailModalVisible(false);
+        }
+        
+        // Refresh the profiles list
+        await loadHealthProfiles();
+      } else {
+        message.error(response.message || 'Không thể từ chối hồ sơ sức khỏe.');
+      }
     } catch (error) {
       console.error('Error rejecting profile:', error);
-      if (error.response?.status === 400) {
-        message.error('Không thể từ chối hồ sơ này. Vui lòng kiểm tra trạng thái.');
-      } else if (error.response?.status === 404) {
-        message.error('Không tìm thấy hồ sơ để từ chối.');
-      } else {
-        message.error('Có lỗi xảy ra khi từ chối hồ sơ.');
-      }
+      message.error('Có lỗi xảy ra khi từ chối hồ sơ. Vui lòng thử lại sau.');
     } finally {
       setActionLoading(false);
     }
   };
 
   // Render health data sections
-  const renderAllergies = (allergies) => {
+  const renderAllergies = (allergies = []) => {
     if (!allergies || allergies.length === 0) {
       return <Text type="secondary">Không có thông tin dị ứng</Text>;
     }
@@ -404,14 +452,14 @@ const NurseHealthProfiles = () => {
         renderItem={(allergy) => (
           <List.Item>
             <div style={{ width: '100%' }}>
-              <div style={{ fontWeight: 500 }}>{allergy.allergen}</div>
+              <div style={{ fontWeight: 500 }}>{allergy.allergyType}</div>
               <div style={{ fontSize: '12px', color: '#666' }}>
-                Mức độ: {allergy.severity === 'MILD' ? 'Nhẹ' : allergy.severity === 'MODERATE' ? 'Trung bình' : 'Nặng'}
+                Mức độ: {allergy.status === 'MILD' ? 'Nhẹ' : allergy.status === 'MODERATE' ? 'Trung bình' : 'Nặng'}
               </div>
-              {allergy.symptoms && <div style={{ fontSize: '12px' }}>Triệu chứng: {allergy.symptoms}</div>}
+              {allergy.description && <div style={{ fontSize: '12px' }}>Mô tả: {allergy.description}</div>}
               {allergy.onsetDate && (
                 <div style={{ fontSize: '12px' }}>
-                  Ngày khởi phát: {dayjs(allergy.onsetDate).format('DD/MM/YYYY')}
+                  Ngày phát hiện: {dayjs(allergy.onsetDate).format('DD/MM/YYYY')}
                 </div>
               )}
             </div>
@@ -421,7 +469,7 @@ const NurseHealthProfiles = () => {
     );
   };
 
-  const renderChronicDiseases = (diseases) => {
+  const renderChronicDiseases = (diseases = []) => {
     if (!diseases || diseases.length === 0) {
       return <Text type="secondary">Không có thông tin bệnh mãn tính</Text>;
     }
@@ -442,6 +490,11 @@ const NurseHealthProfiles = () => {
                   Ngày chẩn đoán: {dayjs(disease.dateDiagnosed).format('DD/MM/YYYY')}
                 </div>
               )}
+              {disease.placeOfTreatment && (
+                <div style={{ fontSize: '12px' }}>
+                  Nơi điều trị: {disease.placeOfTreatment}
+                </div>
+              )}
             </div>
           </List.Item>
         )}
@@ -449,47 +502,185 @@ const NurseHealthProfiles = () => {
     );
   };
 
-  // Thêm function test
-  const testAuth = async () => {
-    try {
-      setLoading(true);
-      console.log("Testing authentication...");
-      await nurseApi.testAuth();
-      message.success("Authentication test successful!");
-    } catch (error) {
-      console.error("Auth test failed:", error);
-      message.error("Authentication failed: " + error.message);
-    } finally {
-      setLoading(false);
+  const renderInfectiousDiseases = (diseases = []) => {
+    if (!diseases || diseases.length === 0) {
+      return <Text type="secondary">Không có thông tin bệnh truyền nhiễm</Text>;
     }
+    
+    return (
+      <List
+        dataSource={diseases}
+        renderItem={(disease) => (
+          <List.Item>
+            <div style={{ width: '100%' }}>
+              <div style={{ fontWeight: 500 }}>{disease.diseaseName}</div>
+              {disease.description && <div style={{ fontSize: '12px' }}>{disease.description}</div>}
+              <div style={{ fontSize: '12px', color: '#666' }}>
+                Trạng thái: {disease.status}
+              </div>
+              {disease.dateDiagnosed && (
+                <div style={{ fontSize: '12px' }}>
+                  Ngày chẩn đoán: {dayjs(disease.dateDiagnosed).format('DD/MM/YYYY')}
+                </div>
+              )}
+              {disease.dateResolved && (
+                <div style={{ fontSize: '12px' }}>
+                  Ngày khỏi bệnh: {dayjs(disease.dateResolved).format('DD/MM/YYYY')}
+                </div>
+              )}
+            </div>
+          </List.Item>
+        )}
+      />
+    );
+  };
+  
+  const renderTreatments = (treatments = []) => {
+    if (!treatments || treatments.length === 0) {
+      return <Text type="secondary">Không có thông tin điều trị</Text>;
+    }
+    
+    return (
+      <List
+        dataSource={treatments}
+        renderItem={(treatment) => (
+          <List.Item>
+            <div style={{ width: '100%' }}>
+              <div style={{ fontWeight: 500 }}>{treatment.treatmentType}</div>
+              {treatment.description && <div style={{ fontSize: '12px' }}>{treatment.description}</div>}
+              {treatment.doctorName && (
+                <div style={{ fontSize: '12px' }}>
+                  Bác sĩ: {treatment.doctorName}
+                </div>
+              )}
+              {treatment.dateOfAdmission && (
+                <div style={{ fontSize: '12px' }}>
+                  Ngày nhập viện: {dayjs(treatment.dateOfAdmission).format('DD/MM/YYYY')}
+                </div>
+              )}
+              {treatment.dateOfDischarge && (
+                <div style={{ fontSize: '12px' }}>
+                  Ngày xuất viện: {dayjs(treatment.dateOfDischarge).format('DD/MM/YYYY')}
+                </div>
+              )}
+              {treatment.placeOfTreatment && (
+                <div style={{ fontSize: '12px' }}>
+                  Nơi điều trị: {treatment.placeOfTreatment}
+                </div>
+              )}
+            </div>
+          </List.Item>
+        )}
+      />
+    );
+  };
+  
+  const renderVaccinationHistory = (vaccinations = []) => {
+    if (!vaccinations || vaccinations.length === 0) {
+      return <Text type="secondary">Không có thông tin tiêm chủng</Text>;
+    }
+    
+    return (
+      <List
+        dataSource={vaccinations}
+        renderItem={(vaccination) => (
+          <List.Item>
+            <div style={{ width: '100%' }}>
+              <div style={{ fontWeight: 500 }}>{vaccination.vaccineName}</div>
+              <div style={{ fontSize: '12px' }}>
+                Liều: {vaccination.doseNumber}
+              </div>
+              {vaccination.manufacturer && (
+                <div style={{ fontSize: '12px' }}>
+                  Nhà sản xuất: {vaccination.manufacturer}
+                </div>
+              )}
+              {vaccination.dateOfVaccination && (
+                <div style={{ fontSize: '12px' }}>
+                  Ngày tiêm: {dayjs(vaccination.dateOfVaccination).format('DD/MM/YYYY')}
+                </div>
+              )}
+              {vaccination.placeOfVaccination && (
+                <div style={{ fontSize: '12px' }}>
+                  Nơi tiêm: {vaccination.placeOfVaccination}
+                </div>
+              )}
+              {vaccination.administeredBy && (
+                <div style={{ fontSize: '12px' }}>
+                  Người thực hiện: {vaccination.administeredBy}
+                </div>
+              )}
+            </div>
+          </List.Item>
+        )}
+      />
+    );
   };
 
-  // Thêm function test endpoint
-  const testEndpoints = async () => {
-    try {
-      setLoading(true);
-      console.log("Testing all possible endpoints...");
-      
-      const token = localStorage.getItem('token');
-      if (!token) {
-        message.error('No token found');
-        return;
-      }
-      
-      // Test authentication first
-      await nurseApi.testAuth();
-      message.success("Authentication successful!");
-      
-      // Then test health profiles endpoints
-      await nurseApi.getHealthProfiles('PENDING');
-      message.success("Health profiles endpoint found!");
-      
-    } catch (error) {
-      console.error("Endpoint test failed:", error);
-      message.error("Endpoint test failed: " + error.message);
-    } finally {
-      setLoading(false);
+  const renderVision = (visionData = []) => {
+    if (!visionData || visionData.length === 0) {
+      return <Text type="secondary">Không có thông tin thị lực</Text>;
     }
+    
+    return (
+      <List
+        dataSource={visionData}
+        renderItem={(vision) => (
+          <List.Item>
+            <div style={{ width: '100%' }}>
+              <div style={{ fontWeight: 500 }}>{vision.visionDescription || 'Thông tin thị lực'}</div>
+              <div style={{ fontSize: '12px' }}>
+                Mắt trái: {vision.visionLeft}/10
+              </div>
+              <div style={{ fontSize: '12px' }}>
+                Mắt phải: {vision.visionRight}/10
+              </div>
+              <div style={{ fontSize: '12px' }}>
+                Mắt trái (với kính): {vision.visionLeftWithGlass}/10
+              </div>
+              <div style={{ fontSize: '12px' }}>
+                Mắt phải (với kính): {vision.visionRightWithGlass}/10
+              </div>
+              {vision.dateOfExamination && (
+                <div style={{ fontSize: '12px' }}>
+                  Ngày khám: {dayjs(vision.dateOfExamination).format('DD/MM/YYYY')}
+                </div>
+              )}
+            </div>
+          </List.Item>
+        )}
+      />
+    );
+  };
+  
+  const renderHearing = (hearingData = []) => {
+    if (!hearingData || hearingData.length === 0) {
+      return <Text type="secondary">Không có thông tin thính lực</Text>;
+    }
+    
+    return (
+      <List
+        dataSource={hearingData}
+        renderItem={(hearing) => (
+          <List.Item>
+            <div style={{ width: '100%' }}>
+              <div style={{ fontWeight: 500 }}>{hearing.description || 'Thông tin thính lực'}</div>
+              <div style={{ fontSize: '12px' }}>
+                Tai trái: {hearing.leftEar}/10
+              </div>
+              <div style={{ fontSize: '12px' }}>
+                Tai phải: {hearing.rightEar}/10
+              </div>
+              {hearing.dateOfExamination && (
+                <div style={{ fontSize: '12px' }}>
+                  Ngày khám: {dayjs(hearing.dateOfExamination).format('DD/MM/YYYY')}
+                </div>
+              )}
+            </div>
+          </List.Item>
+        )}
+      />
+    );
   };
 
   return (
@@ -509,41 +700,58 @@ const NurseHealthProfiles = () => {
           />
         </div>
 
-        {/* Filters */}
-        <Row gutter={[16, 16]} style={{ marginBottom: '16px' }}>
-          <Col span={8}>
-            <Select
-              style={{ width: '100%' }}
-              value={statusFilter}
-              onChange={setStatusFilter}
-              placeholder="Lọc theo trạng thái"
-            >
-              <Option value="">Tất cả</Option>
-              <Option value="PENDING">Chờ duyệt</Option>
-              <Option value="APPROVED">Đã duyệt</Option>
-              <Option value="REJECTED">Từ chối</Option>
-            </Select>
-          </Col>
-          <Col span={16} style={{ textAlign: 'right' }}>
-            <Space>
-              <Button onClick={testEndpoints} loading={loading} type="default">
-                Test Endpoints
-              </Button>
+        <Tabs 
+          activeKey={activeTabKey} 
+          onChange={handleTabChange}
+          tabBarExtraContent={
               <Button onClick={loadHealthProfiles} loading={loading} type="primary">
                 Làm mới
               </Button>
-            </Space>
-          </Col>
-        </Row>
-
-        {/* Table */}
+          }
+          items={[
+            {
+              key: 'pending',
+              label: <span>Chờ duyệt {pendingCount > 0 && <Badge count={pendingCount} style={{ marginLeft: 8 }} />}</span>,
+              children: (
         <Table
           columns={columns}
           dataSource={healthProfiles}
           rowKey="id"
           loading={loading}
           pagination={{ pageSize: 10 }}
-          locale={{ emptyText: 'Không có hồ sơ sức khỏe nào' }}
+                  locale={{ emptyText: 'Không có hồ sơ sức khỏe chờ duyệt nào' }}
+                />
+              )
+            },
+            {
+              key: 'approved',
+              label: 'Đã duyệt',
+              children: (
+                <Table
+                  columns={columns}
+                  dataSource={healthProfiles}
+                  rowKey="id"
+                  loading={loading}
+                  pagination={{ pageSize: 10 }}
+                  locale={{ emptyText: 'Không có hồ sơ sức khỏe đã duyệt nào' }}
+                />
+              )
+            },
+            {
+              key: 'rejected',
+              label: 'Đã từ chối',
+              children: (
+                <Table
+                  columns={columns}
+                  dataSource={healthProfiles}
+                  rowKey="id"
+                  loading={loading}
+                  pagination={{ pageSize: 10 }}
+                  locale={{ emptyText: 'Không có hồ sơ sức khỏe đã từ chối nào' }}
+                />
+              )
+            }
+          ]}
         />
       </Card>
 
@@ -551,39 +759,81 @@ const NurseHealthProfiles = () => {
       <Modal
         title={
           <Space>
-            <EyeOutlined />
-            <span>Chi tiết hồ sơ sức khỏe</span>
+            <FileSearchOutlined />
+            <span>
+              Chi tiết hồ sơ sức khỏe
+              {selectedProfile?.additionalFields?.student && 
+                ` - ${selectedProfile.additionalFields.student.lastName} ${selectedProfile.additionalFields.student.firstName}`}
+            </span>
           </Space>
         }
         open={detailModalVisible}
         onCancel={() => setDetailModalVisible(false)}
         footer={[
+          selectedProfile && selectedProfile.status === 'PENDING' && (
+            <>
+              <Button
+                key="reject"
+                danger
+                onClick={() => handleReject(selectedProfile)}
+                icon={<CloseOutlined />}
+              >
+                Từ chối
+              </Button>
+              <Button
+                key="edit"
+                onClick={() => handleEdit(selectedProfile)}
+                icon={<EditOutlined />}
+              >
+                Chỉnh sửa
+              </Button>
+              <Button
+                key="approve"
+                type="primary"
+                onClick={() => handleApprove(selectedProfile)}
+                icon={<CheckOutlined />}
+              >
+                Duyệt
+              </Button>
+            </>
+          ),
+          <Button 
+            key="refresh" 
+            onClick={() => selectedProfile && handleViewDetail(selectedProfile)} 
+            icon={<FileSearchOutlined />}
+          >
+            Làm mới
+          </Button>,
           <Button key="close" onClick={() => setDetailModalVisible(false)}>
             Đóng
           </Button>
         ]}
         width={800}
+        centered
       >
         {selectedProfile && (
           <div>
             <Descriptions title="Thông tin cơ bản" bordered size="small">
               <Descriptions.Item label="Học sinh" span={2}>
-                {selectedProfile.student.lastName} {selectedProfile.student.firstName}
+                {selectedProfile.additionalFields?.student?.lastName} {selectedProfile.additionalFields?.student?.firstName}
               </Descriptions.Item>
               <Descriptions.Item label="Lớp">
-                {selectedProfile.student.className}
+                {selectedProfile.additionalFields?.student?.className}
               </Descriptions.Item>
               <Descriptions.Item label="Phụ huynh" span={2}>
-                {selectedProfile.parent.lastName} {selectedProfile.parent.firstName}
+                {selectedProfile.additionalFields?.parent?.lastName} {selectedProfile.additionalFields?.parent?.firstName}
               </Descriptions.Item>
               <Descriptions.Item label="SĐT">
-                {selectedProfile.parent.phone}
+                {selectedProfile.additionalFields?.parent?.phone}
               </Descriptions.Item>
               <Descriptions.Item label="Cân nặng">
                 {selectedProfile.weight} kg
               </Descriptions.Item>
               <Descriptions.Item label="Chiều cao">
                 {selectedProfile.height} cm
+              </Descriptions.Item>
+              <Descriptions.Item label="BMI">
+                {(selectedProfile.weight / Math.pow(selectedProfile.height / 100, 2)).toFixed(2)}
               </Descriptions.Item>
               <Descriptions.Item label="Trạng thái">
                 <Tag color={selectedProfile.status === 'PENDING' ? 'processing' : 
@@ -592,6 +842,11 @@ const NurseHealthProfiles = () => {
                    selectedProfile.status === 'APPROVED' ? 'Đã duyệt' : 'Từ chối'}
                 </Tag>
               </Descriptions.Item>
+              {selectedProfile.status === 'APPROVED' && selectedProfile.additionalFields?.schoolNurseFullName && (
+                <Descriptions.Item label="Y tá duyệt" span={2}>
+                  {selectedProfile.additionalFields.schoolNurseFullName}
+                </Descriptions.Item>
+              )}
               <Descriptions.Item label="Ghi chú" span={3}>
                 {selectedProfile.note || 'Không có ghi chú'}
               </Descriptions.Item>
@@ -599,35 +854,69 @@ const NurseHealthProfiles = () => {
 
             <Divider />
 
-            <Tabs defaultActiveKey="allergies">
-              <TabPane tab="Dị ứng" key="allergies">
+            <Collapse defaultActiveKey={['allergies']} bordered={false}>
+              <Panel 
+                header={<span><MedicineBoxOutlined /> Dị ứng</span>} 
+                key="allergies"
+              >
                 {renderAllergies(selectedProfile.allergies)}
-              </TabPane>
-              <TabPane tab="Bệnh mãn tính" key="chronic">
+              </Panel>
+              
+              <Panel 
+                header={<span><HeartOutlined /> Bệnh mãn tính</span>} 
+                key="chronic"
+              >
                 {renderChronicDiseases(selectedProfile.chronicDiseases)}
-              </TabPane>
-              <TabPane tab="Bệnh truyền nhiễm" key="infectious">
-                <Text type="secondary">Không có thông tin bệnh truyền nhiễm</Text>
-              </TabPane>
-              <TabPane tab="Lịch sử điều trị" key="treatments">
-                <Text type="secondary">Không có lịch sử điều trị</Text>
-              </TabPane>
-              <TabPane tab="Tiêm chủng" key="vaccination">
-                <Text type="secondary">Không có lịch sử tiêm chủng</Text>
-              </TabPane>
-            </Tabs>
+              </Panel>
+              
+              <Panel 
+                header={<span><HeartOutlined /> Bệnh truyền nhiễm</span>} 
+                key="infectious"
+              >
+                {renderInfectiousDiseases(selectedProfile.infectiousDiseases)}
+              </Panel>
+              
+              <Panel 
+                header={<span><MedicineBoxOutlined /> Lịch sử điều trị</span>} 
+                key="treatments"
+              >
+                {renderTreatments(selectedProfile.treatments)}
+              </Panel>
+              
+              <Panel 
+                header={<span><CalendarOutlined /> Tiêm chủng</span>} 
+                key="vaccination"
+              >
+                {renderVaccinationHistory(selectedProfile.vaccinationHistory)}
+              </Panel>
+              
+              <Panel 
+                header={<span><EyeOutlined /> Thị lực</span>} 
+                key="vision"
+              >
+                {renderVision(selectedProfile.vision)}
+              </Panel>
+              
+              <Panel 
+                header={<span><AudioOutlined /> Thính lực</span>} 
+                key="hearing"
+              >
+                {renderHearing(selectedProfile.hearing)}
+              </Panel>
+            </Collapse>
           </div>
         )}
       </Modal>
 
       {/* Edit Modal */}
       <Modal
-        title="Chỉnh sửa hồ sơ sức khỏe"
+        title={<span><EditOutlined /> Chỉnh sửa hồ sơ sức khỏe</span>}
         open={editModalVisible}
         onCancel={() => setEditModalVisible(false)}
         onOk={handleSaveEdit}
         confirmLoading={actionLoading}
         width={600}
+        centered
       >
         <Form form={form} layout="vertical">
           <Row gutter={16}>
@@ -680,13 +969,30 @@ const NurseHealthProfiles = () => {
 
       {/* Approve Modal */}
       <Modal
-        title="Duyệt hồ sơ sức khỏe"
+        title={<span><CheckOutlined style={{ color: '#52c41a' }} /> Duyệt hồ sơ sức khỏe</span>}
         open={approveModalVisible}
         onCancel={() => setApproveModalVisible(false)}
         onOk={handleConfirmApprove}
         confirmLoading={actionLoading}
+        centered
       >
-        <p>Bạn có chắc chắn muốn duyệt hồ sơ sức khỏe này không?</p>
+        {selectedProfile && (
+          <div>
+            <Alert
+              message="Xác nhận duyệt hồ sơ sức khỏe"
+              description={
+                <div>
+                  <p>Bạn có chắc chắn muốn duyệt hồ sơ sức khỏe của <strong>{selectedProfile.additionalFields?.student?.lastName} {selectedProfile.additionalFields?.student?.firstName}</strong> (Lớp {selectedProfile.additionalFields?.student?.className}) không?</p>
+                  <p>Khi duyệt, hồ sơ sức khỏe sẽ được chuyển sang mục "Tiền sử sức khỏe" của phụ huynh và sẽ được lưu trữ trong hệ thống.</p>
+                </div>
+              }
+              type="info"
+              showIcon
+              style={{ marginBottom: '16px' }}
+            />
+          </div>
+        )}
+        
         <Form form={approveForm} layout="vertical">
           <Form.Item
             label="Ghi chú của Y tá"
@@ -702,14 +1008,31 @@ const NurseHealthProfiles = () => {
 
       {/* Reject Modal */}
       <Modal
-        title="Từ chối hồ sơ sức khỏe"
+        title={<span><CloseOutlined style={{ color: '#ff4d4f' }} /> Từ chối hồ sơ sức khỏe</span>}
         open={rejectModalVisible}
         onCancel={() => setRejectModalVisible(false)}
         onOk={handleConfirmReject}
         confirmLoading={actionLoading}
         okButtonProps={{ danger: true }}
+        centered
       >
+        {selectedProfile && (
+          <div>
+            <Alert
+              message="Xác nhận từ chối hồ sơ sức khỏe"
+              description={
+                <div>
+                  <p>Bạn sắp từ chối hồ sơ sức khỏe của <strong>{selectedProfile.additionalFields?.student?.lastName} {selectedProfile.additionalFields?.student?.firstName}</strong> (Lớp {selectedProfile.additionalFields?.student?.className}).</p>
+                  <p>Lý do từ chối sẽ được gửi đến phụ huynh.</p>
+                </div>
+              }
+              type="warning"
+              showIcon
+              style={{ marginBottom: '16px' }}
+            />
         <p>Vui lòng nhập lý do từ chối hồ sơ này:</p>
+          </div>
+        )}
         <Form form={rejectForm} layout="vertical">
           <Form.Item
             label="Lý do từ chối"
