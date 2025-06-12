@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @Data
 @AllArgsConstructor
@@ -37,4 +38,7 @@ public class HealthProfileDTO {
     private List<VisionDTO> vision;
     private List<HearingDTO> hearing;
     private List<VaccinationHistoryDTO> vaccinationHistory;
+    
+    // Thông tin bổ sung để hiển thị trên frontend
+    private Map<String, Object> additionalFields;
 }
