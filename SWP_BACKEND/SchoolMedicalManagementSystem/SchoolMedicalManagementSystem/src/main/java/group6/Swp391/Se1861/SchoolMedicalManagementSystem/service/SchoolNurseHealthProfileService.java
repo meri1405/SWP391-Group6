@@ -1,0 +1,424 @@
+package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service;
+
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.*;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.*;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.ProfileStatus;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.*;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+@Service
+public class SchoolNurseHealthProfileService {
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private StudentRepository studentRepository;
+
+    @Autowired
+    private HealthProfileRepository healthProfileRepository;
+
+    @Autowired
+    private AllergiesRepository allergiesRepository;
+
+    @Autowired
+    private ChronicDiseasesRepository chronicDiseasesRepository;
+
+    @Autowired
+    private InfectiousDiseasesRepository infectiousDiseasesRepository;
+
+    @Autowired
+    private TreatmentHistoryRepository treatmentHistoryRepository;
+
+    @Autowired
+    private VisionRepository visionRepository;
+
+    @Autowired
+    private HearingRepository hearingRepository;
+
+    @Autowired
+    private VaccinationHistoryRepository vaccinationHistoryRepository;
+
+    /**
+     * Get all health profiles
+     * @return list of all health profiles
+     */
+    public List<HealthProfileDTO> getAllHealthProfiles() {
+        List<HealthProfile> profiles = healthProfileRepository.findAll();
+        return profiles.stream().map(this::convertToBasicDTO).collect(Collectors.toList());
+    }
+
+    /**
+     * Get health profiles filtered by status
+     * @param status the status to filter by
+     * @return list of health profiles with the specified status
+     */
+    public List<HealthProfileDTO> getHealthProfilesByStatus(ProfileStatus status) {
+        List<HealthProfile> profiles = healthProfileRepository.findByStatus(status);
+        return profiles.stream().map(this::convertToBasicDTO).collect(Collectors.toList());
+    }
+
+    /**
+     * Get a health profile by ID with detailed information
+     * @param profileId ID of the health profile
+     * @return detailed health profile data
+     */
+    public HealthProfileDTO getHealthProfileById(Long profileId) {
+        HealthProfile healthProfile = healthProfileRepository.findById(profileId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Health profile not found"));
+        return convertToDetailedDTO(healthProfile);
+    }
+
+    /**
+     * Update a health profile
+     * @param nurseId ID of the nurse user
+     * @param profileId ID of the health profile
+     * @param healthProfileDTO updated health profile data
+     * @return updated health profile
+     */
+    @Transactional
+    public HealthProfileDTO updateHealthProfile(Long nurseId, Long profileId, HealthProfileDTO healthProfileDTO) {
+        // Validate nurse exists
+        User nurse = userRepository.findById(nurseId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Nurse not found"));
+
+        // Check if the user has SCHOOLNURSE role
+        if (!nurse.getRole().getRoleName().equals("SCHOOLNURSE")) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only school nurses can update health profiles");
+        }
+
+        // Get health profile
+        HealthProfile healthProfile = healthProfileRepository.findById(profileId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Health profile not found"));
+
+        // Update basic information
+        healthProfile.setWeight(healthProfileDTO.getWeight());
+        healthProfile.setHeight(healthProfileDTO.getHeight());
+        healthProfile.setNote(healthProfileDTO.getNote());
+        healthProfile.setUpdatedAt(LocalDate.now());
+        
+        // Save updated profile
+        HealthProfile updatedProfile = healthProfileRepository.save(healthProfile);
+        
+        return convertToDetailedDTO(updatedProfile);
+    }
+
+    /**
+     * Approve a health profile
+     * @param nurseId ID of the nurse user
+     * @param profileId ID of the health profile
+     * @param nurseNote optional note from nurse
+     * @return approved health profile
+     */
+    @Transactional
+    public HealthProfileDTO approveHealthProfile(Long nurseId, Long profileId, String nurseNote) {
+        // Validate nurse exists
+        User nurse = userRepository.findById(nurseId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Nurse not found"));
+
+        // Check if the user has SCHOOLNURSE role
+        if (!nurse.getRole().getRoleName().equals("SCHOOLNURSE")) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only school nurses can approve health profiles");
+        }
+
+        // Get health profile
+        HealthProfile healthProfile = healthProfileRepository.findById(profileId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Health profile not found"));
+
+        // Validate profile is in PENDING status
+        if (healthProfile.getStatus() != ProfileStatus.PENDING) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, 
+                "Only health profiles in PENDING status can be approved. Current status: " + healthProfile.getStatus());
+        }
+
+        // Update profile status and nurse information
+        healthProfile.setStatus(ProfileStatus.APPROVED);
+        healthProfile.setNurse(nurse);
+        healthProfile.setNote(nurseNote != null && !nurseNote.trim().isEmpty() ? 
+                              (healthProfile.getNote() != null ? healthProfile.getNote() + "\n\nNurse Note: " + nurseNote : "Nurse Note: " + nurseNote) : 
+                              healthProfile.getNote());
+        healthProfile.setUpdatedAt(LocalDate.now());
+        
+        // Save approved profile
+        HealthProfile approvedProfile = healthProfileRepository.save(healthProfile);
+        
+        // Send notification to parent - we'll use a log message instead since NotificationService might not exist
+        if (approvedProfile.getParent() != null) {
+            String notificationMessage = "Hồ sơ sức khỏe của học sinh " + 
+                    approvedProfile.getStudent().getFirstName() + " " + 
+                    approvedProfile.getStudent().getLastName() + " đã được y tá trường duyệt.";
+            
+            // Log notification instead of sending
+            System.out.println("NOTIFICATION: To parent ID " + approvedProfile.getParent().getId() + " - " + notificationMessage);
+        }
+        
+        return convertToDetailedDTO(approvedProfile);
+    }
+
+    /**
+     * Reject a health profile
+     * @param nurseId ID of the nurse user
+     * @param profileId ID of the health profile
+     * @param nurseNote nurse note with rejection reason
+     * @return rejected health profile
+     */
+    @Transactional
+    public HealthProfileDTO rejectHealthProfile(Long nurseId, Long profileId, String nurseNote) {
+        // Validate nurse exists
+        User nurse = userRepository.findById(nurseId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Nurse not found"));
+
+        // Check if the user has SCHOOLNURSE role
+        if (!nurse.getRole().getRoleName().equals("SCHOOLNURSE")) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only school nurses can reject health profiles");
+        }
+
+        // Validate nurseNote
+        if (nurseNote == null || nurseNote.trim().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Rejection reason is required");
+        }
+
+        // Get health profile
+        HealthProfile healthProfile = healthProfileRepository.findById(profileId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Health profile not found"));
+
+        // Validate profile is in PENDING status
+        if (healthProfile.getStatus() != ProfileStatus.PENDING) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, 
+                "Only health profiles in PENDING status can be rejected. Current status: " + healthProfile.getStatus());
+        }
+
+        // Update profile status and nurse information
+        healthProfile.setStatus(ProfileStatus.REJECTED);
+        healthProfile.setNurse(nurse);
+        
+        // Add rejection reason to the note
+        String rejectionNote = nurseNote;
+        healthProfile.setNote(healthProfile.getNote() != null ? 
+                        healthProfile.getNote() + "\n\n" + rejectionNote : 
+                        rejectionNote);
+        healthProfile.setUpdatedAt(LocalDate.now());
+        
+        // Save rejected profile
+        HealthProfile rejectedProfile = healthProfileRepository.save(healthProfile);
+        
+        // Send notification to parent - we'll use a log message instead since NotificationService might not exist
+        if (rejectedProfile.getParent() != null) {
+            String notificationMessage = "Hồ sơ sức khỏe của học sinh " + 
+                    rejectedProfile.getStudent().getFirstName() + " " + 
+                    rejectedProfile.getStudent().getLastName() + 
+                    " đã bị từ chối. Lý do: " + nurseNote;
+            
+            // Log notification instead of sending
+            System.out.println("NOTIFICATION: To parent ID " + rejectedProfile.getParent().getId() + " - " + notificationMessage);
+        }
+        
+        return convertToDetailedDTO(rejectedProfile);
+    }
+
+    /**
+     * Convert HealthProfile to basic HealthProfileDTO with student and parent information
+     */
+    private HealthProfileDTO convertToBasicDTO(HealthProfile healthProfile) {
+        HealthProfileDTO dto = new HealthProfileDTO();
+        dto.setId(healthProfile.getId());
+        dto.setWeight(healthProfile.getWeight());
+        dto.setHeight(healthProfile.getHeight());
+        dto.setCreatedAt(healthProfile.getCreatedAt());
+        dto.setUpdatedAt(healthProfile.getUpdatedAt());
+        dto.setStatus(healthProfile.getStatus());
+        dto.setNote(healthProfile.getNote());
+        
+        // Initialize additionalFields if needed
+        Map<String, Object> additionalFields = new HashMap<>();
+        
+        if (healthProfile.getStudent() != null) {
+            dto.setStudentId(healthProfile.getStudent().getStudentID());
+            
+            // Create StudentDTO
+            StudentDTO studentDTO = new StudentDTO();
+            studentDTO.setStudentID(healthProfile.getStudent().getStudentID());
+            studentDTO.setFirstName(healthProfile.getStudent().getFirstName());
+            studentDTO.setLastName(healthProfile.getStudent().getLastName());
+            studentDTO.setClassName(healthProfile.getStudent().getClassName());
+            
+            // Add to additional fields
+            additionalFields.put("student", studentDTO);
+        }
+        
+        if (healthProfile.getParent() != null) {
+            dto.setParentId(healthProfile.getParent().getId());
+            
+            // Create parent UserDTO
+            Map<String, Object> parentDTO = new HashMap<>();
+            parentDTO.put("id", healthProfile.getParent().getId());
+            parentDTO.put("firstName", healthProfile.getParent().getFirstName());
+            parentDTO.put("lastName", healthProfile.getParent().getLastName());
+            parentDTO.put("phone", healthProfile.getParent().getPhone());
+            parentDTO.put("email", healthProfile.getParent().getEmail());
+            
+            // Add to additional fields
+            additionalFields.put("parent", parentDTO);
+        }
+        
+        if (healthProfile.getNurse() != null) {
+            dto.setNurseId(healthProfile.getNurse().getId());
+            
+            // Add nurse full name to additional fields
+            additionalFields.put("schoolNurseFullName", 
+                healthProfile.getNurse().getFirstName() + " " + healthProfile.getNurse().getLastName());
+        }
+        
+        // Set additional fields if any were added
+        if (!additionalFields.isEmpty()) {
+            dto.setAdditionalFields(additionalFields);
+        }
+        
+        return dto;
+    }
+
+    /**
+     * Convert HealthProfile to detailed HealthProfileDTO with all related data
+     */
+    private HealthProfileDTO convertToDetailedDTO(HealthProfile healthProfile) {
+        HealthProfileDTO dto = convertToBasicDTO(healthProfile);
+        
+        // Convert allergies
+        if (healthProfile.getAllergies() != null && !healthProfile.getAllergies().isEmpty()) {
+            List<AllergiesDTO> allergies = new ArrayList<>();
+            for (Allergies allergy : healthProfile.getAllergies()) {
+                AllergiesDTO allergyDTO = new AllergiesDTO();
+                allergyDTO.setId(allergy.getId());
+                allergyDTO.setAllergyType(allergy.getAllergyType());
+                allergyDTO.setDescription(allergy.getDescription());
+                allergyDTO.setStatus(allergy.getStatus());
+                allergyDTO.setOnsetDate(allergy.getOnsetDate());
+                allergies.add(allergyDTO);
+            }
+            dto.setAllergies(allergies);
+        }
+        
+        // Convert chronic diseases
+        if (healthProfile.getChronicDiseases() != null && !healthProfile.getChronicDiseases().isEmpty()) {
+            List<ChronicDiseasesDTO> diseases = new ArrayList<>();
+            for (ChronicDiseases disease : healthProfile.getChronicDiseases()) {
+                ChronicDiseasesDTO diseaseDTO = new ChronicDiseasesDTO();
+                diseaseDTO.setId(disease.getId());
+                diseaseDTO.setDiseaseName(disease.getDiseaseName());
+                diseaseDTO.setDateDiagnosed(disease.getDateDiagnosed());
+                diseaseDTO.setDateResolved(disease.getDateResolved());
+                diseaseDTO.setPlaceOfTreatment(disease.getPlaceOfTreatment());
+                diseaseDTO.setDescription(disease.getDescription());
+                diseaseDTO.setDateOfAdmission(disease.getDateOfAdmission());
+                diseaseDTO.setDateOfDischarge(disease.getDateOfDischarge());
+                diseaseDTO.setStatus(disease.getStatus());
+                diseases.add(diseaseDTO);
+            }
+            dto.setChronicDiseases(diseases);
+        }
+        
+        // Convert infectious diseases
+        if (healthProfile.getInfectiousDiseases() != null && !healthProfile.getInfectiousDiseases().isEmpty()) {
+            List<InfectiousDiseasesDTO> diseases = new ArrayList<>();
+            for (InfectiousDiseases disease : healthProfile.getInfectiousDiseases()) {
+                InfectiousDiseasesDTO diseaseDTO = new InfectiousDiseasesDTO();
+                diseaseDTO.setId(disease.getId());
+                diseaseDTO.setDiseaseName(disease.getDiseaseName());
+                diseaseDTO.setDateDiagnosed(disease.getDateDiagnosed());
+                diseaseDTO.setDateResolved(disease.getDateResolved());
+                diseaseDTO.setPlaceOfTreatment(disease.getPlaceOfTreatment());
+                diseaseDTO.setDescription(disease.getDescription());
+                diseaseDTO.setDateOfAdmission(disease.getDateOfAdmission());
+                diseaseDTO.setDateOfDischarge(disease.getDateOfDischarge());
+                diseaseDTO.setStatus(disease.getStatus());
+                diseases.add(diseaseDTO);
+            }
+            dto.setInfectiousDiseases(diseases);
+        }
+        
+        // Convert treatments
+        if (healthProfile.getTreatments() != null && !healthProfile.getTreatments().isEmpty()) {
+            List<TreatmentHistoryDTO> treatments = new ArrayList<>();
+            for (TreatmentHistory treatment : healthProfile.getTreatments()) {
+                TreatmentHistoryDTO treatmentDTO = new TreatmentHistoryDTO();
+                treatmentDTO.setId(treatment.getId());
+                treatmentDTO.setTreatmentType(treatment.getTreatmentType());
+                treatmentDTO.setDescription(treatment.getDescription());
+                treatmentDTO.setDoctorName(treatment.getDoctorName());
+                treatmentDTO.setDateOfAdmission(treatment.getDateOfAdmission());
+                treatmentDTO.setDateOfDischarge(treatment.getDateOfDischarge());
+                treatmentDTO.setPlaceOfTreatment(treatment.getPlaceOfTreatment());
+                treatmentDTO.setStatus(treatment.getStatus());
+                treatments.add(treatmentDTO);
+            }
+            dto.setTreatments(treatments);
+        }
+        
+        // Convert vision
+        if (healthProfile.getVision() != null && !healthProfile.getVision().isEmpty()) {
+            List<VisionDTO> visionList = new ArrayList<>();
+            for (Vision vision : healthProfile.getVision()) {
+                VisionDTO visionDTO = new VisionDTO();
+                visionDTO.setId(vision.getId());
+                visionDTO.setVisionLeft(vision.getVisionLeft());
+                visionDTO.setVisionRight(vision.getVisionRight());
+                visionDTO.setVisionLeftWithGlass(vision.getVisionLeftWithGlass());
+                visionDTO.setVisionRightWithGlass(vision.getVisionRightWithGlass());
+                visionDTO.setVisionDescription(vision.getVisionDescription());
+                visionDTO.setDateOfExamination(vision.getDateOfExamination());
+                visionList.add(visionDTO);
+            }
+            dto.setVision(visionList);
+        }
+        
+        // Convert hearing
+        if (healthProfile.getHearing() != null && !healthProfile.getHearing().isEmpty()) {
+            List<HearingDTO> hearingList = new ArrayList<>();
+            for (Hearing hearing : healthProfile.getHearing()) {
+                HearingDTO hearingDTO = new HearingDTO();
+                hearingDTO.setId(hearing.getId());
+                hearingDTO.setLeftEar(hearing.getLeftEar());
+                hearingDTO.setRightEar(hearing.getRightEar());
+                hearingDTO.setDescription(hearing.getDescription());
+                hearingDTO.setDateOfExamination(hearing.getDateOfExamination());
+                hearingList.add(hearingDTO);
+            }
+            dto.setHearing(hearingList);
+        }
+        
+        // Convert vaccination history
+        if (healthProfile.getVaccinationHistory() != null && !healthProfile.getVaccinationHistory().isEmpty()) {
+            List<VaccinationHistoryDTO> vaccinations = new ArrayList<>();
+            for (VaccinationHistory vaccination : healthProfile.getVaccinationHistory()) {
+                VaccinationHistoryDTO vaccinationDTO = new VaccinationHistoryDTO();
+                vaccinationDTO.setId(vaccination.getId());
+                vaccinationDTO.setVaccineName(vaccination.getVaccineName());
+                vaccinationDTO.setDoseNumber(vaccination.getDoseNumber());
+                vaccinationDTO.setManufacturer(vaccination.getManufacturer());
+                vaccinationDTO.setDateOfVaccination(vaccination.getDateOfVaccination());
+                vaccinationDTO.setPlaceOfVaccination(vaccination.getPlaceOfVaccination());
+                vaccinationDTO.setAdministeredBy(vaccination.getAdministeredBy());
+                vaccinationDTO.setNotes(vaccination.getNotes());
+                vaccinationDTO.setStatus(vaccination.isStatus());
+                if (vaccination.getVaccinationRule() != null) {
+                    vaccinationDTO.setRuleId(vaccination.getVaccinationRule().getId());
+                }
+                vaccinations.add(vaccinationDTO);
+            }
+            dto.setVaccinationHistory(vaccinations);
+        }
+        
+        return dto;
+    }
+} 

@@ -69,7 +69,7 @@ const HealthProfileDetailModal = ({ visible, onClose, healthProfile }) => {
   };
   
   const formatDate = (date) => {
-    return date ? dayjs(date).format('DD/MM/YYYY') : 'Chưa cập nhật';
+    return date ? dayjs(date).format('DD/MM/YYYY HH:mm') : 'Chưa cập nhật';
   };
   
   return (
@@ -143,13 +143,7 @@ const HealthProfileDetailModal = ({ visible, onClose, healthProfile }) => {
               )}
               {(healthProfile.status === 'APPROVED' || healthProfile.status === 'REJECTED') && healthProfile.schoolNurseFullName && (
                 <div>
-                  <Text strong>Y tá duyệt: </Text>
-                  <Text>{healthProfile.schoolNurseFullName}</Text>
-                </div>
-              )}
-              {healthProfile.status === 'REJECTED' && healthProfile.schoolNurseFullName && (
-                <div>
-                  <Text strong>Y tá từ chối: </Text>
+                  <Text strong>Y tá trường: </Text>
                   <Text>{healthProfile.schoolNurseFullName}</Text>
                 </div>
               )}

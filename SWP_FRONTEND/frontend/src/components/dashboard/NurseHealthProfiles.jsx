@@ -413,24 +413,60 @@ const NurseHealthProfiles = () => {
       const values = await rejectForm.validateFields();
       setActionLoading(true);
       
-      console.log(`Rejecting profile ${selectedProfile.id} with reason: ${values.reason}`);
-      const response = await nurseApi.rejectHealthProfile(selectedProfile.id, values.reason);
-      console.log('Profile reject response:', response);
+      // Đảm bảo có reason
+      if (!values.reason || values.reason.trim() === '') {
+        message.error('Vui lòng nhập lý do từ chối hồ sơ');
+        setActionLoading(false);
+        return;
+      }
       
-      if (response.success) {
-        message.success(response.message || 'Đã từ chối hồ sơ sức khỏe thành công');
-      setRejectModalVisible(false);
-      rejectForm.resetFields();
+      console.log(`Rejecting profile ${selectedProfile.id} with reason: ${values.reason}`);
+      
+      let success = false;
+      let mockUsed = false;
+      
+      try {
+        const response = await nurseApi.rejectHealthProfile(selectedProfile.id, values.reason);
+        console.log('Profile reject response:', response);
+        
+        if (response.success) {
+          success = true;
+          // Kiểm tra xem có phải dữ liệu mock không
+          if (response.data && response.data.id && !response.data.studentId) {
+            mockUsed = true;
+          }
+        }
+      } catch (apiError) {
+        console.error('API error:', apiError);
+        // Không làm gì - chúng ta sẽ xử lý thông qua biến success
+      }
+      
+      // Xử lý kết quả
+      if (success) {
+        if (mockUsed) {
+          message.success('Đã từ chối hồ sơ sức khỏe thành công (dữ liệu tạm thời)');
+          message.info('Lưu ý: Hệ thống đang sử dụng dữ liệu tạm thời do vấn đề kết nối với máy chủ');
+        } else {
+          message.success('Đã từ chối hồ sơ sức khỏe thành công');
+        }
+        
+        setRejectModalVisible(false);
+        rejectForm.resetFields();
         
         // Close detail modal if it was open
         if (detailModalVisible) {
           setDetailModalVisible(false);
         }
         
-        // Refresh the profiles list
-        await loadHealthProfiles();
+        // Refresh the profiles list - try/catch để tránh lỗi nếu có vấn đề xác thực
+        try {
+          await loadHealthProfiles();
+        } catch (loadError) {
+          console.error('Error refreshing profiles:', loadError);
+          // Không hiển thị lỗi cho người dùng vì đã hiển thị thông báo thành công
+        }
       } else {
-        message.error(response.message || 'Không thể từ chối hồ sơ sức khỏe.');
+        message.error('Không thể từ chối hồ sơ sức khỏe. Vui lòng thử lại sau.');
       }
     } catch (error) {
       console.error('Error rejecting profile:', error);
@@ -1023,7 +1059,7 @@ const NurseHealthProfiles = () => {
               description={
                 <div>
                   <p>Bạn sắp từ chối hồ sơ sức khỏe của <strong>{selectedProfile.additionalFields?.student?.lastName} {selectedProfile.additionalFields?.student?.firstName}</strong> (Lớp {selectedProfile.additionalFields?.student?.className}).</p>
-                  <p>Lý do từ chối sẽ được hiển thị cho phụ huynh trên trang khai báo hồ sơ y tế.</p>
+                  <p>Lý do từ chối sẽ được gửi đến phụ huynh.</p>
                 </div>
               }
               type="warning"

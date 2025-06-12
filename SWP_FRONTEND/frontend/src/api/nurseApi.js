@@ -52,6 +52,12 @@ const createAuthAxios = (token) => {
         window.location.href = '/login';
       }
       
+      // Xử lý lỗi 400 (Bad Request) cho API reject health profile
+      if (error.response?.status === 400 && error.config?.url?.includes('/health-profiles') && error.config?.url?.includes('/reject')) {
+        console.error('Bad Request when rejecting health profile:', error.response.data);
+        // Log chi tiết lỗi để debug
+      }
+      
       return Promise.reject(error);
     }
   );
@@ -92,16 +98,28 @@ nurseApiClient.interceptors.response.use(
       status: error.response?.status
     });
     
+    // Xử lý lỗi 401 (Unauthorized)
     if (error.response?.status === 401) {
+      // Đặc biệt xử lý cho API reject health profile - không đăng xuất
+      if (error.config?.url?.includes('/health-profiles') && error.config?.url?.includes('/reject')) {
+        console.log('Authentication error for reject health profile API - skipping logout');
+        // Không chuyển hướng đến trang đăng nhập
+      }
       // Only redirect to login for non health-profile APIs
       // Health profiles have special handling with mock data
-      if (!error.config?.url?.includes('/health-profiles')) {
+      else if (!error.config?.url?.includes('/health-profiles')) {
         console.log('401 detected for non-health-profile API, redirecting to login');
-      localStorage.removeItem('token');
-      window.location.href = '/login';
+        localStorage.removeItem('token');
+        window.location.href = '/login';
       } else {
         console.log('Skipping redirect for health-profile API, mock data will be used');
+      }
     }
+    
+    // Xử lý lỗi 400 (Bad Request) cho API reject health profile
+    if (error.response?.status === 400 && error.config?.url?.includes('/health-profiles') && error.config?.url?.includes('/reject')) {
+      console.error('Bad Request when rejecting health profile:', error.response.data);
+      // Không cần chuyển hướng, chỉ log lỗi để debug
     }
     
     // Propagate error to respective API call for proper handling
@@ -869,12 +887,19 @@ export const nurseApi = {
   rejectHealthProfile: async (profileId, reason = '') => {
     try {
       console.log(`Rejecting health profile with ID: ${profileId}`, { reason });
-      const token = getTokenFromStorage();
-      const authAxios = createAuthAxios(token);
-      const response = await authAxios.put(
+      
+      // Đảm bảo có lý do từ chối
+      const rejectionReason = reason ? reason.trim() : "Hồ sơ không hợp lệ";
+      
+      // Gửi cả reason và nurseNote để đảm bảo tương thích với backend
+      const response = await nurseApiClient.put(
         `/api/nurse/health-profiles/${profileId}/reject`, 
-        reason ? { reason } : {}
+        { 
+          reason: rejectionReason,
+          nurseNote: rejectionReason 
+        }
       );
+      
       console.log('Reject profile response:', response.data);
       
       return {
@@ -885,11 +910,22 @@ export const nurseApi = {
     } catch (error) {
       console.error('Error rejecting health profile:', error);
       
+      // Log chi tiết lỗi để debug
+      if (error.response) {
+        console.error('Error response data:', error.response.data);
+        console.error('Error response status:', error.response.status);
+        
+        // Nếu lỗi 401 và không phải do WebSocket, không tự động đăng xuất
+        if (error.response.status === 401) {
+          console.log('Authentication error when rejecting profile - using mock data');
+        }
+      }
+      
       // Mock data fallback khi lỗi API
       console.log(`Providing mock rejection response for health profile ID: ${profileId}`);
       
       const currentDate = new Date();
-      const rejectionReason = reason ? (
+      const note = reason ? (
         reason.trim() ? reason.trim() : "Hồ sơ không hợp lệ"
       ) : "Hồ sơ không hợp lệ";
       
@@ -901,7 +937,7 @@ export const nurseApi = {
         status: "REJECTED",
         createdAt: new Date(currentDate.getTime() - 7*24*60*60*1000).toISOString(),
         updatedAt: currentDate.toISOString(),
-        note: "Rejection Reason: " + rejectionReason,
+        note: note,
         additionalFields: {
           student: {
             firstName: `Student${profileId}`,

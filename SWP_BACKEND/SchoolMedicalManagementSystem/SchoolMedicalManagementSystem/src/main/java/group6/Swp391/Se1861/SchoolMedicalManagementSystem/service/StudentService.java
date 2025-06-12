@@ -128,7 +128,7 @@ public class StudentService {
      */
     private StudentDTO convertToDTO(Student student) {
         StudentDTO dto = new StudentDTO();
-        dto.setId(student.getStudentID());
+        dto.setStudentID(student.getStudentID());
         dto.setFirstName(student.getFirstName());
         dto.setLastName(student.getLastName());
         dto.setDob(student.getDob());
@@ -147,6 +147,6 @@ public class StudentService {
         if (student.getMother() != null) {
             dto.setMotherId(student.getMother().getId());
         }
-        return dto;
+          return dto;
     }
 }
