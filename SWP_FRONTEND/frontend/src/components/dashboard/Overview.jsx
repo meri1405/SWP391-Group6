@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, Row, Col, Statistic, Typography, Avatar, List, Badge, Space, Divider, Spin, Empty, Select, message } from 'antd';
+import { useNavigate } from 'react-router-dom';
 import { 
   UserOutlined, 
   MedicineBoxOutlined, 
@@ -12,6 +13,7 @@ import {
 } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { parentApi } from '../../api/parentApi';
+import webSocketService from '../../services/webSocketService';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
@@ -19,24 +21,13 @@ const { Option } = Select;
 
 const Overview = ({ userInfo: externalUserInfo }) => {
   const { isParent, getToken } = useAuth();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [students, setStudents] = useState([]);
-  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [students, setStudents] = useState([]);  const [selectedStudent, setSelectedStudent] = useState(null);
   const [parentProfile, setParentProfile] = useState(null);
-    // Function to refresh parent profile data
-  const refreshParentProfile = async () => {
-    if (!isParent()) return;
-    
-    try {
-      const token = getToken();
-      const profileData = await parentApi.getParentProfile(token);
-      
-      console.log('Refreshed parent profile:', profileData);
-      setParentProfile(profileData);
-    } catch (error) {
-      console.error('Error refreshing parent profile:', error);
-    }
-  };
+  const [recentNotifications, setRecentNotifications] = useState([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+
   // When externalUserInfo changes, update the parent profile
   useEffect(() => {
     if (externalUserInfo) {
@@ -80,29 +71,126 @@ const Overview = ({ userInfo: externalUserInfo }) => {
       }
     };
 
-    fetchData();
-  }, [isParent, getToken]);
+    fetchData();  }, [isParent, getToken]);
+  // Helper functions (moved outside useCallback to avoid dependencies)
+  const getNotificationType = useCallback((notification) => {
+    if (notification.medicationRequest) {
+      return 'medication';
+    } else if (notification.medicationSchedule) {
+      return 'medication';
+    }
+    return 'general';
+  }, []);
 
-  // Dữ liệu mẫu cho thông báo
-  const recentNotifications = [
-    {
-      id: 1,
-      type: 'reminder',
-      title: 'Nhắc lịch khám sức khỏe',
-      message: 'Lịch khám sức khỏe định kỳ của bé Nguyễn Văn An vào ngày 15/06/2025',
-      time: '21/5/2025',
-      read: false,
-      icon: <AlertOutlined />
-    },
-    {
-      id: 2,
-      type: 'vaccination',
-      title: 'Cập nhật tiêm chủng',
-      message: 'Nhà trường sẽ tổ chức tiêm vắc-xin phòng cúm vào ngày 30/05/2025',
-      time: '20/5/2025',
-      read: true,
-      icon: <ExclamationCircleOutlined />
-    }  ];
+  const getNotificationIcon = useCallback((notification) => {
+    const type = getNotificationType(notification);
+    switch (type) {
+      case 'medication':
+        return <MedicineBoxOutlined />;
+      case 'vaccination':
+        return <ExclamationCircleOutlined />;
+      case 'reminder':
+        return <AlertOutlined />;
+      default:
+        return <FileTextOutlined />;
+    }
+  }, [getNotificationType]);
+
+  const formatTimeAgo = useCallback((dateString) => {
+    if (!dateString) return 'Không xác định';
+    
+    const now = dayjs();
+    const notificationDate = dayjs(dateString);
+    const diffInDays = now.diff(notificationDate, 'day');
+    
+    if (diffInDays === 0) {
+      return 'Hôm nay';
+    } else if (diffInDays === 1) {
+      return 'Hôm qua';
+    } else if (diffInDays < 7) {
+      return `${diffInDays} ngày trước`;
+    } else {
+      return notificationDate.format('DD/MM/YYYY');
+    }
+  }, []);  // Function to load recent notifications from database
+  const loadRecentNotifications = useCallback(async () => {
+    if (!isParent()) return;
+    
+    try {
+      setNotificationsLoading(true);
+      const token = getToken();
+      // Use limit=3 to only fetch 3 most recent notifications from backend
+      const notifications = await parentApi.getAllNotifications(token, 3);
+      
+      // Format notifications for display
+      const formattedNotifications = notifications.map(notification => ({
+        id: notification.id,
+        type: getNotificationType(notification),
+        title: notification.title,
+        message: notification.message,
+        time: formatTimeAgo(notification.createdAt),
+        read: notification.read,
+        icon: getNotificationIcon(notification)
+      }));
+      
+      setRecentNotifications(formattedNotifications);
+    } catch (error) {
+      console.error('Error loading notifications:', error);
+      // Keep empty array if error
+      setRecentNotifications([]);
+    } finally {
+      setNotificationsLoading(false);
+    }
+  }, [isParent, getToken, getNotificationType, formatTimeAgo, getNotificationIcon]);
+  // Setup WebSocket connection for real-time notifications
+  const setupWebSocketConnection = useCallback(async () => {
+    const token = getToken();
+    if (!token) return;
+
+    try {
+      // Connect to WebSocket if not already connected
+      if (!webSocketService.isConnected()) {
+        await webSocketService.connect(token);
+      }
+      
+      // Add message handler for real-time notifications
+      webSocketService.addMessageHandler('overview-notifications', (newNotification) => {
+        console.log('Received real-time notification in overview:', newNotification);
+        
+        // Transform the new notification
+        const transformedNotification = {
+          id: newNotification.id,
+          type: getNotificationType(newNotification),
+          title: newNotification.title,
+          message: newNotification.message,
+          time: 'Vừa xong',
+          read: false,
+          icon: getNotificationIcon(newNotification)
+        };
+        
+        // Add new notification to the beginning of the list (keep max 5)
+        setRecentNotifications(prev => [transformedNotification, ...prev].slice(0, 5));
+      });
+      
+    } catch (error) {
+      console.error('Error setting up WebSocket connection in overview:', error);
+    }
+  }, [getToken, getNotificationType, getNotificationIcon]);
+
+  // Load notifications and setup WebSocket when component mounts
+  useEffect(() => {
+    if (isParent()) {
+      loadRecentNotifications();
+      setupWebSocketConnection();
+    }
+    
+    return () => {
+      // Cleanup WebSocket when component unmounts
+      if (webSocketService.isConnected()) {
+        webSocketService.removeMessageHandler('overview-notifications');
+      }
+    };
+  }, [isParent, loadRecentNotifications, setupWebSocketConnection]);
 
   if (loading) {
     return (
@@ -374,9 +462,7 @@ const Overview = ({ userInfo: externalUserInfo }) => {
         </Row>
       )}
       </>
-      )}
-
-      {/* Only show notifications section for parents */}
+      )}      {/* Only show notifications section for parents */}
       {isParent() && (
         <Card 
           title={
@@ -388,36 +474,51 @@ const Overview = ({ userInfo: externalUserInfo }) => {
           extra={
             <Text 
               style={{ color: '#1976d2', cursor: 'pointer' }}
-              onClick={() => console.log('View all notifications')}
+              onClick={() => navigate('/parent-dashboard?tab=notifications')}
             >
               Xem tất cả
             </Text>
           }
         >
-          <List
-            dataSource={recentNotifications}
-            renderItem={(notification) => (
-              <List.Item>
-                <List.Item.Meta
-                  avatar={
-                    <Badge dot={!notification.read}>
-                      <Avatar icon={notification.icon} />
-                    </Badge>
-                  }
-                  title={notification.title}
-                  description={
-                    <div>
-                      <Text>{notification.message}</Text>
-                      <br />
-                      <Text type="secondary" style={{ fontSize: '12px' }}>
-                        {notification.time}
-                      </Text>
-                    </div>
-                  }
-                />
-              </List.Item>
-            )}
-          />
+          {notificationsLoading ? (
+            <div style={{ textAlign: 'center', padding: '40px 0' }}>
+              <Spin size="large" />
+              <div style={{ marginTop: 12 }}>
+                <Text type="secondary">Đang tải thông báo...</Text>
+              </div>
+            </div>
+          ) : recentNotifications.length > 0 ? (
+            <List
+              dataSource={recentNotifications}
+              renderItem={(notification) => (
+                <List.Item>
+                  <List.Item.Meta
+                    avatar={
+                      <Badge dot={!notification.read}>
+                        <Avatar icon={notification.icon} />
+                      </Badge>
+                    }
+                    title={notification.title}
+                    description={
+                      <div>
+                        <Text>{notification.message}</Text>
+                        <br />
+                        <Text type="secondary" style={{ fontSize: '12px' }}>
+                          {notification.time}
+                        </Text>
+                      </div>
+                    }
+                  />
+                </List.Item>
+              )}
+            />
+          ) : (
+            <Empty 
+              description="Không có thông báo nào"
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+              style={{ padding: '20px 0' }}
+            />
+          )}
         </Card>
       )}
     </div>

@@ -386,12 +386,12 @@ export const parentApi = {
       ];
     }
   },
-
   // Notification endpoints
-  getAllNotifications: async (token = getTokenFromStorage()) => {
+  getAllNotifications: async (token = getTokenFromStorage(), limit = null) => {
     try {
       const authAxios = createAuthAxios(token);
-      const response = await authAxios.get('/api/notifications');
+      const params = limit ? { limit } : {};
+      const response = await authAxios.get('/api/notifications', { params });
       return response.data;
     } catch (error) {
       console.error('Error fetching all notifications:', error);

@@ -140,14 +140,11 @@ public class SchoolNurseHealthProfileService {
         if (healthProfile.getStatus() != ProfileStatus.PENDING) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, 
                 "Only health profiles in PENDING status can be approved. Current status: " + healthProfile.getStatus());
-        }
-
-        // Update profile status and nurse information
+        }        // Update profile status and nurse information
         healthProfile.setStatus(ProfileStatus.APPROVED);
         healthProfile.setNurse(nurse);
-        healthProfile.setNote(nurseNote != null && !nurseNote.trim().isEmpty() ? 
-                              (healthProfile.getNote() != null ? healthProfile.getNote() + "\n\nNurse Note: " + nurseNote : "Nurse Note: " + nurseNote) : 
-                              healthProfile.getNote());
+        // Set nurse note separately, don't mix with parent note
+        healthProfile.setNurseNote(nurseNote != null && !nurseNote.trim().isEmpty() ? nurseNote.trim() : null);
         healthProfile.setUpdatedAt(LocalDate.now());
         
         // Save approved profile
@@ -200,14 +197,10 @@ public class SchoolNurseHealthProfileService {
         }
 
         // Update profile status and nurse information
-        healthProfile.setStatus(ProfileStatus.REJECTED);
-        healthProfile.setNurse(nurse);
+        healthProfile.setStatus(ProfileStatus.REJECTED);        healthProfile.setNurse(nurse);
         
-        // Add rejection reason to the note
-        String rejectionNote = nurseNote;
-        healthProfile.setNote(healthProfile.getNote() != null ? 
-                        healthProfile.getNote() + "\n\n" + rejectionNote : 
-                        rejectionNote);
+        // Set nurse note separately for rejection reason
+        healthProfile.setNurseNote(nurseNote != null && !nurseNote.trim().isEmpty() ? nurseNote.trim() : null);
         healthProfile.setUpdatedAt(LocalDate.now());
         
         // Save rejected profile

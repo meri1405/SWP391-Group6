@@ -22,7 +22,9 @@ public class HealthProfileDTO {
     private LocalDate updatedAt;
     private ProfileStatus status;
     private String note;
-    
+    private String nurseNote;
+
+
     @NotNull(message = "Student ID is required")
     @Positive(message = "Student ID must be a positive number")
     private Long studentId;

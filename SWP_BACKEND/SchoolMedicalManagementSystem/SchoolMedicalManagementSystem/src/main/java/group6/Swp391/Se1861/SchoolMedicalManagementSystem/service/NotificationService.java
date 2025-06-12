@@ -8,6 +8,7 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.NotificationRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -124,13 +125,22 @@ public class NotificationService {
         }
 
         return notificationDTO;
-    }
-
-    /**
+    }    /**
      * Get all notifications for a user
      */
     public List<NotificationDTO> getAllNotificationsForUser(User user) {
         return notificationRepository.findByRecipientOrderByCreatedAtDesc(user)
+                .stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get all notifications for a user with limit
+     */
+    public List<NotificationDTO> getAllNotificationsForUser(User user, int limit) {
+        return notificationRepository.findByRecipientOrderByCreatedAtDesc(user, 
+                PageRequest.of(0, limit))
                 .stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());

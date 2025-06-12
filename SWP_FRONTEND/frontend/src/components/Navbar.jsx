@@ -15,20 +15,19 @@ const Navbar = () => {
   const { user, logout, isParent, isStaff, getToken } = useAuth();const location = useLocation();
   // Refs for click outside detection
   const notificationRef = useRef(null);
-  const userDropdownRef = useRef(null);
-  const loadNotifications = useCallback(async () => {
+  const userDropdownRef = useRef(null);  const loadNotifications = useCallback(async () => {
     const token = getToken();
     if (!token) return;
     
     try {
       setLoadingNotifications(true);
-      // Load all notifications to show in dropdown
-      const allData = await parentApi.getAllNotifications(token);
+      // Load only 5 most recent notifications to show in dropdown
+      const allData = await parentApi.getAllNotifications(token, 5);
       // Load unread notifications to get count
       const unreadData = await parentApi.getUnreadNotifications(token);
       
-      // Transform backend notifications to frontend format (show latest 5)
-      const transformedNotifications = allData.slice(0, 5).map(notification => ({
+      // Transform backend notifications to frontend format
+      const transformedNotifications = allData.map(notification => ({
         id: notification.id,
         title: notification.title,
         text: notification.message,
