@@ -8,9 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @Data
 @AllArgsConstructor
@@ -39,7 +37,4 @@ public class HealthProfileDTO {
     private List<VisionDTO> vision;
     private List<HearingDTO> hearing;
     private List<VaccinationHistoryDTO> vaccinationHistory;
-    
-    // Additional fields for extra data not in the main model
-    private Map<String, Object> additionalFields = new HashMap<>();
 }

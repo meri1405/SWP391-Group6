@@ -101,7 +101,7 @@ nurseApiClient.interceptors.response.use(
       window.location.href = '/login';
       } else {
         console.log('Skipping redirect for health-profile API, mock data will be used');
-    }
+      }
     }
     
     // Propagate error to respective API call for proper handling
@@ -866,14 +866,14 @@ export const nurseApi = {
   },
   
   // Từ chối hồ sơ sức khỏe
-  rejectHealthProfile: async (profileId, reason = '') => {
+  rejectHealthProfile: async (profileId, nurseNote = '') => {
     try {
-      console.log(`Rejecting health profile with ID: ${profileId}`, { reason });
+      console.log(`Rejecting health profile with ID: ${profileId}`, { nurseNote });
       const token = getTokenFromStorage();
       const authAxios = createAuthAxios(token);
       const response = await authAxios.put(
         `/api/nurse/health-profiles/${profileId}/reject`, 
-        reason ? { reason } : {}
+        nurseNote ? { nurseNote } : {}
       );
       console.log('Reject profile response:', response.data);
       
@@ -889,8 +889,8 @@ export const nurseApi = {
       console.log(`Providing mock rejection response for health profile ID: ${profileId}`);
       
       const currentDate = new Date();
-      const rejectionReason = reason ? (
-        reason.trim() ? reason.trim() : "Hồ sơ không hợp lệ"
+      const note = nurseNote ? (
+        nurseNote.trim() ? nurseNote.trim() : "Hồ sơ không hợp lệ"
       ) : "Hồ sơ không hợp lệ";
       
       // Mock response chi tiết
@@ -901,7 +901,7 @@ export const nurseApi = {
         status: "REJECTED",
         createdAt: new Date(currentDate.getTime() - 7*24*60*60*1000).toISOString(),
         updatedAt: currentDate.toISOString(),
-        note: "Rejection Reason: " + rejectionReason,
+        note: note,
         additionalFields: {
           student: {
             firstName: `Student${profileId}`,
