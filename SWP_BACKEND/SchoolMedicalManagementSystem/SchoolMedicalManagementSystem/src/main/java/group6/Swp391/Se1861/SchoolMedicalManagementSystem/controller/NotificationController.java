@@ -16,13 +16,16 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class NotificationController {
 
-    private final NotificationService notificationService;
-
-    /**
+    private final NotificationService notificationService;    /**
      * Get all notifications for the authenticated user
      */
     @GetMapping
-    public ResponseEntity<List<NotificationDTO>> getAllNotifications(@AuthenticationPrincipal User user) {
+    public ResponseEntity<List<NotificationDTO>> getAllNotifications(
+            @AuthenticationPrincipal User user,
+            @RequestParam(required = false) Integer limit) {
+        if (limit != null && limit > 0) {
+            return ResponseEntity.ok(notificationService.getAllNotificationsForUser(user, limit));
+        }
         return ResponseEntity.ok(notificationService.getAllNotificationsForUser(user));
     }
 

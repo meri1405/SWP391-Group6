@@ -121,21 +121,34 @@ const HealthProfileDetailModal = ({ visible, onClose, healthProfile }) => {
               </div>
               <div>
                 <Text strong>Trạng thái: </Text>
-                {getStatusTag(healthProfile.status)}
-              </div>
-              {healthProfile.status === 'REJECTED' && (
+                {getStatusTag(healthProfile.status)}              </div>
+              {healthProfile.status === 'REJECTED' && healthProfile.nurseNote && (
                 <div style={{ marginTop: 8 }}>
                   <Alert
                     message="Hồ sơ đã bị từ chối"
                     description={
                       <>
                         <strong>Lý do từ chối: </strong>
-                        {healthProfile.note && healthProfile.note.includes("Rejection Reason:") 
-                          ? healthProfile.note.split("Rejection Reason:")[1].trim() 
-                          : healthProfile.note || 'Không có lý do cụ thể'}
+                        {healthProfile.nurseNote}
                       </>
                     }
                     type="error"
+                    showIcon
+                    style={{ marginBottom: 8 }}
+                  />
+                </div>
+              )}
+              {healthProfile.status === 'APPROVED' && healthProfile.nurseNote && (
+                <div style={{ marginTop: 8 }}>
+                  <Alert
+                    message="Hồ sơ đã được duyệt"
+                    description={
+                      <>
+                        <strong>Ghi chú của Y tá: </strong>
+                        {healthProfile.nurseNote}
+                      </>
+                    }
+                    type="success"
                     showIcon
                     style={{ marginBottom: 8 }}
                   />

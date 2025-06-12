@@ -785,6 +785,7 @@ public class ParentHealthProfileService {
         dto.setUpdatedAt(healthProfile.getUpdatedAt());
         dto.setStatus(healthProfile.getStatus());
         dto.setNote(healthProfile.getNote());
+        dto.setNurseNote(healthProfile.getNurseNote());
         dto.setStudentId(healthProfile.getStudent().getStudentID());
 
         if (healthProfile.getNurse() != null) {
@@ -812,6 +813,7 @@ public class ParentHealthProfileService {
         dto.setUpdatedAt(healthProfile.getUpdatedAt());
         dto.setStatus(healthProfile.getStatus());
         dto.setNote(healthProfile.getNote());
+        dto.setNurseNote(healthProfile.getNurseNote());
         dto.setStudentId(healthProfile.getStudent().getStudentID());
 
         if (healthProfile.getNurse() != null) {
