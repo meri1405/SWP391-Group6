@@ -139,18 +139,13 @@ public class StudentService {
         dto.setCitizenship(student.getCitizenship());
         dto.setBloodType(student.getBloodType());
         dto.setDisabled(student.isDisabled());
-        dto.setStudentCode(String.valueOf(student.getStudentID()));
         
         // Set father and mother IDs
         if (student.getFather() != null) {
             dto.setFatherId(student.getFather().getId());
-            if (student.getMother() == null) {
-                dto.setParentId(student.getFather().getId());
-            }
         }
         if (student.getMother() != null) {
             dto.setMotherId(student.getMother().getId());
-            dto.setParentId(student.getMother().getId());
         }
         return dto;
     }

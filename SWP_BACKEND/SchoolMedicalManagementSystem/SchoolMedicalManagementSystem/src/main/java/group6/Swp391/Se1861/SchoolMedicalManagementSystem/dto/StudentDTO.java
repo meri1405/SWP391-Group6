@@ -24,8 +24,6 @@ public class StudentDTO {
     private boolean isDisabled;
     private Long motherId;
     private Long fatherId;
-    private String studentCode;
-    private Long parentId;
 
     /**
      * Create a StudentDTO from a Student entity
@@ -42,18 +40,13 @@ public class StudentDTO {
         dto.setFirstName(student.getFirstName());
         dto.setLastName(student.getLastName());
         dto.setClassName(student.getClassName());
-        dto.setStudentCode(String.valueOf(student.getStudentID()));
         
         if (student.getMother() != null) {
             dto.setMotherId(student.getMother().getId());
-            dto.setParentId(student.getMother().getId());
         }
         
         if (student.getFather() != null) {
             dto.setFatherId(student.getFather().getId());
-            if (student.getMother() == null) {
-                dto.setParentId(student.getFather().getId());
-            }
         }
         
         return dto;
