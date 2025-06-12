@@ -2,6 +2,7 @@ package group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.HealthProfile;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.Student;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.ProfileStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -22,4 +23,7 @@ public interface HealthProfileRepository extends JpaRepository<HealthProfile, Lo
     // Find health profiles by parent and student (for security validation)
     @Query("SELECT hp FROM HealthProfile hp WHERE hp.student.studentID = :studentId AND hp.parent.id = :parentId")
     List<HealthProfile> findByStudentStudentIDAndParentId(@Param("studentId") Long studentId, @Param("parentId") Long parentId);
+    
+    // Find health profiles by status
+    List<HealthProfile> findByStatus(ProfileStatus status);
 }

@@ -11,7 +11,8 @@ import {
   Divider,
   Typography,
   Space,
-  Badge
+  Badge,
+  Alert
 } from 'antd';
 import {
   MedicineBoxOutlined,
@@ -68,7 +69,7 @@ const HealthProfileDetailModal = ({ visible, onClose, healthProfile }) => {
   };
   
   const formatDate = (date) => {
-    return date ? dayjs(date).format('DD/MM/YYYY') : 'Chưa cập nhật';
+    return date ? dayjs(date).format('DD/MM/YYYY HH:mm') : 'Chưa cập nhật';
   };
   
   return (
@@ -122,6 +123,24 @@ const HealthProfileDetailModal = ({ visible, onClose, healthProfile }) => {
                 <Text strong>Trạng thái: </Text>
                 {getStatusTag(healthProfile.status)}
               </div>
+              {healthProfile.status === 'REJECTED' && (
+                <div style={{ marginTop: 8 }}>
+                  <Alert
+                    message="Hồ sơ đã bị từ chối"
+                    description={
+                      <>
+                        <strong>Lý do từ chối: </strong>
+                        {healthProfile.note && healthProfile.note.includes("Rejection Reason:") 
+                          ? healthProfile.note.split("Rejection Reason:")[1].trim() 
+                          : healthProfile.note || 'Không có lý do cụ thể'}
+                      </>
+                    }
+                    type="error"
+                    showIcon
+                    style={{ marginBottom: 8 }}
+                  />
+                </div>
+              )}
               {(healthProfile.status === 'APPROVED' || healthProfile.status === 'REJECTED') && healthProfile.schoolNurseFullName && (
                 <div>
                   <Text strong>Y tá trường: </Text>
