@@ -75,6 +75,16 @@ public class ParentHealthProfileService {
         // Validate parent is related to student        
         if (!isParentRelatedToStudent(parent, student)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Parent is not associated with this student");
+        }        // Check existing profiles for this student to enforce business rules
+        List<HealthProfile> existingProfiles = healthProfileRepository.findByStudentStudentIDAndParentId(
+            healthProfileDTO.getStudentId(), parentId);
+        
+        // Only prevent creating new profiles if there's a PENDING profile
+        boolean hasPendingProfile = existingProfiles.stream()
+            .anyMatch(profile -> profile.getStatus() == ProfileStatus.PENDING);
+        if (hasPendingProfile) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, 
+                "Cannot create new profile when a pending profile exists. Please wait for review or edit the existing pending profile.");
         }
 
         // Create health profile
@@ -338,16 +348,24 @@ public class ParentHealthProfileService {
         // Validate parent is related to student
         if (!isParentRelatedToStudent(parent, healthProfile.getStudent())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Parent is not associated with this student");
-        }
-
-        // Check if profile can be updated (only PENDING profiles can be updated)
-        if (healthProfile.getStatus() != ProfileStatus.PENDING) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only profiles with PENDING status can be updated");
-        }        // Update basic profile information
+        }        // Check if profile can be updated
+        // Allow updating profiles with PENDING, APPROVED, and REJECTED status
+        if (healthProfile.getStatus() != ProfileStatus.PENDING && 
+            healthProfile.getStatus() != ProfileStatus.APPROVED && 
+            healthProfile.getStatus() != ProfileStatus.REJECTED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Profile status does not allow updates");
+        }// Update basic profile information
         healthProfile.setWeight(healthProfileDTO.getWeight());
         healthProfile.setHeight(healthProfileDTO.getHeight());
         healthProfile.setNote(healthProfileDTO.getNote());
-        healthProfile.setUpdatedAt(LocalDate.now());
+        healthProfile.setUpdatedAt(LocalDate.now());        // If the profile was APPROVED or REJECTED, change it back to PENDING when updated
+        if (healthProfile.getStatus() == ProfileStatus.APPROVED || 
+            healthProfile.getStatus() == ProfileStatus.REJECTED) {
+            healthProfile.setStatus(ProfileStatus.PENDING);
+            // Clear nurse note since it will need re-review
+            healthProfile.setNurseNote(null);
+            healthProfile.setNurse(null);
+        }
 
         // Save updated profile
         HealthProfile updatedProfile = healthProfileRepository.save(healthProfile);        // Update allergies if provided
@@ -961,5 +979,128 @@ public class ParentHealthProfileService {
         // Check if the parent is either the mother or father of the student
         return (student.getMother() != null && student.getMother().getId().equals(parent.getId())) ||
                (student.getFather() != null && student.getFather().getId().equals(parent.getId()));
+    }
+
+    /**
+     * Check if a REJECTED profile was previously approved based on nurse notes
+     * @param healthProfile The health profile to check
+     * @return true if the profile was previously approved, false otherwise
+     */
+    private boolean wasProfilePreviouslyApproved(HealthProfile healthProfile) {
+        if (healthProfile.getStatus() != ProfileStatus.REJECTED || healthProfile.getNurseNote() == null) {
+            return false;
+        }
+        
+        String nurseNote = healthProfile.getNurseNote().toLowerCase();
+        return nurseNote.contains("đã được duyệt") ||
+               nurseNote.contains("đã duyệt") ||
+               nurseNote.contains("trước đó") ||
+               nurseNote.contains("chỉnh sửa lại") ||
+               nurseNote.contains("cập nhật lại") ||
+               nurseNote.contains("previously approved") ||
+               nurseNote.contains("was approved");
+    }
+
+    /**
+     * Check if a health profile can be edited based on current status and history
+     * @param parentId ID of the parent user
+     * @param profileId ID of the health profile
+     * @return true if the profile can be edited, false otherwise
+     */
+    public boolean canEditHealthProfile(Long parentId, Long profileId) {
+        try {
+            // Validate parent exists
+            User parent = userRepository.findById(parentId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Parent not found"));
+
+            // Check if the user has PARENT role
+            if (!parent.getRole().getRoleName().equals("PARENT")) {
+                return false;
+            }
+
+            // Get health profile
+            HealthProfile healthProfile = healthProfileRepository.findById(profileId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Health profile not found"));
+
+            // Validate parent is related to student
+            if (!isParentRelatedToStudent(parent, healthProfile.getStudent())) {
+                return false;
+            }
+
+            // Check if profile can be edited based on status
+            switch (healthProfile.getStatus()) {
+                case PENDING:
+                case APPROVED:
+                    return true;
+                case REJECTED:
+                    return wasProfilePreviouslyApproved(healthProfile);
+                default:
+                    return false;
+            }
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Check if a new health profile can be created for a student
+     * @param parentId ID of the parent user  
+     * @param studentId ID of the student
+     * @return true if a new profile can be created, false otherwise
+     */
+    public boolean canCreateNewHealthProfile(Long parentId, Long studentId) {
+        try {
+            // Validate parent exists
+            User parent = userRepository.findById(parentId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Parent not found"));
+
+            // Check if the user has PARENT role
+            if (!parent.getRole().getRoleName().equals("PARENT")) {
+                return false;
+            }
+
+            // Validate student exists
+            Student student = studentRepository.findById(studentId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found"));
+
+            // Validate parent is related to student
+            if (!isParentRelatedToStudent(parent, student)) {
+                return false;
+            }
+
+            // Check existing profiles
+            List<HealthProfile> existingProfiles = healthProfileRepository.findByStudentStudentIDAndParentId(studentId, parentId);
+            
+            if (existingProfiles.isEmpty()) {
+                return true; // No existing profiles, can create new one
+            }
+
+            // Cannot create if there's an APPROVED profile
+            boolean hasApprovedProfile = existingProfiles.stream()
+                .anyMatch(profile -> profile.getStatus() == ProfileStatus.APPROVED);
+            if (hasApprovedProfile) {
+                return false;
+            }
+
+            // Cannot create if there's a PENDING profile
+            boolean hasPendingProfile = existingProfiles.stream()
+                .anyMatch(profile -> profile.getStatus() == ProfileStatus.PENDING);
+            if (hasPendingProfile) {
+                return false;
+            }
+
+            // Cannot create if there's a REJECTED profile that was previously approved
+            boolean hasEditableRejectedProfile = existingProfiles.stream()
+                .anyMatch(profile -> profile.getStatus() == ProfileStatus.REJECTED && 
+                         wasProfilePreviouslyApproved(profile));
+            if (hasEditableRejectedProfile) {
+                return false;
+            }
+
+            // Can create new profile (only for first-time rejected profiles)
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 }
