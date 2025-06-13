@@ -193,7 +193,7 @@ public class AuthService {
         if (user.getRole() != null && 
             ("PARENT".equalsIgnoreCase(user.getRole().getRoleName()) || 
              "STUDENT".equalsIgnoreCase(user.getRole().getRoleName()))) {
-            user.setUsername(null);
+            user.setUsername(user.getPhone()); // Use phone as username for PARENT and STUDENT
             user.setPassword(null);
             user.setEmail(null);
         } else {
