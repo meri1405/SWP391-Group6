@@ -1,10 +1,11 @@
-package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service;
+package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.AuthResponse;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.Role;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.RoleRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.UserRepository;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IAuthService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -23,14 +24,16 @@ import java.util.Map;
 import java.util.Optional;
 
 @Service
-public class AuthService {
+public class AuthService implements IAuthService {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
     private final OtpService otpService;
-    private final AuthenticationManager authenticationManager;    @Autowired
+    private final AuthenticationManager authenticationManager;
+
+    @Autowired
     public AuthService(
             UserRepository userRepository,
             RoleRepository roleRepository,
@@ -49,6 +52,7 @@ public class AuthService {
     /**
      * Authenticate with username and password
      */
+    @Override
     public AuthResponse authenticateUser(String username, String password) {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(username, password));
@@ -70,11 +74,13 @@ public class AuthService {
     }    /**
      * Request OTP for phone authentication
      */
+    @Override
     public boolean requestOtp(String phoneNumber) {
         return otpService.generateAndSendOtp(phoneNumber);
     }    /**
      * Authenticate with OTP
      */
+    @Override
     public AuthResponse authenticateWithOtp(String phoneNumber, String otp) {
         boolean isValid;
         
@@ -123,6 +129,7 @@ public class AuthService {
     /**
      * Process OAuth2 authentication with Gmail
      */
+    @Override
     public AuthResponse processOAuth2Login(OAuth2AuthenticationToken authentication) {
         OAuth2User oauth2User = authentication.getPrincipal();
         Map<String, Object> attributes = oauth2User.getAttributes();
@@ -154,6 +161,7 @@ public class AuthService {
     /**
      * Process OAuth2 user data - find existing user or create new one
      */
+
     private User processOAuthUserData(Map<String, Object> attributes, String provider) {
         String email = (String) attributes.get("email");
 
@@ -182,7 +190,9 @@ public class AuthService {
      * @param user The user to preprocess
      * @return The preprocessed user
      * @throws IllegalArgumentException if phone number or email is already in use
-     */    public User preprocessUserBeforeSave(User user) {
+     */
+    @Override
+    public User preprocessUserBeforeSave(User user) {
         // Check if phone is already in use (only if phone is not null)
         if (user.getId() == null && user.getPhone() != null && !user.getPhone().trim().isEmpty()) { // Only for new users with phone
             Optional<User> existingUserWithPhone = userRepository.findByPhone(user.getPhone());
@@ -221,6 +231,7 @@ public class AuthService {
      * @param user The user to save
      * @return The saved user
      */
+    @Override
     public User saveUser(User user) {
         User preprocessedUser = preprocessUserBeforeSave(user);
         return userRepository.save(preprocessedUser);
@@ -235,6 +246,7 @@ public class AuthService {
      * @return The created user
      * @throws IllegalArgumentException if validation fails
      */
+    @Override
     public User createUserByAdmin(User user, String roleName) {
         // Find the requested role
         Role role = roleRepository.findByRoleName(roleName)
@@ -259,7 +271,8 @@ public class AuthService {
      * @param roleName The role name
      * @throws IllegalArgumentException if validation fails
      */
-    private void validateUserByRole(User user, String roleName) {        // Common validations for all users
+    private void validateUserByRole(User user, String roleName) {
+        // Common validations for all users
         // Phone number is required for all users except STUDENT
         if (!"STUDENT".equalsIgnoreCase(roleName) && (user.getPhone() == null || user.getPhone().trim().isEmpty())) {
             throw new IllegalArgumentException("Phone number is required for " + roleName + " role");
@@ -323,6 +336,7 @@ public class AuthService {
      * @param username Username cần kiểm tra
      * @return true nếu username đã tồn tại, false nếu chưa
      */
+    @Override
     public boolean usernameExists(String username) {
         return userRepository.existsByUsername(username);
     }
@@ -333,6 +347,7 @@ public class AuthService {
      * @param rawPassword Password gốc cần mã hóa
      * @return Password đã được mã hóa
      */
+    @Override
     public String encodePassword(String rawPassword) {
         if (rawPassword == null || rawPassword.trim().isEmpty()) {
             return null;
@@ -347,6 +362,7 @@ public class AuthService {
      * @param encodedPassword Password đã mã hóa trong database
      * @return true nếu password khớp, false nếu không khớp
      */
+    @Override
     public boolean verifyPassword(String rawPassword, String encodedPassword) {
         if (rawPassword == null || encodedPassword == null) {
             return false;
@@ -359,6 +375,7 @@ public class AuthService {
      *
      * @param authHeader The Authorization header containing the JWT token
      */
+    @Override
     public void logout(String authHeader) {
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);

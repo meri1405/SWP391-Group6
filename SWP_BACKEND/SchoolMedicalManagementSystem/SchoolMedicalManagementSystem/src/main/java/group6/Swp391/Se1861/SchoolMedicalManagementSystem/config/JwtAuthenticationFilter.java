@@ -1,6 +1,6 @@
 package group6.Swp391.Se1861.SchoolMedicalManagementSystem.config;
 
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.CustomUserDetailsService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl.CustomUserDetailsService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.util.JwtUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

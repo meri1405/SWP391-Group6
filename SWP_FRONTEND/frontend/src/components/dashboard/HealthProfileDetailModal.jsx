@@ -69,7 +69,7 @@ const HealthProfileDetailModal = ({ visible, onClose, healthProfile }) => {
   };
   
   const formatDate = (date) => {
-    return date ? dayjs(date).format('DD/MM/YYYY HH:mm') : 'Chưa cập nhật';
+    return date ? dayjs(date).format('DD/MM/YYYY') : 'Chưa cập nhật';
   };
   
   return (

@@ -1,4 +1,4 @@
-package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service;
+package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -8,6 +8,7 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.exception.Unauthorized
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.*;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.MedicationStatus;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.MedicationScheduleRepository;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IMedicationScheduleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -21,7 +22,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class MedicationScheduleService {
+public class MedicationScheduleService implements IMedicationScheduleService {
 
     private final MedicationScheduleRepository medicationScheduleRepository;    /**
      * Generate medication schedules for an item request
@@ -30,7 +31,10 @@ public class MedicationScheduleService {
      * @param endDate The end date for medication
      * @return List of created medication schedules
      */
-    public List<MedicationSchedule> generateSchedules(ItemRequest itemRequest, LocalDate startDate, LocalDate endDate) {
+    @Override
+    public List<MedicationSchedule> generateSchedules(ItemRequest itemRequest,
+                                                      LocalDate startDate,
+                                                      LocalDate endDate) {
         List<MedicationSchedule> schedules = new ArrayList<>();
 
         // Calculate the daily frequency and assign time slots (using custom times if available)
@@ -61,7 +65,9 @@ public class MedicationScheduleService {
      * Calculate time slots based on medication frequency and any custom times in the item note
      * @param itemRequest The medication item request containing frequency and note
      * @return Array of time slots for medication
-     */    private LocalTime[] calculateTimeSlots(ItemRequest itemRequest) {
+     */
+    @Override
+    public LocalTime[] calculateTimeSlots(ItemRequest itemRequest) {
         int frequency = itemRequest.getFrequency();
         String note = itemRequest.getNote();
         LocalTime[] timeSlots = new LocalTime[frequency];
@@ -122,7 +128,10 @@ public class MedicationScheduleService {
      * @param note Optional nurse note
      * @return Updated medication schedule
      */
-    public MedicationScheduleDTO updateScheduleStatus(Long scheduleId, MedicationStatus status, User nurse, String note) {
+    @Override
+    public MedicationScheduleDTO updateScheduleStatus(Long scheduleId,
+                                                      MedicationStatus status,
+                                                      User nurse, String note) {
         MedicationSchedule schedule = medicationScheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> new RuntimeException("Schedule not found"));
 
@@ -151,42 +160,50 @@ public class MedicationScheduleService {
         }
 
         return convertToDTO(medicationScheduleRepository.save(schedule));
-    }    /**
+    }
+    /**
      * Get schedules for a medication request
      * @param medicationRequestId The medication request ID
      * @return List of schedules for the medication request
      */
+    @Override
     public List<MedicationScheduleDTO> getSchedulesForMedicationRequest(Long medicationRequestId) {
         return medicationScheduleRepository.findByItemRequestMedicationRequestId(medicationRequestId)
                 .stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
-    }/**
+    }
+    /**
      * Get schedules for a student
      * @param studentId The student ID
      * @return List of schedules for the student
      */
+    @Override
     public List<MedicationScheduleDTO> getSchedulesForStudent(Long studentId) {
         return medicationScheduleRepository.findByItemRequestMedicationRequestStudentStudentID(studentId)
                 .stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
-    }/**
+    }
+    /**
      * Get schedules for a specific date
      * @param date The date to check
      * @return List of schedules for the specified date
      */
+    @Override
     public List<MedicationScheduleDTO> getSchedulesByDate(LocalDate date) {
         return medicationScheduleRepository.findAll().stream()
                 .filter(schedule -> schedule.getScheduledDate().equals(date))
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
-    }    /**
+    }
+    /**
      * Get schedules for a specific date and status
      * @param date The date to check
      * @param status The status to filter by
      * @return List of schedules for the specified date and status
      */
+    @Override
     public List<MedicationScheduleDTO> getSchedulesByDateAndStatus(LocalDate date, MedicationStatus status) {
         return medicationScheduleRepository.findByScheduledDateAndStatus(date, status)
                 .stream()
@@ -198,6 +215,7 @@ public class MedicationScheduleService {
      * @param nurse The nurse who approved the requests
      * @return List of schedules for the specified date
      */
+    @Override
     public List<MedicationScheduleDTO> getSchedulesByDateAndNurse(LocalDate date, User nurse) {
         return medicationScheduleRepository.findAll().stream()
                 .filter(schedule -> schedule.getScheduledDate().equals(date)
@@ -213,7 +231,10 @@ public class MedicationScheduleService {
      * @param nurse The nurse who approved the requests
      * @return List of schedules for the specified date and status
      */
-    public List<MedicationScheduleDTO> getSchedulesByDateAndStatusAndNurse(LocalDate date, MedicationStatus status, User nurse) {
+    @Override
+    public List<MedicationScheduleDTO> getSchedulesByDateAndStatusAndNurse(LocalDate date,
+                                                                           MedicationStatus status,
+                                                                           User nurse) {
         return medicationScheduleRepository.findByScheduledDateAndStatus(date, status).stream()
                 .filter(schedule -> schedule.getItemRequest().getMedicationRequest().getNurse() != null
                         && schedule.getItemRequest().getMedicationRequest().getNurse().getId().equals(nurse.getId())
@@ -226,6 +247,7 @@ public class MedicationScheduleService {
      * @param nurse The nurse who approved the requests
      * @return List of schedules for the student
      */
+    @Override
     public List<MedicationScheduleDTO> getSchedulesForStudentAndNurse(Long studentId, User nurse) {
         return medicationScheduleRepository.findByItemRequestMedicationRequestStudentStudentID(studentId).stream()
                 .filter(schedule -> schedule.getItemRequest().getMedicationRequest().getNurse() != null
@@ -239,6 +261,7 @@ public class MedicationScheduleService {
      * Delete all medication schedules associated with a specific item request
      * @param itemRequestId The ID of the item request
      */
+    @Override
     public void deleteSchedulesForItemRequest(Long itemRequestId) {
         // Find all schedules for this item request and delete them
         List<MedicationSchedule> schedules = medicationScheduleRepository.findByItemRequestId(itemRequestId);
@@ -252,6 +275,7 @@ public class MedicationScheduleService {
      * @param note New note content
      * @return Updated medication schedule
      */
+    @Override
     public MedicationScheduleDTO updateScheduleNote(Long scheduleId, User nurse, String note) {
         MedicationSchedule schedule = medicationScheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> new RuntimeException("Schedule not found"));
@@ -273,7 +297,8 @@ public class MedicationScheduleService {
      * @param schedule The medication schedule entity
      * @return The DTO representation
      */
-    private MedicationScheduleDTO convertToDTO(MedicationSchedule schedule) {
+    @Override
+    public MedicationScheduleDTO convertToDTO(MedicationSchedule schedule) {
         MedicationScheduleDTO dto = new MedicationScheduleDTO();
         dto.setId(schedule.getId());
         dto.setItemRequestId(schedule.getItemRequest().getId());
@@ -303,6 +328,7 @@ public class MedicationScheduleService {
      * @param schedule The medication schedule entity
      * @return The medication schedule DTO
      */
+    @Override
     public MedicationScheduleDTO convertToScheduleDTO(MedicationSchedule schedule) {
         MedicationScheduleDTO dto = new MedicationScheduleDTO();
         dto.setId(schedule.getId());
@@ -339,6 +365,7 @@ public class MedicationScheduleService {
      * @param schedules List of medication schedule entities
      * @return List of medication schedule DTOs
      */
+    @Override
     public List<MedicationScheduleDTO> convertToScheduleDTOList(List<MedicationSchedule> schedules) {
         return schedules.stream()
             .map(this::convertToScheduleDTO)
@@ -350,6 +377,7 @@ public class MedicationScheduleService {
      * @param scheduleId the schedule ID
      * @return the medication schedule entity
      */
+    @Override
     public MedicationSchedule getMedicationScheduleById(Long scheduleId) {
         return medicationScheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> new ResourceNotFoundException("Medication schedule not found with id: " + scheduleId));
