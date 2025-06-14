@@ -5,9 +5,9 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.MedicationSchedule
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.MedicationSchedule;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.MedicationStatus;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.MedicationRequestService;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.MedicationScheduleService;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.NotificationService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IMedicationRequestService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IMedicationScheduleService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.INotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -23,9 +23,9 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class NurseMedicationController {
 
-    private final MedicationRequestService medicationRequestService;
-    private final MedicationScheduleService medicationScheduleService;
-    private final NotificationService notificationService;
+    private final IMedicationRequestService medicationRequestService;
+    private final IMedicationScheduleService medicationScheduleService;
+    private final INotificationService notificationService;
 
     /**
      * Get all pending medication requests
@@ -147,7 +147,8 @@ public class NurseMedicationController {
     public ResponseEntity<MedicationScheduleDTO> updateScheduleStatus(
             @PathVariable Long scheduleId,
             @AuthenticationPrincipal User nurse,
-            @RequestBody Map<String, Object> requestBody) {        MedicationStatus status = MedicationStatus.valueOf((String) requestBody.get("status"));
+            @RequestBody Map<String, Object> requestBody) {
+        MedicationStatus status = MedicationStatus.valueOf((String) requestBody.get("status"));
         String note = (String) requestBody.get("note"); // Don't use getOrDefault to distinguish between null and empty string
 
         MedicationScheduleDTO updatedSchedule = medicationScheduleService.updateScheduleStatus(scheduleId, status, nurse, note);

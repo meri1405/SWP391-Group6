@@ -1,4 +1,4 @@
-package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service;
+package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.NotificationDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.MedicationRequest;
@@ -7,6 +7,7 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.Notification;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.NotificationRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.UserRepository;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.INotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -18,7 +19,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class NotificationService {
+public class NotificationService implements INotificationService {
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
@@ -28,6 +29,7 @@ public class NotificationService {
      * Create a new notification for medication request approval/rejection
      */
     @Transactional
+    @Override
     public NotificationDTO createMedicationRequestNotification(
             MedicationRequest medicationRequest,
             String notificationType,
@@ -76,6 +78,7 @@ public class NotificationService {
      * Create a new notification for medication schedule status update
      */
     @Transactional
+    @Override
     public NotificationDTO createMedicationScheduleNotification(
             MedicationSchedule medicationSchedule,
             String notificationType,
@@ -128,6 +131,7 @@ public class NotificationService {
     }    /**
      * Get all notifications for a user
      */
+    @Override
     public List<NotificationDTO> getAllNotificationsForUser(User user) {
         return notificationRepository.findByRecipientOrderByCreatedAtDesc(user)
                 .stream()
@@ -138,6 +142,7 @@ public class NotificationService {
     /**
      * Get all notifications for a user with limit
      */
+    @Override
     public List<NotificationDTO> getAllNotificationsForUser(User user, int limit) {
         return notificationRepository.findByRecipientOrderByCreatedAtDesc(user, 
                 PageRequest.of(0, limit))
@@ -149,6 +154,7 @@ public class NotificationService {
     /**
      * Get unread notifications for a user
      */
+    @Override
     public List<NotificationDTO> getUnreadNotificationsForUser(User user) {
         return notificationRepository.findByRecipientAndIsReadFalseOrderByCreatedAtDesc(user)
                 .stream()
@@ -160,6 +166,7 @@ public class NotificationService {
      * Mark a notification as read
      */
     @Transactional
+    @Override
     public NotificationDTO markNotificationAsRead(Long notificationId, User user) {
         Notification notification = notificationRepository.findById(notificationId)
                 .orElseThrow(() -> new RuntimeException("Notification not found"));
@@ -177,6 +184,7 @@ public class NotificationService {
      * Mark all notifications as read for a user
      */
     @Transactional
+    @Override
     public void markAllNotificationsAsRead(User user) {
         List<Notification> unreadNotifications = notificationRepository
                 .findByRecipientAndIsReadFalseOrderByCreatedAtDesc(user);
@@ -188,6 +196,7 @@ public class NotificationService {
     /**
      * Get the count of unread notifications for a user
      */
+    @Override
     public long getUnreadNotificationCount(User user) {
         return notificationRepository.countByRecipientAndIsReadFalse(user);
     }
@@ -195,7 +204,8 @@ public class NotificationService {
     /**
      * Convert Notification entity to DTO
      */
-    private NotificationDTO convertToDTO(Notification notification) {
+    @Override
+    public NotificationDTO convertToDTO(Notification notification) {
         NotificationDTO dto = new NotificationDTO();
         dto.setId(notification.getId());
         dto.setTitle(notification.getTitle());

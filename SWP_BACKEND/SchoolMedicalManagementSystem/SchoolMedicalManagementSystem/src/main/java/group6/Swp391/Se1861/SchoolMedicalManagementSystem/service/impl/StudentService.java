@@ -1,10 +1,11 @@
-package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service;
+package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.StudentDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.Student;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.StudentRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.UserRepository;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IStudentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,7 +14,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-public class StudentService {
+public class StudentService implements IStudentService {
 
     @Autowired
     private StudentRepository studentRepository;
@@ -24,6 +25,7 @@ public class StudentService {
      * @param parent the authenticated parent user
      * @return list of students associated with the parent
      */
+    @Override
     public List<StudentDTO> getStudentsByParent(User parent) {
         List<Student> students = studentRepository.findByParentWithParents(parent);
         return students.stream()
@@ -35,6 +37,7 @@ public class StudentService {
      * Get all students (admin only)
      * @return list of all students
      */
+    @Override
     public List<StudentDTO> getAllStudents() {
         List<Student> students = studentRepository.findAllWithParents();
         return students.stream()
@@ -48,6 +51,7 @@ public class StudentService {
      * @return the student DTO
      * @throws IllegalArgumentException if student not found
      */
+    @Override
     public StudentDTO getStudentById(Long studentId) {
         Student student = studentRepository.findByIdWithParents(studentId)
                 .orElseThrow(() -> new IllegalArgumentException("Student not found with id: " + studentId));
@@ -60,6 +64,7 @@ public class StudentService {
      * @throws IllegalArgumentException if student or parent not found, or relationship already exists
      */
     @Transactional
+    @Override
     public void addParentToStudent(Long studentId, Long parentId, String parentType) {
         Student student = studentRepository.findByIdWithParents(studentId)
                 .orElseThrow(() -> new IllegalArgumentException("Student not found with id: " + studentId));
@@ -95,6 +100,7 @@ public class StudentService {
      * @throws IllegalArgumentException if student not found, or relationship doesn't exist
      */
     @Transactional
+    @Override
     public void removeParentFromStudent(Long studentId, String parentType) {
         Student student = studentRepository.findByIdWithParents(studentId)
                 .orElseThrow(() -> new IllegalArgumentException("Student not found with id: " + studentId));
@@ -121,12 +127,15 @@ public class StudentService {
      * @param parentId the parent ID
      * @return true if the parent has access to the student
      */
+    @Override
     public boolean isStudentOwnedByParent(Long studentId, Long parentId) {
         return studentRepository.isStudentOwnedByParent(studentId, parentId);
-    }    /**
+    }
+    /**
      * Convert Student entity to StudentDTO
      */
-    private StudentDTO convertToDTO(Student student) {
+    @Override
+    public StudentDTO convertToDTO(Student student) {
         StudentDTO dto = new StudentDTO();
         dto.setStudentID(student.getStudentID());
         dto.setFirstName(student.getFirstName());

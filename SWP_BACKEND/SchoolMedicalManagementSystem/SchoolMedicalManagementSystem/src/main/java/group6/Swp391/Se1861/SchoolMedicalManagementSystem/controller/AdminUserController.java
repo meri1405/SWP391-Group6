@@ -3,7 +3,8 @@ package group6.Swp391.Se1861.SchoolMedicalManagementSystem.controller;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.config.AdminOnly;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.UserCreationDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.AuthService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IAuthService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl.AuthService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -29,7 +30,7 @@ import java.util.Map;
 @AdminOnly(message = "Yêu cầu quyền Admin để thực hiện các thao tác quản lý người dùng")
 public class AdminUserController {
 
-    private final AuthService authService;
+    private final IAuthService authService;
     private final UserRepository userRepository;
 
     @Autowired

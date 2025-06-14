@@ -3,8 +3,10 @@ package group6.Swp391.Se1861.SchoolMedicalManagementSystem.controller;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.HealthProfileDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.VaccinationRuleDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.ParentHealthProfileService;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.VaccinationRuleService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IParentHealthProfileService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IVaccinationRuleService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl.ParentHealthProfileService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl.VaccinationRuleService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -20,10 +22,10 @@ import java.util.List;
 public class ParentHealthProfileController {
 
     @Autowired
-    private ParentHealthProfileService parentHealthProfileService;
+    private IParentHealthProfileService parentHealthProfileService;
 
     @Autowired
-    private VaccinationRuleService vaccinationRuleService;
+    private IVaccinationRuleService vaccinationRuleService;
 
     /**
      * Create a new health profile for a child

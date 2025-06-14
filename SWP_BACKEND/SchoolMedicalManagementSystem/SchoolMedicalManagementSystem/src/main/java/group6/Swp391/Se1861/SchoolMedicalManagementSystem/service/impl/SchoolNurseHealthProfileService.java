@@ -1,9 +1,10 @@
-package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service;
+package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.*;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.*;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.ProfileStatus;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.*;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.ISchoolNurseHealthProfileService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -18,7 +19,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
-public class SchoolNurseHealthProfileService {
+public class SchoolNurseHealthProfileService implements ISchoolNurseHealthProfileService {
 
     @Autowired
     private UserRepository userRepository;
@@ -54,6 +55,7 @@ public class SchoolNurseHealthProfileService {
      * Get all health profiles
      * @return list of all health profiles
      */
+    @Override
     public List<HealthProfileDTO> getAllHealthProfiles() {
         List<HealthProfile> profiles = healthProfileRepository.findAll();
         return profiles.stream().map(this::convertToBasicDTO).collect(Collectors.toList());
@@ -64,6 +66,7 @@ public class SchoolNurseHealthProfileService {
      * @param status the status to filter by
      * @return list of health profiles with the specified status
      */
+    @Override
     public List<HealthProfileDTO> getHealthProfilesByStatus(ProfileStatus status) {
         List<HealthProfile> profiles = healthProfileRepository.findByStatus(status);
         return profiles.stream().map(this::convertToBasicDTO).collect(Collectors.toList());
@@ -74,6 +77,7 @@ public class SchoolNurseHealthProfileService {
      * @param profileId ID of the health profile
      * @return detailed health profile data
      */
+    @Override
     public HealthProfileDTO getHealthProfileById(Long profileId) {
         HealthProfile healthProfile = healthProfileRepository.findById(profileId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Health profile not found"));
@@ -88,6 +92,7 @@ public class SchoolNurseHealthProfileService {
      * @return updated health profile
      */
     @Transactional
+    @Override
     public HealthProfileDTO updateHealthProfile(Long nurseId, Long profileId, HealthProfileDTO healthProfileDTO) {
         // Validate nurse exists
         User nurse = userRepository.findById(nurseId)
@@ -171,6 +176,7 @@ public class SchoolNurseHealthProfileService {
      * @return rejected health profile
      */
     @Transactional
+    @Override
     public HealthProfileDTO rejectHealthProfile(Long nurseId, Long profileId, String nurseNote) {
         // Validate nurse exists
         User nurse = userRepository.findById(nurseId)
@@ -223,7 +229,8 @@ public class SchoolNurseHealthProfileService {
     /**
      * Convert HealthProfile to basic HealthProfileDTO with student and parent information
      */
-    private HealthProfileDTO convertToBasicDTO(HealthProfile healthProfile) {
+    @Override
+    public HealthProfileDTO convertToBasicDTO(HealthProfile healthProfile) {
         HealthProfileDTO dto = new HealthProfileDTO();
         dto.setId(healthProfile.getId());
         dto.setWeight(healthProfile.getWeight());
@@ -284,7 +291,8 @@ public class SchoolNurseHealthProfileService {
     /**
      * Convert HealthProfile to detailed HealthProfileDTO with all related data
      */
-    private HealthProfileDTO convertToDetailedDTO(HealthProfile healthProfile) {
+    @Override
+    public HealthProfileDTO convertToDetailedDTO(HealthProfile healthProfile) {
         HealthProfileDTO dto = convertToBasicDTO(healthProfile);
         
         // Convert allergies

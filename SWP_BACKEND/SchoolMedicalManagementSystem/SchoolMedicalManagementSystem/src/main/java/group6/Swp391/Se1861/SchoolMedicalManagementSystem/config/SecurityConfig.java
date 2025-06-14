@@ -1,7 +1,7 @@
 package group6.Swp391.Se1861.SchoolMedicalManagementSystem.config;
 
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.CustomOAuth2UserService;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.CustomUserDetailsService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl.CustomOAuth2UserService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl.CustomUserDetailsService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -13,7 +13,6 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration

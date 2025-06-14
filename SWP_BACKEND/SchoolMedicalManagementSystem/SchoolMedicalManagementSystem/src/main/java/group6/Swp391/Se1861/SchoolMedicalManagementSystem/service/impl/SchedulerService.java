@@ -1,12 +1,13 @@
-package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service;
+package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl;
 
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.ISchedulerService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
-public class SchedulerService {
+public class SchedulerService implements ISchedulerService {
 
     private final MedicationRequestService medicationRequestService;    /**
      * Scheduled task to auto-reject expired medication requests

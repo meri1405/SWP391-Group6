@@ -2,7 +2,8 @@ package group6.Swp391.Se1861.SchoolMedicalManagementSystem.controller;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.MedicationRequestDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.MedicationRequestService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IMedicationRequestService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl.MedicationRequestService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -17,7 +18,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ParentMedicationRequestController {
 
-    private final MedicationRequestService medicationRequestService;
+    private final IMedicationRequestService medicationRequestService;
 
     /**
      * Create a new medication request

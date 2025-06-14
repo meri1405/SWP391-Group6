@@ -1,8 +1,9 @@
 package group6.Swp391.Se1861.SchoolMedicalManagementSystem.controller;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.*;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.AuthService;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.FirebaseOtpService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IFirebaseOtpService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl.FirebaseOtpService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IAuthService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,10 +20,10 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     @Autowired
-    private AuthService authService;
+    private IAuthService authService;
     
     @Autowired
-    private FirebaseOtpService firebaseOtpService;
+    private IFirebaseOtpService firebaseOtpService;
     
     @Value("${app.firebase.project-id:}")
     private String firebaseProjectId;
