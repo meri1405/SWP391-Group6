@@ -670,10 +670,13 @@
 .admin-layout-container {
   min-height: calc(100vh - 140px);
   background: #f4f6fb;
-  margin: 90px 20px 30px 20px;
+  margin: 90px 19px 30px 20px;
   border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.08);
+  position: relative;
+  max-width: calc(100vw - 40px);
+  z-index: 1;
 }
 
 /* Header styling */
@@ -1036,4 +1039,58 @@
   font-size: 12px !important;
   top: 8px !important;
   right: 8px !important;
+}
+
+/* Responsive adjustments for developer tools */
+@media (max-height: 600px) {
+  .admin-layout-container {
+    min-height: calc(100vh - 120px) !important;
+    margin-top: 70px !important;
+    margin-bottom: 20px !important;
+  }
+
+  .admin-dashboard-content {
+    min-height: calc(100vh - 240px) !important;
+  }
+}
+
+@media (max-height: 500px) {
+  .admin-layout-container {
+    min-height: calc(100vh - 100px) !important;
+    margin-top: 60px !important;
+    margin-bottom: 15px !important;
+  }
+
+  .admin-dashboard-content {
+    min-height: calc(100vh - 200px) !important;
+  }
+
+  .admin-dashboard-header {
+    min-height: 60px !important;
+    padding: 12px 24px !important;
+  }
+}
+
+/* Additional responsive adjustments for better developer tools compatibility */
+@media (max-height: 400px) {
+  .admin-layout-container {
+    min-height: calc(100vh - 80px) !important;
+    margin-top: 50px !important;
+    margin-bottom: 10px !important;
+  }
+
+  .admin-dashboard-content {
+    min-height: calc(100vh - 160px) !important;
+  }
+
+  .admin-dashboard-header {
+    min-height: 50px !important;
+    padding: 8px 16px !important;
+  }
+
+  .admin-avatar-container {
+    min-height: 60px !important;
+    padding: 8px 16px !important;
+    margin-bottom: 4px !important;
+  }
 }
