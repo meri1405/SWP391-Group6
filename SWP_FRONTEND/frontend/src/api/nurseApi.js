@@ -1209,6 +1209,107 @@ export const nurseApi = {
         message: 'Cập nhật ghi chú thành công'
       };
     }
+  },
+  // Vaccination Rule Management
+  getAllVaccinationRules: async () => {
+    try {
+      const response = await nurseApiClient.get('/api/nurse/vaccination-rules');
+      return response.data; // Return the array directly
+    } catch (error) {
+      console.error('Error fetching vaccination rules:', error);
+      // Mock data fallback for development
+      return [
+        {
+          id: 1,
+          name: 'BCG Vaccine',
+          description: 'Vaccine phòng bệnh lao',
+          doesNumber: 1,
+          minAge: 0,
+          maxAge: 12,
+          intervalDays: 0,
+          mandatory: true,
+          activeCampaignsCount: 2
+        },
+        {
+          id: 2,
+          name: 'Hepatitis B - Dose 1',
+          description: 'Vaccine viêm gan B - Mũi 1',
+          doesNumber: 1,
+          minAge: 0,
+          maxAge: 24,
+          intervalDays: 0,
+          mandatory: true,
+          activeCampaignsCount: 1
+        },
+        {
+          id: 3,
+          name: 'Hepatitis B - Dose 2',
+          description: 'Vaccine viêm gan B - Mũi 2',
+          doesNumber: 2,
+          minAge: 1,          maxAge: 25,
+          intervalDays: 30,
+          mandatory: true,
+          activeCampaignsCount: 0
+        },
+        {
+          id: 4,
+          name: 'HPV Vaccine',
+          description: 'Vaccine phòng ung thư cổ tử cung',
+          doesNumber: 1,
+          minAge: 144, // 12 years
+          maxAge: 180, // 15 years
+          intervalDays: 0,
+          mandatory: false,
+          activeCampaignsCount: 1
+        }
+      ];
+    }
+  },
+  getVaccinationRuleById: async (id) => {
+    try {
+      const response = await nurseApiClient.get(`/api/nurse/vaccination-rules/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching vaccination rule:', error);
+      // Mock data fallback
+      return {
+        id: id,
+        name: `Vaccination Rule ${id}`,
+        description: `Description for vaccination rule ${id}`,
+        doesNumber: 1,
+        minAge: 0,
+        maxAge: 24,
+        intervalDays: 0,
+        mandatory: true,
+        activeCampaignsCount: 0
+      };
+    }
+  },  createVaccinationRule: async (ruleData) => {
+    try {
+      const response = await nurseApiClient.post('/api/nurse/vaccination-rules', ruleData);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating vaccination rule:', error);
+      throw error; // Re-throw to let the component handle the error
+    }
+  },
+  updateVaccinationRule: async (id, ruleData) => {
+    try {
+      const response = await nurseApiClient.put(`/api/nurse/vaccination-rules/${id}`, ruleData);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating vaccination rule:', error);
+      throw error; // Re-throw to let the component handle the error
+    }
+  },
+  deleteVaccinationRule: async (id) => {
+    try {
+      await nurseApiClient.delete(`/api/nurse/vaccination-rules/${id}`);
+      return true; // Return success indicator
+    } catch (error) {
+      console.error('Error deleting vaccination rule:', error);
+      throw error; // Re-throw to let the component handle the error
+    }
   }
 };
 
