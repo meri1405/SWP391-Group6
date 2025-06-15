@@ -1,0 +1,127 @@
+/* Medical Supply Inventory Styles */
+.medical-supply-inventory .ant-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.medical-supply-inventory .ant-card-body {
+  padding: 20px;
+}
+
+/* Status badges */
+.medical-supply-inventory .expired-badge .ant-badge-status-dot {
+  background: #ff4d4f;
+}
+
+.medical-supply-inventory .low-stock-badge .ant-badge-status-dot {
+  background: #faad14;
+}
+
+.medical-supply-inventory .expiring-badge .ant-badge-status-dot {
+  background: #1890ff;
+}
+
+/* Table styles */
+.medical-supply-inventory .ant-table {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.medical-supply-inventory .ant-table-thead > tr > th {
+  background-color: #f5f7fa;
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.medical-supply-inventory .ant-table-tbody > tr:hover > td {
+  background-color: #f0f7ff;
+}
+
+/* Custom badge for low stock */
+.medical-supply-inventory .low-stock-warning {
+  position: relative;
+}
+
+.medical-supply-inventory .low-stock-warning::after {
+  content: '!';
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 16px;
+  height: 16px;
+  background-color: #ff4d4f;
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Restock Request Form styles */
+.add-item-section {
+  background-color: #f9fafc;
+}
+
+.add-item-section .ant-form-item-label {
+  font-weight: 500;
+}
+
+/* Make tag colors more vibrant */
+.medical-supply-inventory .ant-tag-blue {
+  color: #0958d9;
+  background: #e6f4ff;
+}
+
+.medical-supply-inventory .ant-tag-green {
+  color: #1f9254;
+  background: #e6fffb;
+}
+
+.medical-supply-inventory .ant-tag-gold {
+  color: #ad6800;
+  background: #fff9e6;
+}
+
+.medical-supply-inventory .ant-tag-red {
+  color: #a8071a;
+  background: #fff1f0;
+}
+
+/* Improve table search area */
+.medical-supply-inventory .ant-input-affix-wrapper {
+  border-radius: 6px;
+}
+
+.medical-supply-inventory .ant-select:not(.ant-select-customize-input) .ant-select-selector {
+  border-radius: 6px;
+}
+
+/* Filter buttons */
+.medical-supply-inventory .filter-btn {
+  margin-right: 8px;
+  border-radius: 6px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .medical-supply-inventory .search-filter-container {
+    flex-direction: column;
+  }
+  
+  .medical-supply-inventory .ant-input-search {
+    margin-bottom: 12px;
+    width: 100%;
+  }
+  
+  .medical-supply-inventory .ant-select {
+    width: 100% !important;
+    margin-bottom: 12px;
+  }
+  
+  .medical-supply-inventory .ant-tabs-tab {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+} 
