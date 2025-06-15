@@ -54,3 +54,5 @@ public class MedicationRequest {
     @JoinColumn(name = "parentID", referencedColumnName = "userID")
     private User parent;
 }
+
+
