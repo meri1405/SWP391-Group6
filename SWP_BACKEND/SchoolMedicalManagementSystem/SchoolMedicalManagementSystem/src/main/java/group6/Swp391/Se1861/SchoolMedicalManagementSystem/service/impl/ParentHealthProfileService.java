@@ -206,6 +206,7 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
                 vaccination.setAdministeredBy(vaccinationDTO.getAdministeredBy());
                 vaccination.setNotes(vaccinationDTO.getNotes());
                 vaccination.setStatus(vaccinationDTO.isStatus());
+                vaccination.setSource(VaccinationHistory.VaccinationSource.PARENT_REPORTED);
                 vaccination.setHealthProfile(savedProfile);
                 
                 // Set vaccination rule if provided
@@ -714,6 +715,7 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
                     newVaccination.setAdministeredBy(vaccinationDTO.getAdministeredBy());
                     newVaccination.setNotes(vaccinationDTO.getNotes());
                     newVaccination.setStatus(vaccinationDTO.isStatus());
+                    newVaccination.setSource(VaccinationHistory.VaccinationSource.PARENT_REPORTED);
                     newVaccination.setHealthProfile(updatedProfile);
                     
                     // Set vaccination rule if provided
@@ -740,6 +742,7 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
                         existingVaccination.setPlaceOfVaccination(vaccinationDTO.getPlaceOfVaccination());
                         existingVaccination.setAdministeredBy(vaccinationDTO.getAdministeredBy());
                         existingVaccination.setNotes(vaccinationDTO.getNotes());
+                        existingVaccination.setSource(VaccinationHistory.VaccinationSource.PARENT_REPORTED);
                         existingVaccination.setStatus(vaccinationDTO.isStatus());
                         
                         // Update vaccination rule if provided
@@ -965,6 +968,7 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
                         vaccinationDTO.setPlaceOfVaccination(vaccination.getPlaceOfVaccination());
                         vaccinationDTO.setAdministeredBy(vaccination.getAdministeredBy());
                         vaccinationDTO.setNotes(vaccination.getNotes());
+                        vaccinationDTO.setSource(vaccination.getSource() != null ? vaccination.getSource().name() : null);
                         vaccinationDTO.setStatus(vaccination.isStatus());
                         
                         // Include vaccination rule ID if rule is associated
