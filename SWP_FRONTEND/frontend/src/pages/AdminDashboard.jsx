@@ -519,7 +519,7 @@ const UserManagement = ({
                     },
                   ]}
                 >
-                  <Input placeholder="Nhập họ" />
+                  <Input placeholder="Nhập họ" autoComplete="off" />
                 </Form.Item>
                 <Form.Item
                   label="Tên"
@@ -553,7 +553,7 @@ const UserManagement = ({
                     },
                   ]}
                 >
-                  <Input placeholder="Nhập tên" />
+                  <Input placeholder="Nhập tên" autoComplete="off" />
                 </Form.Item>
                 {/* Phone field - required for all remaining roles */}
                 <Form.Item
@@ -584,6 +584,7 @@ const UserManagement = ({
                   <Input
                     placeholder="Nhập số điện thoại (VD: 0901234567)"
                     maxLength={10}
+                    autoComplete="off"
                     onKeyPress={(e) => {
                       // Only allow numbers
                       if (!/[0-9]/.test(e.key)) {
@@ -722,7 +723,7 @@ const UserManagement = ({
                           },
                         ]}
                       >
-                        <Input placeholder="Nhập email (VD: example@gmail.com)" />
+                        <Input placeholder="Nhập email" autoComplete="off" />
                       </Form.Item>
                     ) : null;
                   }}
@@ -786,7 +787,10 @@ const UserManagement = ({
                           },
                         ]}
                       >
-                        <Input placeholder="Nhập tên đăng nhập (VD: user123)" />
+                        <Input
+                          placeholder="Nhập tên đăng nhập"
+                          autoComplete="off"
+                        />
                       </Form.Item>
                     ) : null;
                   }}
@@ -863,9 +867,10 @@ const UserManagement = ({
                             placeholder={
                               modalMode === "edit"
                                 ? "Để trống nếu không đổi mật khẩu"
-                                : "Nhập mật khẩu (8+ ký tự, độ mạnh từ 'Trung bình' trở lên)"
+                                : "Nhập mật khẩu"
                             }
                             onChange={(e) => setCurrentPassword(e.target.value)}
+                            autoComplete="new-password"
                           />
                           {currentPassword && modalMode === "add" && (
                             <div style={{ marginTop: "8px" }}>

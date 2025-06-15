@@ -1,82 +1,34 @@
 package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service;
 
-import org.springframework.stereotype.Service;
-
-import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Service to manage system settings
- * In a real application, this would use a database
- * For now, using in-memory storage that persists until server restart
+ * Service interface to manage system settings
  */
-@Service
-public class SystemSettingsService {
-    
-    // Thread-safe map to store settings
-    private final Map<String, Object> settings = new ConcurrentHashMap<>();
-    
-    // Constructor with default values
-    public SystemSettingsService() {
-        // Initialize with default values
-        settings.put("systemName", "Hệ Thống Quản Lý Y Tế Học Đường");
-        settings.put("contactEmail", "admin@school-health.com");
-        settings.put("twoFactorAuth", true);
-        settings.put("activityLogging", true);
-        settings.put("version", "1.0.0");
-    }
+public interface SystemSettingsService {
     
     /**
      * Get all system settings
      */
-    public Map<String, Object> getAllSettings() {
-        return new HashMap<>(settings);
-    }
+    Map<String, Object> getAllSettings();
     
     /**
      * Get public system information (non-sensitive data only)
      */
-    public Map<String, Object> getPublicSystemInfo() {
-        Map<String, Object> publicInfo = new HashMap<>();
-        publicInfo.put("systemName", settings.get("systemName"));
-        publicInfo.put("contactEmail", settings.get("contactEmail"));
-        publicInfo.put("version", settings.get("version"));
-        return publicInfo;
-    }
+    Map<String, Object> getPublicSystemInfo();
     
     /**
      * Update system settings
      */
-    public void updateSettings(Map<String, Object> newSettings) {
-        // Update only allowed fields
-        if (newSettings.containsKey("systemName")) {
-            settings.put("systemName", newSettings.get("systemName"));
-        }
-        if (newSettings.containsKey("contactEmail")) {
-            settings.put("contactEmail", newSettings.get("contactEmail"));
-        }
-        if (newSettings.containsKey("twoFactorAuth")) {
-            settings.put("twoFactorAuth", newSettings.get("twoFactorAuth"));
-        }
-        if (newSettings.containsKey("activityLogging")) {
-            settings.put("activityLogging", newSettings.get("activityLogging"));
-        }
-        
-        System.out.println("Settings updated: " + settings);
-    }
+    void updateSettings(Map<String, Object> newSettings);
     
     /**
      * Get a specific setting value
      */
-    public Object getSetting(String key) {
-        return settings.get(key);
-    }
+    Object getSetting(String key);
     
     /**
      * Set a specific setting value
      */
-    public void setSetting(String key, Object value) {
-        settings.put(key, value);
-    }
+    void setSetting(String key, Object value);
 } 
