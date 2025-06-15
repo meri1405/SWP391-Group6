@@ -200,9 +200,10 @@ const UserManagement = ({
             className="role-filter"
           >
             <option value="all">Tất cả vai trò</option>
-            <option value="SCHOOLNURSE">Y tá</option>
-            <option value="MANAGER">Quản lý</option>
             <option value="ADMIN">Quản trị viên</option>
+            <option value="MANAGER">Quản lý</option>
+            <option value="SCHOOLNURSE">Y tá</option>
+            <option value="PARENT">Phụ huynh</option>
           </select>
         </div>
       </div>
@@ -240,7 +241,11 @@ const UserManagement = ({
                   <span
                     className={`role-badge ${user.roleName?.toLowerCase()}`}
                   >
-                    {user.roleName}
+                    {user.roleName === "ADMIN" && "Quản trị viên"}
+                    {user.roleName === "MANAGER" && "Quản lý"}
+                    {user.roleName === "SCHOOLNURSE" && "Y tá"}
+                    {user.roleName === "PARENT" && "Phụ huynh"}
+                    {!user.roleName && "Chưa xác định"}
                   </span>
                 </td>
                 <td>
@@ -390,11 +395,17 @@ const UserManagement = ({
                 color={
                   selectedUser?.roleName === "SCHOOLNURSE" ||
                   selectedUser?.role === "SCHOOLNURSE"
-                    ? "purple"
+                    ? "gold"
                     : selectedUser?.roleName === "MANAGER" ||
                       selectedUser?.role === "MANAGER"
                     ? "orange"
-                    : "red"
+                    : selectedUser?.roleName === "ADMIN" ||
+                      selectedUser?.role === "ADMIN"
+                    ? "red"
+                    : selectedUser?.roleName === "PARENT" ||
+                      selectedUser?.role === "PARENT"
+                    ? "blue"
+                    : "default"
                 }
               >
                 {(selectedUser?.roleName === "SCHOOLNURSE" ||
@@ -406,6 +417,12 @@ const UserManagement = ({
                 {(selectedUser?.roleName === "ADMIN" ||
                   selectedUser?.role === "ADMIN") &&
                   "Quản trị viên"}
+                {(selectedUser?.roleName === "PARENT" ||
+                  selectedUser?.role === "PARENT") &&
+                  "Phụ huynh"}
+                {!selectedUser?.roleName &&
+                  !selectedUser?.role &&
+                  "Chưa xác định"}
               </Tag>
             </Descriptions.Item>
             <Descriptions.Item label="Trạng thái" span={1}>
@@ -1213,33 +1230,119 @@ const AdminProfile = ({ userInfo: initialUserInfo, onProfileUpdate }) => {
           title="Thông tin cá nhân"
           styles={{ body: { padding: "24px" } }}
         >
-          <div className="profile-avatar-section">
-            <div className="profile-avatar-large">
-              {avatarUrl ? (
-                <img src={avatarUrl} alt="Avatar" />
-              ) : (
-                <div className="avatar-placeholder">
-                  <UserOutlined style={{ fontSize: 48 }} />
-                </div>
+          <div className="profile-combined-section">
+            <div className="profile-avatar-section">
+              <div className="profile-avatar-large">
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="Avatar" />
+                ) : (
+                  <div className="avatar-placeholder">
+                    <UserOutlined style={{ fontSize: 48 }} />
+                  </div>
+                )}
+              </div>
+              {isEditing && (
+                <Button icon={<UploadOutlined />} size="small">
+                  Đổi ảnh
+                </Button>
               )}
-            </div>
-            {isEditing && (
-              <Button icon={<UploadOutlined />} size="small">
-                Đổi ảnh
-              </Button>
-            )}
 
-            <div className="profile-basic-info">
-              <h3>
-                {formData.lastName} {formData.firstName}
-              </h3>
-              <Tag color="red" icon={<SettingOutlined />}>
-                Quản trị viên
-              </Tag>
+              <div className="profile-basic-info">
+                <h3>
+                  {formData.lastName} {formData.firstName}
+                </h3>
+                <Tag color="red" icon={<SettingOutlined />}>
+                  Quản trị viên
+                </Tag>
+              </div>
             </div>
+
+            {!isEditing && (
+              <div className="profile-info-horizontal">
+                <div className="admin-info-horizontal">
+                  <div className="info-item">
+                    <UserOutlined className="info-icon" />
+                    <div>
+                      <label>HỌ VÀ TÊN</label>
+                      <span>
+                        {formData.lastName && formData.firstName
+                          ? `${formData.lastName} ${formData.firstName}`
+                          : "Chưa cập nhật"}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="info-item">
+                    <MailOutlined className="info-icon" />
+                    <div>
+                      <label>EMAIL</label>
+                      <span>{formData.email || "Chưa cập nhật"}</span>
+                    </div>
+                  </div>
+                  <div className="info-item">
+                    <PhoneOutlined className="info-icon" />
+                    <div>
+                      <label>SỐ ĐIỆN THOẠI</label>
+                      <span>{formData.phone || "Chưa cập nhật"}</span>
+                    </div>
+                  </div>
+                  <div className="info-item">
+                    <UserOutlined className="info-icon" />
+                    <div>
+                      <label>TÊN ĐĂNG NHẬP</label>
+                      <span>{formData.username || "Chưa cập nhật"}</span>
+                    </div>
+                  </div>
+                  <div className="info-item">
+                    <CalendarOutlined className="info-icon" />
+                    <div>
+                      <label>NGÀY SINH</label>
+                      <span>
+                        {formData.dob
+                          ? new Date(formData.dob).toLocaleDateString("vi-VN")
+                          : "Chưa cập nhật"}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="info-item">
+                    <UserOutlined className="info-icon" />
+                    <div>
+                      <label>GIỚI TÍNH</label>
+                      <span>
+                        {formData.gender === "M"
+                          ? "Nam"
+                          : formData.gender === "F"
+                          ? "Nữ"
+                          : "Chưa cập nhật"}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="info-item">
+                    <BankOutlined className="info-icon" />
+                    <div>
+                      <label>CHỨC VỤ</label>
+                      <span>{formData.jobTitle || "Chưa cập nhật"}</span>
+                    </div>
+                  </div>
+                  <div className="info-item">
+                    <SettingOutlined className="info-icon" />
+                    <div>
+                      <label>VAI TRÒ</label>
+                      <span>Quản trị viên</span>
+                    </div>
+                  </div>
+                  <div className="info-item">
+                    <HomeOutlined className="info-icon" />
+                    <div>
+                      <label>ĐỊA CHỈ</label>
+                      <span>{formData.address || "Chưa cập nhật"}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
-          {isEditing ? (
+          {isEditing && (
             <form onSubmit={handleSubmit} className="profile-form">
               <div className="form-row">
                 <div className="form-group">
@@ -1389,162 +1492,7 @@ const AdminProfile = ({ userInfo: initialUserInfo, onProfileUpdate }) => {
                 </button>
               </div>
             </form>
-          ) : (
-            <div className="profile-info-enhanced">
-              <div className="info-section">
-                <h4>Thông tin cơ bản</h4>
-                <div className="info-grid">
-                  <div className="info-item">
-                    <UserOutlined className="info-icon" />
-                    <div>
-                      <label>Họ và tên</label>
-                      <span>
-                        {formData.lastName} {formData.firstName}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="info-item">
-                    <MailOutlined className="info-icon" />
-                    <div>
-                      <label>Email</label>
-                      <span>{formData.email || "Chưa cập nhật"}</span>
-                    </div>
-                  </div>
-                  <div className="info-item">
-                    <PhoneOutlined className="info-icon" />
-                    <div>
-                      <label>Số điện thoại</label>
-                      <span>{formData.phone || "Chưa cập nhật"}</span>
-                    </div>
-                  </div>
-                  <div className="info-item">
-                    <UserOutlined className="info-icon" />
-                    <div>
-                      <label>Tên đăng nhập</label>
-                      <span>{formData.username || "Chưa cập nhật"}</span>
-                    </div>
-                  </div>
-                  <div className="info-item">
-                    <CalendarOutlined className="info-icon" />
-                    <div>
-                      <label>Ngày sinh</label>
-                      <span>
-                        {formData.dob
-                          ? new Date(formData.dob).toLocaleDateString("vi-VN")
-                          : "Chưa cập nhật"}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="info-item">
-                    <UserOutlined className="info-icon" />
-                    <div>
-                      <label>Giới tính</label>
-                      <span>
-                        {formData.gender === "M"
-                          ? "Nam"
-                          : formData.gender === "F"
-                          ? "Nữ"
-                          : "Chưa cập nhật"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <Divider />
-
-              <div className="info-section">
-                <h4>Thông tin công việc</h4>
-                <div className="info-grid">
-                  <div className="info-item">
-                    <SettingOutlined className="info-icon" />
-                    <div>
-                      <label>Vai trò</label>
-                      <span>Quản trị viên</span>
-                    </div>
-                  </div>
-                  <div className="info-item">
-                    <BankOutlined className="info-icon" />
-                    <div>
-                      <label>Chức vụ</label>
-                      <span>{formData.jobTitle || "Quản trị viên"}</span>
-                    </div>
-                  </div>
-                  <div className="info-item">
-                    <CalendarOutlined className="info-icon" />
-                    <div>
-                      <label>Ngày tạo tài khoản</label>
-                      <span>
-                        {adminProfile?.createdAt || adminProfile?.lastLogin
-                          ? new Date(
-                              adminProfile.createdAt || adminProfile.lastLogin
-                            ).toLocaleDateString("vi-VN")
-                          : "Chưa cập nhật"}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="info-item">
-                    <SettingOutlined className="info-icon" />
-                    <div>
-                      <label>Trạng thái</label>
-                      <Tag color="success">Hoạt động</Tag>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <Divider />
-
-              <div className="info-section">
-                <h4>Thông tin liên hệ</h4>
-                <div className="info-grid">
-                  <div className="info-item full-width">
-                    <HomeOutlined className="info-icon" />
-                    <div>
-                      <label>Địa chỉ</label>
-                      <span>{formData.address || "Chưa cập nhật"}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
           )}
-        </Card>
-
-        <Card
-          className="children-card"
-          title="Quyền hạn quản trị"
-          extra={<SettingOutlined />}
-          styles={{ body: { padding: "24px" } }}
-        >
-          <div className="permissions-list">
-            <div className="permission-item">
-              <TeamOutlined className="permission-icon" />
-              <div>
-                <h4>Quản lý người dùng</h4>
-                <p>Tạo, chỉnh sửa, xóa tài khoản người dùng trong hệ thống</p>
-                <Tag color="green">Có quyền</Tag>
-              </div>
-            </div>
-
-            <div className="permission-item">
-              <SettingOutlined className="permission-icon" />
-              <div>
-                <h4>Cài đặt hệ thống</h4>
-                <p>Thay đổi cấu hình và thiết lập hệ thống</p>
-                <Tag color="green">Có quyền</Tag>
-              </div>
-            </div>
-
-            <div className="permission-item">
-              <UserOutlined className="permission-icon" />
-              <div>
-                <h4>Quản lý hồ sơ</h4>
-                <p>Xem và chỉnh sửa hồ sơ của tất cả người dùng</p>
-                <Tag color="green">Có quyền</Tag>
-              </div>
-            </div>
-          </div>
         </Card>
       </div>
 
@@ -1666,6 +1614,7 @@ const SettingsManagement = () => {
           </div>
         </div>
       </div>
+
       <button
         className="btn-primary"
         onClick={handleSaveSettings}

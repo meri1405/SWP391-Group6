@@ -33,9 +33,11 @@
 }
 
 .profile-content {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  width: 100%;
 }
 
 /* Main Profile Card */
@@ -43,6 +45,7 @@
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   border: none;
+  width: 100%;
 }
 
 .profile-main-card .ant-card-head {
@@ -67,6 +70,17 @@
   align-items: center;
   text-align: center;
   margin-bottom: 24px;
+}
+
+/* Combined section for avatar and info */
+.profile-combined-section {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.profile-info-horizontal {
+  width: 100%;
 }
 
 .profile-avatar-large {
@@ -173,6 +187,22 @@
   gap: 32px;
 }
 
+/* Special layout for admin profile info */
+.admin-info-horizontal {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  padding: 0;
+}
+
+.admin-info-horizontal .info-item {
+  flex: 1;
+  min-width: calc(33.33% - 12px);
+  max-width: calc(33.33% - 12px);
+}
+
 .info-section h4 {
   margin: 0 0 20px 0;
   color: #374151;
@@ -183,9 +213,11 @@
 }
 
 .info-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 20px;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  width: 100%;
 }
 
 .info-item {
@@ -197,6 +229,9 @@
   border-radius: 8px;
   border: 1px solid #e2e8f0;
   transition: all 0.3s ease;
+  flex: 1;
+  min-width: 180px;
+  max-width: 300px;
 }
 
 .info-item:hover {
