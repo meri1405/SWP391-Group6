@@ -19,6 +19,7 @@ public class VaccinationHistoryDTO {
     private String administeredBy;
     private String notes;
     private boolean status;
+    private String source; // SCHOOL_ADMINISTERED or PARENT_REPORTED
     private Long healthProfileId;
     private Long ruleId;
 }

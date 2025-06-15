@@ -34,11 +34,15 @@ public class VaccinationHistory {
     private String placeOfVaccination;
 
     @Column(name = "administeredBy", nullable = true)
-    private String administeredBy;
+    private String administeredBy;    @Column(name = "notes", nullable = true)
+    private String notes;
 
-    @Column(name = "notes", nullable = true)
-    private String notes;    @Column(name = "status", nullable = false)
+    @Column(name = "status", nullable = false)
     private boolean status;
+
+    @Column(name = "source", nullable = false)
+    @Enumerated(EnumType.STRING)
+    private VaccinationSource source;
 
     @ManyToOne
     @JoinColumn(name = "healthProfileId", nullable = false)
@@ -47,5 +51,9 @@ public class VaccinationHistory {
     @ManyToOne
     @JoinColumn(name = "vaccinationRuleId", nullable = true)
     private VaccinationRule vaccinationRule;
+
+    public enum VaccinationSource {
+        SCHOOL_ADMINISTERED, PARENT_REPORTED
+    }
 
 }
