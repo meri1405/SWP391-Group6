@@ -34,7 +34,9 @@ public class VaccinationHistory {
     private String placeOfVaccination;
 
     @Column(name = "administeredBy", nullable = true)
-    private String administeredBy;    @Column(name = "notes", nullable = true)
+    private String administeredBy;
+
+    @Column(name = "notes", nullable = true)
     private String notes;
 
     @Column(name = "status", nullable = false)
