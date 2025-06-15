@@ -78,7 +78,7 @@
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 25px;
+  gap: 15px;
   justify-content: center;
 }
 
@@ -538,7 +538,7 @@
   }
 
   .nav-links {
-    gap: 10px;
+    gap: 8px;
   }
 
   .nav-link {

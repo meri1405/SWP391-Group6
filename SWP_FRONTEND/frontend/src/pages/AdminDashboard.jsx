@@ -2266,10 +2266,12 @@ const AdminDashboard = () => {
         style={{
           minHeight: "calc(100vh - 140px)",
           background: "#f4f6fb",
-          margin: "90px 20px 30px 20px",
+          margin: "90px 19px 30px 20px",
           borderRadius: "16px",
           overflow: "hidden",
           boxShadow: "0 4px 20px 0 rgba(0,0,0,0.08)",
+          position: "relative",
+          zIndex: 1,
         }}
       >
         <Sider
