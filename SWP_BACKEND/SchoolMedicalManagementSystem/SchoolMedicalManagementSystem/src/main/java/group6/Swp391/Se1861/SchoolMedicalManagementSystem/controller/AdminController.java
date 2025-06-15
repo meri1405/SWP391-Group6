@@ -2,6 +2,7 @@ package group6.Swp391.Se1861.SchoolMedicalManagementSystem.controller;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.UserRepository;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.SystemSettingsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -22,6 +23,9 @@ public class AdminController {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private SystemSettingsService systemSettingsService;
 
     /**
      * Get admin dashboard data
@@ -57,15 +61,38 @@ public class AdminController {
     }
 
     /**
+     * Get system settings (admin only)
+     */
+    @GetMapping("/settings")
+    public ResponseEntity<?> getSystemSettings() {
+        return ResponseEntity.ok(systemSettingsService.getAllSettings());
+    }
+
+    /**
      * Update system settings (admin only)
      */
     @PostMapping("/settings")
     public ResponseEntity<?> updateSystemSettings(@RequestBody Map<String, Object> settings) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("message", "System settings updated successfully");
-        response.put("updatedSettings", settings);
-        
-        return ResponseEntity.ok(response);
+        try {
+            // Log the received settings
+            System.out.println("Received settings update: " + settings);
+            
+            // Update settings using the service
+            systemSettingsService.updateSettings(settings);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "System settings updated successfully");
+            response.put("updatedSettings", systemSettingsService.getAllSettings());
+            response.put("success", true);
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("error", "Failed to update system settings");
+            errorResponse.put("message", e.getMessage());
+            return ResponseEntity.internalServerError().body(errorResponse);
+        }
     }
 
     /**
