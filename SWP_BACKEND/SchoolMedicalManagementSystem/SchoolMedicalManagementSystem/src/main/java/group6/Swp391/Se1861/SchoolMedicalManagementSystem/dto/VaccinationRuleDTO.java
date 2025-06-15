@@ -15,5 +15,6 @@ public class VaccinationRuleDTO {
     private int minAge;
     private int maxAge;
     private int intervalDays;
-    private boolean isMandatory;
+    private boolean mandatory;
+    private int activeCampaignsCount;
 }

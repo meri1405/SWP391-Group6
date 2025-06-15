@@ -208,7 +208,7 @@ const NurseHealthProfiles = () => {
       key: 'createdAt',
       render: (date) => (
         <div>
-          <div>{dayjs(date).format('DD/MM/YYYY HH:mm')}</div>
+          <div>{dayjs(date).format('DD/MM/YYYY')}</div>
           <div style={{ fontSize: '12px', color: '#666' }}>{dayjs(date).fromNow()}</div>
         </div>
       ),
