@@ -3,43 +3,49 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { parentApi } from "../api/parentApi";
 import webSocketService from "../services/webSocketService";
+import { useSystemSettings } from "../contexts/SystemSettingsContext";
 import "../styles/Navbar.css";
 
 const Navbar = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [notificationCount, setNotificationCount] = useState(0);  const [notifications, setNotifications] = useState([]);
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [notifications, setNotifications] = useState([]);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
   const navigate = useNavigate();
-  const { user, logout, isParent, isStaff, getToken } = useAuth();const location = useLocation();
+  const { user, logout, isParent, isStaff, getToken } = useAuth();
+  const { settings } = useSystemSettings();
+  const location = useLocation();
+
   // Refs for click outside detection
   const notificationRef = useRef(null);
-  const userDropdownRef = useRef(null);  const loadNotifications = useCallback(async () => {
+  const userDropdownRef = useRef(null);
+  const loadNotifications = useCallback(async () => {
     const token = getToken();
     if (!token) return;
-    
+
     try {
       setLoadingNotifications(true);
       // Load only 5 most recent notifications to show in dropdown
       const allData = await parentApi.getAllNotifications(token, 5);
       // Load unread notifications to get count
       const unreadData = await parentApi.getUnreadNotifications(token);
-      
+
       // Transform backend notifications to frontend format
-      const transformedNotifications = allData.map(notification => ({
+      const transformedNotifications = allData.map((notification) => ({
         id: notification.id,
         title: notification.title,
         text: notification.message,
         time: formatTimeAgo(notification.createdAt),
         icon: getNotificationIcon(notification),
-        read: notification.read
+        read: notification.read,
       }));
-      
+
       setNotifications(transformedNotifications);
       setNotificationCount(unreadData.length); // Only count unread notifications for badge
     } catch (error) {
-      console.error('Error loading notifications:', error);
+      console.error("Error loading notifications:", error);
       // Keep empty state if error
       setNotifications([]);
       setNotificationCount(0);
@@ -57,41 +63,48 @@ const Navbar = () => {
       if (!webSocketService.isConnected()) {
         await webSocketService.connect(token);
       }
-      
+
       // Add message handler for real-time notifications
-      webSocketService.addMessageHandler('navbar-notifications', (newNotification) => {
-        console.log('Received real-time notification in navbar:', newNotification);
-        
-        // Transform the new notification
-        const transformedNotification = {
-          id: newNotification.id,
-          title: newNotification.title,
-          text: newNotification.message,
-          time: 'Vừa xong',
-          icon: getNotificationIcon(newNotification),
-          read: false
-        };
-        
-        // Add new notification to the beginning of the list (keep max 5)
-        setNotifications(prev => [transformedNotification, ...prev].slice(0, 5));
-        setNotificationCount(prev => prev + 1);
-      });
-      
+      webSocketService.addMessageHandler(
+        "navbar-notifications",
+        (newNotification) => {
+          console.log(
+            "Received real-time notification in navbar:",
+            newNotification
+          );
+
+          // Transform the new notification
+          const transformedNotification = {
+            id: newNotification.id,
+            title: newNotification.title,
+            text: newNotification.message,
+            time: "Vừa xong",
+            icon: getNotificationIcon(newNotification),
+            read: false,
+          };
+
+          // Add new notification to the beginning of the list (keep max 5)
+          setNotifications((prev) =>
+            [transformedNotification, ...prev].slice(0, 5)
+          );
+          setNotificationCount((prev) => prev + 1);
+        }
+      );
     } catch (error) {
-      console.error('Error setting up WebSocket connection in navbar:', error);
+      console.error("Error setting up WebSocket connection in navbar:", error);
     }
   }, [getToken]);
 
   const getNotificationIcon = (notification) => {
     if (notification.medicationRequest || notification.medicationSchedule) {
-      return 'pills';
+      return "pills";
     }
-    return 'info-circle';
+    return "info-circle";
   };
 
   const formatTimeAgo = (dateString) => {
-    if (!dateString) return 'Không xác định';
-    
+    if (!dateString) return "Không xác định";
+
     const now = new Date();
     const notificationDate = new Date(dateString);
     const diffInMs = now - notificationDate;
@@ -100,14 +113,15 @@ const Navbar = () => {
     const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
 
     if (diffInMinutes < 1) {
-      return 'Vừa xong';
+      return "Vừa xong";
     } else if (diffInMinutes < 60) {
       return `${diffInMinutes} phút trước`;
     } else if (diffInHours < 24) {
       return `${diffInHours} giờ trước`;
     } else {
       return `${diffInDays} ngày trước`;
-    }  };
+    }
+  };
   // Remove the old useEffect that calculated unread count
   // This is now handled by the notification loading
 
@@ -117,11 +131,11 @@ const Navbar = () => {
       loadNotifications();
       setupWebSocketConnection();
     }
-    
+
     return () => {
       // Cleanup WebSocket when component unmounts
       if (webSocketService.isConnected()) {
-        webSocketService.removeMessageHandler('navbar-notifications');
+        webSocketService.removeMessageHandler("navbar-notifications");
       }
     };
   }, [isParent, user, loadNotifications, setupWebSocketConnection]);
@@ -197,38 +211,40 @@ const Navbar = () => {
     if (!showNotifications && notifications.length > 0) {
       // Mark unread notifications as read when opening dropdown
       try {
-        const unreadNotifications = notifications.filter(n => !n.read);        for (const notification of unreadNotifications) {
+        const unreadNotifications = notifications.filter((n) => !n.read);
+        for (const notification of unreadNotifications) {
           await parentApi.markNotificationAsRead(notification.id, getToken());
         }
-        
+
         // Update local state
-        const updatedNotifications = notifications.map(notification => ({
+        const updatedNotifications = notifications.map((notification) => ({
           ...notification,
           read: true,
         }));
         setNotifications(updatedNotifications);
         setNotificationCount(0);
       } catch (error) {
-        console.error('Error marking notifications as read:', error);
+        console.error("Error marking notifications as read:", error);
       }
     }
     setShowUserDropdown(false); // Close user dropdown when opening notifications
-  };  const handleNotificationClick = async (id) => {
+  };
+  const handleNotificationClick = async (id) => {
     try {
       // Mark the specific notification as read
       await parentApi.markNotificationAsRead(id, getToken());
-      
+
       // Update local notification state
       const updatedNotifications = notifications.map((notification) =>
         notification.id === id ? { ...notification, read: true } : notification
       );
       setNotifications(updatedNotifications);
-      
+
       // Reload unread count from server to ensure accuracy
       const unreadData = await parentApi.getUnreadNotifications(getToken());
       setNotificationCount(unreadData.length);
     } catch (error) {
-      console.error('Error marking notification as read:', error);
+      console.error("Error marking notification as read:", error);
     }
   };
 
@@ -240,7 +256,7 @@ const Navbar = () => {
           className={`navbar-logo${location.pathname === "/" ? " active" : ""}`}
         >
           <img src="/medical-logo.svg" alt="Logo" className="logo-img" />
-          <span>Y Tế Học Đường</span>
+          <span>{settings.systemName}</span>
         </Link>
 
         <div className="search-container">
@@ -288,7 +304,8 @@ const Navbar = () => {
             }`}
           >
             Giới thiệu
-          </Link>          {user ? (
+          </Link>{" "}
+          {user ? (
             <>
               {/* Show management button for all authenticated users */}
               <button
@@ -313,15 +330,18 @@ const Navbar = () => {
                         {notificationCount}
                       </span>
                     )}
-                  </button>                  {showNotifications && (
-                    <div className="notifications-dropdown">                      <div className="notifications-header">
+                  </button>{" "}
+                  {showNotifications && (
+                    <div className="notifications-dropdown">
+                      {" "}
+                      <div className="notifications-header">
                         <h4>Thông báo</h4>
                         <span className="notifications-count">
                           {notificationCount > 0
                             ? `${notificationCount} mới`
-                            : notifications.length > 0 
-                              ? "Xem thông báo gần đây"
-                              : "Không có thông báo"}
+                            : notifications.length > 0
+                            ? "Xem thông báo gần đây"
+                            : "Không có thông báo"}
                         </span>
                       </div>
                       <div className="notifications-list">
@@ -349,12 +369,15 @@ const Navbar = () => {
                               }}
                             >
                               <div className="notification-icon">
-                                <i className={`fas fa-${notification.icon}`}></i>
+                                <i
+                                  className={`fas fa-${notification.icon}`}
+                                ></i>
                               </div>
                               <div className="notification-content">
                                 <p className="notification-title">
                                   {notification.title}
-                                </p>                                <p className="notification-text">
+                                </p>{" "}
+                                <p className="notification-text">
                                   {notification.text}
                                 </p>
                                 <span className="notification-time">
@@ -414,15 +437,16 @@ const Navbar = () => {
                       </div>
                       <div className="user-email">{user.email}</div>
                     </div>
-                    <div className="dropdown-divider"></div>                    <Link
+                    <div className="dropdown-divider"></div>{" "}
+                    <Link
                       to={
                         isParent()
                           ? "/parent-dashboard?tab=profile"
                           : user?.roleName === "MANAGER"
-                            ? "/manager-dashboard?tab=profile"
-                            : user?.roleName === "SCHOOLNURSE"
-                              ? "/nurse-dashboard?tab=profile"
-                              : "/admin/dashboard?tab=profile"
+                          ? "/manager-dashboard?tab=profile"
+                          : user?.roleName === "SCHOOLNURSE"
+                          ? "/nurse-dashboard?tab=profile"
+                          : "/admin/dashboard?tab=profile"
                       }
                       className="dropdown-item"
                       onClick={() => setShowUserDropdown(false)}

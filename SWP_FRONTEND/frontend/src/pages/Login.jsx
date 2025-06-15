@@ -1,13 +1,19 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { useSystemSettings } from "../contexts/SystemSettingsContext";
 import {
   API_ENDPOINTS,
   API_BASE_URL,
   logCorsInfo,
   isDevelopment,
 } from "../utils/api";
-import { sendOTP, verifyOTP, cleanupRecaptcha, initializeFirebase } from "../utils/firebase";
+import {
+  sendOTP,
+  verifyOTP,
+  cleanupRecaptcha,
+  initializeFirebase,
+} from "../utils/firebase";
 import "../styles/Login.css";
 
 const Login = () => {
@@ -29,6 +35,7 @@ const Login = () => {
 
   const { login } = useAuth();
   const navigate = useNavigate();
+  const { settings } = useSystemSettings();
   // Check for OAuth2 error messages from URL parameters
   useEffect(() => {
     const error = searchParams.get("error");
@@ -59,7 +66,7 @@ const Login = () => {
     try {
       // Initialize Firebase first
       await initializeFirebase();
-      
+
       // Try Firebase first for OTP sending
       try {
         console.log("Attempting to send OTP via Firebase to:", phoneNumber);
@@ -68,8 +75,11 @@ const Login = () => {
         setShowOtp(true);
         console.log("Firebase OTP sent successfully to", phoneNumber);
       } catch (firebaseError) {
-        console.log("Firebase OTP failed, falling back to backend:", firebaseError);
-        
+        console.log(
+          "Firebase OTP failed, falling back to backend:",
+          firebaseError
+        );
+
         // Fallback to backend OTP generation
         if (isDevelopment) {
           logCorsInfo(API_ENDPOINTS.auth.requestOtp);
@@ -144,7 +154,7 @@ const Login = () => {
 
     try {
       let firebaseIdToken = null;
-      
+
       // Try Firebase OTP verification first if we have a confirmation result
       if (confirmationResult) {
         try {
@@ -153,22 +163,25 @@ const Login = () => {
           firebaseIdToken = firebaseResult.idToken;
           console.log("Firebase OTP verification successful");
         } catch (firebaseError) {
-          console.log("Firebase OTP verification failed, falling back to backend:", firebaseError);
+          console.log(
+            "Firebase OTP verification failed, falling back to backend:",
+            firebaseError
+          );
         }
       }
 
       // Use Firebase verification endpoint if we have a token, otherwise use regular endpoint
-      const endpoint = firebaseIdToken ? 
-        API_ENDPOINTS.auth.verifyFirebaseOtp : 
-        API_ENDPOINTS.auth.verifyOtp;
+      const endpoint = firebaseIdToken
+        ? API_ENDPOINTS.auth.verifyFirebaseOtp
+        : API_ENDPOINTS.auth.verifyOtp;
 
       if (isDevelopment) {
         logCorsInfo(endpoint);
       }
 
-      const requestBody = firebaseIdToken ? 
-        { phoneNumber, firebaseIdToken, otp } : 
-        { phoneNumber, otp };
+      const requestBody = firebaseIdToken
+        ? { phoneNumber, firebaseIdToken, otp }
+        : { phoneNumber, otp };
 
       // API call to verify OTP and login
       const response = await fetch(endpoint, {
@@ -406,7 +419,7 @@ const Login = () => {
         <div className="logo-container">
           <img src="/medical-logo.svg" alt="Medical Logo" className="logo" />
         </div>
-        <h1>Hệ Thống Quản Lý Y Tế Học Đường</h1>
+        <h1>{settings.systemName}</h1>
         <p className="subtitle">
           Đăng nhập để truy cập hệ thống quản lý y tế học đường
         </p>
@@ -466,7 +479,8 @@ const Login = () => {
                 </button>
                 <button
                   type="button"
-                  className="back-button"                  onClick={() => {
+                  className="back-button"
+                  onClick={() => {
                     setShowOtp(false);
                     setErrors({});
                     cleanupRecaptcha();
@@ -479,7 +493,6 @@ const Login = () => {
               </form>
             )}
           </div>
-
           {/* Username/Password Login Column */}
           <div className="login-column">
             <div className="column-icon">
@@ -543,7 +556,8 @@ const Login = () => {
                 )}
               </div>
             </form>
-          </div>        </div>
+          </div>{" "}
+        </div>
       </div>
       {/* reCAPTCHA container for Firebase */}
       <div id="recaptcha-container"></div>

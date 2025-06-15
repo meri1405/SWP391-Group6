@@ -298,6 +298,31 @@ export const getSystemStats = async () => {
 
 // ==================== SYSTEM MANAGEMENT APIs ====================
 
+// Get public system information (no authentication required)
+export const getPublicSystemInfo = async () => {
+  try {
+    console.log("Fetching public system info...");
+
+    const response = await fetch(`${API_BASE_URL}/public/system-info`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log("Public system info received:", data);
+    return data;
+  } catch (error) {
+    console.error("Error fetching public system info:", error);
+    throw error;
+  }
+};
+
 // Get system settings
 export const getSystemSettings = async () => {
   try {
@@ -327,7 +352,7 @@ export const updateSystemSettings = async (settingsData) => {
     console.log("Updating system settings:", settingsData);
 
     const response = await fetch(`${API_BASE_URL}/admin/settings`, {
-      method: "PUT",
+      method: "POST",
       headers: getAuthHeaders(),
       body: JSON.stringify(settingsData),
     });

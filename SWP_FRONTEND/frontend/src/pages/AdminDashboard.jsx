@@ -50,6 +50,7 @@ import {
   getAdminProfile,
   updateAdminProfile,
 } from "../api/adminApi";
+import { useSystemSettings } from "../contexts/SystemSettingsContext";
 
 const { Header, Sider, Content } = Layout;
 
@@ -957,7 +958,7 @@ const UserManagement = ({
 };
 
 // Admin Profile Component - moved outside main component
-const AdminProfile = ({ userInfo: initialUserInfo }) => {
+const AdminProfile = ({ userInfo: initialUserInfo, onProfileUpdate }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(null);
@@ -1098,6 +1099,11 @@ const AdminProfile = ({ userInfo: initialUserInfo }) => {
 
       // Update local state with new data
       setAdminProfile(updatedProfile);
+
+      // Notify parent component to refresh user list
+      if (onProfileUpdate) {
+        onProfileUpdate(updatedProfile);
+      }
 
       message.success("Cập nhật thông tin thành công!");
       setIsEditing(false);
@@ -1550,41 +1556,121 @@ const AdminProfile = ({ userInfo: initialUserInfo }) => {
 };
 
 // Settings Management Component - moved outside main component
-const SettingsManagement = () => (
-  <div className="settings-management">
-    <h2>Cài đặt hệ thống</h2>
-    <div className="settings-sections">
-      <div className="settings-section">
-        <h3>Cài đặt chung</h3>
-        <div className="setting-item">
-          <label>Tên hệ thống</label>
-          <input type="text" defaultValue="Hệ Thống Quản Lý Y Tế Học Đường" />
-        </div>
-        <div className="setting-item">
-          <label>Email liên hệ</label>
-          <input type="email" defaultValue="admin@school-health.com" />
-        </div>
-      </div>
+const SettingsManagement = () => {
+  const { settings, updateSettings, loading } = useSystemSettings();
+  const [formData, setFormData] = useState({
+    systemName: "",
+    contactEmail: "",
+    twoFactorAuth: false,
+    activityLogging: false,
+  });
+  const [saving, setSaving] = useState(false);
 
-      <div className="settings-section">
-        <h3>Cài đặt bảo mật</h3>
-        <div className="setting-item">
-          <label>
-            <input type="checkbox" defaultChecked />
-            Yêu cầu xác thực 2 bước
-          </label>
+  // Initialize form with current settings
+  useEffect(() => {
+    setFormData({
+      systemName: settings.systemName || "",
+      contactEmail: settings.contactEmail || "",
+      twoFactorAuth: settings.twoFactorAuth || false,
+      activityLogging: settings.activityLogging || false,
+    });
+  }, [settings]);
+
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  };
+
+  const handleSaveSettings = async () => {
+    try {
+      setSaving(true);
+      const result = await updateSettings(formData);
+
+      if (result.success) {
+        message.success("Cài đặt hệ thống đã được cập nhật thành công!");
+      } else {
+        message.error(
+          "Có lỗi xảy ra khi cập nhật cài đặt: " +
+            (result.error || "Lỗi không xác định")
+        );
+      }
+    } catch (error) {
+      console.error("Error saving settings:", error);
+      message.error("Có lỗi xảy ra khi lưu cài đặt");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="settings-management">
+      <h2>Cài đặt hệ thống</h2>
+      <div className="settings-sections">
+        <div className="settings-section">
+          <h3>Cài đặt chung</h3>
+          <div className="setting-item">
+            <label>Tên hệ thống</label>
+            <input
+              type="text"
+              name="systemName"
+              value={formData.systemName}
+              onChange={handleInputChange}
+              disabled={loading || saving}
+            />
+          </div>
+          <div className="setting-item">
+            <label>Email liên hệ</label>
+            <input
+              type="email"
+              name="contactEmail"
+              value={formData.contactEmail}
+              onChange={handleInputChange}
+              disabled={loading || saving}
+            />
+          </div>
         </div>
-        <div className="setting-item">
-          <label>
-            <input type="checkbox" defaultChecked />
-            Ghi log hoạt động
-          </label>
+
+        <div className="settings-section">
+          <h3>Cài đặt bảo mật</h3>
+          <div className="setting-item">
+            <label>
+              <input
+                type="checkbox"
+                name="twoFactorAuth"
+                checked={formData.twoFactorAuth}
+                onChange={handleInputChange}
+                disabled={loading || saving}
+              />
+              Yêu cầu xác thực 2 bước
+            </label>
+          </div>
+          <div className="setting-item">
+            <label>
+              <input
+                type="checkbox"
+                name="activityLogging"
+                checked={formData.activityLogging}
+                onChange={handleInputChange}
+                disabled={loading || saving}
+              />
+              Ghi log hoạt động
+            </label>
+          </div>
         </div>
       </div>
+      <button
+        className="btn-primary"
+        onClick={handleSaveSettings}
+        disabled={loading || saving}
+      >
+        {saving ? "Đang lưu..." : "Lưu cài đặt"}
+      </button>
     </div>
-    <button className="btn-primary">Lưu cài đặt</button>
-  </div>
-);
+  );
+};
 
 const AdminDashboard = () => {
   const [activeSection, setActiveSection] = useState("users");
@@ -1660,41 +1746,42 @@ const AdminDashboard = () => {
 
   const { user, isAuthenticated, isStaff } = useAuth();
 
+  // Function to fetch/refresh users data
+  const fetchUsers = async () => {
+    if (isAuthenticated && isStaff()) {
+      try {
+        setLoading(true);
+        const data = await getAllUsers();
+
+        // Ensure data is an array
+        const usersArray = Array.isArray(data) ? data : [];
+        setUsers(usersArray);
+
+        // Calculate stats
+        const totalUsers = usersArray.length;
+        const totalParents = usersArray.filter(
+          (u) => u.roleName === "PARENT"
+        ).length;
+        const totalStudents = usersArray.filter(
+          (u) => u.roleName === "STUDENT"
+        ).length;
+
+        setStats({
+          totalUsers,
+          totalParents,
+          totalStudents,
+        });
+        setLoading(false);
+      } catch (error) {
+        console.error("Failed to fetch users:", error);
+        message.error("Không thể tải danh sách người dùng");
+        setLoading(false);
+      }
+    }
+  };
+
   // Load users from API
   useEffect(() => {
-    const fetchUsers = async () => {
-      if (isAuthenticated && isStaff()) {
-        try {
-          setLoading(true);
-          const data = await getAllUsers();
-
-          // Ensure data is an array
-          const usersArray = Array.isArray(data) ? data : [];
-          setUsers(usersArray);
-
-          // Calculate stats
-          const totalUsers = usersArray.length;
-          const totalParents = usersArray.filter(
-            (u) => u.roleName === "PARENT"
-          ).length;
-          const totalStudents = usersArray.filter(
-            (u) => u.roleName === "STUDENT"
-          ).length;
-
-          setStats({
-            totalUsers,
-            totalParents,
-            totalStudents,
-          });
-          setLoading(false);
-        } catch (error) {
-          console.error("Failed to fetch users:", error);
-          message.error("Không thể tải danh sách người dùng");
-          setLoading(false);
-        }
-      }
-    };
-
     fetchUsers();
   }, [isAuthenticated, isStaff]);
 
@@ -1818,6 +1905,20 @@ const AdminDashboard = () => {
     }, 100);
 
     console.log("Role-specific fields initialized for:", newRole);
+  };
+
+  // Handle profile update callback
+  const handleProfileUpdate = async (updatedProfile) => {
+    console.log("Profile updated, refreshing user list...", updatedProfile);
+
+    // Update userInfo state with new profile data
+    setUserInfo((prev) => ({
+      ...prev,
+      ...updatedProfile,
+    }));
+
+    // Refresh the user list to show updated admin info
+    await fetchUsers();
   };
 
   const openAddUserModal = () => {
@@ -2084,7 +2185,12 @@ const AdminDashboard = () => {
           />
         );
       case "profile":
-        return <AdminProfile userInfo={userInfo} />;
+        return (
+          <AdminProfile
+            userInfo={userInfo}
+            onProfileUpdate={handleProfileUpdate}
+          />
+        );
       case "settings":
         return <SettingsManagement />;
       default:
