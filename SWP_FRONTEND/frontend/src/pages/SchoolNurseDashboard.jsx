@@ -30,6 +30,7 @@ import {
 import NurseMedicationRequests from '../components/dashboard/NurseMedicationRequests';
 import NurseMedicationSchedules from '../components/dashboard/NurseMedicationSchedules';
 import VaccinationRuleManagement from '../components/dashboard/VaccinationRuleManagement';
+import MedicalSupplyInventory from '../components/dashboard/MedicalSupplyInventory';
 // Import nurseApi
 import { nurseApi } from '../api/nurseApi';
 import {
@@ -105,6 +106,11 @@ const SchoolNurseDashboard = () => {
       key: 'inventory',
       icon: <InboxOutlined />,
       label: 'Giám sát tồn kho',
+    },
+    {
+      key: 'restock-requests',
+      icon: <MailOutlined />,
+      label: 'Yêu cầu bổ sung vật tư',
     },
     {
       key: 'vaccination',
@@ -203,7 +209,7 @@ const SchoolNurseDashboard = () => {
   useEffect(() => {
     const tabParam = searchParams.get('tab');
     if (tabParam) {
-      const validTabs = ['dashboard', 'medication-requests', 'medication-schedules', 'medical-events', 'inventory', 'vaccination', 'vaccination-rule-management', 'health-check', 'health-records', 'blog-management', 'school-health', 'profile'];
+      const validTabs = ['dashboard', 'medication-requests', 'medication-schedules', 'medical-events', 'inventory', 'restock-requests', 'vaccination', 'vaccination-rule-management', 'health-check', 'health-records', 'blog-management', 'school-health', 'profile'];
       if (validTabs.includes(tabParam)) {
         setActiveSection(tabParam);
       } else {
@@ -1193,66 +1199,7 @@ const SchoolNurseDashboard = () => {
     </div>
   );
 
-  const Inventory = () => (
-    <div className="nurse-content-card">
-      <h2 className="nurse-section-title">Giám sát tồn kho và vật tư y tế</h2>
-      <div className="nurse-action-buttons">
-        <button className="nurse-btn-primary">
-          <InboxOutlined /> Yêu cầu nhập thêm
-        </button>
-      </div>
-
-      <div className="nurse-search-filters">
-        <input
-          type="text"
-          placeholder="Tìm kiếm vật tư/thuốc..."
-          className="nurse-search-input"
-        />
-        <select className="nurse-filter-select">
-          <option value="all">Tất cả danh mục</option>
-          <option value="medicine">Thuốc</option>
-          <option value="supplies">Vật tư y tế</option>
-          <option value="equipment">Thiết bị</option>
-        </select>
-      </div>
-
-      <div className="nurse-table-container">
-        <table className="nurse-data-table">
-          <thead>
-            <tr>
-              <th>Mã SP</th>
-              <th>Tên sản phẩm</th>
-              <th>Danh mục</th>
-              <th>Số lượng tồn</th>
-              <th>Đơn vị</th>
-              <th>Hạn sử dụng</th>
-              <th>Trạng thái</th>
-              <th>Thao tác</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>MED123</td>
-              <td>Paracetamol 500mg</td>
-              <td>Thuốc</td>
-              <td>150</td>
-              <td>Viên</td>
-              <td>12/2024</td>
-              <td>
-                <span className="nurse-status approved">Bình thường</span>
-              </td>
-              <td>
-                <div className="nurse-table-actions">
-                  <button className="nurse-btn-action view">Chi tiết</button>
-                  <button className="nurse-btn-action edit">Nhập thêm</button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
+  const Inventory = () => <MedicalSupplyInventory />;
 
   // Placeholder components cho các sections chưa hoàn thành
   const Vaccination = () => (
@@ -1285,6 +1232,49 @@ const SchoolNurseDashboard = () => {
     </div>
   );
 
+  // Component cho trang yêu cầu bổ sung vật tư
+  const RestockRequests = () => {
+    // Sử dụng React.lazy để import động component
+    const [RestockRequestListComponent, setRestockRequestListComponent] = React.useState(null);
+    const [loading, setLoading] = React.useState(true);
+    
+    React.useEffect(() => {
+      // Import động sử dụng ES6 import()
+      import('../components/dashboard/RestockRequestList')
+        .then(module => {
+          setRestockRequestListComponent(() => module.default);
+          setLoading(false);
+        })
+        .catch(error => {
+          console.error('Error loading RestockRequestList:', error);
+          setLoading(false);
+        });
+    }, []);
+    
+    if (loading) {
+      return (
+        <div className="nurse-content-card" style={{ textAlign: 'center', padding: '20px' }}>
+          <Spin size="large" />
+          <p style={{ marginTop: '10px' }}>Đang tải danh sách yêu cầu...</p>
+        </div>
+      );
+    }
+    
+    if (!RestockRequestListComponent) {
+      return (
+        <div className="nurse-content-card">
+          <p>Không thể tải component. Vui lòng thử lại sau.</p>
+        </div>
+      );
+    }
+    
+    return (
+      <div className="nurse-content-card">
+        <RestockRequestListComponent />
+      </div>
+    );
+  };
+  
   const renderContent = () => {
     console.log('Rendering content for section:', activeSection);
     
@@ -1299,6 +1289,8 @@ const SchoolNurseDashboard = () => {
         return <MedicalEvents />;
       case "inventory":
         return <Inventory />;
+      case "restock-requests":
+        return <RestockRequests />;
       case "vaccination":
         return <Vaccination />;
       case "vaccination-rule-management":

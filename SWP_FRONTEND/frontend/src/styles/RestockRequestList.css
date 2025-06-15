@@ -1,0 +1,79 @@
+.restock-request-list .ant-table-tbody > tr.ant-table-row:hover > td {
+  background-color: rgba(24, 144, 255, 0.1);
+}
+
+.restock-request-list .ant-card {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+}
+
+.restock-request-list .ant-card-head {
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.restock-request-list .ant-table {
+  background: #fff;
+  border-radius: 8px;
+}
+
+.restock-request-list .ant-pagination {
+  margin-top: 16px;
+}
+
+/* Status tag styles */
+.restock-request-list .ant-tag-blue {
+  background-color: #e6f7ff;
+  border-color: #91d5ff;
+  color: #1890ff;
+}
+
+.restock-request-list .ant-tag-green {
+  background-color: #f6ffed;
+  border-color: #b7eb8f;
+  color: #52c41a;
+}
+
+.restock-request-list .ant-tag-red {
+  background-color: #fff1f0;
+  border-color: #ffa39e;
+  color: #f5222d;
+}
+
+.restock-request-list .ant-tag-orange {
+  background-color: #fff7e6;
+  border-color: #ffd591;
+  color: #fa8c16;
+}
+
+/* Expanded row styles */
+.restock-request-list .ant-table-expanded-row .ant-table {
+  margin: 16px 0;
+  background-color: #fafafa;
+}
+
+.restock-request-list .ant-table-expanded-row .ant-table-thead > tr > th {
+  background-color: #f5f5f5;
+  font-weight: 500;
+}
+
+/* Filter and search bar styles */
+.restock-request-list .ant-input-affix-wrapper {
+  border-radius: 4px;
+}
+
+.restock-request-list .ant-select-selector {
+  border-radius: 4px !important;
+}
+
+.restock-request-list .ant-btn {
+  border-radius: 4px;
+}
+
+/* Empty state styles */
+.restock-request-list .ant-empty-normal {
+  margin: 32px 0;
+}
+
+.restock-request-list .ant-empty-description {
+  color: #8c8c8c;
+} 
