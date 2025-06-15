@@ -255,7 +255,8 @@ public class ParentController {
     public ResponseEntity<?> getAllChildrenMedicationSchedules(
             @AuthenticationPrincipal User parent,
             @RequestParam(required = false) String date,
-            @RequestParam(required = false) String status) {        try {
+            @RequestParam(required = false) String status) {
+        try {
             // Get all students of this parent
             List<Student> parentStudents = studentRepository.findByParent(parent);
 

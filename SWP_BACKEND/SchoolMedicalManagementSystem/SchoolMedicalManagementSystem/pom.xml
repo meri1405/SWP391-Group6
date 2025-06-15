@@ -75,7 +75,8 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-aop</artifactId>
-		</dependency>		<!-- Firebase Admin SDK for phone authentication -->
+		</dependency>
+		<!-- Firebase Admin SDK for phone authentication -->
 		<dependency>
 			<groupId>com.google.firebase</groupId>
 			<artifactId>firebase-admin</artifactId>

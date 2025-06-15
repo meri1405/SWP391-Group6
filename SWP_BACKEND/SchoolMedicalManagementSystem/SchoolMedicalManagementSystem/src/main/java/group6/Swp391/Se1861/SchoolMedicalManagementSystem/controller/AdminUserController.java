@@ -1,6 +1,5 @@
 package group6.Swp391.Se1861.SchoolMedicalManagementSystem.controller;
 
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.config.AdminOnly;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.UserCreationDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IAuthService;
@@ -27,7 +26,6 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/api/admin/users")
-@AdminOnly(message = "Yêu cầu quyền Admin để thực hiện các thao tác quản lý người dùng")
 public class AdminUserController {
 
     private final IAuthService authService;
@@ -245,7 +243,3 @@ public class AdminUserController {
         }
     }
 }
-
-
-
-

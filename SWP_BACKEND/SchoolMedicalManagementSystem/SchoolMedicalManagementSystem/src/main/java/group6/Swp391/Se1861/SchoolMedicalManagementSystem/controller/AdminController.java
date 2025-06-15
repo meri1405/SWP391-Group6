@@ -1,4 +1,4 @@
-package group6.Swp391.Se1861.SchoolMedicalManagementSystem.config;
+package group6.Swp391.Se1861.SchoolMedicalManagementSystem.controller;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.UserRepository;
