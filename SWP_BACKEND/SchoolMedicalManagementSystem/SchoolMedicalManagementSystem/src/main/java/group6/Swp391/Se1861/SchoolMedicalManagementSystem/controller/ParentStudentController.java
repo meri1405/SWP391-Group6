@@ -2,7 +2,8 @@ package group6.Swp391.Se1861.SchoolMedicalManagementSystem.controller;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.StudentDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.StudentService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IStudentService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl.StudentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,7 +21,7 @@ import java.util.Map;
 public class ParentStudentController {
 
     @Autowired
-    private StudentService studentService;
+    private IStudentService studentService;
 
     /**
      * Get all students associated with the authenticated parent

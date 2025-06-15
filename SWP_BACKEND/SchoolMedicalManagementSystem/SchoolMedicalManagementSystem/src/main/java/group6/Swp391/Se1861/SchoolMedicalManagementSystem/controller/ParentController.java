@@ -7,7 +7,8 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.Medication
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.UserRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.StudentRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.MedicationScheduleRepository;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.MedicationScheduleService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IMedicationScheduleService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl.MedicationScheduleService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -49,7 +50,7 @@ public class ParentController {
     private MedicationScheduleRepository medicationScheduleRepository;
     
     @Autowired
-    private MedicationScheduleService medicationScheduleService;
+    private IMedicationScheduleService medicationScheduleService;
 
     /**
      * Lấy thông tin hồ sơ phụ huynh
@@ -254,7 +255,8 @@ public class ParentController {
     public ResponseEntity<?> getAllChildrenMedicationSchedules(
             @AuthenticationPrincipal User parent,
             @RequestParam(required = false) String date,
-            @RequestParam(required = false) String status) {        try {
+            @RequestParam(required = false) String status) {
+        try {
             // Get all students of this parent
             List<Student> parentStudents = studentRepository.findByParent(parent);
 

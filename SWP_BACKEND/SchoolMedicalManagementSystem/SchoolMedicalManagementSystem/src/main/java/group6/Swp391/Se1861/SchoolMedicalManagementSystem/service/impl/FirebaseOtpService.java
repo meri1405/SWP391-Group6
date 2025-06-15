@@ -1,11 +1,12 @@
-package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service;
+package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl;
 
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
-import com.google.firebase.auth.UserRecord;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.exception.AuthenticationException;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.UserRepository;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IFirebaseOtpService;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,7 +22,7 @@ import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
-public class FirebaseOtpService {
+public class FirebaseOtpService implements IFirebaseOtpService {
     private static final Logger logger = LoggerFactory.getLogger(FirebaseOtpService.class);
 
     @Value("${app.firebase.project-id:}")
@@ -83,6 +84,7 @@ public class FirebaseOtpService {
      * Generate and prepare OTP for a parent based on phone number
      * Note: This generates OTP locally since Firebase Auth requires client-side verification
      */
+    @Override
     public boolean generateAndSendOtp(String phoneNumber) {
         logger.info("Starting OTP generation for phone number: {}", phoneNumber);
         
@@ -103,7 +105,7 @@ public class FirebaseOtpService {
             // If still not found, throw exception
             if (!userOptional.isPresent()) {
                 logger.error("No user found with phone number: {} or {}", formattedPhoneNumber, phoneNumber);
-                throw new BadCredentialsException("No user found with this phone number");
+                throw new AuthenticationException("No user found with this phone number");
             }
 
             User user = userOptional.get();
@@ -112,7 +114,7 @@ public class FirebaseOtpService {
             // Verify the user is a parent (strict uppercase checking)
             if (!"PARENT".equals(user.getRole().getRoleName())) {
                 logger.warn("Non-parent user attempted OTP authentication: {}", user.getPhone());
-                throw new BadCredentialsException("Only parents can use OTP authentication");
+                throw new AuthenticationException("Only parents can use OTP authentication");
             }
 
             // Generate 6-digit OTP
@@ -136,6 +138,8 @@ public class FirebaseOtpService {
     /**
      * Verify OTP
      */
+
+    @Override
     public boolean verifyOtp(String phoneNumber, String otp) {
         logger.info("Verifying OTP for phone number: {}", phoneNumber);
         
@@ -156,7 +160,7 @@ public class FirebaseOtpService {
             // If still not found, throw exception
             if (!userOptional.isPresent()) {
                 logger.error("No user found with phone number: {} or {}", formattedPhoneNumber, phoneNumber);
-                throw new BadCredentialsException("Invalid phone number");
+                throw new AuthenticationException("Invalid phone number");
             }
 
             User user = userOptional.get();
@@ -190,6 +194,8 @@ public class FirebaseOtpService {
     /**
      * Verify Firebase ID token (for frontend verification)
      */
+
+    @Override
     public boolean verifyFirebaseToken(String idToken, String phoneNumber) {
         try {
             if (firebaseAuth == null) {
@@ -218,6 +224,8 @@ public class FirebaseOtpService {
     /**
      * Clear expired OTPs from memory
      */
+
+    @Override
     public void clearExpiredOtps() {
         LocalDateTime now = LocalDateTime.now();
         otpStore.entrySet().removeIf(entry -> {
@@ -229,6 +237,8 @@ public class FirebaseOtpService {
     /**
      * Get Firebase Web API Key for frontend
      */
+
+    @Override
     public String getWebApiKey() {
         return firebaseWebApiKey;
     }

@@ -4,6 +4,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.domain.AuditorAware;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Optional;
 
@@ -13,8 +17,26 @@ public class AuditingConfig {
 
     @Bean
     public AuditorAware<String> auditorProvider() {
-        // For simplicity, we're returning a fixed value
-        // In a real application, you'd return the current user's username
-        return () -> Optional.of("System");
+        return () -> {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+            if (authentication == null || !authentication.isAuthenticated() ||
+                    authentication instanceof AnonymousAuthenticationToken) {
+                return Optional.of("System");
+            }
+
+            // Lấy thông tin người dùng từ Authentication object
+            Object principal = authentication.getPrincipal();
+
+            if (principal instanceof UserDetails) {
+                return Optional.of(((UserDetails) principal).getUsername());
+            } else if (principal instanceof String) {
+                return Optional.of((String) principal);
+            }
+
+            // Fallback nếu không thể xác định người dùng
+            return Optional.of(authentication.getName());
+        };
     }
 }
+

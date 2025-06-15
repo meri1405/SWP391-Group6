@@ -1,4 +1,4 @@
-package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service;
+package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -12,22 +12,20 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.*;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.ItemRequestRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.MedicationRequestRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.StudentRepository;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IMedicationRequestService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.DateTimeException;
-import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class MedicationRequestService {
+public class MedicationRequestService implements IMedicationRequestService {
 
     private final MedicationRequestRepository medicationRequestRepository;
     private final StudentRepository studentRepository;
@@ -41,6 +39,7 @@ public class MedicationRequestService {
      * @return the created medication request
      */
     @Transactional
+    @Override
     public MedicationRequestDTO createMedicationRequest(MedicationRequestDTO medicationRequestDTO, User parent) {
         // Verify the student belongs to the parent
         Long studentId = medicationRequestDTO.getStudentId();
@@ -116,6 +115,7 @@ public class MedicationRequestService {
      * @param parent the authenticated parent user
      * @return list of medication requests
      */
+    @Override
     public List<MedicationRequestDTO> getParentMedicationRequests(User parent) {
         List<MedicationRequest> requests = medicationRequestRepository.findByParent(parent);
         return requests.stream()
@@ -127,6 +127,7 @@ public class MedicationRequestService {
      * @param parent the authenticated parent user
      * @return the medication request
      */
+    @Override
     public MedicationRequestDTO getMedicationRequest(Long requestId, User parent) {
         MedicationRequest request = medicationRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Medication request not found with id: " + requestId));
@@ -145,7 +146,9 @@ public class MedicationRequestService {
      * @param requestId the request ID
      * @param nurse the nurse approving the request
      * @return the updated medication request
-     */    @Transactional
+     */
+    @Transactional
+    @Override
     public MedicationRequestDTO approveMedicationRequest(Long requestId, User nurse, String nurseNote) {
         MedicationRequest request = medicationRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Medication request not found with id: " + requestId));
@@ -167,7 +170,9 @@ public class MedicationRequestService {
      * @param nurse the nurse rejecting the request
      * @param note rejection reason
      * @return the updated medication request
-     */    @Transactional
+     */
+    @Transactional
+    @Override
     public MedicationRequestDTO rejectMedicationRequest(Long requestId, User nurse, String note) {
         MedicationRequest request = medicationRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Medication request not found with id: " + requestId));
@@ -187,6 +192,7 @@ public class MedicationRequestService {
      * Get all pending medication requests for nurse review
      * @return list of pending medication requests
      */
+    @Override
     public List<MedicationRequestDTO> getPendingMedicationRequests() {
         List<MedicationRequest> requests = medicationRequestRepository.findByStatus("PENDING");
         return requests.stream()
@@ -198,6 +204,7 @@ public class MedicationRequestService {
      * @return number of auto-rejected requests
      */
     @Transactional
+    @Override
     public int autoRejectExpiredRequests() {
         LocalDateTime cutoffDateTime = LocalDateTime.now().minusHours(24);
         LocalDate cutoffDate = cutoffDateTime.toLocalDate();
@@ -239,7 +246,10 @@ public class MedicationRequestService {
      * @return the updated medication request
      */
     @Transactional
-    public MedicationRequestDTO updateMedicationRequest(Long requestId, MedicationRequestDTO medicationRequestDTO, User parent) {
+    @Override
+    public MedicationRequestDTO updateMedicationRequest(Long requestId,
+                                                        MedicationRequestDTO medicationRequestDTO,
+                                                        User parent) {
         // Find the medication request
         MedicationRequest request = medicationRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Medication request not found with id: " + requestId));
@@ -337,6 +347,7 @@ public class MedicationRequestService {
      * @param parent the authenticated parent user
      */
     @Transactional
+    @Override
     public void deleteMedicationRequest(Long requestId, User parent) {
         // Find the medication request
         MedicationRequest request = medicationRequestRepository.findById(requestId)
@@ -368,7 +379,8 @@ public class MedicationRequestService {
      * @param request the medication request entity
      * @return the DTO representation
      */
-    private MedicationRequestDTO convertToDTO(MedicationRequest request) {
+    @Override
+    public MedicationRequestDTO convertToDTO(MedicationRequest request) {
         MedicationRequestDTO dto = new MedicationRequestDTO();
         dto.setId(request.getId());
         dto.setRequestDate(request.getRequestDate());
@@ -410,7 +422,8 @@ public class MedicationRequestService {
      * @param request the medication request entity
      * @return the DTO representation with schedule times
      */
-    private MedicationRequestDTO convertToDTOWithScheduleTimes(MedicationRequest request) {
+    @Override
+    public MedicationRequestDTO convertToDTOWithScheduleTimes(MedicationRequest request) {
         MedicationRequestDTO dto = new MedicationRequestDTO();
         dto.setId(request.getId());
         dto.setRequestDate(request.getRequestDate());
@@ -478,6 +491,7 @@ public class MedicationRequestService {
      * @param requestId the request ID
      * @return the medication request entity
      */
+    @Override
     public MedicationRequest getMedicationRequestById(Long requestId) {
         return medicationRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Medication request not found with id: " + requestId));

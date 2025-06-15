@@ -2,13 +2,13 @@ package group6.Swp391.Se1861.SchoolMedicalManagementSystem.controller;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.VaccinationRuleDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.VaccinationRuleService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IVaccinationRuleService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl.VaccinationRuleService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -17,7 +17,7 @@ import java.util.List;
 public class SchoolNurseVaccinationController {
 
     @Autowired
-    private VaccinationRuleService vaccinationRuleService;
+    private IVaccinationRuleService vaccinationRuleService;
 
     /**
      * Create a new vaccination rule (only accessible to SCHOOLNURSE users)

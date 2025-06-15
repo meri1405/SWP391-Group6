@@ -1,9 +1,10 @@
-package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service;
+package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.VaccinationRuleDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.VaccinationRule;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.VaccinationRuleRepository;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IVaccinationRuleService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -13,7 +14,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-public class VaccinationRuleService {
+public class VaccinationRuleService implements IVaccinationRuleService {
 
     @Autowired
     private VaccinationRuleRepository vaccinationRuleRepository;
@@ -25,6 +26,7 @@ public class VaccinationRuleService {
      * @param vaccinationRuleDTO The vaccination rule data
      * @return The created vaccination rule
      */
+    @Override
     public VaccinationRuleDTO createVaccinationRule(User user, VaccinationRuleDTO vaccinationRuleDTO) {
         // Verify user has SCHOOLNURSE role
         if (user == null || !user.getRole().getRoleName().equals("SCHOOLNURSE")) {
@@ -54,6 +56,7 @@ public class VaccinationRuleService {
      *
      * @return List of all vaccination rules
      */
+    @Override
     public List<VaccinationRuleDTO> getAllVaccinationRules() {
         List<VaccinationRule> rules = vaccinationRuleRepository.findAll();
         return rules.stream()
@@ -67,6 +70,7 @@ public class VaccinationRuleService {
      * @param id The ID of the vaccination rule to retrieve
      * @return The vaccination rule data
      */
+    @Override
     public VaccinationRuleDTO getVaccinationRuleById(Long id) {
         VaccinationRule rule = vaccinationRuleRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Vaccination rule not found"));
@@ -81,6 +85,7 @@ public class VaccinationRuleService {
      * @param vaccinationRuleDTO The updated vaccination rule data
      * @return The updated vaccination rule
      */
+    @Override
     public VaccinationRuleDTO updateVaccinationRule(Long id, User user, VaccinationRuleDTO vaccinationRuleDTO) {
         // Verify user has SCHOOLNURSE role
         if (user == null || !user.getRole().getRoleName().equals("SCHOOLNURSE")) {
@@ -113,6 +118,7 @@ public class VaccinationRuleService {
      * @param id The ID of the vaccination rule to delete
      * @param user The user attempting to delete the rule
      */
+    @Override
     public void deleteVaccinationRule(Long id, User user) {
         // Verify user has SCHOOLNURSE role
         if (user == null || !user.getRole().getRoleName().equals("SCHOOLNURSE")) {
@@ -139,7 +145,9 @@ public class VaccinationRuleService {
      * @param rule The entity to convert
      * @return The converted DTO
      */
-    private VaccinationRuleDTO convertToDTO(VaccinationRule rule) {
+
+    @Override
+    public VaccinationRuleDTO convertToDTO(VaccinationRule rule) {
         VaccinationRuleDTO dto = new VaccinationRuleDTO();
         dto.setId(rule.getId());
         dto.setName(rule.getName());

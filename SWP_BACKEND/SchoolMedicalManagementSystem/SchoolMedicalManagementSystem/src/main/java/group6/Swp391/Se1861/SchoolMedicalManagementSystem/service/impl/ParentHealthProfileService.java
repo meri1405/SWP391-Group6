@@ -1,20 +1,22 @@
-package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service;
+package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.*;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.exception.BadRequestException;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.exception.ForbiddenAccessException;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.exception.ResourceNotFoundException;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.*;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.ProfileStatus;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.*;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IParentHealthProfileService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
-public class ParentHealthProfileService {
+public class ParentHealthProfileService implements IParentHealthProfileService {
 
     @Autowired
     private UserRepository userRepository;
@@ -41,7 +43,9 @@ public class ParentHealthProfileService {
     private VisionRepository visionRepository;
 
     @Autowired
-    private HearingRepository hearingRepository;    @Autowired
+    private HearingRepository hearingRepository;
+
+    @Autowired
     private VaccinationHistoryRepository vaccinationHistoryRepository;
 
     @Autowired
@@ -53,28 +57,29 @@ public class ParentHealthProfileService {
      * @param healthProfileDTO DTO containing health profile data
      * @return the created health profile
      */
+    @Override
     public HealthProfileDTO createHealthProfile(Long parentId, HealthProfileDTO healthProfileDTO) {
         // Validate required fields
         if (healthProfileDTO.getStudentId() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Student ID is required and cannot be null");
+            throw new BadRequestException("Student ID is required and cannot be null");
         }
 
         // Validate parent exists
         User parent = userRepository.findById(parentId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Parent not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Parent not found"));
 
         // Check if the user has PARENT role
         if (!parent.getRole().getRoleName().equals("PARENT")) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only parents can create health profiles for students");
+            throw new ForbiddenAccessException("Only parents can create health profiles for students");
         }
 
         // Validate student exists
         Student student = studentRepository.findById(healthProfileDTO.getStudentId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
 
         // Validate parent is related to student        
         if (!isParentRelatedToStudent(parent, student)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Parent is not associated with this student");
+            throw new ForbiddenAccessException("Parent is not associated with this student");
         }        // Check existing profiles for this student to enforce business rules
         List<HealthProfile> existingProfiles = healthProfileRepository.findByStudentStudentIDAndParentId(
             healthProfileDTO.getStudentId(), parentId);
@@ -83,8 +88,7 @@ public class ParentHealthProfileService {
         boolean hasPendingProfile = existingProfiles.stream()
             .anyMatch(profile -> profile.getStatus() == ProfileStatus.PENDING);
         if (hasPendingProfile) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, 
-                "Cannot create new profile when a pending profile exists. Please wait for review or edit the existing pending profile.");
+            throw new BadRequestException("Cannot create new profile when a pending profile exists. Please wait for review or edit the existing pending profile.");
         }
 
         // Create health profile
@@ -230,23 +234,25 @@ public class ParentHealthProfileService {
      * @param parentId ID of the parent user
      * @param profileId ID of the health profile
      * @return the health profile data
-     */    public HealthProfileDTO getHealthProfileById(Long parentId, Long profileId) {
+     */
+    @Override
+    public HealthProfileDTO getHealthProfileById(Long parentId, Long profileId) {
         // Validate parent exists
         User parent = userRepository.findById(parentId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Parent not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Parent not found"));
 
         // Check if the user has PARENT role
         if (!parent.getRole().getRoleName().equals("PARENT")) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only parents can access health profiles");
+            throw new ForbiddenAccessException("Only parents can access health profiles");
         }
 
         // Get health profile
         HealthProfile healthProfile = healthProfileRepository.findById(profileId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Health profile not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Health profile not found"));
 
         // Validate parent is related to student
         if (!isParentRelatedToStudent(parent, healthProfile.getStudent())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Parent is not associated with this student");
+            throw new ForbiddenAccessException("Parent is not associated with this student");
         }
 
         // Convert to DTO
@@ -259,23 +265,24 @@ public class ParentHealthProfileService {
      * @param studentId ID of the student
      * @return list of health profiles for the student
      */
+    @Override
     public List<HealthProfileDTO> getHealthProfilesByStudentId(Long parentId, Long studentId) {
         // Validate parent exists
         User parent = userRepository.findById(parentId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Parent not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Parent not found"));
 
         // Check if the user has PARENT role
         if (!parent.getRole().getRoleName().equals("PARENT")) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only parents can access health profiles");
+            throw new ForbiddenAccessException("Only parents can access health profiles");
         }
 
         // Validate student exists
         Student student = studentRepository.findById(studentId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
 
         // Validate parent is related to student
         if (!isParentRelatedToStudent(parent, student)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Parent is not associated with this student");
+            throw new ForbiddenAccessException("Parent is not associated with this student");
         }
 
         // Get health profiles
@@ -293,23 +300,24 @@ public class ParentHealthProfileService {
      * @param studentId ID of the student
      * @return list of approved health profiles for the student
      */
+    @Override
     public List<HealthProfileDTO> getApprovedHealthProfilesByStudentId(Long parentId, Long studentId) {
         // Validate parent exists
         User parent = userRepository.findById(parentId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Parent not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Parent not found"));
 
         // Check if the user has PARENT role
         if (!parent.getRole().getRoleName().equals("PARENT")) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only parents can access health profiles");
+            throw new ForbiddenAccessException("Only parents can access health profiles");
         }
 
         // Validate student exists
         Student student = studentRepository.findById(studentId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
 
         // Validate parent is related to student
         if (!isParentRelatedToStudent(parent, student)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Parent is not associated with this student");
+            throw new ForbiddenAccessException("Parent is not associated with this student");
         }
 
         // Get approved health profiles only
@@ -333,27 +341,28 @@ public class ParentHealthProfileService {
      * @param healthProfileDTO updated health profile data
      * @return updated health profile
      */
+    @Override
     public HealthProfileDTO updateHealthProfile(Long parentId, Long profileId, HealthProfileDTO healthProfileDTO) {
         // Validate parent exists
         User parent = userRepository.findById(parentId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Parent not found"));        // Check if the user has PARENT role
+                .orElseThrow(() -> new ResourceNotFoundException("Parent not found"));        // Check if the user has PARENT role
         if (!parent.getRole().getRoleName().equals("PARENT")) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only parents can update health profiles");
+            throw new ForbiddenAccessException("Only parents can update health profiles");
         }
 
         // Get health profile
         HealthProfile healthProfile = healthProfileRepository.findById(profileId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Health profile not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Health profile not found"));
 
         // Validate parent is related to student
         if (!isParentRelatedToStudent(parent, healthProfile.getStudent())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Parent is not associated with this student");
+            throw new ForbiddenAccessException("Parent is not associated with this student");
         }        // Check if profile can be updated
         // Allow updating profiles with PENDING, APPROVED, and REJECTED status
         if (healthProfile.getStatus() != ProfileStatus.PENDING && 
             healthProfile.getStatus() != ProfileStatus.APPROVED && 
             healthProfile.getStatus() != ProfileStatus.REJECTED) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Profile status does not allow updates");
+            throw new BadRequestException("Profile status does not allow updates");
         }// Update basic profile information
         healthProfile.setWeight(healthProfileDTO.getWeight());
         healthProfile.setHeight(healthProfileDTO.getHeight());
@@ -761,28 +770,29 @@ public class ParentHealthProfileService {
      * @param parentId ID of the parent user
      * @param profileId ID of the health profile
      */
+    @Override
     public void deleteHealthProfile(Long parentId, Long profileId) {
         // Validate parent exists
         User parent = userRepository.findById(parentId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Parent not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Parent not found"));
 
         // Check if the user has PARENT role
         if (!parent.getRole().getRoleName().equals("PARENT")) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only parents can delete health profiles");
+            throw new ForbiddenAccessException("Only parents can delete health profiles");
         }
 
         // Get health profile
         HealthProfile healthProfile = healthProfileRepository.findById(profileId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Health profile not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Health profile not found"));
 
         // Validate parent is related to student
         if (!isParentRelatedToStudent(parent, healthProfile.getStudent())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Parent is not associated with this student");
+            throw new ForbiddenAccessException("Parent is not associated with this student");
         }
 
         // Check if profile can be deleted (only PENDING profiles can be deleted)
         if (healthProfile.getStatus() != ProfileStatus.PENDING) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only profiles with PENDING status can be deleted");
+            throw new BadRequestException("Only profiles with PENDING status can be deleted");
         }
 
         // Delete the health profile (cascade will handle related entities)
@@ -794,7 +804,8 @@ public class ParentHealthProfileService {
      * @param healthProfile the health profile entity
      * @return the health profile DTO
      */
-    private HealthProfileDTO convertToDTO(HealthProfile healthProfile) {
+    @Override
+    public HealthProfileDTO convertToDTO(HealthProfile healthProfile) {
         HealthProfileDTO dto = new HealthProfileDTO();
         dto.setId(healthProfile.getId());
         dto.setWeight(healthProfile.getWeight());
@@ -822,7 +833,8 @@ public class ParentHealthProfileService {
      * @param healthProfile the health profile entity
      * @return the detailed health profile DTO
      */
-    private HealthProfileDTO convertToDetailedDTO(HealthProfile healthProfile) {
+    @Override
+    public HealthProfileDTO convertToDetailedDTO(HealthProfile healthProfile) {
         HealthProfileDTO dto = new HealthProfileDTO();
         dto.setId(healthProfile.getId());
         dto.setWeight(healthProfile.getWeight());
@@ -1011,7 +1023,7 @@ public class ParentHealthProfileService {
         try {
             // Validate parent exists
             User parent = userRepository.findById(parentId)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Parent not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Parent not found"));
 
             // Check if the user has PARENT role
             if (!parent.getRole().getRoleName().equals("PARENT")) {
@@ -1020,7 +1032,7 @@ public class ParentHealthProfileService {
 
             // Get health profile
             HealthProfile healthProfile = healthProfileRepository.findById(profileId)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Health profile not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Health profile not found"));
 
             // Validate parent is related to student
             if (!isParentRelatedToStudent(parent, healthProfile.getStudent())) {
@@ -1052,7 +1064,7 @@ public class ParentHealthProfileService {
         try {
             // Validate parent exists
             User parent = userRepository.findById(parentId)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Parent not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Parent not found"));
 
             // Check if the user has PARENT role
             if (!parent.getRole().getRoleName().equals("PARENT")) {
@@ -1061,7 +1073,7 @@ public class ParentHealthProfileService {
 
             // Validate student exists
             Student student = studentRepository.findById(studentId)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
 
             // Validate parent is related to student
             if (!isParentRelatedToStudent(parent, student)) {
