@@ -31,14 +31,11 @@ public class VaccinationRuleService implements IVaccinationRuleService {
         // Verify user has SCHOOLNURSE role
         if (user == null || !user.getRole().getRoleName().equals("SCHOOLNURSE")) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only school nurses can create vaccination rules");
-        }
-
-        // Create new vaccination rule from DTO
+        }        // Create new vaccination rule from DTO
         VaccinationRule vaccinationRule = new VaccinationRule();
         vaccinationRule.setName(vaccinationRuleDTO.getName());
         vaccinationRule.setDescription(vaccinationRuleDTO.getDescription());
-        vaccinationRule.setDoesNumber(vaccinationRuleDTO.getDoesNumber());
-        vaccinationRule.setMinAge(vaccinationRuleDTO.getMinAge());
+        vaccinationRule.setDoesNumber(vaccinationRuleDTO.getDoesNumber());        vaccinationRule.setMinAge(vaccinationRuleDTO.getMinAge());
         vaccinationRule.setMaxAge(vaccinationRuleDTO.getMaxAge());
         vaccinationRule.setIntervalDays(vaccinationRuleDTO.getIntervalDays());
         vaccinationRule.setMandatory(vaccinationRuleDTO.isMandatory());
@@ -94,9 +91,7 @@ public class VaccinationRuleService implements IVaccinationRuleService {
 
         // Find existing vaccination rule
         VaccinationRule existingRule = vaccinationRuleRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Vaccination rule not found"));
-
-        // Update the rule with new data
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Vaccination rule not found"));        // Update the rule with new data
         existingRule.setName(vaccinationRuleDTO.getName());
         existingRule.setDescription(vaccinationRuleDTO.getDescription());
         existingRule.setDoesNumber(vaccinationRuleDTO.getDoesNumber());
@@ -144,9 +139,7 @@ public class VaccinationRuleService implements IVaccinationRuleService {
      *
      * @param rule The entity to convert
      * @return The converted DTO
-     */
-
-    @Override
+     */    @Override
     public VaccinationRuleDTO convertToDTO(VaccinationRule rule) {
         VaccinationRuleDTO dto = new VaccinationRuleDTO();
         dto.setId(rule.getId());
@@ -157,6 +150,20 @@ public class VaccinationRuleService implements IVaccinationRuleService {
         dto.setMaxAge(rule.getMaxAge());
         dto.setIntervalDays(rule.getIntervalDays());
         dto.setMandatory(rule.isMandatory());
+        
+        // Count active campaigns using this rule
+        if (rule.getVaccinationCampaigns() != null) {
+            long activeCampaigns = rule.getVaccinationCampaigns().stream()
+                    .filter(campaign -> 
+                        campaign.getStatus() == group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.VaccinationCampaign.CampaignStatus.PENDING ||
+                        campaign.getStatus() == group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.VaccinationCampaign.CampaignStatus.APPROVED ||
+                        campaign.getStatus() == group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.VaccinationCampaign.CampaignStatus.IN_PROGRESS
+                    ).count();
+            dto.setActiveCampaignsCount((int) activeCampaigns);
+        } else {
+            dto.setActiveCampaignsCount(0);
+        }
+        
         return dto;
     }
 }

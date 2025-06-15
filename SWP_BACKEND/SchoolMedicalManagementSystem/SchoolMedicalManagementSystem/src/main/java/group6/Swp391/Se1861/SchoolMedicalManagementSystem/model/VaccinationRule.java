@@ -34,10 +34,8 @@ public class VaccinationRule {
     private int maxAge;
 
     @Column(name = "intervalDays", nullable = false)
-    private int intervalDays;
-
-    @Column(name = "isMandatory", nullable = false)
-    private boolean isMandatory;
+    private int intervalDays;    @Column(name = "isMandatory", nullable = false)
+    private boolean mandatory;
 
     @OneToMany(mappedBy = "vaccinationRule", cascade = CascadeType.ALL)
     private List<VaccinationCampaign> vaccinationCampaigns;

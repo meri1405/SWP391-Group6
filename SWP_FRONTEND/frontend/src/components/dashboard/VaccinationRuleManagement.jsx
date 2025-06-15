@@ -49,13 +49,11 @@ const VaccinationRuleManagement = () => {
       }
     }
   };
-
   // Load vaccination rules
   const loadVaccinationRules = async () => {
     try {
       setLoading(true);
-      const token = getToken();
-      const rules = await nurseApi.getAllVaccinationRules(token);
+      const rules = await nurseApi.getAllVaccinationRules();
       setVaccinationRules(rules);
     } catch (error) {
       console.error("Error loading vaccination rules:", error);
@@ -63,8 +61,7 @@ const VaccinationRuleManagement = () => {
     } finally {
       setLoading(false);
     }
-  };
-  useEffect(() => {
+  };  useEffect(() => {
     loadVaccinationRules();
   }, [getToken]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -72,7 +69,6 @@ const VaccinationRuleManagement = () => {
   const handleSubmit = async (values) => {
     try {
       setLoading(true);
-      const token = getToken();
 
       const ruleData = {
         name: values.name,
@@ -82,15 +78,13 @@ const VaccinationRuleManagement = () => {
         maxAge: values.maxAge,
         intervalDays: values.intervalDays,
         mandatory: values.mandatory || false,
-      };
-
-      if (editingRule) {
+      };      if (editingRule) {
         // Update existing rule
-        await nurseApi.updateVaccinationRule(token, editingRule.id, ruleData);
+        await nurseApi.updateVaccinationRule(editingRule.id, ruleData);
         message.success("Cập nhật quy tắc tiêm chủng thành công!");
       } else {
         // Create new rule
-        await nurseApi.createVaccinationRule(token, ruleData);
+        await nurseApi.createVaccinationRule(ruleData);
         message.success("Tạo quy tắc tiêm chủng thành công!");
       }
       setModalVisible(false);
@@ -114,13 +108,11 @@ const VaccinationRuleManagement = () => {
       setLoading(false);
     }
   };
-
   // Handle delete vaccination rule
   const handleDelete = async (id) => {
     try {
       setLoading(true);
-      const token = getToken();
-      await nurseApi.deleteVaccinationRule(token, id);
+      await nurseApi.deleteVaccinationRule(id);
       message.success("Xóa quy tắc tiêm chủng thành công!");
       loadVaccinationRules();
     } catch (error) {

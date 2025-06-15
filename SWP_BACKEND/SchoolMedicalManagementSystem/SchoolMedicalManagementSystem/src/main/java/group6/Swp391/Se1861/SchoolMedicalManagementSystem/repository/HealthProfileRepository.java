@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface HealthProfileRepository extends JpaRepository<HealthProfile, Long> {
@@ -26,4 +27,7 @@ public interface HealthProfileRepository extends JpaRepository<HealthProfile, Lo
     
     // Find health profiles by status
     List<HealthProfile> findByStatus(ProfileStatus status);
+    
+    // Find health profile by student and status
+    Optional<HealthProfile> findByStudentAndStatus(Student student, ProfileStatus status);
 }

@@ -1637,7 +1637,7 @@ const HealthProfileDeclaration = () => {
               showIcon
               style={{ marginBottom: '16px' }}
             />
-            {healthProfiles.length === 0 || healthProfiles.some(profile => profile.status === 'PENDING') ? (
+            {healthProfiles.length === 0 ? (
               <div style={{ marginBottom: '16px', textAlign: 'right' }}>
                 <Button
                   type="primary"
