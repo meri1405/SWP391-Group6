@@ -47,7 +47,7 @@ public class VaccinationCampaign {
     @Enumerated(EnumType.STRING)
     private CampaignStatus status;
 
-    @Column(name = "prePostCareInstructions", columnLength = 1000)
+    @Column(name = "prePostCareInstructions", length = 1000)
     private String prePostCareInstructions;
 
     @Column(name = "estimatedVaccineCount")

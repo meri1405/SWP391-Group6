@@ -113,10 +113,8 @@ public class User implements UserDetails, OAuth2User {
     /** Danh sách chiến dịch tiêm chủng đã tạo - dành cho ADMIN/MANAGER */
     @OneToMany(mappedBy = "createdBy", cascade = CascadeType.ALL)
     @JsonIgnore  // Ngăn vòng lặp khi serialize JSON
-    private List<VaccinationCampaign> createdCampaigns;
-
-    /** Danh sách chiến dịch tiêm chủng được quản lý - dành cho MANAGER */
-    @OneToMany(mappedBy = "manager", cascade = CascadeType.ALL)
+    private List<VaccinationCampaign> createdCampaigns;    /** Danh sách chiến dịch tiêm chủng được quản lý - dành cho MANAGER */
+    @OneToMany(mappedBy = "approvedBy", cascade = CascadeType.ALL)
     @JsonIgnore  // Ngăn vòng lặp khi serialize JSON
     private List<VaccinationCampaign> managedCampaigns;
 
@@ -129,6 +127,16 @@ public class User implements UserDetails, OAuth2User {
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL)
     @JsonIgnore  // Ngăn vòng lặp khi serialize JSON
     private List<MedicationRequest> parentMedicationRequests;
+
+    /** Danh sách phiếu tiêm chủng gửi cho phụ huynh - dành cho PARENT */
+    @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL)
+    @JsonIgnore  // Ngăn vòng lặp khi serialize JSON
+    private List<VaccinationForm> vaccinationForms;
+
+    /** Danh sách bản ghi tiêm chủng được tạo bởi nurse - dành cho SCHOOLNURSE */
+    @OneToMany(mappedBy = "recordedBy", cascade = CascadeType.ALL)
+    @JsonIgnore  // Ngăn vòng lặp khi serialize JSON
+    private List<VaccinationRecord> createdVaccinationRecords;
 
     /** Danh sách hồ sơ sức khỏe do y tá quản lý - dành cho SCHOOLNURSE */
     @OneToMany(mappedBy = "nurse", cascade = CascadeType.ALL)
