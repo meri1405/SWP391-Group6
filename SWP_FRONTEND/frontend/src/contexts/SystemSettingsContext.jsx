@@ -20,7 +20,7 @@ export const useSystemSettings = () => {
 
 export const SystemSettingsProvider = ({ children }) => {
   const [settings, setSettings] = useState({
-    systemName: "Hệ Thống Quản Lý Y Tế Học Đường",
+    systemName: "Y Tế Học Đường",
     contactEmail: "admin@school-health.com",
     twoFactorAuth: true,
     activityLogging: true,

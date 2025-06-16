@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { parentApi } from '../../api/parentApi';
 import dayjs from 'dayjs';
@@ -37,7 +37,7 @@ import '../../styles/MedicationNotes.css';
 const { Title, Text } = Typography;
 const { Option } = Select;
 
-const ParentMedicationSchedules = ({ userInfo }) => {
+const ParentMedicationSchedules = () => {
     const { refreshSession } = useAuth();
     const [schedules, setSchedules] = useState([]);
     const [students, setStudents] = useState([]);
@@ -46,25 +46,23 @@ const ParentMedicationSchedules = ({ userInfo }) => {
     const [selectedStatus, setSelectedStatus] = useState('ALL');
     const [selectedStudent, setSelectedStudent] = useState(null);
     const [detailModalVisible, setDetailModalVisible] = useState(false);
-    const [selectedSchedule, setSelectedSchedule] = useState(null);
-
-    // Status mapping
-    const statusConfig = {
+    const [selectedSchedule, setSelectedSchedule] = useState(null);    // Status mapping - memoized to prevent re-renders
+    const statusConfig = useMemo(() => ({
         PENDING: { color: 'orange', text: 'Chưa uống', icon: <ClockCircleOutlined /> },
         TAKEN: { color: 'green', text: 'Đã uống', icon: <CheckCircleOutlined /> },
         SKIPPED: { color: 'red', text: 'Bỏ lỡ', icon: <CloseCircleOutlined /> }
-    };
-
-    const loadSchedules = useCallback(async () => {
+    }), []);const loadSchedules = useCallback(async () => {
         try {
             setLoading(true);
             refreshSession();
-              let data;
+            
+            let data;
             
             if (selectedStudent) {
+                // Get schedules for specific student (backend returns all schedules for that student)
                 data = await parentApi.getChildMedicationSchedules(selectedStudent);
             } else {
-                // Ensure we always have a valid date
+                // Get schedules for all children with filters
                 const dateToUse = selectedDate || dayjs();
                 const params = {
                     date: dateToUse.format('YYYY-MM-DD'),
@@ -73,58 +71,101 @@ const ParentMedicationSchedules = ({ userInfo }) => {
                 data = await parentApi.getAllChildrenMedicationSchedules(params);
             }
             
-            // Handle new response structure from backend
+            // Handle backend response structure
             let schedulesArray = [];
             let studentsArray = [];
             
             if (selectedStudent) {
-                // For single student, data might still be in old format
-                if (data && data.schedules && data.students) {
+                // For single student: {schedules: [], student: {}}
+                if (data && data.schedules) {
                     schedulesArray = Array.isArray(data.schedules) ? data.schedules : [];
-                    studentsArray = Array.isArray(data.students) ? data.students : [];
+                    // Convert single student to array format for consistency
+                    if (data.student) {
+                        studentsArray = [data.student];
+                    }
                 } else {
-                    // Fallback to old format if needed
                     schedulesArray = Array.isArray(data) ? data : [];
-                    // Extract students from schedules for backward compatibility
-                    const uniqueStudents = [...new Map(
-                        schedulesArray.map(schedule => [schedule.studentId, {
-                            id: schedule.studentId,
-                            name: schedule.studentName,
-                            className: schedule.className
-                        }])
-                    ).values()];
-                    studentsArray = uniqueStudents;
+                }
+                
+                // Apply frontend filtering when student is selected
+                if (selectedStatus && selectedStatus !== 'ALL') {
+                    schedulesArray = schedulesArray.filter(schedule => 
+                        schedule.status === selectedStatus
+                    );
                 }
             } else {
-                // For all children, backend now returns {schedules: [], students: []}
+                // For all children: {schedules: [], students: []}
                 if (data && typeof data === 'object') {
                     schedulesArray = Array.isArray(data.schedules) ? data.schedules : [];
                     studentsArray = Array.isArray(data.students) ? data.students : [];
                 } else {
-                    // Fallback to old format if needed
                     schedulesArray = Array.isArray(data) ? data : [];
-                    studentsArray = [];
                 }
+            }
+            
+            // If we don't have students info but have schedules, extract from schedules
+            if (studentsArray.length === 0 && schedulesArray.length > 0) {
+                const uniqueStudents = [...new Map(
+                    schedulesArray
+                        .filter(schedule => schedule.studentId && schedule.studentName)
+                        .map(schedule => [schedule.studentId, {
+                            id: schedule.studentId,
+                            name: schedule.studentName,
+                            className: schedule.className
+                        }])
+                ).values()];
+                studentsArray = uniqueStudents;
             }
             
             setSchedules(schedulesArray);
             setStudents(studentsArray);
             
+            // Show info message if no schedules found
+            if (schedulesArray.length === 0) {
+                if (selectedStudent) {
+                    const selectedStudentName = studentsArray.find(s => s.id === selectedStudent)?.name || 'học sinh này';
+                    if (selectedStatus && selectedStatus !== 'ALL') {
+                        const statusText = statusConfig[selectedStatus]?.text || selectedStatus;
+                        message.info(`Không có lịch uống thuốc với trạng thái "${statusText}" cho ${selectedStudentName}`);
+                    } else {
+                        message.info(`Không có lịch uống thuốc cho ${selectedStudentName}`);
+                    }
+                } else {
+                    const selectedDateStr = selectedDate ? selectedDate.format('DD/MM/YYYY') : 'hôm nay';
+                    message.info(`Không có lịch uống thuốc cho ngày ${selectedDateStr}`);
+                }
+            }
+            
         } catch (error) {
             console.error('Error loading schedules:', error);
-            message.error('Không thể tải danh sách lịch uống thuốc');
+            
+            // Enhanced error handling
+            if (error.response?.status === 404) {
+                message.info('Không tìm thấy lịch uống thuốc');
+            } else if (error.response?.status === 403) {
+                message.error('Không có quyền truy cập thông tin này');
+            } else {
+                message.error('Không thể tải danh sách lịch uống thuốc. Vui lòng thử lại sau.');
+            }
+            
+            setSchedules([]);
+            setStudents([]);
         } finally {
             setLoading(false);
         }
-    }, [selectedDate, selectedStatus, selectedStudent, refreshSession]);
+    }, [selectedDate, selectedStatus, selectedStudent, refreshSession, statusConfig]);
 
     useEffect(() => {
         loadSchedules();
-    }, [loadSchedules]);
-
-    const showScheduleDetail = (schedule) => {
+    }, [loadSchedules]);    const showScheduleDetail = (schedule) => {
         setSelectedSchedule(schedule);
         setDetailModalVisible(true);
+    };
+
+    const resetFilters = () => {
+        setSelectedDate(dayjs());
+        setSelectedStatus('ALL');
+        setSelectedStudent(null);
     };
 
     // Function to process data for row merging
@@ -284,22 +325,21 @@ const ParentMedicationSchedules = ({ userInfo }) => {
                 </div>
                 
                 {/* Filters */}
-                <div className="filter-container">
-                    <div className="filter-item">
+                <div className="filter-container">                    <div className="filter-item">
                         <div className="filter-label">Ngày:</div>
                         <DatePicker
                             value={selectedDate}
                             onChange={(date) => {
                                 setSelectedDate(date);
-                                setSelectedStudent(null); // Reset student filter when date changes
+                                if (selectedStudent) {
+                                    setSelectedStudent(null); // Reset student filter when date changes
+                                }
                             }}
                             format="DD/MM/YYYY"
                             style={{ width: '100%' }}
-                            disabled={selectedStudent}
+                            disabled={selectedStudent !== null}
                         />
-                    </div>
-                    
-                    <div className="filter-item">
+                    </div>                    <div className="filter-item">
                         <div className="filter-label">Trạng thái:</div>
                         <Select
                             value={selectedStatus}
@@ -336,14 +376,15 @@ const ParentMedicationSchedules = ({ userInfo }) => {
                             ))}
                         </Select>
                     </div>
-                    
-                    <div className="filter-item" style={{ display: 'flex', alignItems: 'flex-end' }}>
+                      <div className="filter-item" style={{ display: 'flex', alignItems: 'flex-end', gap: '8px' }}>
                         <Button 
                             type="primary" 
                             onClick={loadSchedules}
-                            style={{ marginTop: 'auto' }}
                         >
                             Làm mới
+                        </Button>
+                        <Button onClick={resetFilters}>
+                            Đặt lại bộ lọc
                         </Button>
                     </div>
                 </div>
