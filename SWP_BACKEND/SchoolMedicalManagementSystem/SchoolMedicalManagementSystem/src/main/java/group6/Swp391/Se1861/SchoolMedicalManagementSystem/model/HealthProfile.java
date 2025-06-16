@@ -26,6 +26,9 @@ public class HealthProfile {
     @Column(name = "height", nullable = false)
     private double height;
 
+    @Column(name = "bloodType", nullable = false)
+    private String bloodType;
+
     @Column(name = "createdAt", nullable = false)
     private LocalDate createdAt = LocalDate.now();
 

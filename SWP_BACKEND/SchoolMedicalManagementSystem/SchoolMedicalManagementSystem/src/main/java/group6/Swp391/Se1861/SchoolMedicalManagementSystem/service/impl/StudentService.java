@@ -146,7 +146,6 @@ public class StudentService implements IStudentService {
         dto.setBirthPlace(student.getBirthPlace());
         dto.setAddress(student.getAddress());
         dto.setCitizenship(student.getCitizenship());
-        dto.setBloodType(student.getBloodType());
         dto.setDisabled(student.isDisabled());
         
         // Set father and mother IDs

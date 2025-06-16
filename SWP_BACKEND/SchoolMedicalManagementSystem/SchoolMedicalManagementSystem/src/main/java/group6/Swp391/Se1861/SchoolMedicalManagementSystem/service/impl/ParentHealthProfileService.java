@@ -97,6 +97,7 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
         healthProfile.setHeight(healthProfileDTO.getHeight());
         healthProfile.setCreatedAt(LocalDate.now());
         healthProfile.setUpdatedAt(LocalDate.now());
+        healthProfile.setBloodType(healthProfileDTO.getBloodType());
         healthProfile.setStatus(ProfileStatus.PENDING);
         healthProfile.setNote(healthProfileDTO.getNote());
         healthProfile.setStudent(student);
@@ -346,7 +347,8 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
     public HealthProfileDTO updateHealthProfile(Long parentId, Long profileId, HealthProfileDTO healthProfileDTO) {
         // Validate parent exists
         User parent = userRepository.findById(parentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Parent not found"));        // Check if the user has PARENT role
+                .orElseThrow(() -> new ResourceNotFoundException("Parent not found"));
+        // Check if the user has PARENT role
         if (!parent.getRole().getRoleName().equals("PARENT")) {
             throw new ForbiddenAccessException("Only parents can update health profiles");
         }
@@ -367,6 +369,7 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
         }// Update basic profile information
         healthProfile.setWeight(healthProfileDTO.getWeight());
         healthProfile.setHeight(healthProfileDTO.getHeight());
+        healthProfile.setBloodType(healthProfileDTO.getBloodType());
         healthProfile.setNote(healthProfileDTO.getNote());
         healthProfile.setUpdatedAt(LocalDate.now());        // If the profile was APPROVED or REJECTED, change it back to PENDING when updated
         if (healthProfile.getStatus() == ProfileStatus.APPROVED || 
@@ -815,6 +818,7 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
         dto.setHeight(healthProfile.getHeight());
         dto.setCreatedAt(healthProfile.getCreatedAt());
         dto.setUpdatedAt(healthProfile.getUpdatedAt());
+        dto.setBloodType(healthProfile.getBloodType());
         dto.setStatus(healthProfile.getStatus());
         dto.setNote(healthProfile.getNote());
         dto.setNurseNote(healthProfile.getNurseNote());
@@ -844,6 +848,7 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
         dto.setHeight(healthProfile.getHeight());
         dto.setCreatedAt(healthProfile.getCreatedAt());
         dto.setUpdatedAt(healthProfile.getUpdatedAt());
+        dto.setBloodType(healthProfile.getBloodType());
         dto.setStatus(healthProfile.getStatus());
         dto.setNote(healthProfile.getNote());
         dto.setNurseNote(healthProfile.getNurseNote());

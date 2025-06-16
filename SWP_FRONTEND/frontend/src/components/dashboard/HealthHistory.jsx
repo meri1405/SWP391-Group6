@@ -9,8 +9,8 @@ const HealthHistory = () => {
     { id: '1', name: 'Nguyễn Văn An' },
     { id: '2', name: 'Nguyễn Thị Bình' }
   ];
-
   const healthData = {
+    bloodType: 'A',
     allergies: ['Phấn hoa', 'Tôm cua'],
     chronicDiseases: ['Hen suyễn nhẹ'],
     treatments: [
@@ -47,10 +47,15 @@ const HealthHistory = () => {
         >
           Chỉnh sửa thông tin
         </button>
-      </div>
-
-      {activeTab === 'overview' ? (
+      </div>      {activeTab === 'overview' ? (
         <div className="health-overview">
+          <div className="health-card">
+            <h3><i className="fas fa-tint"></i> Nhóm máu</h3>
+            <div className="blood-type">
+              <span className="tag blood-type">{healthData.bloodType}</span>
+            </div>
+          </div>
+
           <div className="health-card">
             <h3><i className="fas fa-exclamation-triangle"></i> Dị ứng</h3>
             <div className="tags">
@@ -85,9 +90,22 @@ const HealthHistory = () => {
             </div>
           </div>
         </div>
-      ) : (
-        <div className="health-form">
+      ) : (        <div className="health-form">
           <form>
+            <div className="form-section">
+              <h3>Nhóm máu</h3>
+              <div className="form-group">
+                <label>Nhóm máu</label>
+                <select defaultValue={healthData.bloodType}>
+                  <option value="">Chọn nhóm máu</option>
+                  <option value="A">A</option>
+                  <option value="B">B</option>
+                  <option value="AB">AB</option>
+                  <option value="O">O</option>
+                </select>
+              </div>
+            </div>
+
             <div className="form-section">
               <h3>Dị ứng</h3>
               <div className="form-group">

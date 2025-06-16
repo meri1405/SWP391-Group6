@@ -185,13 +185,23 @@ const HealthProfileDetailModal = ({ visible, onClose, healthProfile }) => {
             </span>
           } 
           key="basic"
-        >
-          <Descriptions bordered column={2}>
+        >          <Descriptions bordered column={2}>
             <Descriptions.Item label="Chiều cao (cm)">
               {healthProfile.height || 'Chưa cập nhật'}
             </Descriptions.Item>
             <Descriptions.Item label="Cân nặng (kg)">
               {healthProfile.weight || 'Chưa cập nhật'}
+            </Descriptions.Item>
+            <Descriptions.Item label="Nhóm máu">
+              <Tag color="red" style={{ fontSize: '14px', padding: '4px 8px' }}>
+                {healthProfile.bloodType || 'Chưa cập nhật'}
+              </Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="BMI">
+              {healthProfile.height && healthProfile.weight 
+                ? (healthProfile.weight / Math.pow(healthProfile.height / 100, 2)).toFixed(2)
+                : 'Chưa tính được'
+              }
             </Descriptions.Item>
             <Descriptions.Item label="Ghi chú" span={2}>
               {healthProfile.note || 'Không có ghi chú'}

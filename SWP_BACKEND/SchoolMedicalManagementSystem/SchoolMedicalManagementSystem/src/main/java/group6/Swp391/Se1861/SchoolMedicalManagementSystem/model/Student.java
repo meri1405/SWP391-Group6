@@ -45,9 +45,6 @@ public class Student {
     @Column(name = "citizenship", nullable = false)
     private String citizenship;
 
-    @Column(name = "bloodType", nullable = false)
-    private String bloodType;
-
     @Column(name = "isDisabled", nullable = false)
     private boolean isDisabled;
 

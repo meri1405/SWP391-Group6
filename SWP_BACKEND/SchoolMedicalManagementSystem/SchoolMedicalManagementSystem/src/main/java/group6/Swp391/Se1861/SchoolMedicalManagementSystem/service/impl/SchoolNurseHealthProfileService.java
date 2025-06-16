@@ -237,6 +237,7 @@ public class SchoolNurseHealthProfileService implements ISchoolNurseHealthProfil
         dto.setHeight(healthProfile.getHeight());
         dto.setCreatedAt(healthProfile.getCreatedAt());
         dto.setUpdatedAt(healthProfile.getUpdatedAt());
+        dto.setBloodType(healthProfile.getBloodType());
         dto.setStatus(healthProfile.getStatus());
         dto.setNote(healthProfile.getNote());
         

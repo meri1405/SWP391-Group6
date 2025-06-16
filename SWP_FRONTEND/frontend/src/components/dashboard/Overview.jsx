@@ -276,36 +276,7 @@ const Overview = ({ userInfo: externalUserInfo }) => {
                     {dayjs(selectedStudent.dob).format('DD/MM/YYYY')}
                   </Text>
                 )}
-              </Card>
-            </Col>
-            
-            <Col xs={24} sm={12} lg={6}>              <Card 
-                style={{ 
-                  borderTop: '3px solid #2196f3',
-                  height: '100%'
-                }}
-                styles={{ 
-                  body: { 
-                    padding: '16px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'center'
-                  }
-                }}
-              >
-                <div>
-                  <Text type="secondary" style={{ fontSize: 14 }}>Nhóm máu</Text>
-                  <div style={{ display: 'flex', alignItems: 'center', marginTop: 6 }}>
-                    <HeartOutlined style={{ color: '#2196f3', fontSize: 20, marginRight: 8 }} />
-                    <div>
-                      <Text style={{ fontSize: 20, color: '#2196f3', fontWeight: 500 }}>
-                        {selectedStudent?.bloodType || '-'}
-                      </Text>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            </Col>
+              </Card>            </Col>
             
             <Col xs={24} sm={12} lg={6}>              <Card 
                 style={{ 
@@ -391,11 +362,6 @@ const Overview = ({ userInfo: externalUserInfo }) => {
                   <Text type="secondary">Nơi sinh:</Text>
                   <br />
                   <Text>{selectedStudent.birthPlace}</Text>
-                </Col>
-                <Col span={12}>
-                  <Text type="secondary">Nhóm máu:</Text>
-                  <br />
-                  <Text>{selectedStudent.bloodType}</Text>
                 </Col>
                 <Col span={24}>
                   <Text type="secondary">Địa chỉ:</Text>
