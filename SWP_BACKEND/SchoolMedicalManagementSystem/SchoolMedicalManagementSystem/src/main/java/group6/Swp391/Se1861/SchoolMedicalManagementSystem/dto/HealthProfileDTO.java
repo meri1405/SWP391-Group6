@@ -20,6 +20,7 @@ public class HealthProfileDTO {
     private double height;
     private LocalDate createdAt;
     private LocalDate updatedAt;
+    private String bloodType;
     private ProfileStatus status;
     private String note;
     private String nurseNote;

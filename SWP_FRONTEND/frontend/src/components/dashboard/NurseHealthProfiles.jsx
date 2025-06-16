@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Card,
   Table,
@@ -63,9 +63,8 @@ const NurseHealthProfiles = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [activeTabKey, setActiveTabKey] = useState('pending');
-
   // Load health profiles
-  const loadHealthProfiles = async () => {
+  const loadHealthProfiles = useCallback(async () => {
     try {
       setLoading(true);
       console.log('Loading health profiles with status:', statusFilter);
@@ -126,18 +125,15 @@ const NurseHealthProfiles = () => {
         message.error(response.message || 'Không thể tải danh sách hồ sơ sức khỏe.');
         setHealthProfiles([]);
           }
-        } catch (error) {
-      console.error('Unexpected error loading health profiles:', error);
+        } catch (error) {      console.error('Unexpected error loading health profiles:', error);
       message.error('Không thể tải danh sách hồ sơ sức khỏe. Vui lòng thử lại sau.');
       setHealthProfiles([]);
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
+  }, [statusFilter]);  useEffect(() => {
           loadHealthProfiles();
-  }, [statusFilter]);
+  }, [statusFilter, loadHealthProfiles]);
 
   const handleTabChange = (key) => {
     setActiveTabKey(key);
@@ -190,8 +186,7 @@ const NurseHealthProfiles = () => {
         </div>
         );
       },
-    },
-    {
+    },    {
       title: 'Chỉ số cơ bản',
       key: 'basicInfo',
       render: (_, record) => (
@@ -199,6 +194,7 @@ const NurseHealthProfiles = () => {
           <div>Chiều cao: {record.height} cm</div>
           <div>Cân nặng: {record.weight} kg</div>
           <div>BMI: {(record.weight / Math.pow(record.height / 100, 2)).toFixed(2)}</div>
+          <div>Nhóm máu: {record.bloodType || 'Chưa cập nhật'}</div>
         </div>
       )
     },
@@ -278,9 +274,9 @@ const NurseHealthProfiles = () => {
       setLoading(true);
       console.log(`Fetching details for profile ID: ${profile.id}`);
       const response = await nurseApi.getHealthProfileDetail(profile.id);
-      
-      if (response.success && response.data) {
+        if (response.success && response.data) {
         console.log('Profile details loaded successfully:', response.data);
+        console.log('BloodType from API:', response.data.bloodType);
         setSelectedProfile(response.data);
       setDetailModalVisible(true);
       } else {
@@ -295,13 +291,15 @@ const NurseHealthProfiles = () => {
   };
 
   const handleEdit = async (profile) => {
-    try {
-      setLoading(true);
-      const detailProfile = await nurseApi.getHealthProfileDetail(profile.id);
-      setSelectedProfile(detailProfile);
-      form.setFieldsValue({
+    try {      setLoading(true);
+      const response = await nurseApi.getHealthProfileDetail(profile.id);
+      const detailProfile = response.success ? response.data : response;
+      console.log('Detail profile for edit:', detailProfile);
+      console.log('BloodType for edit:', detailProfile.bloodType);
+      setSelectedProfile(detailProfile);      form.setFieldsValue({
         weight: detailProfile.weight,
         height: detailProfile.height,
+        bloodType: detailProfile.bloodType,
         note: detailProfile.note
       });
       setEditModalVisible(true);
@@ -337,11 +335,11 @@ const NurseHealthProfiles = () => {
     try {
       const values = await form.validateFields();
       setActionLoading(true);
-      
-      // Create update payload with only the fields that need to be updated
+        // Create update payload with only the fields that need to be updated
       const updatePayload = {
         weight: values.weight,
         height: values.height,
+        bloodType: values.bloodType,
         note: values.note
       };
       
@@ -804,35 +802,32 @@ const NurseHealthProfiles = () => {
           </Space>
         }
         open={detailModalVisible}
-        onCancel={() => setDetailModalVisible(false)}
-        footer={[
-          selectedProfile && selectedProfile.status === 'PENDING' && (
-            <>
-              <Button
-                key="reject"
-                danger
-                onClick={() => handleReject(selectedProfile)}
-                icon={<CloseOutlined />}
-              >
-                Từ chối
-              </Button>
-              <Button
-                key="edit"
-                onClick={() => handleEdit(selectedProfile)}
-                icon={<EditOutlined />}
-              >
-                Chỉnh sửa
-              </Button>
-              <Button
-                key="approve"
-                type="primary"
-                onClick={() => handleApprove(selectedProfile)}
-                icon={<CheckOutlined />}
-              >
-                Duyệt
-              </Button>
-            </>
-          ),
+        onCancel={() => setDetailModalVisible(false)}        footer={[
+          ...(selectedProfile && selectedProfile.status === 'PENDING' ? [
+            <Button
+              key="reject"
+              danger
+              onClick={() => handleReject(selectedProfile)}
+              icon={<CloseOutlined />}
+            >
+              Từ chối
+            </Button>,
+            <Button
+              key="edit"
+              onClick={() => handleEdit(selectedProfile)}
+              icon={<EditOutlined />}
+            >
+              Chỉnh sửa
+            </Button>,
+            <Button
+              key="approve"
+              type="primary"
+              onClick={() => handleApprove(selectedProfile)}
+              icon={<CheckOutlined />}
+            >
+              Duyệt
+            </Button>
+          ] : []),
           <Button 
             key="refresh" 
             onClick={() => selectedProfile && handleViewDetail(selectedProfile)} 
@@ -867,9 +862,11 @@ const NurseHealthProfiles = () => {
               </Descriptions.Item>
               <Descriptions.Item label="Chiều cao">
                 {selectedProfile.height} cm
-              </Descriptions.Item>
-              <Descriptions.Item label="BMI">
+              </Descriptions.Item>              <Descriptions.Item label="BMI">
                 {(selectedProfile.weight / Math.pow(selectedProfile.height / 100, 2)).toFixed(2)}
+              </Descriptions.Item>
+              <Descriptions.Item label="Nhóm máu">
+                {selectedProfile.bloodType || 'Chưa cập nhật'}
               </Descriptions.Item>
               <Descriptions.Item label="Trạng thái">
                 <Tag color={selectedProfile.status === 'PENDING' ? 'processing' : 
@@ -988,6 +985,24 @@ const NurseHealthProfiles = () => {
                   step={0.1}
                   precision={1}
                 />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="Nhóm máu"
+                name="bloodType"
+                rules={[
+                  { required: true, message: 'Vui lòng chọn nhóm máu' }
+                ]}
+              >
+                <Select placeholder="Chọn nhóm máu">
+                  <Option value="A">A</Option>
+                  <Option value="B">B</Option>
+                  <Option value="AB">AB</Option>
+                  <Option value="O">O</Option>
+                </Select>
               </Form.Item>
             </Col>
           </Row>

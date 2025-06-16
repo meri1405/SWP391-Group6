@@ -233,10 +233,15 @@ const HealthProfileDeclaration = () => {
     if (!values.weight || values.weight <= 0) {
       message.error('Vui lòng nhập cân nặng hợp lệ');
       return;
-    }
-
+    }    
+    
     if (!values.height || values.height <= 0) {
       message.error('Vui lòng nhập chiều cao hợp lệ');
+      return;
+    }
+
+    if (!values.bloodType) {
+      message.error('Vui lòng chọn nhóm máu');
       return;
     }
 
@@ -245,7 +250,7 @@ const HealthProfileDeclaration = () => {
       
       const healthProfileData = {
         weight: parseFloat(values.weight),
-        height: parseFloat(values.height),        note: values.note || '',
+        height: parseFloat(values.height),        bloodType: values.bloodType,note: values.note || '',
         studentId: parseInt(studentId, 10), // Ensure it's a number
         status: 'PENDING',
         allergies: allergies.map(allergy => {
@@ -724,11 +729,10 @@ const HealthProfileDeclaration = () => {
 
     try {
       setLoading(true);
-      
-      const updatedProfileData = {
+        const updatedProfileData = {
         ...selectedProfile,
         weight: parseFloat(values.weight),
-        height: parseFloat(values.height),
+        height: parseFloat(values.height),        bloodType: values.bloodType,
         note: values.note || '',
         studentId: parseInt(studentId, 10),
         allergies: allergies.map(allergy => {
@@ -825,11 +829,10 @@ const HealthProfileDeclaration = () => {
   // Handle profile selection for viewing or editing
   const handleProfileSelect = (profile) => {
     setSelectedProfile(profile);
-    setActiveTab('basic');
-    // Populate form with selected profile data
+    setActiveTab('basic');    // Populate form with selected profile data
     form.setFieldsValue({
       weight: profile.weight,
-      height: profile.height,
+      height: profile.height,      bloodType: profile.bloodType,
       note: profile.note
     });
     setAllergies(profile.allergies);
@@ -963,10 +966,9 @@ const HealthProfileDeclaration = () => {
             <Form
               form={form}
               layout="vertical"
-              onFinish={handleFormSubmit}
-              initialValues={{
+              onFinish={handleFormSubmit}              initialValues={{
                 weight: 0,
-                height: 0,
+                height: 0,                bloodType: '',
                 note: ''
               }}
             ><Tabs 
@@ -1010,7 +1012,33 @@ const HealthProfileDeclaration = () => {
                                 placeholder="Nhập chiều cao"
                                 step={0.1}
                                 precision={1}
-                              />
+                              />                            </Form.Item>
+                          </Col>
+                          <Col span={12}>
+                            <Form.Item
+                              label="Nhóm máu"
+                              name="bloodType"
+                              rules={[
+                                { required: true, message: 'Vui lòng chọn nhóm máu' }
+                              ]}
+                            >
+                              <Select
+                                placeholder="Chọn nhóm máu"
+                                style={{ width: '100%' }}
+                              >
+                                <Option value="A">A</Option>
+                                <Option value="B">B</Option>
+                                <Option value="AB">AB</Option>
+                                <Option value="O">O</Option>
+                                <Option value="A+">A+</Option>
+                                <Option value="A-">A-</Option>
+                                <Option value="B+">B+</Option>
+                                <Option value="B-">B-</Option>
+                                <Option value="AB+">AB+</Option>
+                                <Option value="AB-">AB-</Option>
+                                <Option value="O+">O+</Option>
+                                <Option value="O-">O-</Option>
+                              </Select>
                             </Form.Item>
                           </Col>
                         </Row>

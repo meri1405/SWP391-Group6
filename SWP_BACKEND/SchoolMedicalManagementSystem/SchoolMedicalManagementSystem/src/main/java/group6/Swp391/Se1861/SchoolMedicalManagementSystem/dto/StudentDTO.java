@@ -19,7 +19,6 @@ public class StudentDTO {
     private String birthPlace;
     private String address;
     private String citizenship;
-    private String bloodType;
     private boolean isDisabled;
     private Long motherId;
     private Long fatherId;
