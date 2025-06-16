@@ -51,6 +51,7 @@ import {
   updateAdminProfile,
 } from "../api/adminApi";
 import { useSystemSettings } from "../contexts/SystemSettingsContext";
+import AdminProfileCustom from "../components/AdminProfileCustom";
 
 const { Header, Sider, Content } = Layout;
 
@@ -2140,7 +2141,7 @@ const AdminDashboard = () => {
         );
       case "profile":
         return (
-          <AdminProfile
+          <AdminProfileCustom
             userInfo={userInfo}
             onProfileUpdate={handleProfileUpdate}
           />

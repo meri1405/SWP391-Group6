@@ -37,7 +37,7 @@ import {
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { getAllStudents } from "../../api/medicalEventApi";
-import "./MedicalEventManagement.css";
+import "../../styles/MedicalEventManagement.css";
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
