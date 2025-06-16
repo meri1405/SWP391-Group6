@@ -23,4 +23,17 @@ public class StudentDTO {
     private boolean isDisabled;
     private Long motherId;
     private Long fatherId;
+    
+    // Additional fields for frontend compatibility
+    public Long getId() {
+        return studentID;
+    }
+    
+    public String getName() {
+        return firstName + " " + lastName;
+    }
+    
+    public String getClass_() {
+        return className;
+    }
 }
