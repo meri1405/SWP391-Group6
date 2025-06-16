@@ -1,12 +1,14 @@
 import axios from "axios";
+import { API_BASE_URL } from '../config';
+import { getAuthHeaders } from '../utils/auth';
 
-const API_BASE_URL =
+const API_BASE_URL_AXIOS =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
 // Create axios instance with authorization header
 const createAuthAxios = (token) => {
   const instance = axios.create({
-    baseURL: API_BASE_URL,
+    baseURL: API_BASE_URL_AXIOS,
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
@@ -18,16 +20,16 @@ const createAuthAxios = (token) => {
     (response) => response,
     async (error) => {
       const originalRequest = error.config;
-      
+
       // If we get a 401 error and haven't tried refreshing already
       if (error.response?.status === 401 && !originalRequest._retry) {
         console.log('Received 401, attempting token refresh');
         originalRequest._retry = true;
-        
+
         // Update the timestamp and try to get a fresh token
         localStorage.setItem("loginTimestamp", Date.now().toString());
         const freshToken = getTokenFromStorage();
-        
+
         if (freshToken) {
           // If we got a fresh token, retry the request
           console.log('Got fresh token, retrying request');
@@ -35,7 +37,7 @@ const createAuthAxios = (token) => {
           return axios(originalRequest);
         }
       }
-      
+
       return Promise.reject(error);
     }
   );
@@ -60,7 +62,7 @@ export const parentApi = {
       throw error;
     }
   },
-  
+
   // Get medication schedules for a specific child
   getChildMedicationSchedules: async (studentId, token = getTokenFromStorage()) => {
     try {
@@ -72,7 +74,7 @@ export const parentApi = {
       throw error;
     }
   },
-  
+
   // Get medication schedules for all children with optional filters
   getAllChildrenMedicationSchedules: async (params = {}, token = getTokenFromStorage()) => {
     try {
@@ -138,7 +140,8 @@ export const parentApi = {
       return response.data;
     } catch (error) {
       console.error('Error updating health profile:', error);
-      throw error;    }
+      throw error;
+    }
   },
 
   getHealthProfilesByStudentId: async (studentId, token = getTokenFromStorage()) => {
@@ -354,7 +357,7 @@ export const parentApi = {
       return response.data;
     } catch (error) {
       console.error("Error fetching approved health profiles:", error);
-      
+
       // Mock approved profiles for development
       return [
         {
@@ -431,4 +434,23 @@ export const parentApi = {
       throw error;
     }
   },
+};
+
+// Get all parents
+export const getAllParents = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/users?role=PARENT`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching parents:', error);
+    throw error;
+  }
 };

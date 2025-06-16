@@ -24,6 +24,21 @@ public interface IStudentService {
     StudentDTO getStudentById(Long studentId);
 
     /**
+     * Create a new student
+     */
+    StudentDTO createStudent(StudentDTO studentDTO);
+
+    /**
+     * Update an existing student
+     */
+    StudentDTO updateStudent(Long studentId, StudentDTO studentDTO);
+
+    /**
+     * Delete a student
+     */
+    void deleteStudent(Long studentId);
+
+    /**
      * Add parent to student
      */
     void addParentToStudent(Long studentId, Long parentId, String parentType);

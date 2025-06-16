@@ -158,4 +158,92 @@ public class StudentService implements IStudentService {
         }
           return dto;
     }
+
+    @Override
+    @Transactional
+    public StudentDTO createStudent(StudentDTO studentDTO) {
+        // Validate required fields
+        if (studentDTO.getFirstName() == null || studentDTO.getLastName() == null || 
+            studentDTO.getDob() == null || studentDTO.getGender() == null || 
+            studentDTO.getClassName() == null || studentDTO.getBirthPlace() == null || 
+            studentDTO.getAddress() == null || studentDTO.getCitizenship() == null || 
+            studentDTO.getBloodType() == null) {
+            throw new IllegalArgumentException("All required fields must be provided");
+        }
+
+        // Create new student entity
+        Student student = new Student();
+        student.setFirstName(studentDTO.getFirstName());
+        student.setLastName(studentDTO.getLastName());
+        student.setDob(studentDTO.getDob());
+        student.setGender(studentDTO.getGender());
+        student.setClassName(studentDTO.getClassName());
+        student.setBirthPlace(studentDTO.getBirthPlace());
+        student.setAddress(studentDTO.getAddress());
+        student.setCitizenship(studentDTO.getCitizenship());
+        student.setBloodType(studentDTO.getBloodType());
+        student.setDisabled(studentDTO.isDisabled());
+
+        // Set parents if provided
+        if (studentDTO.getMotherId() != null) {
+            User mother = userRepository.findById(studentDTO.getMotherId())
+                .orElseThrow(() -> new IllegalArgumentException("Mother not found with id: " + studentDTO.getMotherId()));
+            student.setMother(mother);
+        }
+        if (studentDTO.getFatherId() != null) {
+            User father = userRepository.findById(studentDTO.getFatherId())
+                .orElseThrow(() -> new IllegalArgumentException("Father not found with id: " + studentDTO.getFatherId()));
+            student.setFather(father);
+        }
+
+        // Save the student
+        Student savedStudent = studentRepository.save(student);
+        return convertToDTO(savedStudent);
+    }
+
+    @Override
+    @Transactional
+    public StudentDTO updateStudent(Long studentId, StudentDTO studentDTO) {
+        // Find existing student
+        Student student = studentRepository.findById(studentId)
+            .orElseThrow(() -> new IllegalArgumentException("Student not found with id: " + studentId));
+
+        // Update fields if provided
+        if (studentDTO.getFirstName() != null) student.setFirstName(studentDTO.getFirstName());
+        if (studentDTO.getLastName() != null) student.setLastName(studentDTO.getLastName());
+        if (studentDTO.getDob() != null) student.setDob(studentDTO.getDob());
+        if (studentDTO.getGender() != null) student.setGender(studentDTO.getGender());
+        if (studentDTO.getClassName() != null) student.setClassName(studentDTO.getClassName());
+        if (studentDTO.getBirthPlace() != null) student.setBirthPlace(studentDTO.getBirthPlace());
+        if (studentDTO.getAddress() != null) student.setAddress(studentDTO.getAddress());
+        if (studentDTO.getCitizenship() != null) student.setCitizenship(studentDTO.getCitizenship());
+        if (studentDTO.getBloodType() != null) student.setBloodType(studentDTO.getBloodType());
+        student.setDisabled(studentDTO.isDisabled());
+
+        // Update parents if provided
+        if (studentDTO.getMotherId() != null) {
+            User mother = userRepository.findById(studentDTO.getMotherId())
+                .orElseThrow(() -> new IllegalArgumentException("Mother not found with id: " + studentDTO.getMotherId()));
+            student.setMother(mother);
+        }
+        if (studentDTO.getFatherId() != null) {
+            User father = userRepository.findById(studentDTO.getFatherId())
+                .orElseThrow(() -> new IllegalArgumentException("Father not found with id: " + studentDTO.getFatherId()));
+            student.setFather(father);
+        }
+
+        // Save the updated student
+        Student updatedStudent = studentRepository.save(student);
+        return convertToDTO(updatedStudent);
+    }
+
+    @Override
+    @Transactional
+    public void deleteStudent(Long studentId) {
+        // Check if student exists
+        if (!studentRepository.existsById(studentId)) {
+            throw new IllegalArgumentException("Student not found with id: " + studentId);
+        }
+        studentRepository.deleteById(studentId);
+    }
 }

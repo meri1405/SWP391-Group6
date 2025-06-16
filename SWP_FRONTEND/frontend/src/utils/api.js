@@ -7,32 +7,20 @@ const useProxy = import.meta.env.DEV;
 
 // Base URL from environment variables
 export const API_BASE_URL = useProxy
-  ? ""
-  : import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+  ? "/api"  // Use proxy in development
+  : import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api";
 
 export const API_ENDPOINTS = {
   // Auth endpoints
   auth: {
-    login: `${API_BASE_URL}${
-      import.meta.env.VITE_API_AUTH_LOGIN || "/api/auth/login"
-    }`,
-    requestOtp: `${API_BASE_URL}${
-      import.meta.env.VITE_API_AUTH_REQUEST_OTP || "/api/auth/parent/request-otp"
-    }`,
-    verifyOtp: `${API_BASE_URL}${
-      import.meta.env.VITE_API_AUTH_VERIFY_OTP || "/api/auth/parent/verify-otp"
-    }`,
+    login: `${API_BASE_URL}/auth/login`,
+    requestOtp: `${API_BASE_URL}/auth/parent/request-otp`,
+    verifyOtp: `${API_BASE_URL}/auth/parent/verify-otp`,
     // Firebase endpoints
-    firebaseConfig: `${API_BASE_URL}${
-      import.meta.env.VITE_API_AUTH_FIREBASE_CONFIG || "/api/auth/firebase-config"
-    }`,
-    verifyFirebaseOtp: `${API_BASE_URL}${
-      import.meta.env.VITE_API_AUTH_VERIFY_FIREBASE_OTP || "/api/auth/parent/verify-firebase-otp"
-    }`,
+    firebaseConfig: `${API_BASE_URL}/auth/firebase-config`,
+    verifyFirebaseOtp: `${API_BASE_URL}/auth/parent/verify-firebase-otp`,
     // OAuth2 endpoints
-    googleOAuth: `${API_BASE_URL}${
-      import.meta.env.VITE_API_OAUTH2_GOOGLE || "/oauth2/authorize/google"
-    }`,
+    googleOAuth: `${API_BASE_URL}/oauth2/authorize/google`,
   },
   // Add other endpoint categories as needed
 };

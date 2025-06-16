@@ -7,18 +7,20 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.List;
 
 @Entity
+@Data
 @Getter
 @Setter
 @ToString
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "Role")
+@Table(name = "role")
 public class Role {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long roleID;
+    @Column(name = "id", nullable = false)
+    private Long id;
 
-    @Column(name = "roleName", nullable = false)
+    @Column(name = "role_name", nullable = false, unique = true)
     private String roleName;
 
     @OneToMany(mappedBy = "role", cascade = CascadeType.ALL)

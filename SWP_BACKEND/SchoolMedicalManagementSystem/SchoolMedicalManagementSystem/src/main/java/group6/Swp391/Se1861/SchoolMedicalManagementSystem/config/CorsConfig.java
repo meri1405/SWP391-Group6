@@ -17,6 +17,7 @@ public class CorsConfig {
         // Allow both development and production origins
         config.addAllowedOrigin("http://localhost:3000");
         config.addAllowedOrigin("http://localhost:5173"); // Vite development server
+        config.addAllowedOrigin("http://localhost:*"); // Allow any localhost port
         config.addAllowedHeader("*");
         config.addAllowedMethod("*");
         source.registerCorsConfiguration("/**", config);

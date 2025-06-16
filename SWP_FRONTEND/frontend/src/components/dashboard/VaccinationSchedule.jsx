@@ -1,9 +1,15 @@
 import React, { useState } from 'react';
+import { Form, Input, DatePicker, Select, Button, message, Modal, Row, Col } from 'antd';
+import dayjs from 'dayjs';
 import '../../styles/VaccinationSchedule.css';
 
+const { Option } = Select;
+
 const VaccinationSchedule = () => {
+  const [form] = Form.useForm();
   const [activeTab, setActiveTab] = useState('completed');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [newVaccination, setNewVaccination] = useState({
     vaccine: '',
     date: '',
@@ -72,18 +78,19 @@ const VaccinationSchedule = () => {
     }
   ]);
 
-  const handleAddVaccination = () => {
-    // API call to add vaccination record
-    console.log('Adding vaccination:', newVaccination);
-    setShowAddModal(false);
-    setNewVaccination({
-      vaccine: '',
-      date: '',
-      location: '',
-      batchNumber: '',
-      nextDue: '',
-      notes: ''
-    });
+  const handleAddVaccination = async (values) => {
+    try {
+      setLoading(true);
+      // API call to add vaccination record
+      console.log('Adding vaccination:', values);
+      message.success('Thêm thông tin tiêm chủng thành công!');
+      setShowAddModal(false);
+      form.resetFields();
+    } catch (error) {
+      message.error('Có lỗi xảy ra khi thêm thông tin tiêm chủng!');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const formatDate = (dateString) => {
@@ -114,7 +121,7 @@ const VaccinationSchedule = () => {
     <div className="vaccination-container">
       <div className="vaccination-header">
         <h2>Lịch Tiêm Chủng</h2>
-        <button 
+        <button
           className="add-btn"
           onClick={() => setShowAddModal(true)}
         >
@@ -124,14 +131,14 @@ const VaccinationSchedule = () => {
       </div>
 
       <div className="tabs">
-        <button 
+        <button
           className={`tab ${activeTab === 'completed' ? 'active' : ''}`}
           onClick={() => setActiveTab('completed')}
         >
           <i className="fas fa-check-circle"></i>
           Đã tiêm ({completedVaccinations.length})
         </button>
-        <button 
+        <button
           className={`tab ${activeTab === 'upcoming' ? 'active' : ''}`}
           onClick={() => setActiveTab('upcoming')}
         >
@@ -197,9 +204,9 @@ const VaccinationSchedule = () => {
               <div key={vaccination.id} className="vaccination-card upcoming">
                 <div className="card-header">
                   <h3>{vaccination.vaccine}</h3>
-                  <span 
+                  <span
                     className="priority-badge"
-                    style={{ 
+                    style={{
                       backgroundColor: getPriorityColor(vaccination.priority),
                       color: 'white'
                     }}
@@ -241,87 +248,165 @@ const VaccinationSchedule = () => {
 
       {/* Add Vaccination Modal */}
       {showAddModal && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <div className="modal-header">
-              <h3>Thêm thông tin tiêm chủng</h3>
-              <button 
-                className="close-btn"
-                onClick={() => setShowAddModal(false)}
-              >
-                <i className="fas fa-times"></i>
-              </button>
-            </div>
-            <div className="modal-body">
-              <div className="form-group">
-                <label>Tên vaccine</label>
-                <input
-                  type="text"
-                  value={newVaccination.vaccine}
-                  onChange={(e) => setNewVaccination(prev => ({ ...prev, vaccine: e.target.value }))}
-                  placeholder="Nhập tên vaccine"
-                />
-              </div>
-              <div className="form-group">
-                <label>Ngày tiêm</label>
-                <input
-                  type="date"
-                  value={newVaccination.date}
-                  onChange={(e) => setNewVaccination(prev => ({ ...prev, date: e.target.value }))}
-                />
-              </div>
-              <div className="form-group">
-                <label>Địa điểm tiêm</label>
-                <input
-                  type="text"
-                  value={newVaccination.location}
-                  onChange={(e) => setNewVaccination(prev => ({ ...prev, location: e.target.value }))}
-                  placeholder="Nhập địa điểm tiêm"
-                />
-              </div>
-              <div className="form-group">
-                <label>Số lô vaccine</label>
-                <input
-                  type="text"
-                  value={newVaccination.batchNumber}
-                  onChange={(e) => setNewVaccination(prev => ({ ...prev, batchNumber: e.target.value }))}
-                  placeholder="Nhập số lô"
-                />
-              </div>
-              <div className="form-group">
-                <label>Ngày tiêm tiếp theo (nếu có)</label>
-                <input
-                  type="date"
-                  value={newVaccination.nextDue}
-                  onChange={(e) => setNewVaccination(prev => ({ ...prev, nextDue: e.target.value }))}
-                />
-              </div>
-              <div className="form-group">
-                <label>Ghi chú</label>
-                <textarea
-                  value={newVaccination.notes}
-                  onChange={(e) => setNewVaccination(prev => ({ ...prev, notes: e.target.value }))}
-                  placeholder="Nhập ghi chú (nếu có)"
-                  rows="3"
-                />
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button 
-                className="cancel-btn"
-                onClick={() => setShowAddModal(false)}
+        <Modal
+          title="Thêm thông tin tiêm chủng"
+          open={showAddModal}
+          onCancel={() => {
+            setShowAddModal(false);
+            form.resetFields();
+          }}
+          footer={null}
+          width={800}
+          centered
+        >
+          <div className="guide-section" style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
+            <h3 style={{ marginBottom: '10px', color: '#ff6b35' }}>Hướng dẫn nhập thông tin</h3>
+            <ul style={{ margin: 0, paddingLeft: '20px' }}>
+              <li>Vaccine: Chọn từ danh sách vaccine có sẵn</li>
+              <li>Ngày tiêm: Phải là ngày trong quá khứ</li>
+              <li>Nơi tiêm: Tên cơ sở y tế nơi thực hiện tiêm chủng</li>
+              <li>Số lô: Theo định dạng Mã vaccine + Năm + Số thứ tự (ví dụ: HB2023-001)</li>
+              <li>Ngày hết hạn: Phải là ngày trong tương lai</li>
+              <li>Ghi chú: Thông tin bổ sung (nếu có)</li>
+            </ul>
+          </div>
+
+          <Form
+            form={form}
+            layout="vertical"
+            onFinish={handleAddVaccination}
+            style={{ maxWidth: '100%' }}
+          >
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item
+                  name="vaccine"
+                  label="Vaccine"
+                  rules={[{ required: true, message: 'Vui lòng chọn vaccine!' }]}
+                >
+                  <Select placeholder="Chọn vaccine">
+                    <Option value="Viêm gan B (lần 1)">Viêm gan B (lần 1)</Option>
+                    <Option value="Viêm gan B (lần 2)">Viêm gan B (lần 2)</Option>
+                    <Option value="DPT (lần 1)">DPT (lần 1)</Option>
+                    <Option value="DPT (lần 2)">DPT (lần 2)</Option>
+                    <Option value="MMR">MMR (Sởi - Quai bị - Rubella)</Option>
+                    <Option value="Polio (lần 1)">Polio (lần 1)</Option>
+                    <Option value="Polio (lần 2)">Polio (lần 2)</Option>
+                  </Select>
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  name="vaccinationDate"
+                  label="Ngày tiêm"
+                  rules={[
+                    { required: true, message: 'Vui lòng chọn ngày tiêm!' },
+                    {
+                      validator: (_, value) => {
+                        if (value && value.isAfter(dayjs())) {
+                          return Promise.reject('Ngày tiêm không thể là ngày trong tương lai!');
+                        }
+                        return Promise.resolve();
+                      },
+                    },
+                  ]}
+                >
+                  <DatePicker
+                    style={{ width: '100%' }}
+                    format="DD/MM/YYYY"
+                    placeholder="Chọn ngày tiêm"
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item
+                  name="location"
+                  label="Nơi tiêm"
+                  rules={[
+                    { required: true, message: 'Vui lòng nhập nơi tiêm!' },
+                    { min: 3, message: 'Nơi tiêm phải có ít nhất 3 ký tự!' }
+                  ]}
+                >
+                  <Input placeholder="Nhập nơi tiêm" />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  name="batchNumber"
+                  label="Số lô"
+                  rules={[
+                    { required: true, message: 'Vui lòng nhập số lô!' },
+                    {
+                      pattern: /^[A-Z]{2}\d{4}-\d{3}$/,
+                      message: 'Số lô phải theo định dạng: Mã vaccine + Năm + Số thứ tự (ví dụ: HB2023-001)'
+                    }
+                  ]}
+                >
+                  <Input placeholder="Nhập số lô (ví dụ: HB2023-001)" />
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item
+                  name="nextDueDate"
+                  label="Ngày hết hạn"
+                  rules={[
+                    {
+                      validator: (_, value) => {
+                        if (value && value.isBefore(dayjs())) {
+                          return Promise.reject('Ngày hết hạn phải là ngày trong tương lai!');
+                        }
+                        return Promise.resolve();
+                      },
+                    },
+                  ]}
+                >
+                  <DatePicker
+                    style={{ width: '100%' }}
+                    format="DD/MM/YYYY"
+                    placeholder="Chọn ngày hết hạn"
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  name="notes"
+                  label="Ghi chú"
+                >
+                  <Input.TextArea
+                    placeholder="Nhập ghi chú (nếu có)"
+                    rows={4}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Form.Item style={{ marginTop: 24, textAlign: 'right' }}>
+              <Button
+                onClick={() => {
+                  setShowAddModal(false);
+                  form.resetFields();
+                }}
+                style={{ marginRight: 8 }}
               >
                 Hủy
-              </button>
-              <button 
-                className="save-btn"
-                onClick={handleAddVaccination}
+              </Button>
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={loading}
+                style={{ background: '#ff6b35', borderColor: '#ff6b35' }}
               >
-                Lưu
-              </button>
-            </div>
-          </div>
-        </div>
+                Thêm mới
+              </Button>
+            </Form.Item>
+          </Form>
+        </Modal>
       )}
     </div>
   );

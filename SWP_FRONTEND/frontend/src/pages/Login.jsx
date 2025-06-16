@@ -59,7 +59,7 @@ const Login = () => {
     try {
       // Initialize Firebase first
       await initializeFirebase();
-      
+
       // Try Firebase first for OTP sending
       try {
         console.log("Attempting to send OTP via Firebase to:", phoneNumber);
@@ -69,7 +69,7 @@ const Login = () => {
         console.log("Firebase OTP sent successfully to", phoneNumber);
       } catch (firebaseError) {
         console.log("Firebase OTP failed, falling back to backend:", firebaseError);
-        
+
         // Fallback to backend OTP generation
         if (isDevelopment) {
           logCorsInfo(API_ENDPOINTS.auth.requestOtp);
@@ -144,7 +144,7 @@ const Login = () => {
 
     try {
       let firebaseIdToken = null;
-      
+
       // Try Firebase OTP verification first if we have a confirmation result
       if (confirmationResult) {
         try {
@@ -158,16 +158,16 @@ const Login = () => {
       }
 
       // Use Firebase verification endpoint if we have a token, otherwise use regular endpoint
-      const endpoint = firebaseIdToken ? 
-        API_ENDPOINTS.auth.verifyFirebaseOtp : 
+      const endpoint = firebaseIdToken ?
+        API_ENDPOINTS.auth.verifyFirebaseOtp :
         API_ENDPOINTS.auth.verifyOtp;
 
       if (isDevelopment) {
         logCorsInfo(endpoint);
       }
 
-      const requestBody = firebaseIdToken ? 
-        { phoneNumber, firebaseIdToken, otp } : 
+      const requestBody = firebaseIdToken ?
+        { phoneNumber, firebaseIdToken, otp } :
         { phoneNumber, otp };
 
       // API call to verify OTP and login
@@ -271,29 +271,6 @@ const Login = () => {
     setErrors({});
 
     try {
-      // For testing - simulate successful admin login
-      if (username === "admin" && password === "admin") {
-        console.log("Test admin login successful");
-
-        const mockUserData = {
-          token: "mock-jwt-token",
-          id: 1,
-          username: "admin",
-          firstName: "Admin",
-          lastName: "User",
-          email: "admin@example.com",
-          roleName: "ADMIN",
-          loginMethod: "username",
-        };
-
-        await login(mockUserData);
-        navigate("/admin/dashboard");
-        return;
-      }
-
-      // Simulate API delay for better UX
-      await new Promise((resolve) => setTimeout(resolve, 800));
-
       // Use the configured API endpoint
       const loginUrl = API_ENDPOINTS.auth.login;
       console.log("Attempting login to:", loginUrl);
@@ -305,6 +282,7 @@ const Login = () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ username, password }),
+        credentials: 'include' // Include cookies in the request
       });
 
       console.log("Login response status:", response.status);
@@ -317,6 +295,7 @@ const Login = () => {
         }
 
         const userData = await response.json();
+        console.log("Login successful, user data:", userData);
 
         // Add login method to track username/password login
         const userDataWithMethod = {
@@ -350,18 +329,31 @@ const Login = () => {
             navigate("/");
         }
       } else {
-        // Handle error responses with simplified message
+        // Try to get detailed error message from response
         let errorMessage = "Tên đăng nhập hoặc mật khẩu không hợp lệ";
 
-        // For all authentication errors, just show the simple message
+        try {
+          const errorData = await response.json();
+          if (errorData.message) {
+            errorMessage = errorData.message;
+          }
+        } catch (parseError) {
+          console.error("Error parsing error response:", parseError);
+        }
+
+        // Log the error for debugging
+        console.error("Login failed:", {
+          status: response.status,
+          statusText: response.statusText,
+          errorMessage
+        });
+
         setErrors({ username: errorMessage });
       }
     } catch (networkError) {
-      console.log("Network error during login:", networkError.message);
-
-      // For any network or connection errors, show the simple error message
+      console.error("Network error during login:", networkError);
       setErrors({
-        username: "Tên đăng nhập hoặc mật khẩu không hợp lệ",
+        username: "Không thể kết nối đến server. Vui lòng thử lại.",
       });
     } finally {
       setIndividualLoading("usernameLogin", false);
@@ -466,7 +458,7 @@ const Login = () => {
                 </button>
                 <button
                   type="button"
-                  className="back-button"                  onClick={() => {
+                  className="back-button" onClick={() => {
                     setShowOtp(false);
                     setErrors({});
                     cleanupRecaptcha();

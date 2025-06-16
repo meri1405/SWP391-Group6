@@ -250,291 +250,195 @@ const VaccinationRuleManagement = () => {
   ];
 
   return (
-    <div style={{ padding: "20px" }}>
-      {/* Header */}
-      <Row gutter={[16, 16]} style={{ marginBottom: "20px" }}>
-        <Col span={24}>
-          <Card>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center" }}>
-                <MedicineBoxOutlined
-                  style={{
-                    fontSize: "24px",
-                    color: "#1890ff",
-                    marginRight: "10px",
-                  }}
-                />{" "}
-                <div>
-                  <h2 style={{ margin: 0, fontWeight: 600 }}>
-                    Quản lý quy tắc tiêm chủng
-                  </h2>
-                  <p style={{ margin: 0, color: "#666" }}>
-                    Thiết lập và quản lý các quy tắc tiêm chủng cho học sinh
-                    (tuổi tính theo tháng)
-                  </p>
-                </div>
-              </div>
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={handleAddNew}
-                size="large"
-              >
-                Thêm quy tắc mới
-              </Button>
-            </div>
-          </Card>
-        </Col>
-      </Row>
+    <div className="vaccination-rule-management">
+      <div className="section-header">
+        <h2>Quản lý quy tắc tiêm chủng</h2>
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={handleAddNew}
+          style={{ background: '#ff6b35', borderColor: '#ff6b35' }}
+        >
+          Thêm quy tắc mới
+        </Button>
+      </div>
 
-      {/* Statistics */}
-      <Row gutter={[16, 16]} style={{ marginBottom: "20px" }}>
-        <Col span={8}>
-          <Card>
-            <div style={{ textAlign: "center" }}>
-              <h3 style={{ color: "#1890ff", fontSize: "24px", margin: 0 }}>
-                {vaccinationRules.length}
-              </h3>
-              <p style={{ margin: 0, color: "#666" }}>Tổng số quy tắc</p>
-            </div>
-          </Card>
-        </Col>
-        <Col span={8}>
-          <Card>
-            <div style={{ textAlign: "center" }}>
-              <h3 style={{ color: "#52c41a", fontSize: "24px", margin: 0 }}>
-                {vaccinationRules.filter((rule) => rule.mandatory).length}
-              </h3>
-              <p style={{ margin: 0, color: "#666" }}>Quy tắc bắt buộc</p>
-            </div>
-          </Card>
-        </Col>
-        <Col span={8}>
-          <Card>
-            <div style={{ textAlign: "center" }}>
-              <h3 style={{ color: "#fa8c16", fontSize: "24px", margin: 0 }}>
-                {vaccinationRules.filter((rule) => !rule.mandatory).length}
-              </h3>
-              <p style={{ margin: 0, color: "#666" }}>Quy tắc tự nguyện</p>
-            </div>
-          </Card>
-        </Col>
-      </Row>
+      <Table
+        columns={columns}
+        dataSource={vaccinationRules}
+        rowKey="id"
+        loading={loading}
+        style={{ marginTop: 16 }}
+      />
 
-      {/* Table */}
-      <Card>
-        <Table
-          columns={columns}
-          dataSource={vaccinationRules}
-          loading={loading}
-          rowKey="id"
-          pagination={{
-            pageSize: 10,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total) => `Tổng ${total} quy tắc`,
-          }}
-          scroll={{ x: 1000 }}
-        />
-      </Card>
-
-      {/* Modal for Add/Edit */}
       <Modal
-        title={
-          editingRule
-            ? "Cập nhật quy tắc tiêm chủng"
-            : "Thêm quy tắc tiêm chủng mới"
-        }
+        title={editingRule ? "Sửa quy tắc tiêm chủng" : "Thêm quy tắc tiêm chủng mới"}
         open={modalVisible}
         onCancel={() => {
           setModalVisible(false);
           setEditingRule(null);
           form.resetFields();
-          // Explicitly clear all field values
-          form.setFieldsValue({
-            name: undefined,
-            description: undefined,
-            doesNumber: undefined,
-            minAge: undefined,
-            maxAge: undefined,
-            intervalDays: undefined,
-            mandatory: undefined,
-          });
         }}
         footer={null}
-        width={600}
-        destroyOnHidden
+        width={800}
       >
-        {" "}
-        <Form form={form} layout="vertical" onFinish={handleSubmit}>
+        <div className="guide-section" style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
+          <h3 style={{ marginBottom: '10px', color: '#ff6b35' }}>Hướng dẫn nhập thông tin</h3>
+          <ul style={{ margin: 0, paddingLeft: '20px' }}>
+            <li>Tên quy tắc: Phải là duy nhất và có ít nhất 3 ký tự</li>
+            <li>Mô tả: Giải thích chi tiết về quy tắc tiêm chủng</li>
+            <li>Mũi thứ: Số thứ tự của mũi tiêm (từ 1 đến 10)</li>
+            <li>Độ tuổi tối thiểu: Tuổi nhỏ nhất có thể tiêm (từ 0 đến 18 tuổi)</li>
+            <li>Độ tuổi tối đa: Tuổi lớn nhất có thể tiêm (phải lớn hơn độ tuổi tối thiểu)</li>
+            <li>Khoảng cách tối thiểu: Số ngày tối thiểu giữa các mũi tiêm (từ 0 đến 365 ngày)</li>
+            <li>Bắt buộc: Xác định xem mũi tiêm này có bắt buộc hay không</li>
+          </ul>
+        </div>
+
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleSubmit}
+          initialValues={{
+            mandatory: false
+          }}
+        >
           <Form.Item
             name="name"
             label="Tên quy tắc"
             rules={[
-              { required: true, message: "Vui lòng nhập tên quy tắc" },
+              { required: true, message: 'Vui lòng nhập tên quy tắc!' },
+              { min: 3, message: 'Tên quy tắc phải có ít nhất 3 ký tự!' },
               {
-                max: 255,
-                message: "Tên quy tắc không được vượt quá 255 ký tự",
-              },
+                validator: async (_, value) => {
+                  if (!value) return Promise.resolve();
+                  const isDuplicate = vaccinationRules.some(
+                    rule => rule.name === value && (!editingRule || rule.id !== editingRule.id)
+                  );
+                  if (isDuplicate) {
+                    return Promise.reject('Tên quy tắc này đã tồn tại!');
+                  }
+                  return Promise.resolve();
+                }
+              }
             ]}
           >
-            <Input placeholder="VD: COVID-19 Vaccination" />
-          </Form.Item>{" "}
+            <Input placeholder="Nhập tên quy tắc" />
+          </Form.Item>
+
           <Form.Item
             name="description"
             label="Mô tả"
             rules={[
-              { required: true, message: "Vui lòng nhập mô tả" },
-              { max: 500, message: "Mô tả không được vượt quá 500 ký tự" },
+              { required: true, message: 'Vui lòng nhập mô tả!' },
+              { min: 10, message: 'Mô tả phải có ít nhất 10 ký tự!' }
             ]}
           >
             <TextArea
-              rows={3}
-              placeholder="VD: Quy tắc cho mũi 1 vaccine COVID-19, dành cho trẻ 60-216 tháng tuổi, có thể tiêm ngay"
+              placeholder="Nhập mô tả chi tiết về quy tắc tiêm chủng"
+              rows={4}
             />
           </Form.Item>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="doesNumber"
-                label="Mũi thứ"
-                rules={[
-                  {
-                    required: true,
-                    message: "Vui lòng nhập số thứ tự mũi tiêm",
-                  },
-                  {
-                    type: "number",
-                    min: 1,
-                    max: 10,
-                    message: "Mũi tiêm phải từ 1-10",
-                  },
-                ]}
-              >
-                <InputNumber
-                  min={1}
-                  max={10}
-                  style={{ width: "100%" }}
-                  placeholder=""
-                  addonBefore="Mũi"
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="intervalDays"
-                label="Số ngày tối thiểu sau mũi trước đó"
-                rules={[
-                  {
-                    required: true,
-                    message: "Vui lòng nhập số ngày tối thiểu",
-                  },
-                  {
-                    type: "number",
-                    min: 0,
-                    max: 365,
-                    message: "Số ngày phải từ 0-365 ngày",
-                  },
-                ]}
-                extra="Mũi 1 có thể là 0 ngày. Các mũi tiếp theo phải chờ ít nhất số ngày này sau mũi trước."
-              >
-                <InputNumber
-                  min={0}
-                  max={365}
-                  style={{ width: "100%" }}
-                  placeholder=""
-                  addonAfter="ngày"
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="minAge"
-                label="Tuổi tối thiểu (tháng)"
-                rules={[
-                  { required: true, message: "Vui lòng nhập tuổi tối thiểu" },
-                  {
-                    type: "number",
-                    min: 0,
-                    max: 216,
-                    message: "Tuổi phải từ 0-216 tháng (18 năm)",
-                  },
-                ]}
-              >
-                <InputNumber
-                  min={0}
-                  max={216}
-                  style={{ width: "100%" }}
-                  placeholder=""
-                  addonAfter="tháng"
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="maxAge"
-                label="Tuổi tối đa (tháng)"
-                rules={[
-                  { required: true, message: "Vui lòng nhập tuổi tối đa" },
-                  {
-                    type: "number",
-                    min: 0,
-                    max: 216,
-                    message: "Tuổi phải từ 0-216 tháng (18 năm)",
-                  },
-                ]}
-              >
-                <InputNumber
-                  min={0}
-                  max={216}
-                  style={{ width: "100%" }}
-                  placeholder=""
-                  addonAfter="tháng"
-                />
-              </Form.Item>
-            </Col>
-          </Row>
+
+          <Form.Item
+            name="doesNumber"
+            label="Mũi thứ"
+            rules={[
+              { required: true, message: 'Vui lòng nhập số thứ tự mũi tiêm!' },
+              { type: 'number', min: 1, max: 10, message: 'Số thứ tự mũi tiêm phải từ 1 đến 10!' }
+            ]}
+          >
+            <InputNumber
+              style={{ width: '100%' }}
+              placeholder="Nhập số thứ tự mũi tiêm"
+              min={1}
+              max={10}
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="minAge"
+            label="Độ tuổi tối thiểu (tháng)"
+            rules={[
+              { required: true, message: 'Vui lòng nhập độ tuổi tối thiểu!' },
+              { type: 'number', min: 0, max: 216, message: 'Độ tuổi phải từ 0 đến 18 tuổi (216 tháng)!' }
+            ]}
+          >
+            <InputNumber
+              style={{ width: '100%' }}
+              placeholder="Nhập độ tuổi tối thiểu (tháng)"
+              min={0}
+              max={216}
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="maxAge"
+            label="Độ tuổi tối đa (tháng)"
+            rules={[
+              { required: true, message: 'Vui lòng nhập độ tuổi tối đa!' },
+              { type: 'number', min: 0, max: 216, message: 'Độ tuổi phải từ 0 đến 18 tuổi (216 tháng)!' },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (!value || !getFieldValue('minAge') || value >= getFieldValue('minAge')) {
+                    return Promise.resolve();
+                  }
+                  return Promise.reject('Độ tuổi tối đa phải lớn hơn độ tuổi tối thiểu!');
+                },
+              }),
+            ]}
+          >
+            <InputNumber
+              style={{ width: '100%' }}
+              placeholder="Nhập độ tuổi tối đa (tháng)"
+              min={0}
+              max={216}
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="intervalDays"
+            label="Khoảng cách tối thiểu (ngày)"
+            rules={[
+              { required: true, message: 'Vui lòng nhập khoảng cách tối thiểu!' },
+              { type: 'number', min: 0, max: 365, message: 'Khoảng cách phải từ 0 đến 365 ngày!' }
+            ]}
+          >
+            <InputNumber
+              style={{ width: '100%' }}
+              placeholder="Nhập khoảng cách tối thiểu giữa các mũi tiêm"
+              min={0}
+              max={365}
+            />
+          </Form.Item>
+
           <Form.Item
             name="mandatory"
-            label="Bắt buộc tiêm"
+            label="Bắt buộc"
             valuePropName="checked"
           >
-            <Switch checkedChildren="Bắt buộc" unCheckedChildren="Tự nguyện" />
+            <Switch />
           </Form.Item>
-          <Form.Item style={{ textAlign: "right", marginBottom: 0 }}>
-            <Space>
-              {" "}
-              <Button
-                onClick={() => {
-                  setModalVisible(false);
-                  setEditingRule(null);
-                  form.resetFields();
-                  // Explicitly clear all field values
-                  form.setFieldsValue({
-                    name: undefined,
-                    description: undefined,
-                    doesNumber: undefined,
-                    minAge: undefined,
-                    maxAge: undefined,
-                    intervalDays: undefined,
-                    mandatory: undefined,
-                  });
-                }}
-              >
-                Hủy
-              </Button>
-              <Button type="primary" htmlType="submit" loading={loading}>
-                {editingRule ? "Cập nhật" : "Tạo mới"}
-              </Button>
-            </Space>
+
+          <Form.Item style={{ marginTop: 24, textAlign: 'right' }}>
+            <Button
+              onClick={() => {
+                setModalVisible(false);
+                setEditingRule(null);
+                form.resetFields();
+              }}
+              style={{ marginRight: 8 }}
+            >
+              Hủy
+            </Button>
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={loading}
+              style={{ background: '#ff6b35', borderColor: '#ff6b35' }}
+            >
+              {editingRule ? 'Cập nhật' : 'Thêm mới'}
+            </Button>
           </Form.Item>
         </Form>
       </Modal>
