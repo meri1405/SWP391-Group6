@@ -24,7 +24,7 @@ import {
   UserOutlined,
   CalendarOutlined
 } from '@ant-design/icons';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../../contexts/AuthContext';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;

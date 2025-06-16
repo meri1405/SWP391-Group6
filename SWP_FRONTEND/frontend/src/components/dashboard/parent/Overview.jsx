@@ -11,9 +11,9 @@ import {
   CheckCircleOutlined,
   ExclamationCircleOutlined
 } from '@ant-design/icons';
-import { useAuth } from '../../contexts/AuthContext';
-import { parentApi } from '../../api/parentApi';
-import webSocketService from '../../services/webSocketService';
+import { useAuth } from '../../../contexts/AuthContext';
+import { parentApi } from '../../../api/parentApi';
+import webSocketService from '../../../services/webSocketService';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;

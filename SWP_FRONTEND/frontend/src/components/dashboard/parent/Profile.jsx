@@ -23,9 +23,9 @@ import {
   Tag, 
   Avatar 
 } from "antd";
-import { useAuth } from "../../contexts/AuthContext";
-import { parentApi } from "../../api/parentApi";
-import "../../styles/Profile.css";
+import { useAuth } from "../../../contexts/AuthContext";
+import { parentApi } from "../../../api/parentApi";
+import "../../../styles/Profile.css";
 import dayjs from 'dayjs';
 
 const Profile = ({ userInfo, onProfileUpdate }) => {

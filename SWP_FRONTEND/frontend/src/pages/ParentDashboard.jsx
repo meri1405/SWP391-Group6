@@ -13,16 +13,14 @@ import {
   LeftOutlined,
   RightOutlined
 } from '@ant-design/icons';
-import Overview from '../components/dashboard/Overview';
+import Overview from '../components/dashboard/parent/Overview';
 import '../styles/SidebarTrigger.css'
 import Notifications from '../components/dashboard/Notifications';
-import HealthHistory from '../components/dashboard/HealthHistory';
-import PhysicalMental from '../components/dashboard/PhysicalMental';
-import MedicationManagement from '../components/dashboard/MedicationManagement';
+import MedicationManagement from '../components/dashboard/parent/MedicationManagement';
 import VaccinationSchedule from '../components/dashboard/VaccinationSchedule';
-import Profile from '../components/dashboard/Profile';
-import HealthProfileDeclaration from '../components/dashboard/HealthProfileDeclaration';
-import ApprovedHealthProfile from '../components/dashboard/ApprovedHealthProfile';
+import Profile from '../components/dashboard/parent/Profile';
+import HealthProfileDeclaration from '../components/dashboard/parent/HealthProfileDeclaration';
+import ApprovedHealthProfile from '../components/dashboard/parent/ApprovedHealthProfile';
 
 const { Header, Sider, Content } = Layout;
 

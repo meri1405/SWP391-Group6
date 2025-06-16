@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
-import { parentApi } from '../../api/parentApi';
+import { useAuth } from '../../../contexts/AuthContext';
+import { parentApi } from '../../../api/parentApi';
 import dayjs from 'dayjs';
 import { 
   Table, 
@@ -30,9 +30,9 @@ import {
   AlertOutlined,
   NumberOutlined
 } from '@ant-design/icons';
-import '../../styles/NurseMedicationComponents.css';
-import '../../styles/NurseMedicationCards.css';
-import '../../styles/MedicationNotes.css';
+import '../../../styles/NurseMedicationComponents.css';
+import '../../../styles/NurseMedicationCards.css';
+import '../../../styles/MedicationNotes.css';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
