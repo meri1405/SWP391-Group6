@@ -25,10 +25,10 @@ import {
   CalendarOutlined,
   InfoCircleOutlined
 } from '@ant-design/icons';
-import { parentApi } from '../../api/parentApi';
-import { useAuth } from '../../contexts/AuthContext';
+import { parentApi } from '../../../api/parentApi';
+import { useAuth } from '../../../contexts/AuthContext';
 import dayjs from 'dayjs';
-import '../../styles/ApprovedHealthProfile.css';
+import '../../../styles/ApprovedHealthProfile.css';
 
 const { Option } = Select;
 

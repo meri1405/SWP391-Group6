@@ -32,9 +32,9 @@ import {
   MinusCircleOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { useAuth } from '../../contexts/AuthContext';
-import { parentApi } from '../../api/parentApi';
-import '../../styles/MedicationManagement.css';
+import { useAuth } from '../../../contexts/AuthContext';
+import { parentApi } from '../../../api/parentApi';
+import '../../../styles/MedicationManagement.css';
 import ParentMedicationSchedules from './ParentMedicationSchedules';
 
 const { Option } = Select;

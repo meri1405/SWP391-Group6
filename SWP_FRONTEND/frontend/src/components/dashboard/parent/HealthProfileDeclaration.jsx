@@ -34,10 +34,10 @@ import {
   FileTextOutlined,
   HistoryOutlined
 } from '@ant-design/icons';
-import { parentApi } from '../../api/parentApi';
-import { useAuth } from '../../contexts/AuthContext';
+import { parentApi } from '../../../api/parentApi';
+import { useAuth } from '../../../contexts/AuthContext';
 import dayjs from 'dayjs';
-import '../../styles/HealthProfileDeclaration.css';
+import '../../../styles/HealthProfileDeclaration.css';
 import HealthProfileDetailModal from './HealthProfileDetailModal';
 
 const { TextArea } = Input;
