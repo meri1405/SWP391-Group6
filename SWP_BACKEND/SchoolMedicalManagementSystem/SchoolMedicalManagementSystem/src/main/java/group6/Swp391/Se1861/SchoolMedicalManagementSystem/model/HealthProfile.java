@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.Set;
 
 @Entity
@@ -77,5 +78,8 @@ public class HealthProfile {
 
     @OneToMany(mappedBy = "healthProfile", cascade = CascadeType.ALL)
     private Set<VaccinationHistory> vaccinationHistory;
+
+    @OneToMany(mappedBy = "healthProfile", cascade = CascadeType.ALL)
+    private Set<MedicalEvent> medicalEvents = new HashSet<>();
 
 }

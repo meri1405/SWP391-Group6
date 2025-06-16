@@ -26,6 +26,9 @@ public interface MedicalSupplyRepository extends JpaRepository<MedicalSupply, Lo
     @Query("SELECT m FROM MedicalSupply m WHERE LOWER(m.name) LIKE LOWER(CONCAT('%', :name, '%'))")
     List<MedicalSupply> findByNameContainingIgnoreCase(@Param("name") String name);
     
+    @Query("SELECT m FROM MedicalSupply m WHERE LOWER(m.name) = LOWER(:name) AND m.quantity > 0 ORDER BY m.expirationDate ASC")
+    List<MedicalSupply> findByNameOrderByExpirationDateAsc(@Param("name") String name);
+
     @Query("SELECT m FROM MedicalSupply m WHERE m.location = :location")
     List<MedicalSupply> findByLocation(@Param("location") String location);
     

@@ -11,15 +11,13 @@ import java.util.List;
 @Repository
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
 
-    // Find all notifications for a specific user, ordered by creation time (newest first)
     List<Notification> findByRecipientOrderByCreatedAtDesc(User recipient);
 
-    // Find all notifications for a specific user with pagination, ordered by creation time (newest first)
     List<Notification> findByRecipientOrderByCreatedAtDesc(User recipient, Pageable pageable);
 
-    // Find all unread notifications for a specific user
-    List<Notification> findByRecipientAndIsReadFalseOrderByCreatedAtDesc(User recipient);
+    List<Notification> findByRecipientAndIsReadFalse(User recipient);
 
-    // Count unread notifications for a specific user
     long countByRecipientAndIsReadFalse(User recipient);
+
+    List<Notification> findByNotificationType(String notificationType);
 }

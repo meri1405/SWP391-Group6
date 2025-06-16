@@ -18,4 +18,5 @@ public class NotificationDTO {
     private Long recipientId;
     private Long medicationRequestId;
     private Long medicationScheduleId;
+    private Long medicalEventId;
 }
