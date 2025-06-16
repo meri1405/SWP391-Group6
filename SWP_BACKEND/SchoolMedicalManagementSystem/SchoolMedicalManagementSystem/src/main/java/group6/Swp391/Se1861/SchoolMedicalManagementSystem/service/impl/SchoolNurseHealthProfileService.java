@@ -51,6 +51,9 @@ public class SchoolNurseHealthProfileService implements ISchoolNurseHealthProfil
     @Autowired
     private VaccinationHistoryRepository vaccinationHistoryRepository;
 
+    @Autowired
+    private NotificationService notificationService;
+
     /**
      * Get all health profiles
      * @return list of all health profiles
@@ -112,10 +115,10 @@ public class SchoolNurseHealthProfileService implements ISchoolNurseHealthProfil
         healthProfile.setHeight(healthProfileDTO.getHeight());
         healthProfile.setNote(healthProfileDTO.getNote());
         healthProfile.setUpdatedAt(LocalDate.now());
-        
+
         // Save updated profile
         HealthProfile updatedProfile = healthProfileRepository.save(healthProfile);
-        
+
         return convertToDetailedDTO(updatedProfile);
     }
 
@@ -151,20 +154,26 @@ public class SchoolNurseHealthProfileService implements ISchoolNurseHealthProfil
         // Set nurse note separately, don't mix with parent note
         healthProfile.setNurseNote(nurseNote != null && !nurseNote.trim().isEmpty() ? nurseNote.trim() : null);
         healthProfile.setUpdatedAt(LocalDate.now());
-        
+
         // Save approved profile
         HealthProfile approvedProfile = healthProfileRepository.save(healthProfile);
-        
-        // Send notification to parent - we'll use a log message instead since NotificationService might not exist
+
+        // Send notification to parent using NotificationService
         if (approvedProfile.getParent() != null) {
-            String notificationMessage = "Hồ sơ sức khỏe của học sinh " + 
-                    approvedProfile.getStudent().getFirstName() + " " + 
+            String title = "Hồ sơ sức khỏe đã được duyệt";
+            String message = "Hồ sơ sức khỏe của học sinh " +
+                    approvedProfile.getStudent().getFirstName() + " " +
                     approvedProfile.getStudent().getLastName() + " đã được y tá trường duyệt.";
-            
-            // Log notification instead of sending
-            System.out.println("NOTIFICATION: To parent ID " + approvedProfile.getParent().getId() + " - " + notificationMessage);
+
+            notificationService.createHealthProfileNotification(
+                approvedProfile,
+                approvedProfile.getParent(),
+                "HEALTH_PROFILE_APPROVED",
+                title,
+                message
+            );
         }
-        
+
         return convertToDetailedDTO(approvedProfile);
     }
 
@@ -204,25 +213,31 @@ public class SchoolNurseHealthProfileService implements ISchoolNurseHealthProfil
 
         // Update profile status and nurse information
         healthProfile.setStatus(ProfileStatus.REJECTED);        healthProfile.setNurse(nurse);
-        
+
         // Set nurse note separately for rejection reason
         healthProfile.setNurseNote(nurseNote != null && !nurseNote.trim().isEmpty() ? nurseNote.trim() : null);
         healthProfile.setUpdatedAt(LocalDate.now());
-        
+
         // Save rejected profile
         HealthProfile rejectedProfile = healthProfileRepository.save(healthProfile);
-        
-        // Send notification to parent - we'll use a log message instead since NotificationService might not exist
+
+        // Send notification to parent using NotificationService
         if (rejectedProfile.getParent() != null) {
-            String notificationMessage = "Hồ sơ sức khỏe của học sinh " + 
-                    rejectedProfile.getStudent().getFirstName() + " " + 
+            String title = "Hồ sơ sức khỏe đã bị từ chối";
+            String message = "Hồ sơ sức khỏe của học sinh " +
+                    rejectedProfile.getStudent().getFirstName() + " " +
                     rejectedProfile.getStudent().getLastName() + 
                     " đã bị từ chối. Lý do: " + nurseNote;
-            
-            // Log notification instead of sending
-            System.out.println("NOTIFICATION: To parent ID " + rejectedProfile.getParent().getId() + " - " + notificationMessage);
+
+            notificationService.createHealthProfileNotification(
+                rejectedProfile,
+                rejectedProfile.getParent(),
+                "HEALTH_PROFILE_REJECTED",
+                title,
+                message
+            );
         }
-        
+
         return convertToDetailedDTO(rejectedProfile);
     }
 
@@ -240,27 +255,27 @@ public class SchoolNurseHealthProfileService implements ISchoolNurseHealthProfil
         dto.setBloodType(healthProfile.getBloodType());
         dto.setStatus(healthProfile.getStatus());
         dto.setNote(healthProfile.getNote());
-        
+
         // Initialize additionalFields if needed
         Map<String, Object> additionalFields = new HashMap<>();
-        
+
         if (healthProfile.getStudent() != null) {
             dto.setStudentId(healthProfile.getStudent().getStudentID());
-            
+
             // Create StudentDTO
             StudentDTO studentDTO = new StudentDTO();
             studentDTO.setStudentID(healthProfile.getStudent().getStudentID());
             studentDTO.setFirstName(healthProfile.getStudent().getFirstName());
             studentDTO.setLastName(healthProfile.getStudent().getLastName());
             studentDTO.setClassName(healthProfile.getStudent().getClassName());
-            
+
             // Add to additional fields
             additionalFields.put("student", studentDTO);
         }
-        
+
         if (healthProfile.getParent() != null) {
             dto.setParentId(healthProfile.getParent().getId());
-            
+
             // Create parent UserDTO
             Map<String, Object> parentDTO = new HashMap<>();
             parentDTO.put("id", healthProfile.getParent().getId());
@@ -268,24 +283,24 @@ public class SchoolNurseHealthProfileService implements ISchoolNurseHealthProfil
             parentDTO.put("lastName", healthProfile.getParent().getLastName());
             parentDTO.put("phone", healthProfile.getParent().getPhone());
             parentDTO.put("email", healthProfile.getParent().getEmail());
-            
+
             // Add to additional fields
             additionalFields.put("parent", parentDTO);
         }
-        
+
         if (healthProfile.getNurse() != null) {
             dto.setNurseId(healthProfile.getNurse().getId());
-            
+
             // Add nurse full name to additional fields
             additionalFields.put("schoolNurseFullName", 
                 healthProfile.getNurse().getFirstName() + " " + healthProfile.getNurse().getLastName());
         }
-        
+
         // Set additional fields if any were added
         if (!additionalFields.isEmpty()) {
             dto.setAdditionalFields(additionalFields);
         }
-        
+
         return dto;
     }
 
@@ -295,7 +310,7 @@ public class SchoolNurseHealthProfileService implements ISchoolNurseHealthProfil
     @Override
     public HealthProfileDTO convertToDetailedDTO(HealthProfile healthProfile) {
         HealthProfileDTO dto = convertToBasicDTO(healthProfile);
-        
+
         // Convert allergies
         if (healthProfile.getAllergies() != null && !healthProfile.getAllergies().isEmpty()) {
             List<AllergiesDTO> allergies = new ArrayList<>();
@@ -310,7 +325,7 @@ public class SchoolNurseHealthProfileService implements ISchoolNurseHealthProfil
             }
             dto.setAllergies(allergies);
         }
-        
+
         // Convert chronic diseases
         if (healthProfile.getChronicDiseases() != null && !healthProfile.getChronicDiseases().isEmpty()) {
             List<ChronicDiseasesDTO> diseases = new ArrayList<>();
@@ -329,7 +344,7 @@ public class SchoolNurseHealthProfileService implements ISchoolNurseHealthProfil
             }
             dto.setChronicDiseases(diseases);
         }
-        
+
         // Convert infectious diseases
         if (healthProfile.getInfectiousDiseases() != null && !healthProfile.getInfectiousDiseases().isEmpty()) {
             List<InfectiousDiseasesDTO> diseases = new ArrayList<>();
@@ -348,7 +363,7 @@ public class SchoolNurseHealthProfileService implements ISchoolNurseHealthProfil
             }
             dto.setInfectiousDiseases(diseases);
         }
-        
+
         // Convert treatments
         if (healthProfile.getTreatments() != null && !healthProfile.getTreatments().isEmpty()) {
             List<TreatmentHistoryDTO> treatments = new ArrayList<>();
@@ -366,7 +381,7 @@ public class SchoolNurseHealthProfileService implements ISchoolNurseHealthProfil
             }
             dto.setTreatments(treatments);
         }
-        
+
         // Convert vision
         if (healthProfile.getVision() != null && !healthProfile.getVision().isEmpty()) {
             List<VisionDTO> visionList = new ArrayList<>();
@@ -383,7 +398,7 @@ public class SchoolNurseHealthProfileService implements ISchoolNurseHealthProfil
             }
             dto.setVision(visionList);
         }
-        
+
         // Convert hearing
         if (healthProfile.getHearing() != null && !healthProfile.getHearing().isEmpty()) {
             List<HearingDTO> hearingList = new ArrayList<>();
@@ -398,7 +413,7 @@ public class SchoolNurseHealthProfileService implements ISchoolNurseHealthProfil
             }
             dto.setHearing(hearingList);
         }
-        
+
         // Convert vaccination history
         if (healthProfile.getVaccinationHistory() != null && !healthProfile.getVaccinationHistory().isEmpty()) {
             List<VaccinationHistoryDTO> vaccinations = new ArrayList<>();
@@ -420,7 +435,7 @@ public class SchoolNurseHealthProfileService implements ISchoolNurseHealthProfil
             }
             dto.setVaccinationHistory(vaccinations);
         }
-        
+
         return dto;
     }
-} 
+}

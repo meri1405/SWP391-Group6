@@ -1,6 +1,8 @@
 package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.NotificationDTO;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.HealthProfile;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.MedicalEvent;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.MedicationRequest;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.MedicationSchedule;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.Notification;
@@ -9,7 +11,7 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
 import java.util.List;
 
 public interface INotificationService {
-    
+
     /**
      * Create a new notification for medication request approval/rejection
      */
@@ -24,6 +26,16 @@ public interface INotificationService {
      */
     NotificationDTO createMedicationScheduleNotification(
             MedicationSchedule medicationSchedule,
+            String notificationType,
+            String title,
+            String message);
+
+    /**
+     * Create a new notification for health profile actions
+     */
+    NotificationDTO createHealthProfileNotification(
+            HealthProfile healthProfile,
+            User recipient,
             String notificationType,
             String title,
             String message);

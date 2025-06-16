@@ -45,4 +45,9 @@ public class Notification {
     @ManyToOne
     @JoinColumn(name = "medicationScheduleId")
     private MedicationSchedule medicationSchedule;
+
+    // Optional reference to related medical event
+    @ManyToOne
+    @JoinColumn(name = "medicalEventId")
+    private MedicalEvent medicalEvent;
 }

@@ -1,10 +1,7 @@
 package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.NotificationDTO;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.MedicationRequest;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.MedicationSchedule;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.Notification;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.*;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.NotificationRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.UserRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.INotificationService;
@@ -128,7 +125,9 @@ public class NotificationService implements INotificationService {
         }
 
         return notificationDTO;
-    }    /**
+    }
+
+    /**
      * Get all notifications for a user
      */
     @Override
@@ -144,7 +143,7 @@ public class NotificationService implements INotificationService {
      */
     @Override
     public List<NotificationDTO> getAllNotificationsForUser(User user, int limit) {
-        return notificationRepository.findByRecipientOrderByCreatedAtDesc(user, 
+        return notificationRepository.findByRecipientOrderByCreatedAtDesc(user,
                 PageRequest.of(0, limit))
                 .stream()
                 .map(this::convertToDTO)
@@ -156,7 +155,7 @@ public class NotificationService implements INotificationService {
      */
     @Override
     public List<NotificationDTO> getUnreadNotificationsForUser(User user) {
-        return notificationRepository.findByRecipientAndIsReadFalseOrderByCreatedAtDesc(user)
+        return notificationRepository.findByRecipientAndIsReadFalse(user)
                 .stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -187,7 +186,7 @@ public class NotificationService implements INotificationService {
     @Override
     public void markAllNotificationsAsRead(User user) {
         List<Notification> unreadNotifications = notificationRepository
-                .findByRecipientAndIsReadFalseOrderByCreatedAtDesc(user);
+                .findByRecipientAndIsReadFalse(user);
 
         unreadNotifications.forEach(notification -> notification.setRead(true));
         notificationRepository.saveAll(unreadNotifications);
@@ -199,6 +198,55 @@ public class NotificationService implements INotificationService {
     @Override
     public long getUnreadNotificationCount(User user) {
         return notificationRepository.countByRecipientAndIsReadFalse(user);
+    }
+
+    /**
+     * Create a new notification for health profile actions
+     */
+    @Transactional
+    @Override
+    public NotificationDTO createHealthProfileNotification(
+            HealthProfile healthProfile,
+            User recipient,
+            String notificationType,
+            String title,
+            String message) {
+
+        // Check if recipient exists
+        if (recipient == null) {
+            System.out.println("Warning: Cannot send notification - recipient is null for health profile ID: " + healthProfile.getId());
+            return null;
+        }
+
+        // Create and save notification entity
+        Notification notification = new Notification();
+        notification.setTitle(title);
+        notification.setMessage(message);
+        notification.setNotificationType(notificationType);
+        notification.setRecipient(recipient);
+        // Set health profile in notification (assuming there's a field for it)
+        // If there's no field for health profile in Notification, you may need to add it
+
+        Notification savedNotification = notificationRepository.save(notification);
+
+        // Convert to DTO
+        NotificationDTO notificationDTO = convertToDTO(savedNotification);
+
+        try {
+            // Send real-time notification via WebSocket
+            if (recipient.getUsername() != null) {
+                messagingTemplate.convertAndSendToUser(
+                        recipient.getUsername(),
+                        "/topic/notifications",
+                        notificationDTO
+                );
+            }
+        } catch (Exception e) {
+            // Log the error but don't fail the entire transaction
+            System.err.println("Error sending WebSocket notification: " + e.getMessage());
+        }
+
+        return notificationDTO;
     }
 
     /**
@@ -222,6 +270,15 @@ public class NotificationService implements INotificationService {
         if (notification.getMedicationSchedule() != null) {
             dto.setMedicationScheduleId(notification.getMedicationSchedule().getId());
         }
+
+        if (notification.getMedicalEvent() != null) {
+            dto.setMedicalEventId(notification.getMedicalEvent().getId());
+        }
+
+        // If there's a field for health profile in Notification, add it here
+        // if (notification.getHealthProfile() != null) {
+        //     dto.setHealthProfileId(notification.getHealthProfile().getId());
+        // }
 
         return dto;
     }

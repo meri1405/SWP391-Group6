@@ -51,6 +51,9 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
     @Autowired
     private VaccinationRuleRepository vaccinationRuleRepository;
 
+    @Autowired
+    private NotificationService notificationService;
+
     /**
      * Create a health profile for a child by a parent
      * @param parentId ID of the parent user
@@ -83,7 +86,7 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
         }        // Check existing profiles for this student to enforce business rules
         List<HealthProfile> existingProfiles = healthProfileRepository.findByStudentStudentIDAndParentId(
             healthProfileDTO.getStudentId(), parentId);
-        
+
         // Only prevent creating new profiles if there's a PENDING profile
         boolean hasPendingProfile = existingProfiles.stream()
             .anyMatch(profile -> profile.getStatus() == ProfileStatus.PENDING);
@@ -209,15 +212,35 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
                 vaccination.setStatus(vaccinationDTO.isStatus());
                 vaccination.setSource(VaccinationHistory.VaccinationSource.PARENT_REPORTED);
                 vaccination.setHealthProfile(savedProfile);
-                
+
                 // Set vaccination rule if provided
                 if (vaccinationDTO.getRuleId() != null) {
                     VaccinationRule rule = vaccinationRuleRepository.findById(vaccinationDTO.getRuleId())
                             .orElse(null);
                     vaccination.setVaccinationRule(rule);
                 }
-                
+
                 vaccinationHistoryRepository.save(vaccination);
+            }
+        }
+
+        // Send notification to all school nurses
+        List<User> schoolNurses = userRepository.findByRole_RoleName("SCHOOLNURSE");
+        if (!schoolNurses.isEmpty()) {
+            String title = "Hồ sơ sức khỏe mới đã được tạo";
+            String message = "Phụ huynh " + parent.getFirstName() + " " + parent.getLastName() + 
+                    " đã tạo hồ sơ sức khỏe mới cho học sinh " + 
+                    student.getFirstName() + " " + student.getLastName() + 
+                    ". Vui lòng xem xét và phê duyệt.";
+
+            for (User nurse : schoolNurses) {
+                notificationService.createHealthProfileNotification(
+                    savedProfile,
+                    nurse,
+                    "HEALTH_PROFILE_CREATED",
+                    title,
+                    message
+                );
             }
         }
 
@@ -324,7 +347,7 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
 
         // Get approved health profiles only
         List<HealthProfile> healthProfiles = healthProfileRepository.findByStudentStudentIDAndParentId(studentId, parentId);
-        
+
         // Filter for approved profiles only
         List<HealthProfile> approvedProfiles = healthProfiles.stream()
                 .filter(profile -> profile.getStatus() == ProfileStatus.APPROVED)
@@ -386,7 +409,7 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
             Set<Allergies> existingAllergies = healthProfile.getAllergies() != null ? 
                 new HashSet<>(healthProfile.getAllergies()) : new HashSet<>();
             Set<Allergies> updatedAllergies = new HashSet<>(existingAllergies);
-            
+
             // Process each allergy from DTO
             for (AllergiesDTO allergyDTO : healthProfileDTO.getAllergies()) {
                 // Check if this is a new allergy (no ID) or doesn't exist in current allergies
@@ -396,7 +419,7 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
                         (existing.getAllergyType().equalsIgnoreCase(allergyDTO.getAllergyType()) &&
                          existing.getOnsetDate().equals(allergyDTO.getOnsetDate()))
                     );
-                
+
                 if (isNewAllergy) {
                     // Create new allergy
                     Allergies newAllergy = new Allergies();
@@ -405,7 +428,7 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
                     newAllergy.setStatus(allergyDTO.getStatus());
                     newAllergy.setOnsetDate(allergyDTO.getOnsetDate());
                     newAllergy.setHealthProfile(updatedProfile);
-                    
+
                     // Save new allergy
                     Allergies savedAllergy = allergiesRepository.save(newAllergy);
                     updatedAllergies.add(savedAllergy);
@@ -416,7 +439,7 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
                                 (existing.getAllergyType().equalsIgnoreCase(allergyDTO.getAllergyType()) &&
                                  existing.getOnsetDate().equals(allergyDTO.getOnsetDate())))
                         .findFirst().orElse(null);
-                    
+
                     if (existingAllergy != null) {
                         // Update fields if they have changed
                         existingAllergy.setDescription(allergyDTO.getDescription());
@@ -425,7 +448,7 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
                     }
                 }
             }
-            
+
             // Update the bidirectional relationship
             updatedProfile.setAllergies(updatedAllergies);
             // Save the updated profile with the allergies
@@ -437,7 +460,7 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
             Set<ChronicDiseases> existingDiseases = healthProfile.getChronicDiseases() != null ? 
                 new HashSet<>(healthProfile.getChronicDiseases()) : new HashSet<>();
             Set<ChronicDiseases> updatedDiseases = new HashSet<>(existingDiseases);
-            
+
             // Process each chronic disease from DTO
             for (ChronicDiseasesDTO diseaseDTO : healthProfileDTO.getChronicDiseases()) {
                 // Check if this is a new chronic disease (no ID) or doesn't exist in current diseases
@@ -447,7 +470,7 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
                         (existing.getDiseaseName().equalsIgnoreCase(diseaseDTO.getDiseaseName()) &&
                          existing.getDateDiagnosed().equals(diseaseDTO.getDateDiagnosed()))
                     );
-                
+
                 if (isNewDisease) {
                     // Create new chronic disease
                     ChronicDiseases newDisease = new ChronicDiseases();
@@ -460,7 +483,7 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
                     newDisease.setDateOfDischarge(diseaseDTO.getDateOfDischarge());
                     newDisease.setStatus(diseaseDTO.getStatus());
                     newDisease.setHealthProfile(updatedProfile);
-                    
+
                     // Save new chronic disease
                     ChronicDiseases savedDisease = chronicDiseasesRepository.save(newDisease);
                     updatedDiseases.add(savedDisease);
@@ -484,7 +507,7 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
                     }
                 }
             }
-            
+
             // Update the bidirectional relationship
             updatedProfile.setChronicDiseases(updatedDiseases);
             // Save the updated profile with the chronic diseases
@@ -496,14 +519,14 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
             List<InfectiousDiseases> existingDiseases = healthProfile.getInfectiousDiseases() != null ? 
                 new ArrayList<>(healthProfile.getInfectiousDiseases()) : new ArrayList<>();
             List<InfectiousDiseases> updatedDiseases = new ArrayList<>(existingDiseases);
-            
+
             for (InfectiousDiseasesDTO diseaseDTO : healthProfileDTO.getInfectiousDiseases()) {
                 // Check if this is a new infectious disease (no ID or doesn't match existing)
                 if (diseaseDTO.getId() == null || existingDiseases.stream()
                     .noneMatch(existing -> existing.getId().equals(diseaseDTO.getId()) ||
                               (existing.getDiseaseName().equalsIgnoreCase(diseaseDTO.getDiseaseName()) &&
                                existing.getDateDiagnosed().equals(diseaseDTO.getDateDiagnosed())))) {
-                    
+
                     // Create new infectious disease
                     InfectiousDiseases newDisease = new InfectiousDiseases();
                     newDisease.setDiseaseName(diseaseDTO.getDiseaseName());
@@ -515,7 +538,7 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
                     newDisease.setDateOfDischarge(diseaseDTO.getDateOfDischarge());
                     newDisease.setStatus(diseaseDTO.getStatus());
                     newDisease.setHealthProfile(updatedProfile);
-                    
+
                     // Save new infectious disease
                     InfectiousDiseases savedDisease = infectiousDiseasesRepository.save(newDisease);
                     updatedDiseases.add(savedDisease);
@@ -539,7 +562,7 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
                     }
                 }
             }
-            
+
             // Update the bidirectional relationship
             updatedProfile.setInfectiousDiseases(new HashSet<>(updatedDiseases));
             // Save the updated profile with the infectious diseases
@@ -551,14 +574,14 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
             List<TreatmentHistory> existingTreatments = healthProfile.getTreatments() != null ? 
                 new ArrayList<>(healthProfile.getTreatments()) : new ArrayList<>();
             List<TreatmentHistory> updatedTreatments = new ArrayList<>(existingTreatments);
-            
+
             for (TreatmentHistoryDTO treatmentDTO : healthProfileDTO.getTreatments()) {
                 // Check if this is a new treatment (no ID or doesn't match existing)
                 if (treatmentDTO.getId() == null || existingTreatments.stream()
                     .noneMatch(existing -> existing.getId().equals(treatmentDTO.getId()) ||
                               (existing.getTreatmentType().equalsIgnoreCase(treatmentDTO.getTreatmentType()) &&
                                existing.getDateOfAdmission().equals(treatmentDTO.getDateOfAdmission())))) {
-                    
+
                     // Create new treatment
                     TreatmentHistory newTreatment = new TreatmentHistory();
                     newTreatment.setTreatmentType(treatmentDTO.getTreatmentType());
@@ -569,7 +592,7 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
                     newTreatment.setPlaceOfTreatment(treatmentDTO.getPlaceOfTreatment());
                     newTreatment.setStatus(treatmentDTO.getStatus());
                     newTreatment.setHealthProfile(updatedProfile);
-                    
+
                     // Save new treatment
                     TreatmentHistory savedTreatment = treatmentHistoryRepository.save(newTreatment);
                     updatedTreatments.add(savedTreatment);
@@ -592,7 +615,7 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
                     }
                 }
             }
-            
+
             // Update the bidirectional relationship
             updatedProfile.setTreatments(new HashSet<>(updatedTreatments));
             // Save the updated profile with the treatments
@@ -604,13 +627,13 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
             List<Vision> existingVision = healthProfile.getVision() != null ? 
                 new ArrayList<>(healthProfile.getVision()) : new ArrayList<>();
             List<Vision> updatedVision = new ArrayList<>(existingVision);
-            
+
             for (VisionDTO visionDTO : healthProfileDTO.getVision()) {
                 // Check if this is a new vision record (no ID or doesn't match existing)
                 if (visionDTO.getId() == null || existingVision.stream()
                     .noneMatch(existing -> existing.getId().equals(visionDTO.getId()) ||
                               existing.getDateOfExamination().equals(visionDTO.getDateOfExamination()))) {
-                    
+
                     // Create new vision record
                     Vision newVision = new Vision();
                     newVision.setVisionLeft(visionDTO.getVisionLeft());
@@ -620,7 +643,7 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
                     newVision.setVisionDescription(visionDTO.getVisionDescription());
                     newVision.setDateOfExamination(visionDTO.getDateOfExamination());
                     newVision.setHealthProfile(updatedProfile);
-                    
+
                     // Save new vision record
                     Vision savedVision = visionRepository.save(newVision);
                     updatedVision.add(savedVision);
@@ -642,7 +665,7 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
                     }
                 }
             }
-            
+
             // Update the bidirectional relationship
             updatedProfile.setVision(new HashSet<>(updatedVision));
             // Save the updated profile with the vision records
@@ -654,13 +677,13 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
             List<Hearing> existingHearing = healthProfile.getHearing() != null ? 
                 new ArrayList<>(healthProfile.getHearing()) : new ArrayList<>();
             List<Hearing> updatedHearing = new ArrayList<>(existingHearing);
-            
+
             for (HearingDTO hearingDTO : healthProfileDTO.getHearing()) {
                 // Check if this is a new hearing record (no ID or doesn't match existing)
                 if (hearingDTO.getId() == null || existingHearing.stream()
                     .noneMatch(existing -> existing.getId().equals(hearingDTO.getId()) ||
                               existing.getDateOfExamination().equals(hearingDTO.getDateOfExamination()))) {
-                    
+
                     // Create new hearing record
                     Hearing newHearing = new Hearing();
                     newHearing.setLeftEar(hearingDTO.getLeftEar());
@@ -668,7 +691,7 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
                     newHearing.setDescription(hearingDTO.getDescription());
                     newHearing.setDateOfExamination(hearingDTO.getDateOfExamination());
                     newHearing.setHealthProfile(updatedProfile);
-                    
+
                     // Save new hearing record
                     Hearing savedHearing = hearingRepository.save(newHearing);
                     updatedHearing.add(savedHearing);
@@ -688,7 +711,7 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
                     }
                 }
             }
-            
+
             // Update the bidirectional relationship
             updatedProfile.setHearing(new HashSet<>(updatedHearing));
             // Save the updated profile with the hearing records
@@ -700,7 +723,7 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
             List<VaccinationHistory> existingVaccinations = healthProfile.getVaccinationHistory() != null ? 
                 new ArrayList<>(healthProfile.getVaccinationHistory()) : new ArrayList<>();
             List<VaccinationHistory> updatedVaccinations = new ArrayList<>(existingVaccinations);
-            
+
             for (VaccinationHistoryDTO vaccinationDTO : healthProfileDTO.getVaccinationHistory()) {
                 // Check if this is a new vaccination record (no ID or doesn't match existing)
                 if (vaccinationDTO.getId() == null || existingVaccinations.stream()
@@ -720,14 +743,14 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
                     newVaccination.setStatus(vaccinationDTO.isStatus());
                     newVaccination.setSource(VaccinationHistory.VaccinationSource.PARENT_REPORTED);
                     newVaccination.setHealthProfile(updatedProfile);
-                    
+
                     // Set vaccination rule if provided
                     if (vaccinationDTO.getRuleId() != null) {
                         VaccinationRule rule = vaccinationRuleRepository.findById(vaccinationDTO.getRuleId())
                                 .orElse(null);
                         newVaccination.setVaccinationRule(rule);
                     }
-                    
+
                     // Save new vaccination record
                     VaccinationHistory savedVaccination = vaccinationHistoryRepository.save(newVaccination);
                     updatedVaccinations.add(savedVaccination);
@@ -747,7 +770,7 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
                         existingVaccination.setNotes(vaccinationDTO.getNotes());
                         existingVaccination.setSource(VaccinationHistory.VaccinationSource.PARENT_REPORTED);
                         existingVaccination.setStatus(vaccinationDTO.isStatus());
-                        
+
                         // Update vaccination rule if provided
                         if (vaccinationDTO.getRuleId() != null) {
                             VaccinationRule rule = vaccinationRuleRepository.findById(vaccinationDTO.getRuleId())
@@ -756,12 +779,12 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
                         } else {
                             existingVaccination.setVaccinationRule(null);
                         }
-                        
+
                         vaccinationHistoryRepository.save(existingVaccination);
                     }
                 }
             }
-            
+
             // Update the bidirectional relationship
             updatedProfile.setVaccinationHistory(new HashSet<>(updatedVaccinations));
             // Save the updated profile with the vaccination history
@@ -975,12 +998,12 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
                         vaccinationDTO.setNotes(vaccination.getNotes());
                         vaccinationDTO.setSource(vaccination.getSource() != null ? vaccination.getSource().name() : null);
                         vaccinationDTO.setStatus(vaccination.isStatus());
-                        
+
                         // Include vaccination rule ID if rule is associated
                         if (vaccination.getVaccinationRule() != null) {
                             vaccinationDTO.setRuleId(vaccination.getVaccinationRule().getId());
                         }
-                        
+
                         return vaccinationDTO;
                     })
                     .collect(Collectors.toList());
@@ -1011,7 +1034,7 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
         if (healthProfile.getStatus() != ProfileStatus.REJECTED || healthProfile.getNurseNote() == null) {
             return false;
         }
-        
+
         String nurseNote = healthProfile.getNurseNote().toLowerCase();
         return nurseNote.contains("đã được duyệt") ||
                nurseNote.contains("đã duyệt") ||
@@ -1091,7 +1114,7 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
 
             // Check existing profiles
             List<HealthProfile> existingProfiles = healthProfileRepository.findByStudentStudentIDAndParentId(studentId, parentId);
-            
+
             if (existingProfiles.isEmpty()) {
                 return true; // No existing profiles, can create new one
             }

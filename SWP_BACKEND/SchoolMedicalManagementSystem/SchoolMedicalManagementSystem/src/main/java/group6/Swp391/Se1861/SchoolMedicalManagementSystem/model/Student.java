@@ -67,4 +67,18 @@ public class Student {
     public String getFullName() {
         return firstName + " " + lastName;
     }
+
+    /**
+     * Gets the primary parent contact for the student.
+     * Returns mother if available, otherwise returns father.
+     * May return null if no parent is assigned.
+     */
+    public User getParent() {
+        // Return mother as the primary contact if available
+        if (mother != null) {
+            return mother;
+        }
+        // Otherwise return father
+        return father;
+    }
 }
