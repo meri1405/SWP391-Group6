@@ -399,6 +399,118 @@
   line-height: 1.4;
 }
 
+/* Resend OTP Button */
+.resend-otp-button {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(135deg, #ff9800 0%, #ffa726 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-top: 12px;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  position: relative;
+  overflow: hidden;
+}
+
+.resend-otp-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.resend-otp-button:hover::before {
+  left: 100%;
+}
+
+.resend-otp-button:hover {
+  background: linear-gradient(135deg, #f57c00 0%, #ff9800 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 152, 0, 0.3);
+}
+
+.resend-otp-button:disabled {
+  background: linear-gradient(135deg, #bdbdbd 0%, #e0e0e0 100%);
+  color: #757575;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.resend-otp-button:disabled::before {
+  display: none;
+}
+
+/* Loading state for resend button */
+.resend-otp-button:disabled.loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  margin-top: -8px;
+  margin-left: -8px;
+  border: 2px solid transparent;
+  border-top: 2px solid #757575;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* Special states for resend button */
+.resend-otp-button.can-resend {
+  background: linear-gradient(135deg, #4caf50 0%, #66bb6a 100%);
+  animation: pulse 2s infinite;
+}
+
+.resend-otp-button.can-resend:hover {
+  background: linear-gradient(135deg, #388e3c 0%, #4caf50 100%);
+  box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7); }
+  70% { box-shadow: 0 0 0 10px rgba(76, 175, 80, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
+}
+
+/* Urgent resend state when OTP expired */
+.resend-otp-button.urgent {
+  background: linear-gradient(135deg, #f44336 0%, #ef5350 100%);
+  animation: urgentPulse 1.5s infinite;
+}
+
+.resend-otp-button.urgent:hover {
+  background: linear-gradient(135deg, #d32f2f 0%, #f44336 100%);
+  box-shadow: 0 6px 20px rgba(244, 67, 54, 0.4);
+}
+
+@keyframes urgentPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+/* Success state after successful resend */
+.resend-otp-button.success {
+  background: linear-gradient(135deg, #4caf50 0%, #66bb6a 100%);
+  animation: successFlash 0.6s ease-in-out;
+}
+
+@keyframes successFlash {
+  0%, 100% { background: linear-gradient(135deg, #4caf50 0%, #66bb6a 100%); }
+  50% { background: linear-gradient(135deg, #81c784 0%, #a5d6a7 100%); }
+}
+
 @media (max-width: 768px) {
   .login-columns {
     flex-direction: column;
@@ -410,5 +522,31 @@
 
   .login-column {
     padding: 15px;
+  }
+
+  /* Responsive design for resend button */
+  .resend-otp-button {
+    padding: 14px;
+    font-size: 15px;
+    margin-top: 15px;
+  }
+  
+  .otp-timer {
+    font-size: 14px;
+    margin-top: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .resend-otp-button {
+    padding: 16px;
+    font-size: 16px;
+    margin-top: 18px;
+    border-radius: 10px;
+  }
+  
+  .otp-timer {
+    font-size: 15px;
+    margin-top: 15px;
   }
 }
