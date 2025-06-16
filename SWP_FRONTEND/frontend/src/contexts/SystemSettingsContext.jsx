@@ -8,7 +8,8 @@ import { useAuth } from "./AuthContext";
 
 const SystemSettingsContext = createContext();
 
-export const useSystemSettings = () => {
+// Export hook as named export
+const useSystemSettings = () => {
   const context = useContext(SystemSettingsContext);
   if (!context) {
     throw new Error(
@@ -18,7 +19,8 @@ export const useSystemSettings = () => {
   return context;
 };
 
-export const SystemSettingsProvider = ({ children }) => {
+// Export provider as named export
+const SystemSettingsProvider = ({ children }) => {
   const [settings, setSettings] = useState({
     systemName: "Y Tế Học Đường",
     contactEmail: "admin@school-health.com",
@@ -159,3 +161,7 @@ export const SystemSettingsProvider = ({ children }) => {
     </SystemSettingsContext.Provider>
   );
 };
+
+// Export with default pattern for Fast Refresh compatibility
+export { useSystemSettings, SystemSettingsProvider };
+export default SystemSettingsProvider;
