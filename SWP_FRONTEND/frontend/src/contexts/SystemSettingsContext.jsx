@@ -33,17 +33,34 @@ export const SystemSettingsProvider = ({ children }) => {
     loadPublicSystemInfo();
   }, []);
 
-  // Load admin settings when user is authenticated and is staff
+  // Load admin settings when user is authenticated and is ADMIN
   useEffect(() => {
-    if (
-      isAuthenticated &&
-      isStaff &&
-      typeof isStaff === "function" &&
-      isStaff()
-    ) {
-      loadAdminSettings();
+    if (isAuthenticated && user) {
+      const userRole = user?.roleName;
+      console.log("SystemSettings: User role check", {
+        isAuthenticated,
+        userExists: !!user,
+        userRole,
+        isAdmin: userRole === "ADMIN",
+      });
+
+      // Only try to load admin settings for ADMIN users specifically
+      // Backend requires ADMIN role for /api/admin/** endpoints
+      if (userRole === "ADMIN") {
+        console.log("User is ADMIN, loading admin settings");
+        loadAdminSettings();
+      } else {
+        console.log(
+          `User role is ${userRole}, not ADMIN. Skipping admin settings load`
+        );
+      }
+    } else {
+      console.log("SystemSettings: Prerequisites not met", {
+        isAuthenticated,
+        userExists: !!user,
+      });
     }
-  }, [isAuthenticated, isStaff, user]);
+  }, [isAuthenticated, user]);
 
   const loadPublicSystemInfo = async () => {
     try {
@@ -67,7 +84,17 @@ export const SystemSettingsProvider = ({ children }) => {
   const loadAdminSettings = async () => {
     try {
       setLoading(true);
+      console.log("Loading admin settings...");
+
+      const token = localStorage.getItem("token");
+      if (!token) {
+        console.log("No token found, skipping admin settings load");
+        return;
+      }
+
       const data = await getSystemSettings();
+      console.log("Admin settings loaded successfully:", data);
+
       if (data) {
         setSettings((prev) => ({
           ...prev,
@@ -85,6 +112,17 @@ export const SystemSettingsProvider = ({ children }) => {
       }
     } catch (error) {
       console.error("Failed to load admin settings:", error);
+
+      // Handle specific error cases
+      if (error.message && error.message.includes("401")) {
+        console.log(
+          "Unauthorized access to admin settings - user may not have admin privileges"
+        );
+        // This is expected for non-admin users, so we silently fail
+      } else {
+        console.error("Unexpected error loading admin settings:", error);
+      }
+
       // Keep current values if API fails
     } finally {
       setLoading(false);

@@ -1,6 +1,15 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Layout, Menu, Breadcrumb, Spin, message, Upload, Badge, Progress } from 'antd';
+import {
+  Layout,
+  Menu,
+  Breadcrumb,
+  Spin,
+  message,
+  Upload,
+  Badge,
+  Progress,
+} from "antd";
 import { useAuth } from "../contexts/AuthContext";
 import {
   DashboardOutlined,
@@ -25,14 +34,14 @@ import {
   CameraOutlined,
   CheckCircleOutlined,
   TrophyOutlined,
-  StarOutlined
-} from '@ant-design/icons';
-import NurseMedicationRequests from '../components/dashboard/NurseMedicationRequests';
-import NurseMedicationSchedules from '../components/dashboard/NurseMedicationSchedules';
-import VaccinationRuleManagement from '../components/dashboard/VaccinationRuleManagement';
-import MedicalSupplyInventory from '../components/dashboard/MedicalSupplyInventory';
+  StarOutlined,
+} from "@ant-design/icons";
+import NurseMedicationRequests from "../components/dashboard/NurseMedicationRequests";
+import NurseMedicationSchedules from "../components/dashboard/NurseMedicationSchedules";
+import VaccinationRuleManagement from "../components/dashboard/VaccinationRuleManagement";
+import MedicalSupplyInventory from "../components/dashboard/MedicalSupplyInventory";
 // Import nurseApi
-import { nurseApi } from '../api/nurseApi';
+import { nurseApi } from "../api/nurseApi";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -46,9 +55,10 @@ import {
   LineElement,
 } from "chart.js";
 import { Bar, Doughnut } from "react-chartjs-2";
-import '../styles/SchoolNurseDashboard.css';
-import '../styles/SidebarTrigger.css';
+import "../styles/SchoolNurseDashboard.css";
+import "../styles/SidebarTrigger.css";
 import NurseHealthProfiles from "../components/dashboard/NurseHealthProfiles";
+import MedicalEventManagement from "../components/dashboard/MedicalEventManagement";
 
 ChartJS.register(
   CategoryScale,
@@ -71,7 +81,7 @@ const SchoolNurseDashboard = () => {
   const [userInfo, setUserInfoState] = useState(null);
   const [collapsed, setCollapsed] = useState(false);
   const [searchParams] = useSearchParams();
-  
+
   // Sample data for the dashboard
   const [stats] = useState({
     totalMedicineReceived: 156,
@@ -83,152 +93,175 @@ const SchoolNurseDashboard = () => {
   // Navigation items specific to SchoolNurse role
   const menuItems = [
     {
-      key: 'dashboard',
+      key: "dashboard",
       icon: <DashboardOutlined />,
-      label: 'Tổng quan',
+      label: "Tổng quan",
     },
     {
-      key: 'medication-requests',
+      key: "medication-requests",
       icon: <FileDoneOutlined />,
-      label: 'Duyệt yêu cầu thuốc',
+      label: "Duyệt yêu cầu thuốc",
     },
     {
-      key: 'medication-schedules',
+      key: "medication-schedules",
       icon: <ClockCircleOutlined />,
-      label: 'Quản lý lịch uống thuốc',
+      label: "Quản lý lịch uống thuốc",
     },
     {
-      key: 'medical-events',
+      key: "medical-events",
       icon: <AlertOutlined />,
-      label: 'Ghi nhận sự kiện y tế',
+      label: "Ghi nhận sự kiện y tế",
     },
     {
-      key: 'inventory',
+      key: "inventory",
       icon: <InboxOutlined />,
-      label: 'Giám sát tồn kho',
+      label: "Giám sát tồn kho",
     },
     {
-      key: 'restock-requests',
+      key: "restock-requests",
       icon: <MailOutlined />,
-      label: 'Yêu cầu bổ sung vật tư',
+      label: "Yêu cầu bổ sung vật tư",
     },
     {
-      key: 'vaccination',
+      key: "vaccination",
       icon: <CalendarOutlined />,
-      label: 'Chiến dịch tiêm chủng',
+      label: "Chiến dịch tiêm chủng",
     },
     {
-      key: 'vaccination-rule-management',
+      key: "vaccination-rule-management",
       icon: <MedicineBoxOutlined />,
-      label: 'Quản lý quy tắc tiêm chủng',
+      label: "Quản lý quy tắc tiêm chủng",
     },
     {
-      key: 'health-check',
+      key: "health-check",
       icon: <HeartOutlined />,
-      label: 'Đợt khám sức khỏe',
+      label: "Đợt khám sức khỏe",
     },
     {
-      key: 'health-records',
+      key: "health-records",
       icon: <FileTextOutlined />,
-      label: 'Hồ sơ y tế học sinh',
+      label: "Hồ sơ y tế học sinh",
     },
     {
-      key: 'blog-management',
+      key: "blog-management",
       icon: <EditOutlined />,
-      label: 'Quản lý blog',
+      label: "Quản lý blog",
     },
     {
-      key: 'school-health',
+      key: "school-health",
       icon: <HeartOutlined />,
-      label: 'Thông tin sức khỏe học đường',
+      label: "Thông tin sức khỏe học đường",
     },
     {
-      key: 'profile',
+      key: "profile",
       icon: <UserOutlined />,
-      label: 'Hồ sơ cá nhân',
+      label: "Hồ sơ cá nhân",
     },
   ];
 
   const handleMenuClick = (e) => {
     const tabKey = e.key;
     setActiveSection(tabKey);
-    
-    const newUrl = tabKey === 'dashboard' 
-      ? '/school-nurse-dashboard' 
-      : `/school-nurse-dashboard?tab=${tabKey}`;
-    
-    window.history.pushState(null, '', newUrl);
+
+    const newUrl =
+      tabKey === "dashboard"
+        ? "/school-nurse-dashboard"
+        : `/school-nurse-dashboard?tab=${tabKey}`;
+
+    window.history.pushState(null, "", newUrl);
   };
 
   const getBreadcrumbItems = () => {
-    const currentItem = menuItems.find(item => item.key === activeSection);
+    const currentItem = menuItems.find((item) => item.key === activeSection);
     return [
       {
-        title: 'Dashboard',
+        title: "Dashboard",
       },
       {
-        title: currentItem?.label || 'Tổng quan',
+        title: currentItem?.label || "Tổng quan",
       },
     ];
   };
 
   useEffect(() => {
-    console.log('Auth check:', { isAuthenticated, user, isSchoolNurse: typeof isSchoolNurse });
-    
+    console.log("Auth check:", {
+      isAuthenticated,
+      user,
+      isSchoolNurse: typeof isSchoolNurse,
+    });
+
     if (!isAuthenticated) {
-      console.log('Not authenticated, redirecting to login');
-      navigate('/login');
+      console.log("Not authenticated, redirecting to login");
+      navigate("/login");
       return;
     }
 
     // Kiểm tra role với fallback
     const checkNurseRole = () => {
-      if (typeof isSchoolNurse === 'function') {
+      if (typeof isSchoolNurse === "function") {
         try {
           return isSchoolNurse();
         } catch (error) {
-          console.warn('Error calling isSchoolNurse function:', error);
+          console.warn("Error calling isSchoolNurse function:", error);
           return false;
         }
       }
       // Fallback check
-      return user?.role === 'SCHOOLNURSE' || user?.roleName === 'SCHOOLNURSE' || user?.role === 'SCHOOL_NURSE';
+      return (
+        user?.role === "SCHOOLNURSE" ||
+        user?.roleName === "SCHOOLNURSE" ||
+        user?.role === "SCHOOL_NURSE"
+      );
     };
 
     if (!checkNurseRole()) {
-      console.log('Not school nurse role, user role:', user?.role);
-      message.error('Bạn không có quyền truy cập vào trang này');
-      navigate('/');
+      console.log("Not school nurse role, user role:", user?.role);
+      message.error("Bạn không có quyền truy cập vào trang này");
+      navigate("/");
       return;
     }
 
-    console.log('Setting user info:', user);
+    console.log("Setting user info:", user);
     setUserInfoState(user);
   }, [navigate, isAuthenticated, isSchoolNurse, user]);
 
   useEffect(() => {
-    const tabParam = searchParams.get('tab');
+    const tabParam = searchParams.get("tab");
     if (tabParam) {
-      const validTabs = ['dashboard', 'medication-requests', 'medication-schedules', 'medical-events', 'inventory', 'restock-requests', 'vaccination', 'vaccination-rule-management', 'health-check', 'health-records', 'blog-management', 'school-health', 'profile'];
+      const validTabs = [
+        "dashboard",
+        "medication-requests",
+        "medication-schedules",
+        "medical-events",
+        "inventory",
+        "restock-requests",
+        "vaccination",
+        "vaccination-rule-management",
+        "health-check",
+        "health-records",
+        "blog-management",
+        "school-health",
+        "profile",
+      ];
       if (validTabs.includes(tabParam)) {
         setActiveSection(tabParam);
       } else {
-        setActiveSection('dashboard');
-        window.history.replaceState(null, '', '/school-nurse-dashboard');
+        setActiveSection("dashboard");
+        window.history.replaceState(null, "", "/school-nurse-dashboard");
       }
     } else {
-      setActiveSection('dashboard');
+      setActiveSection("dashboard");
     }
   }, [searchParams]);
 
   // Dashboard Overview Component (giữ nguyên như cũ)
   const DashboardOverview = () => {
-    console.log('Rendering DashboardOverview');
-    
+    console.log("Rendering DashboardOverview");
+
     const barChartData = {
       labels: [
         "Tháng 1",
-        "Tháng 2", 
+        "Tháng 2",
         "Tháng 3",
         "Tháng 4",
         "Tháng 5",
@@ -332,19 +365,19 @@ const SchoolNurseDashboard = () => {
 
   // Profile Component giống AdminDashboard
   const ProfileComponent = () => {
-    console.log('Rendering ProfileComponent with userInfo:', userInfo);
-    
+    console.log("Rendering ProfileComponent with userInfo:", userInfo);
+
     const [isEditing, setIsEditing] = useState(false);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [uploadingAvatar, setUploadingAvatar] = useState(false);
-    
+
     // Activity stats state
     const [activityStats, setActivityStats] = useState({
       medicalEventsHandled: 0,
       vaccinationsPerformed: 0,
       healthChecksPerformed: 0,
-      medicationRequestsApproved: 0
+      medicationRequestsApproved: 0,
     });
 
     // Activity history state
@@ -352,28 +385,28 @@ const SchoolNurseDashboard = () => {
 
     // Profile data state - giống Parent Dashboard
     const [profileData, setProfileData] = useState({
-      id: '',
-      firstName: '',
-      lastName: '',
-      email: '',
-      phone: '',
-      address: '',
-      dateOfBirth: '',
-      gender: '',
-      avatar: '',
-      username: '',
-      specialization: 'Y tá Trường học',
-      department: 'Phòng Y tế',
-      employeeId: '',
-      licenseNumber: '',
-      experience: '',
-      workingHours: '7:00 - 17:00',
-      education: '',
-      joinDate: '',
-      emergencyContactName: '',
-      emergencyContactPhone: '',
-      status: 'active',
-      completionLevel: 0
+      id: "",
+      firstName: "",
+      lastName: "",
+      email: "",
+      phone: "",
+      address: "",
+      dateOfBirth: "",
+      gender: "",
+      avatar: "",
+      username: "",
+      specialization: "Y tá Trường học",
+      department: "Phòng Y tế",
+      employeeId: "",
+      licenseNumber: "",
+      experience: "",
+      workingHours: "7:00 - 17:00",
+      education: "",
+      joinDate: "",
+      emergencyContactName: "",
+      emergencyContactPhone: "",
+      status: "active",
+      completionLevel: 0,
     });
 
     const [originalData, setOriginalData] = useState({});
@@ -383,64 +416,65 @@ const SchoolNurseDashboard = () => {
       const loadActivityData = async () => {
         try {
           setLoading(true);
-          
+
           // Mock data for activity stats
           const mockStats = {
             medicalEventsHandled: 45,
             vaccinationsPerformed: 123,
             healthChecksPerformed: 67,
-            medicationRequestsApproved: 89
+            medicationRequestsApproved: 89,
           };
 
           // Mock data for activity history
           const mockHistory = [
             {
               id: 1,
-              type: 'medical_event',
-              description: 'Xử lý sự kiện té ngã của học sinh Nguyễn Văn A',
+              type: "medical_event",
+              description: "Xử lý sự kiện té ngã của học sinh Nguyễn Văn A",
               createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
             },
             {
               id: 2,
-              type: 'vaccination',
-              description: 'Thực hiện tiêm vaccine COVID-19 cho học sinh lớp 10A',
+              type: "vaccination",
+              description:
+                "Thực hiện tiêm vaccine COVID-19 cho học sinh lớp 10A",
               createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000), // 4 hours ago
             },
             {
               id: 3,
-              type: 'medication',
-              description: 'Duyệt yêu cầu thuốc hạ sốt cho học sinh Trần Thị B',
+              type: "medication",
+              description: "Duyệt yêu cầu thuốc hạ sốt cho học sinh Trần Thị B",
               createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000), // 6 hours ago
             },
             {
               id: 4,
-              type: 'health_check',
-              description: 'Thực hiện khám sức khỏe định kỳ cho học sinh lớp 9B',
+              type: "health_check",
+              description:
+                "Thực hiện khám sức khỏe định kỳ cho học sinh lớp 9B",
               createdAt: new Date(Date.now() - 8 * 60 * 60 * 1000), // 8 hours ago
             },
             {
               id: 5,
-              type: 'medical_event',
-              description: 'Xử lý trường hợp đau bụng của học sinh Lê Văn C',
+              type: "medical_event",
+              description: "Xử lý trường hợp đau bụng của học sinh Lê Văn C",
               createdAt: new Date(Date.now() - 12 * 60 * 60 * 1000), // 12 hours ago
-            }
+            },
           ];
 
           // TODO: Replace with real API calls
           // const statsResponse = await nurseApi.getActivityStats();
           // const historyResponse = await nurseApi.getActivityHistory();
-          
+
           setActivityStats(mockStats);
           setActivityHistory(mockHistory);
-          
         } catch (error) {
-          console.error('Error loading activity data:', error);
+          console.error("Error loading activity data:", error);
           // Set empty defaults on error
           setActivityStats({
             medicalEventsHandled: 0,
             vaccinationsPerformed: 0,
             healthChecksPerformed: 0,
-            medicationRequestsApproved: 0
+            medicationRequestsApproved: 0,
           });
           setActivityHistory([]);
         } finally {
@@ -454,86 +488,96 @@ const SchoolNurseDashboard = () => {
     // Helper function to calculate completion level
     const calculateCompletionLevel = useCallback((data) => {
       const fields = [
-        'firstName', 'lastName', 'email', 'phone', 'address', 
-        'dateOfBirth', 'gender', 'specialization', 'licenseNumber',
-        'experience', 'education', 'emergencyContactName', 'emergencyContactPhone'
+        "firstName",
+        "lastName",
+        "email",
+        "phone",
+        "address",
+        "dateOfBirth",
+        "gender",
+        "specialization",
+        "licenseNumber",
+        "experience",
+        "education",
+        "emergencyContactName",
+        "emergencyContactPhone",
       ];
-      
-      const filledFields = fields.filter(field => {
+
+      const filledFields = fields.filter((field) => {
         const value = data[field];
-        return value && value.toString().trim() !== '';
+        return value && value.toString().trim() !== "";
       });
-      
+
       return Math.round((filledFields.length / fields.length) * 100);
     }, []);
 
     // Format functions giống Parent
     const formatDate = useCallback((dateString) => {
-      if (!dateString) return 'Chưa cập nhật';
+      if (!dateString) return "Chưa cập nhật";
       try {
-        return new Date(dateString).toLocaleDateString('vi-VN');
+        return new Date(dateString).toLocaleDateString("vi-VN");
       } catch (error) {
-        return 'Chưa cập nhật';
+        return "Chưa cập nhật";
       }
     }, []);
 
     const formatPhoneNumber = useCallback((phone) => {
-      if (!phone) return 'Chưa cập nhật';
-      const cleanPhone = phone.replace(/\D/g, '');
+      if (!phone) return "Chưa cập nhật";
+      const cleanPhone = phone.replace(/\D/g, "");
       if (cleanPhone.length === 10) {
-        return cleanPhone.replace(/(\d{4})(\d{3})(\d{3})/, '$1 $2 $3');
+        return cleanPhone.replace(/(\d{4})(\d{3})(\d{3})/, "$1 $2 $3");
       }
       return phone;
     }, []);
 
     const formatGender = useCallback((gender) => {
-      if (!gender) return 'Chưa cập nhật';
+      if (!gender) return "Chưa cập nhật";
       switch (gender.toLowerCase()) {
-        case 'male':
-        case 'm':
-          return 'Nam';
-        case 'female':
-        case 'f':
-          return 'Nữ';
-        case 'other':
-          return 'Khác';
+        case "male":
+        case "m":
+          return "Nam";
+        case "female":
+        case "f":
+          return "Nữ";
+        case "other":
+          return "Khác";
         default:
-          return 'Chưa cập nhật';
+          return "Chưa cập nhật";
       }
     }, []);
 
     // Load data từ userInfo như Parent Dashboard
     useEffect(() => {
       if (userInfo) {
-        console.log('Loading userInfo into profileData:', userInfo);
-        
+        console.log("Loading userInfo into profileData:", userInfo);
+
         const loadedProfile = {
-          id: userInfo.id || '',
-          firstName: userInfo.firstName || '',
-          lastName: userInfo.lastName || '',
-          email: userInfo.email || '',
-          phone: userInfo.phone || '',
-          address: userInfo.address || '',
-          dateOfBirth: userInfo.dateOfBirth || '',
-          gender: userInfo.gender || '',
-          avatar: userInfo.avatar || '',
-          username: userInfo.username || '',
-          specialization: userInfo.specialization || 'Y tá Trường học',
-          department: userInfo.department || 'Phòng Y tế',
-          employeeId: userInfo.employeeId || 'NV001',
-          licenseNumber: userInfo.licenseNumber || '',
-          experience: userInfo.experience || '',
-          workingHours: userInfo.workingHours || '7:00 - 17:00',
-          education: userInfo.education || '',
-          joinDate: userInfo.joinDate || new Date().toISOString().split('T')[0],
-          emergencyContactName: userInfo.emergencyContactName || '',
-          emergencyContactPhone: userInfo.emergencyContactPhone || '',
-          status: userInfo.status || 'active'
+          id: userInfo.id || "",
+          firstName: userInfo.firstName || "",
+          lastName: userInfo.lastName || "",
+          email: userInfo.email || "",
+          phone: userInfo.phone || "",
+          address: userInfo.address || "",
+          dateOfBirth: userInfo.dateOfBirth || "",
+          gender: userInfo.gender || "",
+          avatar: userInfo.avatar || "",
+          username: userInfo.username || "",
+          specialization: userInfo.specialization || "Y tá Trường học",
+          department: userInfo.department || "Phòng Y tế",
+          employeeId: userInfo.employeeId || "NV001",
+          licenseNumber: userInfo.licenseNumber || "",
+          experience: userInfo.experience || "",
+          workingHours: userInfo.workingHours || "7:00 - 17:00",
+          education: userInfo.education || "",
+          joinDate: userInfo.joinDate || new Date().toISOString().split("T")[0],
+          emergencyContactName: userInfo.emergencyContactName || "",
+          emergencyContactPhone: userInfo.emergencyContactPhone || "",
+          status: userInfo.status || "active",
         };
-        
+
         // Calculate completion level
         loadedProfile.completionLevel = calculateCompletionLevel(loadedProfile);
-        
+
         setProfileData(loadedProfile);
         setOriginalData(loadedProfile);
       }
@@ -545,54 +589,60 @@ const SchoolNurseDashboard = () => {
         setSaving(true);
 
         // Validation giống Parent
-        if (!profileData.firstName?.trim() || !profileData.lastName?.trim() || !profileData.email?.trim()) {
-          message.error('Vui lòng điền đầy đủ thông tin bắt buộc');
+        if (
+          !profileData.firstName?.trim() ||
+          !profileData.lastName?.trim() ||
+          !profileData.email?.trim()
+        ) {
+          message.error("Vui lòng điền đầy đủ thông tin bắt buộc");
           return;
         }
 
         // Email validation
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(profileData.email)) {
-          message.error('Email không hợp lệ');
+          message.error("Email không hợp lệ");
           return;
         }
 
         // Phone validation
-        if (profileData.phone && !/^[0-9+\-\s()]{10,15}$/.test(profileData.phone.replace(/\s/g, ''))) {
-          message.error('Số điện thoại không hợp lệ');
+        if (
+          profileData.phone &&
+          !/^[0-9+\-\s()]{10,15}$/.test(profileData.phone.replace(/\s/g, ""))
+        ) {
+          message.error("Số điện thoại không hợp lệ");
           return;
         }
 
-        console.log('Saving profile:', profileData);
+        console.log("Saving profile:", profileData);
 
         // Calculate new completion level
         const updatedProfile = {
           ...profileData,
-          completionLevel: calculateCompletionLevel(profileData)
+          completionLevel: calculateCompletionLevel(profileData),
         };
 
         // TODO: Call API giống Parent Dashboard
         // const response = await nurseApi.updateProfile(updatedProfile);
-        
+
         // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        message.success('Cập nhật hồ sơ thành công!');
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        message.success("Cập nhật hồ sơ thành công!");
         setIsEditing(false);
         setProfileData(updatedProfile);
         setOriginalData(updatedProfile);
-        
+
         // Update userInfo in context
         if (setUserInfo) {
           setUserInfo({
             ...userInfo,
-            ...updatedProfile
+            ...updatedProfile,
           });
         }
-        
       } catch (error) {
-        console.error('Error saving profile:', error);
-        message.error('Có lỗi xảy ra khi cập nhật hồ sơ');
+        console.error("Error saving profile:", error);
+        message.error("Có lỗi xảy ra khi cập nhật hồ sơ");
       } finally {
         setSaving(false);
       }
@@ -604,9 +654,9 @@ const SchoolNurseDashboard = () => {
     };
 
     const handleInputChange = (field, value) => {
-      setProfileData(prev => ({
+      setProfileData((prev) => ({
         ...prev,
-        [field]: value
+        [field]: value,
       }));
     };
 
@@ -615,35 +665,39 @@ const SchoolNurseDashboard = () => {
       try {
         setUploadingAvatar(true);
 
-        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        const allowedTypes = [
+          "image/jpeg",
+          "image/png",
+          "image/gif",
+          "image/webp",
+        ];
         if (!allowedTypes.includes(file.type)) {
-          message.error('Chỉ chấp nhận file ảnh (JPEG, PNG, GIF, WebP)');
+          message.error("Chỉ chấp nhận file ảnh (JPEG, PNG, GIF, WebP)");
           return false;
         }
 
         const maxSize = 5 * 1024 * 1024;
         if (file.size > maxSize) {
-          message.error('Kích thước file không được vượt quá 5MB');
+          message.error("Kích thước file không được vượt quá 5MB");
           return false;
         }
 
         // TODO: Upload avatar API giống Parent
         const avatarUrl = URL.createObjectURL(file);
-        
-        setProfileData(prev => ({
-          ...prev,
-          avatar: avatarUrl
-        }));
-        
-        message.success('Cập nhật avatar thành công!');
 
+        setProfileData((prev) => ({
+          ...prev,
+          avatar: avatarUrl,
+        }));
+
+        message.success("Cập nhật avatar thành công!");
       } catch (error) {
-        console.error('Error uploading avatar:', error);
-        message.error('Không thể tải lên avatar');
+        console.error("Error uploading avatar:", error);
+        message.error("Không thể tải lên avatar");
       } finally {
         setUploadingAvatar(false);
       }
-      
+
       return false;
     };
 
@@ -665,15 +719,15 @@ const SchoolNurseDashboard = () => {
             <div className="nurse-profile-background-overlay"></div>
             <div className="nurse-profile-background-pattern"></div>
           </div>
-          
+
           <div className="nurse-profile-header-content">
             <div className="nurse-profile-avatar-section">
               <div className="nurse-profile-avatar-container">
                 <div className="nurse-profile-avatar-wrapper">
                   {profileData.avatar ? (
-                    <img 
-                      src={profileData.avatar} 
-                      alt="Avatar" 
+                    <img
+                      src={profileData.avatar}
+                      alt="Avatar"
                       className="nurse-profile-avatar-image"
                     />
                   ) : (
@@ -681,7 +735,7 @@ const SchoolNurseDashboard = () => {
                       <UserOutlined />
                     </div>
                   )}
-                  
+
                   <Upload
                     showUploadList={false}
                     beforeUpload={handleAvatarUpload}
@@ -702,25 +756,25 @@ const SchoolNurseDashboard = () => {
                     {profileData.firstName} {profileData.lastName}
                   </h1>
                 </div>
-                
+
                 <p className="nurse-profile-role">
                   <TrophyOutlined />
                   {profileData.specialization}
                 </p>
-                
+
                 <div className="nurse-profile-details">
                   <div className="nurse-profile-detail-item">
                     <IdcardOutlined />
                     <span>{profileData.department}</span>
                   </div>
-                  
+
                   {profileData.username && (
                     <div className="nurse-profile-detail-item">
                       <UserOutlined />
                       <span>{profileData.username}</span>
                     </div>
                   )}
-                  
+
                   {profileData.phone && (
                     <div className="nurse-profile-detail-item">
                       <PhoneOutlined />
@@ -734,15 +788,15 @@ const SchoolNurseDashboard = () => {
             <div className="nurse-profile-actions">
               {isEditing ? (
                 <div className="nurse-edit-actions">
-                  <button 
+                  <button
                     className="nurse-btn nurse-btn-success"
                     onClick={handleSaveProfile}
                     disabled={saving}
                   >
                     {saving ? <Spin size="small" /> : <SaveOutlined />}
-                    <span>{saving ? 'Đang lưu...' : 'Lưu thay đổi'}</span>
+                    <span>{saving ? "Đang lưu..." : "Lưu thay đổi"}</span>
                   </button>
-                  <button 
+                  <button
                     className="nurse-btn nurse-btn-default"
                     onClick={handleCancelEdit}
                     disabled={saving}
@@ -753,7 +807,7 @@ const SchoolNurseDashboard = () => {
                 </div>
               ) : (
                 <div className="nurse-view-actions">
-                  <button 
+                  <button
                     className="nurse-btn nurse-btn-primary"
                     onClick={() => setIsEditing(true)}
                   >
@@ -776,7 +830,9 @@ const SchoolNurseDashboard = () => {
               <div className="nurse-stat-info">
                 <h3>{activityStats.medicalEventsHandled}</h3>
                 <p>Sự kiện y tế đã xử lý</p>
-                <span className="nurse-stat-change positive">+12% tháng này</span>
+                <span className="nurse-stat-change positive">
+                  +12% tháng này
+                </span>
               </div>
             </div>
           </div>
@@ -789,7 +845,9 @@ const SchoolNurseDashboard = () => {
               <div className="nurse-stat-info">
                 <h3>{activityStats.vaccinationsPerformed}</h3>
                 <p>Mũi tiêm đã thực hiện</p>
-                <span className="nurse-stat-change positive">+8% tháng này</span>
+                <span className="nurse-stat-change positive">
+                  +8% tháng này
+                </span>
               </div>
             </div>
           </div>
@@ -802,7 +860,9 @@ const SchoolNurseDashboard = () => {
               <div className="nurse-stat-info">
                 <h3>{activityStats.healthChecksPerformed}</h3>
                 <p>Lượt khám sức khỏe</p>
-                <span className="nurse-stat-change positive">+15% tháng này</span>
+                <span className="nurse-stat-change positive">
+                  +15% tháng này
+                </span>
               </div>
             </div>
           </div>
@@ -815,7 +875,9 @@ const SchoolNurseDashboard = () => {
               <div className="nurse-stat-info">
                 <h3>{activityStats.medicationRequestsApproved}</h3>
                 <p>Yêu cầu thuốc đã duyệt</p>
-                <span className="nurse-stat-change positive">+5% tháng này</span>
+                <span className="nurse-stat-change positive">
+                  +5% tháng này
+                </span>
               </div>
             </div>
           </div>
@@ -842,11 +904,15 @@ const SchoolNurseDashboard = () => {
                       type="text"
                       className="nurse-input"
                       value={profileData.lastName}
-                      onChange={(e) => handleInputChange('lastName', e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("lastName", e.target.value)
+                      }
                       placeholder="Nhập họ"
                     />
                   ) : (
-                    <div className="nurse-form-value">{profileData.lastName || 'Chưa cập nhật'}</div>
+                    <div className="nurse-form-value">
+                      {profileData.lastName || "Chưa cập nhật"}
+                    </div>
                   )}
                 </div>
 
@@ -859,28 +925,37 @@ const SchoolNurseDashboard = () => {
                       type="text"
                       className="nurse-input"
                       value={profileData.firstName}
-                      onChange={(e) => handleInputChange('firstName', e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("firstName", e.target.value)
+                      }
                       placeholder="Nhập tên"
                     />
                   ) : (
-                    <div className="nurse-form-value">{profileData.firstName || 'Chưa cập nhật'}</div>
+                    <div className="nurse-form-value">
+                      {profileData.firstName || "Chưa cập nhật"}
+                    </div>
                   )}
                 </div>
 
                 <div className="nurse-form-group">
                   <label>
-                    <MailOutlined /> Email <span className="nurse-required">*</span>
+                    <MailOutlined /> Email{" "}
+                    <span className="nurse-required">*</span>
                   </label>
                   {isEditing ? (
                     <input
                       type="email"
                       className="nurse-input"
                       value={profileData.email}
-                      onChange={(e) => handleInputChange('email', e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("email", e.target.value)
+                      }
                       placeholder="Nhập email"
                     />
                   ) : (
-                    <div className="nurse-form-value">{profileData.email || 'Chưa cập nhật'}</div>
+                    <div className="nurse-form-value">
+                      {profileData.email || "Chưa cập nhật"}
+                    </div>
                   )}
                 </div>
 
@@ -893,11 +968,15 @@ const SchoolNurseDashboard = () => {
                       type="tel"
                       className="nurse-input"
                       value={profileData.phone}
-                      onChange={(e) => handleInputChange('phone', e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("phone", e.target.value)
+                      }
                       placeholder="Nhập số điện thoại (VD: 0123456789)"
                     />
                   ) : (
-                    <div className="nurse-form-value">{formatPhoneNumber(profileData.phone)}</div>
+                    <div className="nurse-form-value">
+                      {formatPhoneNumber(profileData.phone)}
+                    </div>
                   )}
                 </div>
 
@@ -908,12 +987,32 @@ const SchoolNurseDashboard = () => {
                       type="date"
                       className="nurse-input"
                       value={profileData.dateOfBirth}
-                      onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
-                      max={new Date(new Date().getFullYear() - 18, new Date().getMonth(), new Date().getDate()).toISOString().split('T')[0]}
-                      min={new Date(new Date().getFullYear() - 70, new Date().getMonth(), new Date().getDate()).toISOString().split('T')[0]}
+                      onChange={(e) =>
+                        handleInputChange("dateOfBirth", e.target.value)
+                      }
+                      max={
+                        new Date(
+                          new Date().getFullYear() - 18,
+                          new Date().getMonth(),
+                          new Date().getDate()
+                        )
+                          .toISOString()
+                          .split("T")[0]
+                      }
+                      min={
+                        new Date(
+                          new Date().getFullYear() - 70,
+                          new Date().getMonth(),
+                          new Date().getDate()
+                        )
+                          .toISOString()
+                          .split("T")[0]
+                      }
                     />
                   ) : (
-                    <div className="nurse-form-value">{formatDate(profileData.dateOfBirth)}</div>
+                    <div className="nurse-form-value">
+                      {formatDate(profileData.dateOfBirth)}
+                    </div>
                   )}
                 </div>
 
@@ -923,7 +1022,9 @@ const SchoolNurseDashboard = () => {
                     <select
                       className="nurse-input"
                       value={profileData.gender}
-                      onChange={(e) => handleInputChange('gender', e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("gender", e.target.value)
+                      }
                     >
                       <option value="">Chọn giới tính</option>
                       <option value="male">Nam</option>
@@ -931,7 +1032,9 @@ const SchoolNurseDashboard = () => {
                       <option value="other">Khác</option>
                     </select>
                   ) : (
-                    <div className="nurse-form-value">{formatGender(profileData.gender)}</div>
+                    <div className="nurse-form-value">
+                      {formatGender(profileData.gender)}
+                    </div>
                   )}
                 </div>
 
@@ -944,11 +1047,15 @@ const SchoolNurseDashboard = () => {
                       type="text"
                       className="nurse-input"
                       value={profileData.address}
-                      onChange={(e) => handleInputChange('address', e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("address", e.target.value)
+                      }
                       placeholder="Nhập địa chỉ đầy đủ"
                     />
                   ) : (
-                    <div className="nurse-form-value">{profileData.address || 'Chưa cập nhật'}</div>
+                    <div className="nurse-form-value">
+                      {profileData.address || "Chưa cập nhật"}
+                    </div>
                   )}
                 </div>
               </div>
@@ -971,15 +1078,21 @@ const SchoolNurseDashboard = () => {
                     <select
                       className="nurse-input"
                       value={profileData.specialization}
-                      onChange={(e) => handleInputChange('specialization', e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("specialization", e.target.value)
+                      }
                     >
                       <option value="Y tá Trường học">Y tá Trường học</option>
                       <option value="Y tá Nhi khoa">Y tá Nhi khoa</option>
                       <option value="Y tá Cấp cứu">Y tá Cấp cứu</option>
-                      <option value="Y tá Phòng chống dịch">Y tá Phòng chống dịch</option>
+                      <option value="Y tá Phòng chống dịch">
+                        Y tá Phòng chống dịch
+                      </option>
                     </select>
                   ) : (
-                    <div className="nurse-form-value">{profileData.specialization}</div>
+                    <div className="nurse-form-value">
+                      {profileData.specialization}
+                    </div>
                   )}
                 </div>
 
@@ -990,11 +1103,15 @@ const SchoolNurseDashboard = () => {
                       type="text"
                       className="nurse-input"
                       value={profileData.licenseNumber}
-                      onChange={(e) => handleInputChange('licenseNumber', e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("licenseNumber", e.target.value)
+                      }
                       placeholder="Số chứng chỉ hành nghề"
                     />
                   ) : (
-                    <div className="nurse-form-value">{profileData.licenseNumber || 'Chưa cập nhật'}</div>
+                    <div className="nurse-form-value">
+                      {profileData.licenseNumber || "Chưa cập nhật"}
+                    </div>
                   )}
                 </div>
 
@@ -1007,12 +1124,16 @@ const SchoolNurseDashboard = () => {
                       max="50"
                       className="nurse-input"
                       value={profileData.experience}
-                      onChange={(e) => handleInputChange('experience', e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("experience", e.target.value)
+                      }
                       placeholder="Số năm kinh nghiệm"
                     />
                   ) : (
                     <div className="nurse-form-value">
-                      {profileData.experience ? `${profileData.experience} năm` : 'Chưa cập nhật'}
+                      {profileData.experience
+                        ? `${profileData.experience} năm`
+                        : "Chưa cập nhật"}
                     </div>
                   )}
                 </div>
@@ -1024,11 +1145,15 @@ const SchoolNurseDashboard = () => {
                       type="text"
                       className="nurse-input"
                       value={profileData.workingHours}
-                      onChange={(e) => handleInputChange('workingHours', e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("workingHours", e.target.value)
+                      }
                       placeholder="Ví dụ: 7:00 - 17:00"
                     />
                   ) : (
-                    <div className="nurse-form-value">{profileData.workingHours}</div>
+                    <div className="nurse-form-value">
+                      {profileData.workingHours}
+                    </div>
                   )}
                 </div>
 
@@ -1039,11 +1164,15 @@ const SchoolNurseDashboard = () => {
                       className="nurse-input nurse-textarea"
                       rows="3"
                       value={profileData.education}
-                      onChange={(e) => handleInputChange('education', e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("education", e.target.value)
+                      }
                       placeholder="Mô tả trình độ học vấn, bằng cấp..."
                     />
                   ) : (
-                    <div className="nurse-form-value">{profileData.education || 'Chưa cập nhật'}</div>
+                    <div className="nurse-form-value">
+                      {profileData.education || "Chưa cập nhật"}
+                    </div>
                   )}
                 </div>
               </div>
@@ -1067,11 +1196,18 @@ const SchoolNurseDashboard = () => {
                       type="text"
                       className="nurse-input"
                       value={profileData.emergencyContactName}
-                      onChange={(e) => handleInputChange('emergencyContactName', e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange(
+                          "emergencyContactName",
+                          e.target.value
+                        )
+                      }
                       placeholder="Tên người liên hệ khẩn cấp"
                     />
                   ) : (
-                    <div className="nurse-form-value">{profileData.emergencyContactName || 'Chưa cập nhật'}</div>
+                    <div className="nurse-form-value">
+                      {profileData.emergencyContactName || "Chưa cập nhật"}
+                    </div>
                   )}
                 </div>
 
@@ -1082,11 +1218,18 @@ const SchoolNurseDashboard = () => {
                       type="tel"
                       className="nurse-input"
                       value={profileData.emergencyContactPhone}
-                      onChange={(e) => handleInputChange('emergencyContactPhone', e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange(
+                          "emergencyContactPhone",
+                          e.target.value
+                        )
+                      }
                       placeholder="SĐT người liên hệ khẩn cấp"
                     />
                   ) : (
-                    <div className="nurse-form-value">{formatPhoneNumber(profileData.emergencyContactPhone)}</div>
+                    <div className="nurse-form-value">
+                      {formatPhoneNumber(profileData.emergencyContactPhone)}
+                    </div>
                   )}
                 </div>
               </div>
@@ -1105,19 +1248,24 @@ const SchoolNurseDashboard = () => {
               <div className="nurse-activity-list">
                 {activityHistory.length > 0 ? (
                   activityHistory.slice(0, 5).map((activity, index) => (
-                    <div key={activity.id || index} className="nurse-activity-item">
+                    <div
+                      key={activity.id || index}
+                      className="nurse-activity-item"
+                    >
                       <div className="nurse-activity-icon">
-                        {activity.type === 'medical_event' && <AlertOutlined />}
-                        {activity.type === 'vaccination' && <MedicineBoxOutlined />}
-                        {activity.type === 'medication' && <FileDoneOutlined />}
-                        {activity.type === 'health_check' && <HeartOutlined />}
+                        {activity.type === "medical_event" && <AlertOutlined />}
+                        {activity.type === "vaccination" && (
+                          <MedicineBoxOutlined />
+                        )}
+                        {activity.type === "medication" && <FileDoneOutlined />}
+                        {activity.type === "health_check" && <HeartOutlined />}
                       </div>
                       <div className="nurse-activity-content">
                         <div className="nurse-activity-description">
                           {activity.description}
                         </div>
                         <div className="nurse-activity-time">
-                          {new Date(activity.createdAt).toLocaleString('vi-VN')}
+                          {new Date(activity.createdAt).toLocaleString("vi-VN")}
                         </div>
                       </div>
                     </div>
@@ -1136,68 +1284,7 @@ const SchoolNurseDashboard = () => {
   };
 
   // Các components khác giữ nguyên như cũ...
-  const MedicalEvents = () => (
-    <div className="nurse-content-card">
-      <h2 className="nurse-section-title">Ghi nhận và xử lý sự kiện y tế</h2>
-      <div className="nurse-action-buttons">
-        <button className="nurse-btn-primary">
-          <AlertOutlined /> Thêm sự kiện y tế
-        </button>
-      </div>
-
-      <div className="nurse-search-filters">
-        <input
-          type="text"
-          placeholder="Tìm kiếm sự kiện..."
-          className="nurse-search-input"
-        />
-        <select className="nurse-filter-select">
-          <option value="all">Tất cả loại sự kiện</option>
-          <option value="accident">Tai nạn</option>
-          <option value="illness">Dịch bệnh</option>
-          <option value="fever">Sốt</option>
-          <option value="injury">Té ngã</option>
-        </select>
-      </div>
-
-      <div className="nurse-table-container">
-        <table className="nurse-data-table">
-          <thead>
-            <tr>
-              <th>Mã sự kiện</th>
-              <th>Thời gian</th>
-              <th>Học sinh</th>
-              <th>Loại sự kiện</th>
-              <th>Mô tả</th>
-              <th>Xử lý</th>
-              <th>Trạng thái</th>
-              <th>Thao tác</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>EV001</td>
-              <td>15/03/2024 09:30</td>
-              <td>Trần Thị B</td>
-              <td>Té ngã</td>
-              <td>Té ngã ở sân trường</td>
-              <td>Sơ cứu, băng bó</td>
-              <td>
-                <span className="nurse-status in-progress">Đang xử lý</span>
-              </td>
-              <td>
-                <div className="nurse-table-actions">
-                  <button className="nurse-btn-action view">Chi tiết</button>
-                  <button className="nurse-btn-action edit">Cập nhật</button>
-                  <button className="nurse-btn-action complete">Hoàn thành</button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
+  const MedicalEvents = () => <MedicalEventManagement />;
 
   const Inventory = () => <MedicalSupplyInventory />;
 
@@ -1235,31 +1322,35 @@ const SchoolNurseDashboard = () => {
   // Component cho trang yêu cầu bổ sung vật tư
   const RestockRequests = () => {
     // Sử dụng React.lazy để import động component
-    const [RestockRequestListComponent, setRestockRequestListComponent] = React.useState(null);
+    const [RestockRequestListComponent, setRestockRequestListComponent] =
+      React.useState(null);
     const [loading, setLoading] = React.useState(true);
-    
+
     React.useEffect(() => {
       // Import động sử dụng ES6 import()
-      import('../components/dashboard/RestockRequestList')
-        .then(module => {
+      import("../components/dashboard/RestockRequestList")
+        .then((module) => {
           setRestockRequestListComponent(() => module.default);
           setLoading(false);
         })
-        .catch(error => {
-          console.error('Error loading RestockRequestList:', error);
+        .catch((error) => {
+          console.error("Error loading RestockRequestList:", error);
           setLoading(false);
         });
     }, []);
-    
+
     if (loading) {
       return (
-        <div className="nurse-content-card" style={{ textAlign: 'center', padding: '20px' }}>
+        <div
+          className="nurse-content-card"
+          style={{ textAlign: "center", padding: "20px" }}
+        >
           <Spin size="large" />
-          <p style={{ marginTop: '10px' }}>Đang tải danh sách yêu cầu...</p>
+          <p style={{ marginTop: "10px" }}>Đang tải danh sách yêu cầu...</p>
         </div>
       );
     }
-    
+
     if (!RestockRequestListComponent) {
       return (
         <div className="nurse-content-card">
@@ -1267,17 +1358,17 @@ const SchoolNurseDashboard = () => {
         </div>
       );
     }
-    
+
     return (
       <div className="nurse-content-card">
         <RestockRequestListComponent />
       </div>
     );
   };
-  
+
   const renderContent = () => {
-    console.log('Rendering content for section:', activeSection);
-    
+    console.log("Rendering content for section:", activeSection);
+
     switch (activeSection) {
       case "dashboard":
         return <DashboardOverview />;
@@ -1310,17 +1401,24 @@ const SchoolNurseDashboard = () => {
     }
   };
 
-  console.log('Rendering main dashboard, userInfo:', userInfo, 'activeSection:', activeSection);
+  console.log(
+    "Rendering main dashboard, userInfo:",
+    userInfo,
+    "activeSection:",
+    activeSection
+  );
 
   if (!userInfo) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh',
-        background: '#f4f6fb' 
-      }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+          background: "#f4f6fb",
+        }}
+      >
         <Spin size="large" />
       </div>
     );
@@ -1334,22 +1432,20 @@ const SchoolNurseDashboard = () => {
         theme="light"
         className="nurse-sidebar"
         style={{
-          borderRight: '1px solid #f0f0f0',
-          background: '#fff',
+          borderRight: "1px solid #f0f0f0",
+          background: "#fff",
           zIndex: 10,
           paddingTop: 24,
-          position: 'relative'
+          position: "relative",
         }}
         trigger={null}
       >
         <div className="nurse-user-section">
           <div className="nurse-user-avatar">
-            <UserOutlined style={{ fontSize: 32, color: '#1976d2' }} />
+            <UserOutlined style={{ fontSize: 32, color: "#1976d2" }} />
           </div>
           {!collapsed && (
-            <span className="nurse-user-badge">
-              Y tá Trường học
-            </span>
+            <span className="nurse-user-badge">Y tá Trường học</span>
           )}
         </div>
 
@@ -1359,26 +1455,27 @@ const SchoolNurseDashboard = () => {
           mode="inline"
           items={menuItems}
           onClick={handleMenuClick}
-          style={{ border: 'none', fontWeight: 500, fontSize: 16 }}
+          style={{ border: "none", fontWeight: 500, fontSize: 16 }}
         />
 
-        <div 
+        <div
           className="custom-sidebar-trigger"
           onClick={() => setCollapsed(!collapsed)}
           tabIndex={0}
           role="button"
           aria-label={collapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
+            if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
               setCollapsed(!collapsed);
             }
           }}
         >
-          {collapsed ? 
-            <RightOutlined className="icon-right" /> : 
+          {collapsed ? (
+            <RightOutlined className="icon-right" />
+          ) : (
             <LeftOutlined className="icon-left" />
-          }
+          )}
           {!collapsed && <span className="trigger-text">Thu gọn</span>}
         </div>
       </Sider>
@@ -1386,22 +1483,25 @@ const SchoolNurseDashboard = () => {
       <Layout style={{ marginLeft: 0 }}>
         <Header className="nurse-header">
           <div style={{ flex: 1 }}>
-            <Breadcrumb items={getBreadcrumbItems()} style={{ fontSize: 14, marginBottom: 4 }} />
-            <h1 className="nurse-header-title">Bảng điều khiển Y tá Trường học</h1>
+            <Breadcrumb
+              items={getBreadcrumbItems()}
+              style={{ fontSize: 14, marginBottom: 4 }}
+            />
+            <h1 className="nurse-header-title">
+              Bảng điều khiển Y tá Trường học
+            </h1>
           </div>
           <div className="nurse-header-user">
             <div className="nurse-header-avatar">
-              <UserOutlined style={{ fontSize: 20, color: '#1976d2' }} />
+              <UserOutlined style={{ fontSize: 20, color: "#1976d2" }} />
             </div>
             <span style={{ fontWeight: 500, fontSize: 16 }}>
-              {userInfo?.firstName || ''} {userInfo?.lastName || ''}
+              {userInfo?.firstName || ""} {userInfo?.lastName || ""}
             </span>
           </div>
         </Header>
 
-        <Content className="nurse-content">
-          {renderContent()}
-        </Content>
+        <Content className="nurse-content">{renderContent()}</Content>
       </Layout>
     </Layout>
   );

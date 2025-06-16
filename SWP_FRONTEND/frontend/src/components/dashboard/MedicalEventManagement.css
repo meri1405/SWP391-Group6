@@ -1,0 +1,501 @@
+.medical-event-management {
+  padding: 24px;
+  background: #f0f2f5;
+  min-height: 100vh;
+}
+
+/* Statistics Row */
+.statistics-row {
+  margin-bottom: 24px;
+}
+
+.statistics-row .ant-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
+}
+
+.statistics-row .ant-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}
+
+.statistics-row .ant-statistic-title {
+  color: #666;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.statistics-row .ant-statistic-content {
+  color: #262626;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+/* Main Content Card */
+.main-content-card {
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.main-content-card .ant-card-body {
+  padding: 24px;
+}
+
+/* Header Section */
+.header-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.header-section h3 {
+  margin: 0;
+  color: #1890ff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-section .ant-btn {
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.header-section .ant-btn-primary {
+  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+  border: none;
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.3);
+}
+
+.header-section .ant-btn-primary:hover {
+  background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.4);
+}
+
+/* Filter Section */
+.filter-section {
+  margin-bottom: 24px;
+  padding: 20px;
+  background: #fafafa;
+  border-radius: 8px;
+  border: 1px solid #f0f0f0;
+}
+
+.filter-section .ant-input {
+  border-radius: 6px;
+  transition: all 0.3s ease;
+}
+
+.filter-section .ant-input:focus {
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+.filter-section .ant-select {
+  border-radius: 6px;
+}
+
+.filter-section .ant-select-selector {
+  border-radius: 6px !important;
+  transition: all 0.3s ease;
+}
+
+.filter-section .ant-select-focused .ant-select-selector {
+  border-color: #1890ff !important;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2) !important;
+}
+
+.filter-section .ant-picker {
+  border-radius: 6px;
+  transition: all 0.3s ease;
+}
+
+.filter-section .ant-picker:hover,
+.filter-section .ant-picker-focused {
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+/* Events Table */
+.events-table {
+  margin-top: 16px;
+}
+
+.events-table .ant-table {
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.events-table .ant-table-thead > tr > th {
+  background: #fafafa;
+  border-bottom: 2px solid #f0f0f0;
+  font-weight: 600;
+  color: #262626;
+  padding: 16px;
+}
+
+.events-table .ant-table-tbody > tr > td {
+  padding: 16px;
+  vertical-align: middle;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.events-table .ant-table-tbody > tr:hover > td {
+  background-color: #f8f9ff;
+}
+
+.events-table .ant-table-tbody > tr:last-child > td {
+  border-bottom: none;
+}
+
+/* Table Actions */
+.events-table .ant-btn {
+  border-radius: 6px;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.events-table .ant-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Status Action Buttons */
+.events-table .ant-btn[style*="background-color: rgb(246, 255, 237)"] {
+  border: 1px solid #b7eb8f;
+  color: #52c41a !important;
+  background: #f6ffed !important;
+}
+
+.events-table .ant-btn[style*="background-color: rgb(24, 144, 255)"] {
+  background: #1890ff !important;
+  border-color: #1890ff !important;
+  color: #fff !important;
+}
+
+.events-table .ant-btn[style*="background-color: rgb(246, 255, 237)"]:hover {
+  background: #d9f7be !important;
+  border-color: #95d07b !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(82, 196, 26, 0.2);
+}
+
+.events-table .ant-btn[style*="background-color: rgb(24, 144, 255)"]:hover {
+  background: #40a9ff !important;
+  border-color: #40a9ff !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3);
+}
+
+/* Tags Styling */
+.ant-tag {
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+}
+
+.ant-tag.ant-tag-success {
+  background: #f6ffed;
+  color: #52c41a;
+}
+
+.ant-tag.ant-tag-warning {
+  background: #fffbe6;
+  color: #faad14;
+}
+
+.ant-tag.ant-tag-error {
+  background: #fff2f0;
+  color: #ff4d4f;
+}
+
+.ant-tag.ant-tag-processing {
+  background: #e6f7ff;
+  color: #1890ff;
+}
+
+/* Modal Styling */
+.event-modal .ant-modal-header {
+  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+}
+
+.event-modal .ant-modal-title {
+  color: white;
+  font-weight: 600;
+}
+
+.event-modal .ant-modal-close {
+  color: white;
+}
+
+.event-modal .ant-modal-close:hover {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.event-modal .ant-modal-body {
+  padding: 24px;
+}
+
+.event-modal .ant-form-item-label > label {
+  font-weight: 500;
+  color: #262626;
+}
+
+.event-modal .ant-input,
+.event-modal .ant-select-selector,
+.event-modal .ant-picker {
+  border-radius: 6px;
+  transition: all 0.3s ease;
+}
+
+.event-modal .ant-input:focus,
+.event-modal .ant-select-focused .ant-select-selector,
+.event-modal .ant-picker-focused {
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+/* Detail Modal */
+.ant-modal-content {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.ant-tabs-tab {
+  font-weight: 500;
+}
+
+.ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: #1890ff;
+  font-weight: 600;
+}
+
+.ant-tabs-ink-bar {
+  background: #1890ff;
+}
+
+/* Timeline Styling */
+.ant-timeline-item-tail {
+  border-left: 2px solid #e6f7ff;
+}
+
+.ant-timeline-item-head {
+  border-color: #1890ff;
+  background: #1890ff;
+}
+
+.ant-timeline-item-content {
+  margin-left: 8px;
+  padding-left: 16px;
+}
+
+/* Rate Component */
+.ant-rate-star {
+  margin-right: 4px;
+}
+
+.ant-rate-star-full .ant-rate-star-second {
+  color: #faad14;
+}
+
+/* Progress Bar */
+.ant-progress-bg {
+  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+}
+
+/* Alert Styling */
+.ant-alert {
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+
+.ant-alert-warning {
+  background: #fffbe6;
+  border: 1px solid #ffe58f;
+}
+
+.ant-alert-success {
+  background: #f6ffed;
+  border: 1px solid #b7eb8f;
+}
+
+/* Card Enhancements */
+.ant-card {
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.ant-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.ant-card-head {
+  border-bottom: 1px solid #f0f0f0;
+  padding: 16px 24px;
+}
+
+.ant-card-head-title {
+  font-weight: 600;
+  color: #262626;
+}
+
+.ant-card-body {
+  padding: 20px 24px;
+}
+
+.ant-card-small > .ant-card-head {
+  padding: 12px 16px;
+  min-height: auto;
+}
+
+.ant-card-small > .ant-card-body {
+  padding: 16px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .medical-event-management {
+    padding: 16px;
+  }
+
+  .header-section {
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+  }
+
+  .header-section h3 {
+    text-align: center;
+  }
+
+  .filter-section {
+    padding: 16px;
+  }
+
+  .statistics-row .ant-statistic-content {
+    font-size: 20px;
+  }
+
+  .events-table .ant-table-tbody > tr > td {
+    padding: 12px 8px;
+  }
+
+  .events-table .ant-table-thead > tr > th {
+    padding: 12px 8px;
+  }
+}
+
+@media (max-width: 576px) {
+  .header-section .ant-space {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .header-section .ant-btn {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .filter-section .ant-row {
+    gap: 8px;
+  }
+
+  .events-table {
+    overflow-x: auto;
+  }
+
+  .statistics-row .ant-statistic-content {
+    font-size: 18px;
+  }
+}
+
+/* Animation Effects */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.medical-event-management > * {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+.medical-event-management > *:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+.medical-event-management > *:nth-child(3) {
+  animation-delay: 0.2s;
+}
+
+/* Loading States */
+.ant-spin-container {
+  transition: opacity 0.3s ease;
+}
+
+.ant-spin-blur {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* Hover Effects */
+.ant-card:hover,
+.ant-table-tbody > tr:hover {
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.ant-btn {
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.ant-btn:hover {
+  transform: translateY(-1px);
+}
+
+/* Focus States */
+.ant-input:focus,
+.ant-select-focused .ant-select-selector,
+.ant-picker-focused {
+  outline: none;
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+/* Custom Scrollbar */
+.events-table .ant-table-body::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.events-table .ant-table-body::-webkit-scrollbar-track {
+  background: #f5f5f5;
+  border-radius: 3px;
+}
+
+.events-table .ant-table-body::-webkit-scrollbar-thumb {
+  background: #d9d9d9;
+  border-radius: 3px;
+}
+
+.events-table .ant-table-body::-webkit-scrollbar-thumb:hover {
+  background: #bfbfbf;
+}
