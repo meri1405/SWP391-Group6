@@ -56,44 +56,9 @@ public class StudentService implements IStudentService {
         Student student = studentRepository.findByIdWithParents(studentId)
                 .orElseThrow(() -> new IllegalArgumentException("Student not found with id: " + studentId));
         return convertToDTO(student);
-    }    /**
-     * Add parent to existing student (admin only)
-     * @param studentId the student ID
-     * @param parentId the parent ID
-     * @param parentType either "father" or "mother"
-     * @throws IllegalArgumentException if student or parent not found, or relationship already exists
-     */
-    @Transactional
-    @Override
-    public void addParentToStudent(Long studentId, Long parentId, String parentType) {
-        Student student = studentRepository.findByIdWithParents(studentId)
-                .orElseThrow(() -> new IllegalArgumentException("Student not found with id: " + studentId));
-        
-        User parent = userRepository.findById(parentId)
-                .orElseThrow(() -> new IllegalArgumentException("Parent not found with id: " + parentId));
-        
-        // Check if parent has PARENT role
-        if (!parent.getRole().getRoleName().equals("PARENT")) {
-            throw new IllegalArgumentException("User with id " + parentId + " is not a parent");
-        }
-        
-        // Set parent based on type
-        if ("father".equalsIgnoreCase(parentType)) {
-            if (student.getFather() != null) {
-                throw new IllegalArgumentException("Student already has a father assigned");
-            }
-            student.setFather(parent);
-        } else if ("mother".equalsIgnoreCase(parentType)) {
-            if (student.getMother() != null) {
-                throw new IllegalArgumentException("Student already has a mother assigned");
-            }
-            student.setMother(parent);
-        } else {
-            throw new IllegalArgumentException("Parent type must be either 'father' or 'mother'");
-        }
-        
-        studentRepository.save(student);
-    }    /**
+    }
+
+    /**
      * Remove parent from student (admin only)
      * @param studentId the student ID
      * @param parentType either "father" or "mother"

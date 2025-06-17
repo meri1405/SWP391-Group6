@@ -33,38 +33,6 @@ public class AdminController {
     @Autowired
     private IStudentService studentService;
 
-    /**
-     * Get admin dashboard data
-     */
-    @GetMapping("/dashboard")
-    public ResponseEntity<?> getDashboardData() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        User user = (User) authentication.getPrincipal();
-        
-        Map<String, Object> dashboardData = new HashMap<>();
-        dashboardData.put("message", "Welcome to Admin Dashboard");
-        dashboardData.put("adminUser", user.getUsername());
-        dashboardData.put("role", user.getRole().getRoleName());
-        dashboardData.put("totalUsers", 1234);
-        dashboardData.put("totalParents", 856);
-        dashboardData.put("totalStudents", 2341);
-        dashboardData.put("totalHealthRecords", 1567);
-          return ResponseEntity.ok(dashboardData);
-    }
-
-    /**
-     * Get system statistics (admin only)
-     */
-    @GetMapping("/statistics")
-    public ResponseEntity<?> getSystemStatistics() {
-        Map<String, Object> stats = new HashMap<>();
-        stats.put("totalLogins", 5432);
-        stats.put("activeUsers", 234);
-        stats.put("systemUptime", "99.9%");
-        stats.put("lastBackup", "2024-01-15 02:00:00");
-        
-        return ResponseEntity.ok(stats);
-    }
 
     /**
      * Get system settings (admin only)
