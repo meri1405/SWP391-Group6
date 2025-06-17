@@ -24,11 +24,6 @@ public interface IStudentService {
     StudentDTO getStudentById(Long studentId);
 
     /**
-     * Add parent to student
-     */
-    void addParentToStudent(Long studentId, Long parentId, String parentType);
-
-    /**
      * Remove parent from student
      */
     void removeParentFromStudent(Long studentId, String parentType);
