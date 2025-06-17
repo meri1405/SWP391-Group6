@@ -22,6 +22,17 @@ public interface INotificationService {
             String message);
 
     /**
+     *   /**
+     * Create a new notification for medical events
+     */
+    NotificationDTO createMedicalEventNotification(
+        MedicalEvent medicalEvent,
+        String notificationType,
+        String title,
+        String message);
+
+/**
+ * 
      * Create a new notification for medication schedule updates
      */
     NotificationDTO createMedicationScheduleNotification(
