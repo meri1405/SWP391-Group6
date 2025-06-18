@@ -1,4 +1,4 @@
-package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service;
+package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.RestockRequestDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.RestockItemDTO;

@@ -10,7 +10,19 @@ export * from "./parentApi";
 // Nurse APIs
 export * from "./nurseApi";
 
-// User APIs (non-admin functions)
+// Vaccination APIs
+export * from "./vaccinationCampaignApi";
+
+// Medical Event APIs
+export * from "./medicalEventApi";
+
+// Medical Supply APIs
+export * from "./medicalSupplyApi";
+
+// Restock Request APIs
+export * from "./restockRequestApi";
+
+// User APIs
 export * from "./userApi";
 
 // ==================== LEGACY SUPPORT ====================
