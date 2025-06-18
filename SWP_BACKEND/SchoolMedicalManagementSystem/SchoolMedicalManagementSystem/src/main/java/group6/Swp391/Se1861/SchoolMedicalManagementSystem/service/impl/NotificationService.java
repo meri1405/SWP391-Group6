@@ -128,6 +128,62 @@ public class NotificationService implements INotificationService {
     }
 
     /**
+     * Create a new notification for medical events
+     */
+    @Transactional
+    @Override
+    public NotificationDTO createMedicalEventNotification(
+            MedicalEvent medicalEvent,
+            String notificationType,
+            String title,
+            String message) {
+
+        // Get the parent from the student associated with the medical event
+        User parent = null;
+        try {
+            parent = medicalEvent.getStudent().getParent();
+        } catch (NullPointerException e) {
+            System.out.println("Warning: Cannot send notification - error accessing parent for medical event ID: " + medicalEvent.getId());
+            return null;
+        }
+
+        // Check if parent exists
+        if (parent == null) {
+            System.out.println("Warning: Cannot send notification - parent is null for medical event ID: " + medicalEvent.getId());
+            return null;
+        }
+
+        // Create and save notification entity
+        Notification notification = new Notification();
+        notification.setTitle(title);
+        notification.setMessage(message);
+        notification.setNotificationType(notificationType);
+        notification.setRecipient(parent);
+        notification.setMedicalEvent(medicalEvent);
+
+        Notification savedNotification = notificationRepository.save(notification);
+
+        // Convert to DTO
+        NotificationDTO notificationDTO = convertToDTO(savedNotification);
+
+        try {
+            // Send real-time notification via WebSocket
+            if (parent.getUsername() != null) {
+                messagingTemplate.convertAndSendToUser(
+                        parent.getUsername(),
+                        "/topic/notifications",
+                        notificationDTO
+                );
+            }
+        } catch (Exception e) {
+            // Log the error but don't fail the entire transaction
+            System.err.println("Error sending WebSocket notification: " + e.getMessage());
+        }
+
+        return notificationDTO;
+    }
+
+    /**
      * Get all notifications for a user
      */
     @Override

@@ -22,7 +22,7 @@ public interface INotificationService {
             String message);
 
     /**
-     *   /**
+ /**
      * Create a new notification for medical events
      */
     NotificationDTO createMedicalEventNotification(
@@ -30,7 +30,6 @@ public interface INotificationService {
         String notificationType,
         String title,
         String message);
-
 /**
  * 
      * Create a new notification for medication schedule updates
