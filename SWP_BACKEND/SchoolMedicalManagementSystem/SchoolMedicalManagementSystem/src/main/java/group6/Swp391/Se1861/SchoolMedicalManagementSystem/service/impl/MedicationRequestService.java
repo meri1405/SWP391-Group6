@@ -13,6 +13,7 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.ItemRequest
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.MedicationRequestRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.StudentRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IMedicationRequestService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IMedicationScheduleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,7 +31,7 @@ public class MedicationRequestService implements IMedicationRequestService {
     private final MedicationRequestRepository medicationRequestRepository;
     private final StudentRepository studentRepository;
     private final ItemRequestRepository itemRequestRepository;
-    private final MedicationScheduleService medicationScheduleService;
+    private final IMedicationScheduleService medicationScheduleService;
 
     /**
      * Create a new medication request

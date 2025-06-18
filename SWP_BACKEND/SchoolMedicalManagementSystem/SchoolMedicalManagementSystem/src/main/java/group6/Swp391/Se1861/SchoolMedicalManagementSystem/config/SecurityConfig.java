@@ -76,7 +76,10 @@ public class SecurityConfig {
                     .requestMatchers("/api/nurse/**").hasRole("SCHOOLNURSE")
                     .requestMatchers("/api/schoolnurse/**").hasRole("SCHOOLNURSE")
                     .requestMatchers("/api/parent/**").hasRole("PARENT")
-                        .requestMatchers("/api/medical-events/**").hasAnyRole("PARENT", "SCHOOLNURSE", "MANAGER")
+                    .requestMatchers("/api/medical-events/**").hasAnyRole("PARENT", "SCHOOLNURSE", "MANAGER")
+                    .requestMatchers("/api/health-check/campaigns").hasAnyRole( "SCHOOLNURSE", "MANAGER")
+                    .requestMatchers("/api/health-check/forms").hasAnyRole("SCHOOLNURSE", "MANAGER", "PARENT")
+                    .requestMatchers("/api/health-check/results").hasAnyRole("SCHOOLNURSE", "MANAGER", "PARENT")
                     .anyRequest().authenticated()
             ).oauth2Login(oauth2 ->
                 oauth2.authorizationEndpoint(authEndpoint ->

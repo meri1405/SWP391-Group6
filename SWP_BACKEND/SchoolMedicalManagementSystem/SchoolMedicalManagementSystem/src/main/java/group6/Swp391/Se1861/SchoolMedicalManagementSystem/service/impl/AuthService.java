@@ -6,6 +6,7 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.RoleRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.UserRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IAuthService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IOtpService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -30,7 +31,7 @@ public class AuthService implements IAuthService {
     private final RoleRepository roleRepository;
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
-    private final OtpService otpService;
+    private final IOtpService otpService;
     private final AuthenticationManager authenticationManager;
 
     @Autowired

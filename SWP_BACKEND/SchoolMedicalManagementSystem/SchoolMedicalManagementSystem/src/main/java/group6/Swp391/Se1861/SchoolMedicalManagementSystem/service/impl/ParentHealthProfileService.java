@@ -7,6 +7,7 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.exception.ResourceNotF
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.*;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.ProfileStatus;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.*;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.INotificationService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IParentHealthProfileService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -52,7 +53,7 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
     private VaccinationRuleRepository vaccinationRuleRepository;
 
     @Autowired
-    private NotificationService notificationService;
+    private INotificationService notificationService;
 
     /**
      * Create a health profile for a child by a parent

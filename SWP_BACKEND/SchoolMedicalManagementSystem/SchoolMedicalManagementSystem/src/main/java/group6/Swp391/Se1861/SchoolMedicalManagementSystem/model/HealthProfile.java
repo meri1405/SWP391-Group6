@@ -27,6 +27,9 @@ public class HealthProfile {
     @Column(name = "height", nullable = false)
     private double height;
 
+    @Column(name = "bmi", nullable = true)
+    private Double bmi;
+
     @Column(name = "bloodType", nullable = false)
     private String bloodType;
 

@@ -1,5 +1,6 @@
 package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl;
 
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IFirebaseOtpService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IOtpService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -12,7 +13,7 @@ import org.springframework.stereotype.Service;
 public class OtpService implements IOtpService {
     
     @Autowired
-    private FirebaseOtpService firebaseOtpService;
+    private IFirebaseOtpService firebaseOtpService;
     
     /**
      * Generate and send OTP to a parent based on phone number

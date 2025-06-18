@@ -4,6 +4,7 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.*;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.*;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.ProfileStatus;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.*;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.INotificationService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.ISchoolNurseHealthProfileService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -52,7 +53,7 @@ public class SchoolNurseHealthProfileService implements ISchoolNurseHealthProfil
     private VaccinationHistoryRepository vaccinationHistoryRepository;
 
     @Autowired
-    private NotificationService notificationService;
+    private INotificationService notificationService;
 
     /**
      * Get all health profiles
