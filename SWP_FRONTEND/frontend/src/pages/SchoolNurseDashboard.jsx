@@ -59,6 +59,8 @@ import "../styles/SchoolNurseDashboard.css";
 import "../styles/SidebarTrigger.css";
 import NurseHealthProfiles from "../components/dashboard/NurseHealthProfiles";
 import MedicalEventManagement from "../components/dashboard/MedicalEventManagement";
+// Import the vaccination campaign management component
+import VaccinationCampaignManagement from "../components/schoolnurse/vaccinationCampaign/VaccinationCampaignManagement";
 
 ChartJS.register(
   CategoryScale,
@@ -1288,13 +1290,14 @@ const SchoolNurseDashboard = () => {
 
   const Inventory = () => <MedicalSupplyInventory />;
 
-  // Placeholder components cho các sections chưa hoàn thành
-  const Vaccination = () => (
-    <div className="nurse-content-card">
-      <h2 className="nurse-section-title">Chiến dịch tiêm chủng</h2>
-      <p>Component đang được phát triển...</p>
-    </div>
-  );
+  // Update the Vaccination component to use the VaccinationCampaignManagement
+  const Vaccination = () => {
+    return (
+      <div className="nurse-content-card">
+        <VaccinationCampaignManagement />
+      </div>
+    );
+  };
 
   const HealthCheck = () => (
     <div className="nurse-content-card">

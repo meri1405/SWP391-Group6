@@ -304,6 +304,7 @@ public class NotificationService implements INotificationService {
 
         return notificationDTO;
     }
+
     /**
      * Convert Notification entity to DTO
      */
@@ -336,5 +337,162 @@ public class NotificationService implements INotificationService {
         // }
 
         return dto;
+    }
+
+    /**
+     * Create vaccination form confirmation notification
+     */
+    @Transactional
+    @Override
+    public NotificationDTO createVaccinationFormConfirmationNotification(
+            User recipient,
+            String studentName,
+            String vaccineName) {
+        
+        String title = "Vaccination Consent Confirmed";
+        String message = "Parent has confirmed vaccination for " + studentName + " - " + vaccineName;
+        String notificationType = "VACCINATION_CONSENT_CONFIRMED";
+        
+        return createGeneralNotification(recipient, title, message, notificationType);
+    }
+
+    /**
+     * Create vaccination form decline notification
+     */
+    @Transactional
+    @Override
+    public NotificationDTO createVaccinationFormDeclineNotification(
+            User recipient,
+            String studentName,
+            String vaccineName,
+            String reason) {
+        
+        String title = "Vaccination Consent Declined";
+        String message = "Parent has declined vaccination for " + studentName + " - " + vaccineName;
+        if (reason != null && !reason.trim().isEmpty()) {
+            message += ". Reason: " + reason;
+        }
+        String notificationType = "VACCINATION_CONSENT_DECLINED";
+        
+        return createGeneralNotification(recipient, title, message, notificationType);
+    }
+
+    /**
+     * Create vaccination form expiry notification
+     */
+    @Transactional
+    @Override
+    public NotificationDTO createVaccinationFormExpiryNotification(
+            User recipient,
+            String studentName) {
+        
+        String title = "Vaccination Form Expired";
+        String message = "Vaccination consent form for " + studentName + " has expired without response";
+        String notificationType = "VACCINATION_CONSENT_EXPIRED";
+        return createGeneralNotification(recipient, title, message, notificationType);
+    }
+
+    /**
+     * Create campaign approval notification
+     */
+    @Transactional
+    @Override
+    public NotificationDTO createCampaignApprovalNotification(
+            User recipient,
+            String campaignName,
+            String approverName) {
+        
+        String title = "Campaign Approved";
+        String message = "Your vaccination campaign '" + campaignName + "' has been approved by " + approverName;
+        String notificationType = "CAMPAIGN_APPROVAL";
+        
+        return createGeneralNotification(recipient, title, message, notificationType);
+    }
+
+    /**
+     * Create campaign rejection notification
+     */
+    @Transactional
+    @Override
+    public NotificationDTO createCampaignRejectionNotification(
+            User recipient,
+            String campaignName,
+            String reason) {
+        
+        String title = "Campaign Rejected";
+        String message = "Your vaccination campaign '" + campaignName + "' has been rejected. Reason: " + reason;
+        String notificationType = "CAMPAIGN_REJECTION";
+        
+        return createGeneralNotification(recipient, title, message, notificationType);
+    }
+
+    /**
+     * Create campaign approval request notification
+     */
+    @Transactional
+    @Override
+    public NotificationDTO createCampaignApprovalRequestNotification(
+            User recipient,
+            String campaignName,
+            String creatorName) {
+        
+        String title = "New Campaign Pending Approval";
+        String message = "A new vaccination campaign '" + campaignName + "' created by " + creatorName + " is pending your approval.";
+        String notificationType = "CAMPAIGN_APPROVAL_REQUEST";
+        
+        return createGeneralNotification(recipient, title, message, notificationType);
+    }
+
+    /**
+     * Create vaccination consent form notification
+     */
+    @Transactional
+    @Override
+    public NotificationDTO createVaccinationConsentFormNotification(
+            User recipient,
+            String studentName,
+            String vaccineName,
+            String location,
+            String scheduledDate) {
+        
+        String title = "Vaccination Consent Required";
+        String message = "Please review and confirm vaccination for " + studentName + " - " + vaccineName;
+        if (location != null && !location.trim().isEmpty()) {
+            message += " at " + location;
+        }
+        if (scheduledDate != null && !scheduledDate.trim().isEmpty()) {
+            message += " scheduled for " + scheduledDate;
+        }
+        String notificationType = "VACCINATION_CONSENT_REQUIRED";
+        
+        return createGeneralNotification(recipient, title, message, notificationType);
+    }
+
+    @Transactional
+    @Override
+    public NotificationDTO createGeneralNotification(User recipient, String title, String message, String notificationType) {
+        Notification notification = new Notification();
+        notification.setTitle(title);
+        notification.setMessage(message);
+        notification.setNotificationType(notificationType);
+        notification.setRecipient(recipient);
+
+        Notification savedNotification = notificationRepository.save(notification);
+
+        NotificationDTO notificationDTO = convertToDTO(savedNotification);
+
+        try {
+            if (recipient.getUsername() != null) {
+                messagingTemplate.convertAndSendToUser(
+                        recipient.getUsername(),
+                        "/topic/notifications",
+                        notificationDTO
+                );
+            }
+        } catch (Exception e) {
+            System.err.println("Error sending WebSocket notification: " + e.getMessage());
+        }
+
+        return notificationDTO;
     }
 }

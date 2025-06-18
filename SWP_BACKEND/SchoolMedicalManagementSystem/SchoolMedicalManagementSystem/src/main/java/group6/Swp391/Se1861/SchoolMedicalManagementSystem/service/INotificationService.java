@@ -17,7 +17,6 @@ public interface INotificationService {
             String message);
 
     /**
- /**
      * Create a new notification for medical events
      */
     NotificationDTO createMedicalEventNotification(
@@ -25,8 +24,8 @@ public interface INotificationService {
         String notificationType,
         String title,
         String message);
-/**
- * 
+
+    /**
      * Create a new notification for medication schedule updates
      */
     NotificationDTO createMedicationScheduleNotification(
@@ -44,6 +43,73 @@ public interface INotificationService {
             String notificationType,
             String title,
             String message);
+
+    /**
+     * Create a general notification
+     */
+    NotificationDTO createGeneralNotification(
+            User recipient,
+            String title,
+            String message,
+            String notificationType);
+
+    /**
+     * Create vaccination form confirmation notification
+     */
+    NotificationDTO createVaccinationFormConfirmationNotification(
+            User recipient,
+            String studentName,
+            String vaccineName);
+
+    /**
+     * Create vaccination form decline notification
+     */
+    NotificationDTO createVaccinationFormDeclineNotification(
+            User recipient,
+            String studentName,
+            String vaccineName,
+            String reason);
+
+    /**
+     * Create vaccination form expiry notification
+     */
+    NotificationDTO createVaccinationFormExpiryNotification(
+            User recipient,
+            String studentName);
+
+    /**
+     * Create campaign approval notification
+     */
+    NotificationDTO createCampaignApprovalNotification(
+            User recipient,
+            String campaignName,
+            String approverName);
+
+    /**
+     * Create campaign rejection notification
+     */
+    NotificationDTO createCampaignRejectionNotification(
+            User recipient,
+            String campaignName,
+            String reason);
+
+    /**
+     * Create campaign approval request notification
+     */
+    NotificationDTO createCampaignApprovalRequestNotification(
+            User recipient,
+            String campaignName,
+            String creatorName);
+
+    /**
+     * Create vaccination consent form notification
+     */
+    NotificationDTO createVaccinationConsentFormNotification(
+            User recipient,
+            String studentName,
+            String vaccineName,
+            String location,
+            String scheduledDate);
 
     /**
      * Create a general notification
