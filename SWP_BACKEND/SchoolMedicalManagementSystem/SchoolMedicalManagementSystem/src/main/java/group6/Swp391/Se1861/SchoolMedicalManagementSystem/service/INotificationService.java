@@ -1,12 +1,7 @@
 package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.NotificationDTO;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.HealthProfile;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.MedicalEvent;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.MedicationRequest;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.MedicationSchedule;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.Notification;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.*;
 
 import java.util.List;
 

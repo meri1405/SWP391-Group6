@@ -304,7 +304,6 @@ public class NotificationService implements INotificationService {
 
         return notificationDTO;
     }
-
     /**
      * Convert Notification entity to DTO
      */
