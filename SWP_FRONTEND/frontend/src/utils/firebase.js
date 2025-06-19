@@ -46,22 +46,32 @@ export const setupRecaptcha = (containerId) => {
       throw new Error('Firebase not initialized');
     }
     
-    // Clear existing reCAPTCHA if any
+    console.log('Setting up reCAPTCHA for container:', containerId);
+    
+    // Ensure complete cleanup first
     if (window.recaptchaVerifier) {
       try {
         window.recaptchaVerifier.clear();
+        console.log('Existing reCAPTCHA verifier cleared');
       } catch (clearError) {
         console.log('Error clearing existing reCAPTCHA:', clearError);
       }
       window.recaptchaVerifier = null;
     }
     
-    // Clear the container content to avoid conflicts
+    // Clear and prepare the container
     const container = document.getElementById(containerId);
-    if (container) {
-      container.innerHTML = '';
+    if (!container) {
+      throw new Error(`Container with id '${containerId}' not found`);
     }
     
+    // Clear everything in the container
+    container.innerHTML = '';
+    container.removeAttribute('data-sitekey');
+    container.removeAttribute('data-callback');
+    container.removeAttribute('data-expired-callback');
+    
+    // Create new reCAPTCHA verifier
     window.recaptchaVerifier = new RecaptchaVerifier(auth, containerId, {
       size: 'invisible',
       callback: () => {
@@ -69,12 +79,17 @@ export const setupRecaptcha = (containerId) => {
       },
       'expired-callback': () => {
         console.log('reCAPTCHA expired');
+        // Auto cleanup on expiration
+        cleanupRecaptcha();
       }
     });
     
+    console.log('reCAPTCHA setup completed successfully');
     return window.recaptchaVerifier;
   } catch (error) {
     console.error('Error setting up reCAPTCHA:', error);
+    // Cleanup on error
+    cleanupRecaptcha();
     throw error;
   }
 };
@@ -97,33 +112,48 @@ export const sendOTP = async (phoneNumber) => {
         formattedPhoneNumber = '+84' + formattedPhoneNumber;      }
     }
 
+    console.log('Sending OTP to:', formattedPhoneNumber);
+
     // Always cleanup before setting up new reCAPTCHA
     cleanupRecaptcha();
     
-    // Setup reCAPTCHA - always recreate to avoid conflicts
-    // Add delay and multiple attempts to ensure DOM is ready
+    // Wait longer to ensure complete cleanup
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Setup reCAPTCHA with multiple attempts and longer delays
     let setupAttempts = 0;
     const maxAttempts = 3;
     
     while (setupAttempts < maxAttempts) {
       try {
-        await new Promise(resolve => setTimeout(resolve, 150 * (setupAttempts + 1)));
+        console.log(`reCAPTCHA setup attempt ${setupAttempts + 1}/${maxAttempts}`);
+        
+        // Wait progressively longer between attempts  
+        await new Promise(resolve => setTimeout(resolve, 300 * (setupAttempts + 1)));
+        
         setupRecaptcha('recaptcha-container');
+        console.log('reCAPTCHA setup successful');
         break; // Success, exit loop
       } catch (setupError) {
         setupAttempts++;
         console.log(`reCAPTCHA setup attempt ${setupAttempts} failed:`, setupError);
+        
         if (setupAttempts >= maxAttempts) {
-          throw setupError;
+          throw new Error(`Failed to setup reCAPTCHA after ${maxAttempts} attempts: ${setupError.message}`);
         }
-        // Clean up before retry
+        
+        // Clean up completely before retry
         cleanupRecaptcha();
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
     }
 
     const appVerifier = window.recaptchaVerifier;
+    if (!appVerifier) {
+      throw new Error('reCAPTCHA verifier not available');
+    }
 
+    console.log('Initiating phone sign-in...');
     const confirmationResult = await signInWithPhoneNumber(
       auth, 
       formattedPhoneNumber, 
@@ -139,6 +169,15 @@ export const sendOTP = async (phoneNumber) => {
     
     // Complete cleanup on error
     cleanupRecaptcha();
+    
+    // Provide more specific error messages
+    if (error.code === 'auth/too-many-requests') {
+      throw new Error('Quá nhiều yêu cầu OTP. Vui lòng thử lại sau ít phút.');
+    } else if (error.code === 'auth/invalid-phone-number') {
+      throw new Error('Số điện thoại không hợp lệ.');
+    } else if (error.message && error.message.includes('reCAPTCHA')) {
+      throw new Error('Lỗi xác thực reCAPTCHA. Vui lòng thử lại.');
+    }
     
     throw error;
   }
@@ -206,40 +245,72 @@ export const resetOTPTimer = () => {
 
 // Cleanup reCAPTCHA
 export const cleanupRecaptcha = () => {
+  console.log('Starting reCAPTCHA cleanup...');
+  
   // Clear verifier first
   if (window.recaptchaVerifier) {
     try {
       window.recaptchaVerifier.clear();
+      console.log('reCAPTCHA verifier cleared');
     } catch (error) {
       console.log('Error clearing reCAPTCHA verifier:', error);
     }
     window.recaptchaVerifier = null;
   }
   
-  // Clear the container content
+  // Clear the container content completely
   const container = document.getElementById('recaptcha-container');
   if (container) {
     container.innerHTML = '';
+    // Remove any data attributes that might be set by reCAPTCHA
+    container.removeAttribute('data-sitekey');
+    container.removeAttribute('data-callback');
+    container.removeAttribute('data-expired-callback');
+    console.log('reCAPTCHA container cleared');
   }
   
-  // Clear any global reCAPTCHA state
+  // Remove all reCAPTCHA related elements from DOM
+  try {
+    // Remove reCAPTCHA widgets
+    const widgets = document.querySelectorAll('.grecaptcha-badge, [id^="g-recaptcha-"], iframe[src*="recaptcha"]');
+    widgets.forEach(widget => {
+      try {
+        widget.remove();
+        console.log('Removed reCAPTCHA widget:', widget);
+      } catch (e) {
+        console.log('Error removing reCAPTCHA widget:', e);
+      }
+    });
+    
+    // Remove any script tags added by reCAPTCHA
+    const scripts = document.querySelectorAll('script[src*="recaptcha"]');
+    scripts.forEach(script => {
+      try {
+        if (script.parentNode) {
+          script.parentNode.removeChild(script);
+        }
+      } catch (e) {
+        console.log('Error removing reCAPTCHA script:', e);
+      }
+    });
+  } catch (error) {
+    console.log('Error cleaning up reCAPTCHA DOM elements:', error);
+  }
+  
+  // Reset global reCAPTCHA state
   if (window.grecaptcha) {
     try {
-      const widgets = document.querySelectorAll('.grecaptcha-badge');
-      widgets.forEach(widget => {
-        try {
-          widget.remove();
-        } catch (e) {
-          console.log('Error removing reCAPTCHA widget:', e);
-        }
-      });
+      if (typeof window.grecaptcha.reset === 'function') {
+        window.grecaptcha.reset();
+      }
     } catch (error) {
-      console.log('Error cleaning up reCAPTCHA widgets:', error);
+      console.log('Error resetting grecaptcha:', error);
     }
   }
   
   // Also reset OTP timer when cleaning up
   otpSentTime = null;
+  console.log('reCAPTCHA cleanup completed');
 };
 
 // Check if we can retry OTP input (not expired and not used)

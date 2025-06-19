@@ -16,9 +16,10 @@ export const API_ENDPOINTS = {
     login: `${API_BASE_URL}${
       import.meta.env.VITE_API_AUTH_LOGIN || "/api/auth/login"
     }`,
-    requestOtp: `${API_BASE_URL}${
-      import.meta.env.VITE_API_AUTH_REQUEST_OTP || "/api/auth/parent/request-otp"
-    }`,
+    // OTP generation endpoint points to dedicated OTP server on port 8082
+    requestOtp: import.meta.env.DEV
+      ? "http://localhost:8082/api/otp/generate"
+      : `${import.meta.env.VITE_OTP_API_BASE_URL || "http://localhost:8082"}/api/otp/generate`,
     verifyOtp: `${API_BASE_URL}${
       import.meta.env.VITE_API_AUTH_VERIFY_OTP || "/api/auth/parent/verify-otp"
     }`,
