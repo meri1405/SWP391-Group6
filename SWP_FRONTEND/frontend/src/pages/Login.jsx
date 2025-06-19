@@ -78,7 +78,6 @@ const Login = () => {
       cleanupRecaptcha();
     };
   }, []);
-
   // OTP Timer countdown
   useEffect(() => {
     let interval = null;
@@ -88,8 +87,8 @@ const Login = () => {
         const remainingTime = getOTPRemainingTime();
         setOtpTimeLeft(remainingTime);
         
-        // If OTP has expired, show message and reset
-        if (remainingTime <= 0 && confirmationResult) {
+        // Only show expired message if not currently verifying OTP and we have confirmation result
+        if (remainingTime <= 0 && confirmationResult && !loadingStates.otpVerify) {
           setErrors({ otp: 'Mã OTP đã hết hạn. Vui lòng yêu cầu mã mới.' });
           setConfirmationResult(null);
           resetOTPTimer();
@@ -104,7 +103,7 @@ const Login = () => {
         clearInterval(interval);
       }
     };
-  }, [showOtp, confirmationResult]);
+  }, [showOtp, confirmationResult, loadingStates.otpVerify]); // Add loadingStates.otpVerify to dependencies
   // Helper function to set individual loading state
   const setIndividualLoading = (key, value) => {
     setLoadingStates((prev) => ({
@@ -273,11 +272,12 @@ const Login = () => {
       setResendSuccess(true); // Mark resend as successful
     }
   };
-
   const handleOtpVerification = async (e) => {
     e.preventDefault();
     setIndividualLoading("otpVerify", true);
-    setErrors({}); // Clear previous errors
+    
+    // Clear errors when starting verification, especially expiration errors
+    setErrors({}); 
 
     try {
       let firebaseIdToken = null;
@@ -622,14 +622,14 @@ const Login = () => {
                     placeholder="Nhập mã OTP"
                     value={otp}                    onChange={(e) => {
                       setOtp(e.target.value);
-                      // Clear OTP errors when user starts typing
-                      if (errors.otp) {
+                      // Only clear OTP errors when user starts typing if not currently verifying
+                      if (errors.otp && !loadingStates.otpVerify) {
                         setErrors(prev => ({ ...prev, otp: undefined }));
                       }
                     }}
                     onFocus={() => {
-                      // Also clear errors when user focuses on input
-                      if (errors.otp && !errors.otp.includes('hết hạn')) {
+                      // Only clear errors when user focuses on input if not currently verifying
+                      if (errors.otp && !errors.otp.includes('hết hạn') && !loadingStates.otpVerify) {
                         setErrors(prev => ({ ...prev, otp: undefined }));
                       }
                     }}
