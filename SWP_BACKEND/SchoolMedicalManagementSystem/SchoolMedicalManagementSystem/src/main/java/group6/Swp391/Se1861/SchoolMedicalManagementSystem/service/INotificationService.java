@@ -109,7 +109,8 @@ public interface INotificationService {
             String studentName,
             String vaccineName,
             String location,
-            String scheduledDate);
+            String scheduledDate,
+            VaccinationForm vaccinationForm);
 
     /**
      * Create a general notification

@@ -19,4 +19,6 @@ public class NotificationDTO {
     private Long medicationRequestId;
     private Long medicationScheduleId;
     private Long medicalEventId;
+    private Boolean confirm;
+    private Long vaccinationFormId;
 }

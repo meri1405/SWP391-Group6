@@ -32,6 +32,14 @@ public class Notification {
     @Column(nullable = false)
     private String notificationType;
 
+    @Column
+    private Boolean confirm;
+
+    // Optional reference to related vaccination form
+    @ManyToOne
+    @JoinColumn(name = "vaccinationFormId")
+    private VaccinationForm vaccinationForm;
+
     @ManyToOne
     @JoinColumn(name = "recipientId", nullable = false)
     private User recipient;

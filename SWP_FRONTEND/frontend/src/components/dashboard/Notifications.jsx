@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { parentApi } from '../../api/parentApi';
 import webSocketService from '../../services/webSocketService';
+import VaccinationFormModal from './VaccinationFormModal';
 import '../../styles/Notifications.css';
 
 const Notifications = () => {
@@ -9,7 +10,38 @@ const Notifications = () => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const { getToken } = useAuth();
+  const [showVaccinationModal, setShowVaccinationModal] = useState(false);
+  const [selectedVaccinationFormId, setSelectedVaccinationFormId] = useState(null);  const { getToken } = useAuth();
+  
+  // Helper functions for formatting
+  const formatVietnameseDate = useCallback((dateString) => {
+    if (!dateString) return dateString;
+    
+    try {
+      const date = new Date(dateString);
+      const day = date.getDate().toString().padStart(2, '0');
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const year = date.getFullYear();
+      const hours = date.getHours().toString().padStart(2, '0');
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      
+      return `${day}/${month}/${year} lúc ${hours}:${minutes}`;
+    } catch {
+      return dateString;
+    }
+  }, []);
+  
+  const formatNotificationMessage = useCallback((message) => {
+    if (!message) return message;
+    
+    // Regex to find ISO date formats like 2025-06-25T10:30 or 2025-06-25T10:30:00
+    const isoDateRegex = /(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?(?:\.\d{3})?(?:Z|[+-]\d{2}:\d{2})?)/g;
+    
+    return message.replace(isoDateRegex, (match) => {
+      return formatVietnameseDate(match);
+    });
+  }, [formatVietnameseDate]);
+
   // Load notifications on component mount
   const loadNotifications = useCallback(async () => {
     const token = getToken();
@@ -18,31 +50,33 @@ const Notifications = () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await parentApi.getAllNotifications(token);
-      
-      // Transform backend notification data to frontend format
-      const transformedNotifications = data.map(notification => ({
-        id: notification.id,
-        type: getNotificationType(notification),
-        title: notification.title,
-        message: notification.message,
-        time: formatTimeAgo(notification.createdAt),
-        date: notification.createdAt,
-        read: notification.read,
-        priority: determinePriority(notification),
-        actionRequired: determineActionRequired(notification),
-        medicationRequest: notification.medicationRequest,
-        medicationSchedule: notification.medicationSchedule
-      }));
+      const data = await parentApi.getAllNotifications(token);      // Transform backend notification data to frontend format
+      const transformedNotifications = data.map(notification => {
+        const transformed = {
+          id: notification.id,
+          type: getNotificationType(notification),
+          title: notification.title,
+          message: formatNotificationMessage(notification.message),
+          time: formatTimeAgo(notification.createdAt),
+          date: notification.createdAt,
+          read: notification.read,
+          priority: determinePriority(notification),
+          actionRequired: determineActionRequired(notification),
+          confirm: notification.confirm,
+          medicationRequest: notification.medicationRequest,
+          medicationSchedule: notification.medicationSchedule,
+          vaccinationFormId: notification.vaccinationFormId
+        };
+        return transformed;
+      });
       
       setNotifications(transformedNotifications);
     } catch (error) {
       console.error('Error loading notifications:', error);
-      setError('Không thể tải thông báo. Vui lòng thử lại.');
-    } finally {
+      setError('Không thể tải thông báo. Vui lòng thử lại.');    } finally {
       setLoading(false);
     }
-  }, [getToken]);
+  }, [getToken, formatNotificationMessage]);
 
   const setupWebSocketConnection = useCallback(async () => {
     const token = getToken();
@@ -50,35 +84,31 @@ const Notifications = () => {
 
     try {
       // Connect to WebSocket
-      await webSocketService.connect(token);
-      
-      // Add message handler for real-time notifications
+      await webSocketService.connect(token);      // Add message handler for real-time notifications
       webSocketService.addMessageHandler('notifications', (newNotification) => {
-        console.log('Received real-time notification:', newNotification);
-        
         // Transform the new notification
         const transformedNotification = {
           id: newNotification.id,
           type: getNotificationType(newNotification),
           title: newNotification.title,
-          message: newNotification.message,
+          message: formatNotificationMessage(newNotification.message),
           time: 'Vừa xong',
           date: newNotification.createdAt,
           read: false,
           priority: determinePriority(newNotification),
           actionRequired: determineActionRequired(newNotification),
           medicationRequest: newNotification.medicationRequest,
-          medicationSchedule: newNotification.medicationSchedule
+          medicationSchedule: newNotification.medicationSchedule,
+          vaccinationFormId: newNotification.vaccinationFormId
         };
         
         // Add new notification to the beginning of the list
         setNotifications(prev => [transformedNotification, ...prev]);
       });
-      
-    } catch (error) {
+        } catch (error) {
       console.error('Error setting up WebSocket connection:', error);
     }
-  }, [getToken]);
+  }, [getToken, formatNotificationMessage]);
 
   useEffect(() => {
     loadNotifications();
@@ -88,18 +118,22 @@ const Notifications = () => {
       // Cleanup WebSocket connection when component unmounts
       webSocketService.removeMessageHandler('notifications');
     };
-  }, [loadNotifications, setupWebSocketConnection]);
-
-  const getNotificationType = (notification) => {
+  }, [loadNotifications, setupWebSocketConnection]);  const getNotificationType = (notification) => {
     if (notification.medicationRequest) {
       return 'medication';
     } else if (notification.medicationSchedule) {
       return 'medication';
+    } else if (notification.vaccinationFormId) {
+      return 'vaccination';
     }
     return 'general';
   };
 
   const determinePriority = (notification) => {
+    // High priority for vaccination consent required
+    if (notification.confirm === true) {
+      return 'high';
+    }
     // Determine priority based on notification content
     if (notification.title?.includes('từ chối') || notification.title?.includes('thất bại')) {
       return 'high';
@@ -110,10 +144,13 @@ const Notifications = () => {
   };
 
   const determineActionRequired = (notification) => {
+    // Vaccination consent notifications require action
+    if (notification.confirm === true) {
+      return true;
+    }
     // Medication-related notifications usually require some action/attention
     return notification.medicationRequest || notification.medicationSchedule;
   };
-
   const formatTimeAgo = (dateString) => {
     if (!dateString) return 'Không xác định';
     
@@ -131,9 +168,9 @@ const Notifications = () => {
     } else if (diffInHours < 24) {
       return `${diffInHours} giờ trước`;
     } else {
-      return `${diffInDays} ngày trước`;
-    }
+      return `${diffInDays} ngày trước`;    }
   };
+
   const filteredNotifications = notifications.filter(notification => {
     if (filter === 'all') return true;
     if (filter === 'unread') return !notification.read;
@@ -156,24 +193,28 @@ const Notifications = () => {
     } catch (error) {
       console.error('Error marking notification as read:', error);
     }
-  };
-
-  const confirmAction = (notification) => {
+  };  const confirmAction = (notification) => {
     // Handle different types of confirmations based on notification type
-    if (notification.medicationRequest) {
+    if (notification.vaccinationFormId) {
+      // Open vaccination form modal for confirmation/decline
+      setSelectedVaccinationFormId(notification.vaccinationFormId);
+      setShowVaccinationModal(true);
+    } else if (notification.medicationRequest) {
       // Redirect to medication request details
-      console.log('Viewing medication request:', notification.medicationRequest.id);
     } else if (notification.medicationSchedule) {
       // Redirect to medication schedule details
-      console.log('Viewing medication schedule:', notification.medicationSchedule.id);
     }
     
     // Mark as read when action is taken
     if (!notification.read) {
       markAsRead(notification.id);
     }
+  };const handleVaccinationFormUpdated = () => {
+    // Refresh notifications after form update
+    loadNotifications();
+    setShowVaccinationModal(false);
+    setSelectedVaccinationFormId(null);
   };
-
   const getTypeIcon = (type) => {
     switch (type) {
       case 'vaccination': return 'fas fa-syringe';
@@ -190,8 +231,7 @@ const Notifications = () => {
       case 'low': return '#4caf50';
       default: return '#2196f3';
     }
-  };
-  return (
+  };  return (
     <div className="notifications">
       <div className="notifications-header">
         <h2>Thông Báo</h2>
@@ -213,12 +253,17 @@ const Notifications = () => {
             onClick={() => setFilter('action')}
           >
             Cần xử lý ({notifications.filter(n => n.actionRequired).length})
-          </button>
-          <button 
+          </button>          <button 
             className={filter === 'medication' ? 'active' : ''} 
             onClick={() => setFilter('medication')}
           >
             Thuốc
+          </button>
+          <button 
+            className={filter === 'vaccination' ? 'active' : ''} 
+            onClick={() => setFilter('vaccination')}
+          >
+            Tiêm chủng
           </button>
         </div>
       </div>
@@ -240,49 +285,58 @@ const Notifications = () => {
         </div>
       )}
 
-      {!loading && !error && (
-        <div className="notifications-list">
+      {!loading && !error && (        <div className="notifications-list">
           {filteredNotifications.map(notification => (
             <div 
               key={notification.id} 
-              className={`notification-card ${!notification.read ? 'unread' : ''}`}
+              className={`notification-card ${!notification.read ? 'unread' : ''} ${notification.priority}`}
             >
-              <div className="notification-header">
+              <div className="notification-content">
                 <div className="notification-icon">
                   <i 
                     className={getTypeIcon(notification.type)}
                     style={{ color: getPriorityColor(notification.priority) }}
                   ></i>
                 </div>
-                <div className="notification-meta">
-                  <h3>{notification.title}</h3>
-                  <span className="notification-time">{notification.time}</span>
-                  {notification.priority === 'high' && (
-                    <span className="priority-badge high">Khẩn cấp</span>
-                  )}
+                
+                <div className="notification-main">
+                  <div className="notification-header">
+                    <h3 className="notification-title">{notification.title}</h3>
+                    <div className="notification-badges">
+                      {notification.priority === 'high' && (
+                        <span className="priority-badge high">Khẩn cấp</span>
+                      )}
+                      {!notification.read && <div className="unread-dot"></div>}
+                    </div>
+                  </div>
+                  
+                  <div className="notification-body">
+                    <p className="notification-message">{notification.message}</p>
+                    <span className="notification-time">
+                      <i className="fas fa-clock"></i> {notification.time}
+                    </span>
+                  </div>
+                  
+                  <div className="notification-actions">
+                    {!notification.read && (
+                      <button 
+                        className="action-btn secondary"
+                        onClick={() => markAsRead(notification.id)}
+                      >
+                        <i className="fas fa-check"></i> Đánh dấu đã đọc
+                      </button>
+                    )}
+                    {(notification.actionRequired || notification.vaccinationFormId) && (
+                      <button 
+                        className="action-btn primary"
+                        onClick={() => confirmAction(notification)}
+                      >
+                        <i className="fas fa-syringe"></i> 
+                        {notification.confirm ? 'Xác nhận tiêm chủng' : 'Xem chi tiết'}
+                      </button>
+                    )}
+                  </div>
                 </div>
-                {!notification.read && <div className="unread-dot"></div>}
-              </div>              <div className="notification-body">
-                <p>{notification.message}</p>
-              </div>
-
-              <div className="notification-actions">
-                {!notification.read && (
-                  <button 
-                    className="action-btn secondary"
-                    onClick={() => markAsRead(notification.id)}
-                  >
-                    Đánh dấu đã đọc
-                  </button>
-                )}
-                {notification.actionRequired && (
-                  <button 
-                    className="action-btn primary"
-                    onClick={() => confirmAction(notification)}
-                  >
-                    Xem chi tiết
-                  </button>
-                )}
               </div>
             </div>
           ))}
@@ -293,9 +347,19 @@ const Notifications = () => {
         <div className="no-notifications">
           <i className="fas fa-bell-slash"></i>
           <h3>Không có thông báo</h3>
-          <p>Không có thông báo nào phù hợp với bộ lọc đã chọn.</p>
-        </div>
+          <p>Không có thông báo nào phù hợp với bộ lọc đã chọn.</p>        </div>
       )}
+
+      {/* Vaccination Form Modal */}
+      <VaccinationFormModal
+        isOpen={showVaccinationModal}
+        onClose={() => {
+          setShowVaccinationModal(false);
+          setSelectedVaccinationFormId(null);
+        }}
+        vaccinationFormId={selectedVaccinationFormId}
+        onFormUpdated={handleVaccinationFormUpdated}
+      />
     </div>
   );
 };

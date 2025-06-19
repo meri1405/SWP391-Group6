@@ -13,42 +13,51 @@ class WebSocketService {  constructor() {
   }  connect(token) {
     return new Promise((resolve, reject) => {
       try {
+        console.log('Connecting to WebSocket with token:', token ? 'Token provided' : 'No token');
+        
         // Store token for potential reconnection
         this.currentToken = token;
         
         // Create SockJS connection
         const wsUrl = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'}/ws`;
-        const socket = new SockJS(wsUrl);
+        const socket = new SockJS(wsUrl);        // Create STOMP client
+        const connectHeaders = {
+          'Authorization': `Bearer ${token}`
+        };
+        console.log('Connect headers:', connectHeaders);
         
-        // Create STOMP client
         this.client = new Client({
           webSocketFactory: () => socket,
+          connectHeaders: connectHeaders,
           debug: (str) => {
             console.log('STOMP Debug:', str);
           },
           reconnectDelay: this.reconnectDelay,
           heartbeatIncoming: 4000,
           heartbeatOutgoing: 4000,
-        });
-
-        // Set up connection handlers
+        });// Set up connection handlers
         this.client.onConnect = (frame) => {
           console.log('Connected to WebSocket server:', frame);
           this.connected = true;
           this.reconnectAttempts = 0;
           
-          // Subscribe to personal notifications
-          this.subscribeToNotifications();
+          // Add a small delay to ensure connection is fully established
+          setTimeout(() => {
+            // Subscribe to personal notifications
+            this.subscribeToNotifications();
+          }, 100);
           
           resolve(frame);
-        };
-
-        this.client.onStompError = (frame) => {
+        };        this.client.onStompError = (frame) => {
           console.error('STOMP Error:', frame);
+          console.error('STOMP Error headers:', frame.headers);
+          console.error('STOMP Error body:', frame.body);
           this.connected = false;
-          reject(new Error('WebSocket connection failed'));
+          reject(new Error(`WebSocket connection failed: ${frame.body || 'Unknown error'}`));
         };        this.client.onWebSocketClose = (event) => {
           console.log('WebSocket connection closed:', event);
+          console.log('Close code:', event.code);
+          console.log('Close reason:', event.reason);
           this.connected = false;
           
           // Use stored token for reconnection
@@ -71,14 +80,19 @@ class WebSocketService {  constructor() {
       }
     });
   }
-
   subscribeToNotifications() {
-    if (!this.client || !this.connected) {
-      console.warn('Cannot subscribe - client not connected');
+    if (!this.client) {
+      console.warn('Cannot subscribe - client is null');
+      return;
+    }
+    
+    if (!this.client.connected) {
+      console.warn('Cannot subscribe - STOMP client not connected');
       return;
     }
 
     try {
+      console.log('Attempting to subscribe to notifications...');
       // Subscribe to personal notification queue
       const subscription = this.client.subscribe('/user/queue/notifications', (message) => {
         try {
@@ -99,7 +113,7 @@ class WebSocketService {  constructor() {
       });
 
       this.subscriptions.set('notifications', subscription);
-      console.log('Subscribed to notifications');
+      console.log('Successfully subscribed to notifications');
     } catch (error) {
       console.error('Error subscribing to notifications:', error);
     }
