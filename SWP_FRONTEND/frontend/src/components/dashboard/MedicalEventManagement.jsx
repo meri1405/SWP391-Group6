@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Card,
   Table,
@@ -14,32 +14,32 @@ import {
   Statistic,
   Typography,
   Tooltip,
-  AutoComplete,
   message,
   Tag,
+  Popconfirm,
 } from "antd";
 import {
   PlusOutlined,
   SearchOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
   AlertOutlined,
   MedicineBoxOutlined,
-  ClockCircleOutlined,
-  CheckCircleOutlined,
-  ExclamationCircleOutlined,
   FileTextOutlined,
-  HeartOutlined,
-  ThunderboltOutlined,
-  SafetyOutlined,
-  BugOutlined,
-  FireOutlined,
-  CarOutlined,
-  UserOutlined,
+  EyeOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
-import { getAllStudents } from "../../api/medicalEventApi";
+import {
+  getMedicalEvents,
+  createMedicalEvent,
+  getMedicalEventById,
+  updateMedicalEventStatus,
+  getAllStudents,
+} from "../../api/medicalEventApi";
+import { medicalSupplyApi } from "../../api/medicalSupplyApi";
 import "../../styles/MedicalEventManagement.css";
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 const { Option } = Select;
 const { TextArea } = Input;
 const { RangePicker } = DatePicker;
@@ -50,301 +50,181 @@ const MedicalEventManagement = () => {
   const [filteredEvents, setFilteredEvents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
-
+  const [viewModalVisible, setViewModalVisible] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [form] = Form.useForm();
   const [searchText, setSearchText] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterProcessed, setFilterProcessed] = useState("all");
   const [filterType, setFilterType] = useState("all");
+  const [filterSeverity, setFilterSeverity] = useState("all");
   const [dateRange, setDateRange] = useState([]);
   const [students, setStudents] = useState([]);
+  const [medicalSupplies, setMedicalSupplies] = useState([]);
   const [statistics, setStatistics] = useState({
     total: 0,
-    inProgress: 0,
-    completed: 0,
-    urgent: 0,
+    pending: 0,
+    processed: 0,
   });
 
-  // Ref to prevent duplicate API calls
-  const studentsLoadedRef = useRef(false);
-
-  // Event Types with icons and colors
+  // Backend EventType enum values (từ backend)
   const eventTypes = [
-    {
-      value: "accident",
-      label: "Tai nạn",
-      icon: <CarOutlined />,
-      color: "#ff4d4f",
-    },
-    {
-      value: "illness",
-      label: "Bệnh tật",
-      icon: <BugOutlined />,
-      color: "#faad14",
-    },
-    { value: "fever", label: "Sốt", icon: <FireOutlined />, color: "#fa8c16" },
-    {
-      value: "injury",
-      label: "Chấn thương",
-      icon: <ThunderboltOutlined />,
-      color: "#f50",
-    },
-    {
-      value: "allergy",
-      label: "Dị ứng",
-      icon: <ExclamationCircleOutlined />,
-      color: "#722ed1",
-    },
-    {
-      value: "poisoning",
-      label: "Ngộ độc",
-      icon: <AlertOutlined />,
-      color: "#eb2f96",
-    },
-    {
-      value: "emergency",
-      label: "Cấp cứu",
-      icon: <HeartOutlined />,
-      color: "#ff0000",
-    },
-    {
-      value: "checkup",
-      label: "Khám định kỳ",
-      icon: <SafetyOutlined />,
-      color: "#52c41a",
-    },
+    { value: "ACCIDENT", label: "Tai nạn", color: "#ff4d4f" },
+    { value: "FEVER", label: "Sốt", color: "#fa8c16" },
+    { value: "FALL", label: "Té ngã", color: "#faad14" },
+    { value: "EPIDEMIC", label: "Dịch bệnh", color: "#722ed1" },
+    { value: "OTHER_EMERGENCY", label: "Cấp cứu khác", color: "#eb2f96" },
   ];
 
-  // Status options
-  const statusOptions = [
-    { value: "pending", label: "Chờ xử lý", color: "#faad14" },
-    { value: "in-progress", label: "Đang xử lý", color: "#1890ff" },
-    { value: "completed", label: "Hoàn thành", color: "#52c41a" },
-    { value: "follow-up", label: "Theo dõi", color: "#722ed1" },
-    { value: "referred", label: "Chuyển viện", color: "#fa541c" },
-  ];
-
-  // Severity levels
+  // Backend SeverityLevel enum values (từ backend)
   const severityLevels = [
-    { value: 1, label: "Nhẹ", color: "#52c41a" },
-    { value: 2, label: "Trung bình", color: "#faad14" },
-    { value: 3, label: "Nặng", color: "#fa541c" },
-    { value: 4, label: "Rất nặng", color: "#f50" },
-    { value: 5, label: "Nguy kịch", color: "#ff0000" },
+    { value: "MILD", label: "Nhẹ", color: "#52c41a" },
+    { value: "MODERATE", label: "Trung bình", color: "#faad14" },
+    { value: "SEVERE", label: "Nặng", color: "#ff4d4f" },
   ];
 
-  // Mock data for demonstration - UPDATED TO USE REAL STUDENTS FROM DATABASE
-  const mockEvents = [
-    {
-      id: "EV001",
-      eventCode: "EV001",
-      timestamp: "2024-03-15T09:30:00",
-      studentId: 1, // Real student ID from database
-      studentName: "Lý Ngọc Lily", // Real student name from database
-      studentClass: "3B", // Real class from database
-      eventType: "injury",
-      severity: 2,
-      description: "Học sinh té ngã ở sân trường, bị trầy xước đầu gối",
-      initialTreatment: "Sơ cứu, rửa vết thương, băng bó",
-      status: "completed",
-      location: "Sân trường",
-      symptoms: ["Trầy xước", "Đau đầu gối"],
-      vitals: {
-        temperature: 36.5,
-        heartRate: 85,
-        bloodPressure: "120/80",
-      },
-      treatmentHistory: [
-        {
-          timestamp: "2024-03-15T09:35:00",
-          action: "Sơ cứu ban đầu",
-          notes: "Rửa vết thương bằng nước muối sinh lý",
-        },
-        {
-          timestamp: "2024-03-15T09:45:00",
-          action: "Băng bó",
-          notes: "Băng bó vết thương và hướng dẫn chăm sóc",
-        },
-      ],
-      followUp: {
-        required: true,
-        date: "2024-03-17T14:00:00",
-        notes: "Kiểm tra lại vết thương sau 2 ngày",
-      },
-      parentNotified: true,
-      documentsAttached: ["photo1.jpg", "report1.pdf"],
-      createdBy: "nurse_001",
-      updatedAt: "2024-03-15T10:00:00",
-    },
-    {
-      id: "EV002",
-      eventCode: "EV002",
-      timestamp: "2024-03-15T11:15:00",
-      studentId: 2, // Real student ID from database
-      studentName: "Lý Tiểu Long", // Real student name from database
-      studentClass: "3B", // Real class from database
-      eventType: "fever",
-      severity: 3,
-      description: "Học sinh sốt cao, đau đầu, mệt mỏi",
-      initialTreatment: "Đo nhiệt độ, cho nghỉ ngơi, thông báo phụ huynh",
-      status: "in-progress",
-      location: "Phòng y tế",
-      symptoms: ["Sốt cao", "Đau đầu", "Mệt mỏi", "Buồn nôn"],
-      vitals: {
-        temperature: 38.5,
-        heartRate: 95,
-        bloodPressure: "110/70",
-      },
-      treatmentHistory: [
-        {
-          timestamp: "2024-03-15T11:20:00",
-          action: "Đo nhiệt độ",
-          notes: "Nhiệt độ 38.5°C",
-        },
-        {
-          timestamp: "2024-03-15T11:25:00",
-          action: "Cho nghỉ ngơi",
-          notes: "Học sinh nằm nghỉ tại phòng y tế",
-        },
-      ],
-      followUp: {
-        required: true,
-        date: "2024-03-15T15:00:00",
-        notes: "Theo dõi nhiệt độ mỗi 2 giờ",
-      },
-      parentNotified: true,
-      documentsAttached: [],
-      createdBy: "nurse_001",
-      updatedAt: "2024-03-15T11:30:00",
-    },
-  ];
-
-  const mockStudents = [
-    { id: "ST001", name: "Nguyễn Văn An", class: "3A", phone: "0123456789" },
-    { id: "ST002", name: "Trần Thị Lan", class: "5B", phone: "0123456788" },
-    { id: "ST003", name: "Lê Văn Minh", class: "2A", phone: "0123456787" },
-    { id: "ST004", name: "Phạm Thị Mai", class: "4C", phone: "0123456786" },
-    { id: "ST005", name: "Hoàng Văn Nam", class: "1A", phone: "0123456785" },
-    { id: "ST006", name: "Võ Thị Hoa", class: "5A", phone: "0123456784" },
-  ];
-
-  // Initialize data
+  // Load data on component mount
   useEffect(() => {
     loadEvents();
     loadStudents();
+    loadMedicalSupplies();
   }, []);
+
+  // Filter events when search or filter changes
+  useEffect(() => {
+    filterEvents();
+  }, [
+    events,
+    searchText,
+    filterProcessed,
+    filterType,
+    filterSeverity,
+    dateRange,
+  ]);
 
   const loadEvents = useCallback(async () => {
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      setEvents(mockEvents);
-      setFilteredEvents(mockEvents);
-      calculateStatistics(mockEvents);
+      const response = await getMedicalEvents();
+      console.log("Events API Response:", response);
+      const eventsData = Array.isArray(response) ? response : [];
+      setEvents(eventsData);
+      calculateStatistics(eventsData);
     } catch (error) {
-      message.error("Không thể tải dữ liệu sự kiện");
+      console.error("Error loading medical events:", error);
+      message.error("Không thể tải danh sách sự kiện y tế");
+      setEvents([]);
     } finally {
       setLoading(false);
     }
   }, []);
 
   const loadStudents = useCallback(async () => {
-    // Prevent duplicate API calls
-    if (studentsLoadedRef.current) {
-      console.log("Students already loaded, skipping...");
-      return;
-    }
-
     try {
-      console.log("Starting to load students...");
-      studentsLoadedRef.current = true; // Set flag before API call
-
       const response = await getAllStudents();
-      console.log("Raw API response:", response);
-
+      console.log("Students API Response:", response);
       // Handle different response formats
-      const studentsData = Array.isArray(response)
-        ? response
-        : response.students || response.data || [];
-
-      if (studentsData.length > 0) {
-        console.log(
-          "Successfully loaded",
-          studentsData.length,
-          "students from API"
-        );
-        setStudents(studentsData);
-        message.success(`Đã tải ${studentsData.length} học sinh từ database`);
-      } else {
-        console.log("API returned empty data, using mock data");
-        setStudents(mockStudents);
-        message.warning("Database trống, sử dụng dữ liệu mẫu");
-      }
+      const studentsData = response?.students || response || [];
+      console.log("Processed students data:", studentsData);
+      setStudents(Array.isArray(studentsData) ? studentsData : []);
     } catch (error) {
       console.error("Error loading students:", error);
+      message.error("Không thể tải danh sách học sinh");
+    }
+  }, []);
 
-      // Check specific error types
-      if (error.message.includes("401")) {
-        message.error(
-          "Không có quyền truy cập dữ liệu học sinh. Đang sử dụng dữ liệu mẫu."
-        );
-      } else if (error.message.includes("404")) {
-        message.warning("API chưa được triển khai. Đang sử dụng dữ liệu mẫu.");
-      } else {
-        message.warning(
-          "Không thể kết nối database. Đang sử dụng dữ liệu mẫu."
-        );
-      }
+  const loadMedicalSupplies = useCallback(async () => {
+    try {
+      const response = await medicalSupplyApi.getAllSupplies();
+      console.log("Medical Supplies API Response:", response);
+      let suppliesData = Array.isArray(response) ? response : [];
 
-      // Always fallback to mock data
-      console.log("Using mock data as fallback");
-      setStudents(mockStudents);
+      // Lọc bỏ vật tư đã hết hạn
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Set to start of day for accurate comparison
+
+      suppliesData = suppliesData.filter((supply) => {
+        const expirationDate = new Date(supply.expirationDate);
+        expirationDate.setHours(0, 0, 0, 0);
+        return expirationDate >= today; // Chỉ giữ lại vật tư chưa hết hạn
+      });
+
+      // Sắp xếp vật tư y tế theo ngày hết hạn
+      suppliesData = suppliesData.sort((a, b) => {
+        const dateA = new Date(a.expirationDate);
+        const dateB = new Date(b.expirationDate);
+
+        // Nếu tên thuốc giống nhau, ưu tiên cái gần hết hạn hơn
+        if (a.name === b.name) {
+          return dateA - dateB; // Gần hết hạn nhất lên đầu
+        }
+
+        // Nếu tên khác nhau, vẫn sắp xếp theo ngày hết hạn (gần nhất đến xa nhất)
+        return dateA - dateB;
+      });
+
+      console.log(
+        "Filtered and sorted medical supplies (excluding expired):",
+        suppliesData
+      );
+      setMedicalSupplies(suppliesData);
+    } catch (error) {
+      console.error("Error loading medical supplies:", error);
+      message.error("Không thể tải danh sách vật tư y tế");
     }
   }, []);
 
   const calculateStatistics = (eventData) => {
-    const stats = {
-      total: eventData.length,
-      inProgress: eventData.filter((e) => e.status === "in-progress").length,
-      completed: eventData.filter((e) => e.status === "completed").length,
-      urgent: eventData.filter((e) => e.severity >= 4).length,
-    };
-    setStatistics(stats);
+    const total = eventData.length;
+    const pending = eventData.filter((event) => !event.processed).length;
+    const processed = eventData.filter((event) => event.processed).length;
+
+    setStatistics({
+      total,
+      pending,
+      processed,
+    });
   };
 
-  // Filter and search functionality
-  useEffect(() => {
-    filterEvents();
-  }, [events, searchText, filterStatus, filterType, dateRange]);
-
   const filterEvents = () => {
-    let filtered = [...events];
+    let filtered = events;
 
-    // Text search
+    // Search filter
     if (searchText) {
       filtered = filtered.filter(
         (event) =>
-          event.studentName.toLowerCase().includes(searchText.toLowerCase()) ||
-          event.eventCode.toLowerCase().includes(searchText.toLowerCase()) ||
-          event.description.toLowerCase().includes(searchText.toLowerCase())
+          `${event.student?.firstName} ${event.student?.lastName}`
+            .toLowerCase()
+            .includes(searchText.toLowerCase()) ||
+          event.location?.toLowerCase().includes(searchText.toLowerCase()) ||
+          event.symptoms?.toLowerCase().includes(searchText.toLowerCase())
       );
     }
 
-    // Status filter
-    if (filterStatus !== "all") {
-      filtered = filtered.filter((event) => event.status === filterStatus);
+    // Processed status filter
+    if (filterProcessed !== "all") {
+      filtered = filtered.filter((event) => {
+        if (filterProcessed === "pending") return !event.processed;
+        if (filterProcessed === "processed") return event.processed;
+        return true;
+      });
     }
 
-    // Type filter
+    // Event type filter
     if (filterType !== "all") {
       filtered = filtered.filter((event) => event.eventType === filterType);
     }
 
+    // Severity filter
+    if (filterSeverity !== "all") {
+      filtered = filtered.filter(
+        (event) => event.severityLevel === filterSeverity
+      );
+    }
+
     // Date range filter
-    if (dateRange.length === 2) {
+    if (dateRange && dateRange.length === 2) {
       filtered = filtered.filter((event) => {
-        const eventDate = dayjs(event.timestamp);
+        const eventDate = dayjs(event.occurrenceTime);
         return (
           eventDate.isAfter(dateRange[0]) && eventDate.isBefore(dateRange[1])
         );
@@ -355,37 +235,37 @@ const MedicalEventManagement = () => {
   };
 
   const handleAddEvent = () => {
-    form.resetFields();
     setSelectedEvent(null);
     setModalVisible(true);
+    // Reset form after modal is opened to avoid the warning
+    setTimeout(() => {
+      form.resetFields();
+    }, 0);
   };
 
-  const handleEditEvent = (event) => {
-    setSelectedEvent(event);
-    form.setFieldsValue({
-      ...event,
-      timestamp: dayjs(event.timestamp),
-      studentId: event.studentId,
-      symptoms: event.symptoms,
-    });
-    setModalVisible(true);
-  };
-
-  const handleUpdateEventStatus = async (eventId, newStatus) => {
+  const handleViewEvent = async (eventId) => {
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      const updatedEvents = events.map((event) =>
-        event.id === eventId ? { ...event, status: newStatus } : event
-      );
-
-      setEvents(updatedEvents);
-
-      const statusText = newStatus === "completed" ? "đã xử lý" : "chưa xử lý";
-      message.success(`Đã cập nhật trạng thái sự kiện thành "${statusText}"`);
+      const event = await getMedicalEventById(eventId);
+      setSelectedEvent(event);
+      setViewModalVisible(true);
     } catch (error) {
+      console.error("Error loading event details:", error);
+      message.error("Không thể tải chi tiết sự kiện");
+    }
+  };
+
+  const handleProcessEvent = async (eventId) => {
+    try {
+      setLoading(true);
+      // Backend endpoint /process chỉ cần eventId, không cần status parameter
+      await updateMedicalEventStatus(eventId);
+      message.success("Đã đánh dấu sự kiện là đã xử lý");
+      loadEvents();
+    } catch (error) {
+      console.error("Error processing event:", error);
       message.error("Không thể cập nhật trạng thái sự kiện");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -394,39 +274,37 @@ const MedicalEventManagement = () => {
       const values = await form.validateFields();
       setLoading(true);
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Format suppliesUsed data according to backend DTO
+      const suppliesUsed = values.suppliesUsed || [];
+      const formattedSuppliesUsed = suppliesUsed.map((supply) => ({
+        medicalSupplyId: parseInt(supply.medicalSupplyId),
+        quantityUsed: parseInt(supply.quantityUsed),
+      }));
 
+      // Format data according to backend DTO
       const eventData = {
-        ...values,
-        id: selectedEvent ? selectedEvent.id : `EV${Date.now()}`,
-        eventCode: selectedEvent
-          ? selectedEvent.eventCode
-          : `EV${String(events.length + 1).padStart(3, "0")}`,
-        timestamp: values.timestamp.toISOString(),
-        createdBy: "current_nurse",
-        updatedAt: new Date().toISOString(),
-        treatmentHistory: selectedEvent ? selectedEvent.treatmentHistory : [],
-        parentNotified: false,
-        documentsAttached: [],
+        eventType: values.eventType,
+        occurrenceTime: values.occurrenceTime.toISOString(),
+        location: values.location,
+        symptoms: values.symptoms || "",
+        severityLevel: values.severityLevel,
+        firstAidActions: values.firstAidActions || "",
+        studentId: parseInt(values.studentId),
+        suppliesUsed: formattedSuppliesUsed,
       };
 
-      if (selectedEvent) {
-        // Update existing event
-        const updatedEvents = events.map((e) =>
-          e.id === selectedEvent.id ? eventData : e
-        );
-        setEvents(updatedEvents);
-        message.success("Đã cập nhật sự kiện thành công");
-      } else {
-        // Add new event
-        setEvents([eventData, ...events]);
-        message.success("Đã thêm sự kiện mới thành công");
-      }
+      console.log("Sending event data:", eventData);
 
+      // Create new event
+      const response = await createMedicalEvent(eventData);
+      console.log("Create event response:", response);
+
+      message.success("Đã thêm sự kiện mới thành công");
       setModalVisible(false);
       form.resetFields();
+      loadEvents();
     } catch (error) {
+      console.error("Error saving event:", error);
       message.error("Có lỗi xảy ra khi lưu sự kiện");
     } finally {
       setLoading(false);
@@ -437,29 +315,59 @@ const MedicalEventManagement = () => {
     return eventTypes.find((t) => t.value === type) || eventTypes[0];
   };
 
-  const getStatusConfig = (status) => {
-    return statusOptions.find((s) => s.value === status) || statusOptions[0];
-  };
-
   const getSeverityConfig = (severity) => {
     return (
       severityLevels.find((s) => s.value === severity) || severityLevels[0]
     );
   };
 
-  // Table columns for events
+  const getSupplyName = (supplyId, supplyObject = null) => {
+    console.log("Debug getSupplyName:", {
+      supplyId,
+      supplyObject,
+      medicalSupplies,
+    });
+
+    // Ưu tiên sử dụng thông tin từ backend response trước
+    if (supplyObject?.medicalSupply?.name) {
+      console.log("Using backend supply info:", supplyObject.medicalSupply);
+      return {
+        name: supplyObject.medicalSupply.name,
+        unit: supplyObject.medicalSupply.unit || "",
+      };
+    }
+
+    // Tìm từ danh sách medicalSupplies
+    const supplyInfo = medicalSupplies.find((s) => s.id === supplyId);
+    if (supplyInfo) {
+      console.log("Using supply info:", supplyInfo);
+      return {
+        name: supplyInfo.name,
+        unit: supplyInfo.unit,
+      };
+    }
+
+    // Fallback
+    console.log("Using fallback for supply ID:", supplyId);
+    return {
+      name: `Vật tư ID: ${supplyId}`,
+      unit: "",
+    };
+  };
+
+  // Table columns
   const columns = [
     {
-      title: "Mã sự kiện",
-      dataIndex: "eventCode",
-      key: "eventCode",
-      width: 120,
-      render: (text) => <Text strong>{text}</Text>,
+      title: "ID",
+      dataIndex: "id",
+      key: "id",
+      width: 80,
+      render: (text) => <Text strong>#{text}</Text>,
     },
     {
       title: "Thời gian",
-      dataIndex: "timestamp",
-      key: "timestamp",
+      dataIndex: "occurrenceTime",
+      key: "occurrenceTime",
       width: 140,
       render: (text) => dayjs(text).format("DD/MM/YYYY HH:mm"),
     },
@@ -469,9 +377,11 @@ const MedicalEventManagement = () => {
       width: 180,
       render: (_, record) => (
         <div>
-          <Text strong>{record.studentName}</Text>
+          <Text strong>
+            {record.student?.firstName} {record.student?.lastName}
+          </Text>
           <br />
-          <Text type="secondary">{record.studentClass}</Text>
+          <Text type="secondary">{record.student?.className}</Text>
         </div>
       ),
     },
@@ -479,133 +389,90 @@ const MedicalEventManagement = () => {
       title: "Loại sự kiện",
       dataIndex: "eventType",
       key: "eventType",
-      width: 120,
-      align: "center",
+      width: 140,
       render: (type) => {
         const config = getEventTypeConfig(type);
-        return (
-          <Text
-            style={{
-              color: config.color,
-              fontWeight: "500",
-              fontSize: "14px",
-            }}
-          >
-            {config.label}
-          </Text>
-        );
+        return <Tag color={config.color}>{config.label}</Tag>;
       },
     },
     {
       title: "Mức độ",
-      dataIndex: "severity",
-      key: "severity",
+      dataIndex: "severityLevel",
+      key: "severityLevel",
       width: 120,
-      align: "center",
       render: (severity) => {
-        const getSeverityDisplay = (level) => {
-          if (level >= 4) {
-            return { color: "#dc143c", label: "Nặng" }; // Đỏ đô
-          } else if (level >= 2) {
-            return { color: "#ffd700", label: "Trung bình" }; // Vàng
-          } else {
-            return { color: "#1890ff", label: "Nhẹ" }; // Xanh dương
-          }
-        };
-
-        const display = getSeverityDisplay(severity);
-        return (
-          <Text
-            style={{
-              color: display.color,
-              fontWeight: "500",
-              fontSize: "14px",
-            }}
-          >
-            {display.label}
-          </Text>
-        );
+        const config = getSeverityConfig(severity);
+        return <Tag color={config.color}>{config.label}</Tag>;
       },
+    },
+    {
+      title: "Địa điểm",
+      dataIndex: "location",
+      key: "location",
+      width: 120,
     },
     {
       title: "Trạng thái",
-      dataIndex: "status",
-      key: "status",
+      dataIndex: "processed",
+      key: "processed",
       width: 120,
-      align: "center",
-      render: (status) => {
-        return (
-          <Text
-            style={{
-              color: "#1890ff",
-              fontWeight: "500",
-              fontSize: "14px",
-            }}
-          >
-            Đang xử lý
-          </Text>
-        );
-      },
-    },
-    {
-      title: "Mô tả tình trạng",
-      dataIndex: "description",
-      key: "description",
-      width: 250,
-      render: (text) => (
-        <Tooltip title={text}>
-          <Text
-            style={{
-              display: "-webkit-box",
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              fontSize: "13px",
-              lineHeight: "1.4",
-            }}
-          >
-            {text}
-          </Text>
-        </Tooltip>
+      render: (processed, record) => (
+        <div>
+          <Tag color={processed ? "green" : "orange"}>
+            {processed ? "Đã xử lý" : "Chờ xử lý"}
+          </Tag>
+          {processed && record.processedTime && (
+            <div>
+              <Text type="secondary" style={{ fontSize: "12px" }}>
+                {dayjs(record.processedTime).format("DD/MM HH:mm")}
+              </Text>
+            </div>
+          )}
+        </div>
       ),
     },
     {
-      title: "Thao tác",
+      title: "Hành động",
       key: "actions",
       width: 150,
-      align: "center",
-      render: (_, record) => {
-        const isProcessed = record.status === "completed";
-
-        return (
-          <Button
-            size="small"
-            type={isProcessed ? "default" : "primary"}
-            style={{
-              backgroundColor: isProcessed ? "#f6ffed" : "#ff4d4f",
-              borderColor: isProcessed ? "#b7eb8f" : "#ff4d4f",
-              color: isProcessed ? "#52c41a" : "#fff",
-              fontWeight: "bold",
-              minWidth: "100px",
-            }}
-            onClick={() => {
-              const newStatus = isProcessed ? "in-progress" : "completed";
-              handleUpdateEventStatus(record.id, newStatus);
-            }}
-          >
-            {isProcessed ? "Đã xử lý" : "Chưa xử lý"}
-          </Button>
-        );
-      },
+      render: (_, record) => (
+        <Space size="small">
+          <Tooltip title="Xem chi tiết">
+            <Button
+              type="text"
+              icon={<EyeOutlined />}
+              onClick={() => handleViewEvent(record.id)}
+              size="small"
+            />
+          </Tooltip>
+          {!record.processed && (
+            <Popconfirm
+              title="Đánh dấu đã xử lý?"
+              description="Bạn có chắc chắn muốn đánh dấu sự kiện này là đã xử lý?"
+              onConfirm={() => handleProcessEvent(record.id)}
+              okText="Có"
+              cancelText="Không"
+            >
+              <Tooltip title="Đánh dấu đã xử lý">
+                <Button
+                  type="text"
+                  icon={<CheckCircleOutlined />}
+                  size="small"
+                  style={{ color: "#52c41a" }}
+                />
+              </Tooltip>
+            </Popconfirm>
+          )}
+        </Space>
+      ),
     },
   ];
 
   return (
     <div className="medical-event-management">
-      {/* Header Statistics */}
+      {/* Statistics */}
       <Row gutter={[16, 16]} className="statistics-row">
-        <Col xs={24} sm={12} md={6}>
+        <Col xs={24} sm={8}>
           <Card>
             <Statistic
               title="Tổng số sự kiện"
@@ -614,60 +481,47 @@ const MedicalEventManagement = () => {
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} md={6}>
+        <Col xs={24} sm={8}>
           <Card>
             <Statistic
-              title="Đang xử lý"
-              value={statistics.inProgress}
+              title="Chờ xử lý"
+              value={statistics.pending}
               prefix={<ClockCircleOutlined style={{ color: "#faad14" }} />}
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} md={6}>
+        <Col xs={24} sm={8}>
           <Card>
             <Statistic
-              title="Hoàn thành"
-              value={statistics.completed}
+              title="Đã xử lý"
+              value={statistics.processed}
               prefix={<CheckCircleOutlined style={{ color: "#52c41a" }} />}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card>
-            <Statistic
-              title="Cấp cứu"
-              value={statistics.urgent}
-              prefix={<AlertOutlined style={{ color: "#f50" }} />}
             />
           </Card>
         </Col>
       </Row>
 
       {/* Main Content */}
-      <Card className="main-content-card">
+      <Card>
         <div className="header-section">
           <Title level={3}>
-            <MedicineBoxOutlined /> Ghi nhận và xử lý sự kiện y tế
+            <MedicineBoxOutlined /> Quản lý sự kiện y tế
           </Title>
-
-          {/* Action Buttons */}
-          <Space>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={handleAddEvent}
-            >
-              Thêm sự kiện y tế
-            </Button>
-          </Space>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={handleAddEvent}
+          >
+            Thêm sự kiện y tế
+          </Button>
         </div>
 
         {/* Filters */}
         <div className="filter-section">
           <Row gutter={[16, 16]}>
-            <Col xs={24} sm={12} md={8}>
+            <Col xs={24} sm={12} md={6}>
               <Input
-                placeholder="Tìm kiếm theo tên học sinh, mã sự kiện..."
+                placeholder="Tìm kiếm học sinh, địa điểm..."
                 prefix={<SearchOutlined />}
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
@@ -677,16 +531,13 @@ const MedicalEventManagement = () => {
             <Col xs={24} sm={12} md={4}>
               <Select
                 placeholder="Trạng thái"
-                value={filterStatus}
-                onChange={setFilterStatus}
+                value={filterProcessed}
+                onChange={setFilterProcessed}
                 style={{ width: "100%" }}
               >
-                <Option value="all">Tất cả trạng thái</Option>
-                {statusOptions.map((status) => (
-                  <Option key={status.value} value={status.value}>
-                    {status.label}
-                  </Option>
-                ))}
+                <Option value="all">Tất cả</Option>
+                <Option value="pending">Chờ xử lý</Option>
+                <Option value="processed">Đã xử lý</Option>
               </Select>
             </Col>
             <Col xs={24} sm={12} md={4}>
@@ -699,12 +550,27 @@ const MedicalEventManagement = () => {
                 <Option value="all">Tất cả loại</Option>
                 {eventTypes.map((type) => (
                   <Option key={type.value} value={type.value}>
-                    {type.icon} {type.label}
+                    {type.label}
                   </Option>
                 ))}
               </Select>
             </Col>
-            <Col xs={24} sm={12} md={8}>
+            <Col xs={24} sm={12} md={4}>
+              <Select
+                placeholder="Mức độ"
+                value={filterSeverity}
+                onChange={setFilterSeverity}
+                style={{ width: "100%" }}
+              >
+                <Option value="all">Tất cả mức độ</Option>
+                {severityLevels.map((level) => (
+                  <Option key={level.value} value={level.value}>
+                    {level.label}
+                  </Option>
+                ))}
+              </Select>
+            </Col>
+            <Col xs={24} sm={12} md={6}>
               <RangePicker
                 style={{ width: "100%" }}
                 value={dateRange}
@@ -730,28 +596,28 @@ const MedicalEventManagement = () => {
               `${range[0]}-${range[1]} của ${total} sự kiện`,
           }}
           scroll={{ x: 1200 }}
-          className="events-table"
         />
       </Card>
 
-      {/* Add/Edit Event Modal */}
+      {/* Add Event Modal */}
       <Modal
-        title={
-          selectedEvent ? "Chỉnh sửa sự kiện y tế" : "Thêm sự kiện y tế mới"
-        }
+        title="Thêm sự kiện y tế mới"
         open={modalVisible}
         onOk={handleSubmit}
-        onCancel={() => setModalVisible(false)}
+        onCancel={() => {
+          setModalVisible(false);
+        }}
         width={800}
         confirmLoading={loading}
+        destroyOnClose
+        forceRender
         className="event-modal"
-        destroyOnHidden
       >
-        <Form form={form} layout="vertical">
+        <Form form={form} layout="vertical" preserve={false}>
           <Row gutter={[16, 16]}>
             <Col xs={24} sm={12}>
               <Form.Item
-                name="timestamp"
+                name="occurrenceTime"
                 label="Thời gian xảy ra"
                 rules={[{ required: true, message: "Vui lòng chọn thời gian" }]}
               >
@@ -769,18 +635,24 @@ const MedicalEventManagement = () => {
                 label="Học sinh"
                 rules={[{ required: true, message: "Vui lòng chọn học sinh" }]}
               >
-                <AutoComplete
-                  options={students.map((student) => ({
-                    value: student.studentID || student.id,
-                    label: `${student.firstName} ${student.lastName} - ${student.className}`,
-                  }))}
-                  placeholder="Tìm và chọn học sinh"
-                  filterOption={(inputValue, option) =>
-                    option.label
-                      .toLowerCase()
-                      .includes(inputValue.toLowerCase())
+                <Select
+                  placeholder="Chọn học sinh"
+                  showSearch
+                  filterOption={(input, option) =>
+                    option.children.toLowerCase().includes(input.toLowerCase())
                   }
-                />
+                >
+                  {Array.isArray(students) &&
+                    students.map((student) => (
+                      <Option
+                        key={student.studentID || student.id}
+                        value={student.studentID || student.id}
+                      >
+                        {student.firstName} {student.lastName} -{" "}
+                        {student.className}
+                      </Option>
+                    ))}
+                </Select>
               </Form.Item>
             </Col>
             <Col xs={24} sm={12}>
@@ -794,7 +666,7 @@ const MedicalEventManagement = () => {
                 <Select placeholder="Chọn loại sự kiện">
                   {eventTypes.map((type) => (
                     <Option key={type.value} value={type.value}>
-                      {type.icon} {type.label}
+                      {type.label}
                     </Option>
                   ))}
                 </Select>
@@ -802,7 +674,7 @@ const MedicalEventManagement = () => {
             </Col>
             <Col xs={24} sm={12}>
               <Form.Item
-                name="severity"
+                name="severityLevel"
                 label="Mức độ nghiêm trọng"
                 rules={[{ required: true, message: "Vui lòng chọn mức độ" }]}
               >
@@ -815,7 +687,7 @@ const MedicalEventManagement = () => {
                 </Select>
               </Form.Item>
             </Col>
-            <Col xs={24} sm={12}>
+            <Col xs={24}>
               <Form.Item
                 name="location"
                 label="Địa điểm xảy ra"
@@ -824,82 +696,239 @@ const MedicalEventManagement = () => {
                 <Input placeholder="Ví dụ: Sân trường, Phòng học 101..." />
               </Form.Item>
             </Col>
-            <Col xs={24} sm={12}>
-              <Form.Item
-                name="status"
-                label="Trạng thái"
-                rules={[
-                  { required: true, message: "Vui lòng chọn trạng thái" },
-                ]}
-              >
-                <Select placeholder="Chọn trạng thái">
-                  {statusOptions.map((status) => (
-                    <Option key={status.value} value={status.value}>
-                      <Tag color={status.color}>{status.label}</Tag>
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
             <Col xs={24}>
-              <Form.Item
-                name="description"
-                label="Mô tả chi tiết"
-                rules={[{ required: true, message: "Vui lòng mô tả sự kiện" }]}
-              >
+              <Form.Item name="symptoms" label="Triệu chứng">
                 <TextArea
-                  rows={4}
-                  placeholder="Mô tả chi tiết về sự kiện, triệu chứng, hoàn cảnh xảy ra..."
+                  rows={3}
+                  placeholder="Mô tả các triệu chứng của học sinh..."
                 />
               </Form.Item>
             </Col>
             <Col xs={24}>
-              <Form.Item
-                name="initialTreatment"
-                label="Xử lý ban đầu"
-                rules={[
-                  { required: true, message: "Vui lòng mô tả cách xử lý" },
-                ]}
-              >
+              <Form.Item name="firstAidActions" label="Xử lý ban đầu">
                 <TextArea
                   rows={3}
                   placeholder="Mô tả các biện pháp xử lý, sơ cứu đã thực hiện..."
                 />
               </Form.Item>
             </Col>
-            <Col xs={24} sm={8}>
-              <Form.Item name="temperature" label="Nhiệt độ (°C)">
-                <Input placeholder="36.5" type="number" step="0.1" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={8}>
-              <Form.Item name="heartRate" label="Nhịp tim (lần/phút)">
-                <Input placeholder="85" type="number" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={8}>
-              <Form.Item name="bloodPressure" label="Huyết áp">
-                <Input placeholder="120/80" />
-              </Form.Item>
-            </Col>
             <Col xs={24}>
-              <Form.Item name="symptoms" label="Triệu chứng">
-                <Select
-                  mode="tags"
-                  placeholder="Nhập và chọn các triệu chứng"
-                  options={[
-                    { value: "Đau đầu", label: "Đau đầu" },
-                    { value: "Sốt", label: "Sốt" },
-                    { value: "Buồn nôn", label: "Buồn nôn" },
-                    { value: "Chóng mặt", label: "Chóng mặt" },
-                    { value: "Đau bụng", label: "Đau bụng" },
-                    { value: "Khó thở", label: "Khó thở" },
-                  ]}
-                />
+              <Form.Item name="suppliesUsed" label="Vật tư y tế đã sử dụng">
+                <Form.List name="suppliesUsed">
+                  {(fields, { add, remove }) => (
+                    <>
+                      {fields.map(({ key, name, ...restField }) => (
+                        <div
+                          key={key}
+                          style={{ display: "flex", marginBottom: 8, gap: 8 }}
+                        >
+                          <Form.Item
+                            {...restField}
+                            name={[name, "medicalSupplyId"]}
+                            style={{ flex: 1 }}
+                            rules={[{ required: true, message: "Chọn vật tư" }]}
+                          >
+                            <Select placeholder="Chọn vật tư y tế">
+                              {medicalSupplies.map((supply) => {
+                                const expirationDate = dayjs(
+                                  supply.expirationDate
+                                );
+                                const today = dayjs();
+                                const daysUntilExpiry = expirationDate.diff(
+                                  today,
+                                  "day"
+                                );
+
+                                // Xác định trạng thái hết hạn (chỉ cho vật tư chưa hết hạn)
+                                let expiryStatus = "";
+                                let expiryColor = "";
+
+                                if (daysUntilExpiry <= 30) {
+                                  expiryStatus = `(Còn ${daysUntilExpiry} ngày)`;
+                                  expiryColor = "#faad14";
+                                } else if (daysUntilExpiry <= 90) {
+                                  expiryStatus = `(Còn ${daysUntilExpiry} ngày)`;
+                                  expiryColor = "#1890ff";
+                                }
+
+                                return (
+                                  <Option key={supply.id} value={supply.id}>
+                                    <div
+                                      style={{
+                                        display: "flex",
+                                        justifyContent: "space-between",
+                                        alignItems: "center",
+                                      }}
+                                    >
+                                      <span>
+                                        {supply.name} - Còn:{" "}
+                                        {supply.quantity ||
+                                          supply.availableQuantity ||
+                                          0}{" "}
+                                        {supply.unit}
+                                      </span>
+                                      {expiryStatus && (
+                                        <span
+                                          style={{
+                                            color: expiryColor,
+                                            fontSize: "12px",
+                                            marginLeft: "8px",
+                                          }}
+                                        >
+                                          {expiryStatus}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </Option>
+                                );
+                              })}
+                            </Select>
+                          </Form.Item>
+                          <Form.Item
+                            {...restField}
+                            name={[name, "quantityUsed"]}
+                            style={{ width: 120 }}
+                            rules={[
+                              { required: true, message: "Nhập số lượng" },
+                            ]}
+                          >
+                            <Input
+                              type="number"
+                              placeholder="Số lượng"
+                              min={1}
+                            />
+                          </Form.Item>
+                          <Button
+                            type="text"
+                            danger
+                            onClick={() => remove(name)}
+                            style={{ marginTop: 4 }}
+                          >
+                            Xóa
+                          </Button>
+                        </div>
+                      ))}
+                      <Button type="dashed" onClick={() => add()} block>
+                        + Thêm vật tư y tế
+                      </Button>
+                    </>
+                  )}
+                </Form.List>
               </Form.Item>
             </Col>
           </Row>
         </Form>
+      </Modal>
+
+      {/* View Event Details Modal */}
+      <Modal
+        title="Chi tiết sự kiện y tế"
+        open={viewModalVisible}
+        onCancel={() => setViewModalVisible(false)}
+        footer={[
+          <Button key="close" onClick={() => setViewModalVisible(false)}>
+            Đóng
+          </Button>,
+        ]}
+        width={800}
+      >
+        {selectedEvent && (
+          <div>
+            <Row gutter={[16, 16]}>
+              <Col xs={24} sm={12}>
+                <Text strong>ID sự kiện:</Text> #{selectedEvent.id}
+              </Col>
+              <Col xs={24} sm={12}>
+                <Text strong>Thời gian:</Text>{" "}
+                {dayjs(selectedEvent.occurrenceTime).format("DD/MM/YYYY HH:mm")}
+              </Col>
+              <Col xs={24} sm={12}>
+                <Text strong>Học sinh:</Text> {selectedEvent.student?.firstName}{" "}
+                {selectedEvent.student?.lastName}
+              </Col>
+              <Col xs={24} sm={12}>
+                <Text strong>Lớp:</Text> {selectedEvent.student?.className}
+              </Col>
+              <Col xs={24} sm={12}>
+                <Text strong>Loại sự kiện:</Text>{" "}
+                <Tag color={getEventTypeConfig(selectedEvent.eventType).color}>
+                  {getEventTypeConfig(selectedEvent.eventType).label}
+                </Tag>
+              </Col>
+              <Col xs={24} sm={12}>
+                <Text strong>Mức độ:</Text>{" "}
+                <Tag
+                  color={getSeverityConfig(selectedEvent.severityLevel).color}
+                >
+                  {getSeverityConfig(selectedEvent.severityLevel).label}
+                </Tag>
+              </Col>
+              <Col xs={24}>
+                <Text strong>Địa điểm:</Text> {selectedEvent.location}
+              </Col>
+              <Col xs={24}>
+                <Text strong>Triệu chứng:</Text>{" "}
+                {selectedEvent.symptoms || "Không có"}
+              </Col>
+              <Col xs={24}>
+                <Text strong>Xử lý ban đầu:</Text>{" "}
+                {selectedEvent.firstAidActions || "Không có"}
+              </Col>
+              <Col xs={24}>
+                <Text strong>Trạng thái:</Text>{" "}
+                <Tag color={selectedEvent.processed ? "green" : "orange"}>
+                  {selectedEvent.processed ? "Đã xử lý" : "Chờ xử lý"}
+                </Tag>
+              </Col>
+              {selectedEvent.processed && (
+                <>
+                  <Col xs={24} sm={12}>
+                    <Text strong>Thời gian xử lý:</Text>{" "}
+                    {dayjs(selectedEvent.processedTime).format(
+                      "DD/MM/YYYY HH:mm"
+                    )}
+                  </Col>
+                  <Col xs={24} sm={12}>
+                    <Text strong>Người xử lý:</Text>{" "}
+                    {selectedEvent.processedBy?.fullName}
+                  </Col>
+                </>
+              )}
+              <Col xs={24} sm={12}>
+                <Text strong>Người tạo:</Text>{" "}
+                {selectedEvent.createdBy?.fullName}
+              </Col>
+              <Col xs={24} sm={12}>
+                <Text strong>Ngày tạo:</Text>{" "}
+                {dayjs(selectedEvent.createdAt).format("DD/MM/YYYY HH:mm")}
+              </Col>
+              {selectedEvent.suppliesUsed &&
+                selectedEvent.suppliesUsed.length > 0 && (
+                  <Col xs={24}>
+                    <Text strong>Vật tư y tế đã sử dụng:</Text>
+                    <div style={{ marginTop: 8 }}>
+                      {selectedEvent.suppliesUsed.map((supply, index) => {
+                        const supplyInfo = getSupplyName(
+                          supply.medicalSupplyId,
+                          supply
+                        );
+
+                        return (
+                          <div key={index} style={{ marginBottom: 4 }}>
+                            <Text>
+                              • {supplyInfo.name} - Số lượng:{" "}
+                              {supply.quantityUsed}
+                              {supplyInfo.unit && ` ${supplyInfo.unit}`}
+                            </Text>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </Col>
+                )}
+            </Row>
+          </div>
+        )}
       </Modal>
     </div>
   );

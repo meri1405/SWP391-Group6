@@ -40,7 +40,7 @@ export const getMedicalEvents = async (params = {}) => {
     console.log("Fetching medical events with params:", params);
 
     const response = await fetch(
-      `${API_BASE_URL}/nurse/medical-events?${queryParams}`,
+      `${API_BASE_URL}/medical-events?${queryParams}`,
       {
         method: "GET",
         headers: getAuthHeaders(),
@@ -65,13 +65,10 @@ export const getMedicalEventById = async (eventId) => {
   try {
     console.log("Fetching medical event by ID:", eventId);
 
-    const response = await fetch(
-      `${API_BASE_URL}/nurse/medical-events/${eventId}`,
-      {
-        method: "GET",
-        headers: getAuthHeaders(),
-      }
-    );
+    const response = await fetch(`${API_BASE_URL}/medical-events/${eventId}`, {
+      method: "GET",
+      headers: getAuthHeaders(),
+    });
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -91,7 +88,7 @@ export const createMedicalEvent = async (eventData) => {
   try {
     console.log("Creating medical event:", eventData);
 
-    const response = await fetch(`${API_BASE_URL}/nurse/medical-events`, {
+    const response = await fetch(`${API_BASE_URL}/medical-events`, {
       method: "POST",
       headers: getAuthHeaders(),
       body: JSON.stringify(eventData),
@@ -113,60 +110,8 @@ export const createMedicalEvent = async (eventData) => {
   }
 };
 
-// Update medical event
-export const updateMedicalEvent = async (eventId, eventData) => {
-  try {
-    console.log("Updating medical event:", eventId, eventData);
-
-    const response = await fetch(
-      `${API_BASE_URL}/nurse/medical-events/${eventId}`,
-      {
-        method: "PUT",
-        headers: getAuthHeaders(),
-        body: JSON.stringify(eventData),
-      }
-    );
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
-      );
-    }
-
-    const data = await response.json();
-    console.log("Medical event updated successfully:", data);
-    return data;
-  } catch (error) {
-    console.error("Error updating medical event:", error);
-    throw error;
-  }
-};
-
-// Delete medical event
-export const deleteMedicalEvent = async (eventId) => {
-  try {
-    console.log("Deleting medical event:", eventId);
-
-    const response = await fetch(
-      `${API_BASE_URL}/nurse/medical-events/${eventId}`,
-      {
-        method: "DELETE",
-        headers: getAuthHeaders(),
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    console.log("Medical event deleted successfully");
-    return { success: true };
-  } catch (error) {
-    console.error("Error deleting medical event:", error);
-    throw error;
-  }
-};
+// Note: UPDATE and DELETE endpoints are not available in backend
+// Only CREATE, READ, and PROCESS are supported
 
 // Update medical event status
 export const updateMedicalEventStatus = async (eventId, status, notes = "") => {
@@ -174,11 +119,10 @@ export const updateMedicalEventStatus = async (eventId, status, notes = "") => {
     console.log("Updating medical event status:", eventId, status);
 
     const response = await fetch(
-      `${API_BASE_URL}/nurse/medical-events/${eventId}/status`,
+      `${API_BASE_URL}/medical-events/${eventId}/process`,
       {
         method: "PATCH",
         headers: getAuthHeaders(),
-        body: JSON.stringify({ status, notes }),
       }
     );
 
@@ -647,8 +591,6 @@ export default {
   getMedicalEvents,
   getMedicalEventById,
   createMedicalEvent,
-  updateMedicalEvent,
-  deleteMedicalEvent,
   updateMedicalEventStatus,
   addTreatmentHistory,
   updateVitalSigns,
