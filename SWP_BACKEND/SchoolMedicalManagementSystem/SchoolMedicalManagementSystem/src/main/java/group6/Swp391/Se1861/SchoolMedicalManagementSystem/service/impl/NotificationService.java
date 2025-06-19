@@ -318,6 +318,7 @@ public class NotificationService implements INotificationService {
         dto.setRead(notification.isRead());
         dto.setNotificationType(notification.getNotificationType());
         dto.setRecipientId(notification.getRecipient().getId());
+        dto.setConfirm(notification.getConfirm());
 
         if (notification.getMedicationRequest() != null) {
             dto.setMedicationRequestId(notification.getMedicationRequest().getId());
@@ -331,10 +332,9 @@ public class NotificationService implements INotificationService {
             dto.setMedicalEventId(notification.getMedicalEvent().getId());
         }
 
-        // If there's a field for health profile in Notification, add it here
-        // if (notification.getHealthProfile() != null) {
-        //     dto.setHealthProfileId(notification.getHealthProfile().getId());
-        // }
+        if (notification.getVaccinationForm() != null) {
+            dto.setVaccinationFormId(notification.getVaccinationForm().getId());
+        }
 
         return dto;
     }
@@ -453,19 +453,43 @@ public class NotificationService implements INotificationService {
             String studentName,
             String vaccineName,
             String location,
-            String scheduledDate) {
-        
-        String title = "Vaccination Consent Required";
-        String message = "Please review and confirm vaccination for " + studentName + " - " + vaccineName;
+            String scheduledDate,
+            VaccinationForm vaccinationForm) {
+
+        String title = "XÁC NHẬN ĐỒNG Ý TIÊM CHỦNG";
+        String message = "Vui lòng xem xét và xác nhận tiêm chủng cho " + studentName + " - " + vaccineName;
         if (location != null && !location.trim().isEmpty()) {
-            message += " at " + location;
+            message += " tại " + location;
         }
         if (scheduledDate != null && !scheduledDate.trim().isEmpty()) {
-            message += " scheduled for " + scheduledDate;
+            message += " vào " + scheduledDate;
         }
         String notificationType = "VACCINATION_CONSENT_REQUIRED";
         
-        return createGeneralNotification(recipient, title, message, notificationType);
+        Notification notification = new Notification();
+        notification.setTitle(title);
+        notification.setMessage(message);
+        notification.setNotificationType(notificationType);
+        notification.setRecipient(recipient);
+        notification.setConfirm(null); // Initially null, will be set to true/false when parent responds
+        notification.setVaccinationForm(vaccinationForm);
+
+        Notification savedNotification = notificationRepository.save(notification);
+        NotificationDTO notificationDTO = convertToDTO(savedNotification);
+
+        try {
+            if (recipient.getUsername() != null) {
+                messagingTemplate.convertAndSendToUser(
+                        recipient.getUsername(),
+                        "/topic/notifications",
+                        notificationDTO
+                );
+            }
+        } catch (Exception e) {
+            System.err.println("Error sending WebSocket notification: " + e.getMessage());
+        }
+
+        return notificationDTO;
     }
 
     @Transactional
@@ -496,3 +520,4 @@ public class NotificationService implements INotificationService {
         return notificationDTO;
     }
 }
+

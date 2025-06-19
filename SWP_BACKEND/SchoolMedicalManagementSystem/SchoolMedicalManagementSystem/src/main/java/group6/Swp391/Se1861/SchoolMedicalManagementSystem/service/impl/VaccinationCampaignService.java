@@ -442,17 +442,19 @@ public class VaccinationCampaignService implements IVaccinationCampaignService {
         List<VaccinationForm> forms = formRepository.findByCampaignAndConfirmationStatus(
                 campaign, VaccinationForm.ConfirmationStatus.PENDING);
 
-        List<VaccinationForm> sentForms = new ArrayList<>();        for (VaccinationForm form : forms) {
+        List<VaccinationForm> sentForms = new ArrayList<>();
+        for (VaccinationForm form : forms) {
             if (form.getSentDate() == null) {
                 // Send notification to parent
-                String studentName = form.getStudent().getFirstName() + " " + form.getStudent().getLastName();
-                String vaccineName = form.getVaccineName() + " (Dose " + form.getDoseNumber() + ")";
+                String studentName = form.getStudent().getLastName() + " " + form.getStudent().getFirstName();
+                String vaccineName = form.getVaccineName() + " (Mũi " + form.getDoseNumber() + ")";
                 notificationService.createVaccinationConsentFormNotification(
                         form.getParent(),
                         studentName,
                         vaccineName,
                         form.getLocation(),
-                        form.getScheduledDate() != null ? form.getScheduledDate().toString() : null
+                        form.getScheduledDate() != null ? form.getScheduledDate().toString() : null,
+                        form
                 );
 
                 form.setSentDate(LocalDateTime.now());

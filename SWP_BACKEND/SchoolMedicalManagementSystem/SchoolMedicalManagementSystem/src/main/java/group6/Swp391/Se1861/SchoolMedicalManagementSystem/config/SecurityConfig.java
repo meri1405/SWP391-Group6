@@ -68,6 +68,7 @@ public class SecurityConfig {
                     .requestMatchers("/api/public/**").permitAll()
                     .requestMatchers("/oauth2/**").permitAll()
                     .requestMatchers("/login/oauth2/**").permitAll()
+                    .requestMatchers("/ws/**").permitAll()  // Allow WebSocket endpoint
                     .requestMatchers("/api/nurse/students/test").permitAll()  // Debug endpoint
                     .requestMatchers("/api/nurse/students/debug-user").authenticated()  // Any authenticated user
                     .requestMatchers("/api/nurse/students/all").authenticated()  // Any authenticated user

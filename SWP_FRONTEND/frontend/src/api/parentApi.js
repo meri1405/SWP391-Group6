@@ -431,4 +431,75 @@ export const parentApi = {
       throw error;
     }
   },
+
+  // Vaccination Form APIs
+  getVaccinationForms: async (token = getTokenFromStorage()) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.get('/api/parent/vaccination-forms');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching vaccination forms:', error);
+      throw error;
+    }
+  },
+
+  getPendingVaccinationForms: async (token = getTokenFromStorage()) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.get('/api/parent/vaccination-forms/pending');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching pending vaccination forms:', error);
+      throw error;
+    }
+  },
+
+  getVaccinationFormById: async (formId, token = getTokenFromStorage()) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.get(`/api/parent/vaccination-forms/${formId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching vaccination form:', error);
+      throw error;
+    }
+  },
+
+  confirmVaccinationForm: async (formId, notes = '', token = getTokenFromStorage()) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.post(`/api/parent/vaccination-forms/${formId}/confirm`, {
+        notes: notes
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error confirming vaccination form:', error);
+      throw error;
+    }
+  },
+
+  declineVaccinationForm: async (formId, notes = '', token = getTokenFromStorage()) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.post(`/api/parent/vaccination-forms/${formId}/decline`, {
+        notes: notes
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error declining vaccination form:', error);
+      throw error;
+    }
+  },
+
+  getVaccinationStatistics: async (token = getTokenFromStorage()) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.get('/api/parent/vaccination-forms/statistics');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching vaccination statistics:', error);
+      throw error;
+    }
+  },
 };
