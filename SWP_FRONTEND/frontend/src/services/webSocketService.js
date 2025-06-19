@@ -1,7 +1,8 @@
-import SockJS from 'sockjs-client';
-import { Client } from '@stomp/stompjs';
+import SockJS from "sockjs-client";
+import { Client } from "@stomp/stompjs";
 
-class WebSocketService {  constructor() {
+class WebSocketService {
+  constructor() {
     this.client = null;
     this.connected = false;
     this.subscriptions = new Map();
@@ -10,47 +11,79 @@ class WebSocketService {  constructor() {
     this.maxReconnectAttempts = 5;
     this.reconnectDelay = 3000;
     this.currentToken = null; // Store current token for reconnection
-  }  connect(token) {
+  }
+  connect(token) {
     return new Promise((resolve, reject) => {
       try {
+        // Validate token before connecting
+        if (!token) {
+          console.warn("No token provided for WebSocket connection");
+          reject(new Error("Authentication token required"));
+          return;
+        }
+
         // Store token for potential reconnection
         this.currentToken = token;
-        
-        // Create SockJS connection
-        const wsUrl = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'}/ws`;
+
+        // Temporarily disable WebSocket connection due to authentication issues
+        // The backend WebSocket endpoint (/ws) is not configured with authentication interceptor
+        // This causes 401 Unauthorized errors when trying to connect with Bearer tokens
+        // Real-time notifications are disabled until backend WebSocket auth is properly configured
+        console.log(
+          "WebSocket connection temporarily disabled due to authentication issues"
+        );
+        resolve({ status: "disabled" });
+        return;
+
+        // Create SockJS connection with token in URL
+        const wsUrl = `${
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:8080"
+        }/ws?token=${encodeURIComponent(token)}`;
+        console.log(
+          "Connecting to WebSocket URL:",
+          wsUrl.replace(token, "***TOKEN***")
+        );
+        console.log(
+          "Using token:",
+          token ? `${token.substring(0, 20)}...` : "No token"
+        );
         const socket = new SockJS(wsUrl);
-        
+
         // Create STOMP client
         this.client = new Client({
           webSocketFactory: () => socket,
           debug: (str) => {
-            console.log('STOMP Debug:', str);
+            console.log("STOMP Debug:", str);
           },
           reconnectDelay: this.reconnectDelay,
           heartbeatIncoming: 4000,
           heartbeatOutgoing: 4000,
+          connectHeaders: {
+            Authorization: `Bearer ${token}`,
+          },
         });
 
         // Set up connection handlers
         this.client.onConnect = (frame) => {
-          console.log('Connected to WebSocket server:', frame);
+          console.log("Connected to WebSocket server:", frame);
           this.connected = true;
           this.reconnectAttempts = 0;
-          
+
           // Subscribe to personal notifications
           this.subscribeToNotifications();
-          
+
           resolve(frame);
         };
 
         this.client.onStompError = (frame) => {
-          console.error('STOMP Error:', frame);
+          console.error("STOMP Error:", frame);
           this.connected = false;
-          reject(new Error('WebSocket connection failed'));
-        };        this.client.onWebSocketClose = (event) => {
-          console.log('WebSocket connection closed:', event);
+          reject(new Error("WebSocket connection failed"));
+        };
+        this.client.onWebSocketClose = (event) => {
+          console.log("WebSocket connection closed:", event);
           this.connected = false;
-          
+
           // Use stored token for reconnection
           if (this.currentToken) {
             this.handleReconnect(this.currentToken);
@@ -58,15 +91,14 @@ class WebSocketService {  constructor() {
         };
 
         this.client.onWebSocketError = (error) => {
-          console.error('WebSocket error:', error);
+          console.error("WebSocket error:", error);
           this.connected = false;
         };
 
         // Activate the client
         this.client.activate();
-
       } catch (error) {
-        console.error('Error creating WebSocket connection:', error);
+        console.error("Error creating WebSocket connection:", error);
         reject(error);
       }
     });
@@ -74,34 +106,40 @@ class WebSocketService {  constructor() {
 
   subscribeToNotifications() {
     if (!this.client || !this.connected) {
-      console.warn('Cannot subscribe - client not connected');
+      console.warn("Cannot subscribe - client not connected");
       return;
     }
 
     try {
       // Subscribe to personal notification queue
-      const subscription = this.client.subscribe('/user/queue/notifications', (message) => {
-        try {
-          const notification = JSON.parse(message.body);
-          console.log('Received notification:', notification);
-          
-          // Call all registered message handlers
-          this.messageHandlers.forEach((handler, handlerName) => {
-            try {
-              handler(notification);
-            } catch (error) {
-              console.error(`Error in message handler ${handlerName}:`, error);
-            }
-          });
-        } catch (error) {
-          console.error('Error processing notification message:', error);
-        }
-      });
+      const subscription = this.client.subscribe(
+        "/user/queue/notifications",
+        (message) => {
+          try {
+            const notification = JSON.parse(message.body);
+            console.log("Received notification:", notification);
 
-      this.subscriptions.set('notifications', subscription);
-      console.log('Subscribed to notifications');
+            // Call all registered message handlers
+            this.messageHandlers.forEach((handler, handlerName) => {
+              try {
+                handler(notification);
+              } catch (error) {
+                console.error(
+                  `Error in message handler ${handlerName}:`,
+                  error
+                );
+              }
+            });
+          } catch (error) {
+            console.error("Error processing notification message:", error);
+          }
+        }
+      );
+
+      this.subscriptions.set("notifications", subscription);
+      console.log("Subscribed to notifications");
     } catch (error) {
-      console.error('Error subscribing to notifications:', error);
+      console.error("Error subscribing to notifications:", error);
     }
   }
 
@@ -116,15 +154,17 @@ class WebSocketService {  constructor() {
   handleReconnect(token) {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
-      console.log(`Attempting to reconnect... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
-      
+      console.log(
+        `Attempting to reconnect... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`
+      );
+
       setTimeout(() => {
-        this.connect(token).catch(error => {
-          console.error('Reconnection failed:', error);
+        this.connect(token).catch((error) => {
+          console.error("Reconnection failed:", error);
         });
       }, this.reconnectDelay);
     } else {
-      console.error('Max reconnection attempts reached');
+      console.error("Max reconnection attempts reached");
     }
   }
 
@@ -147,7 +187,7 @@ class WebSocketService {  constructor() {
       try {
         this.client.deactivate();
       } catch (error) {
-        console.error('Error deactivating STOMP client:', error);
+        console.error("Error deactivating STOMP client:", error);
       }
 
       this.client = null;
@@ -157,19 +197,21 @@ class WebSocketService {  constructor() {
   }
 
   isConnected() {
-    return this.connected && this.client && this.client.connected;
+    // Return false when WebSocket is disabled to prevent connection attempts
+    return false;
+    // return this.connected && this.client && this.client.connected;
   }
 
   // Send a message (if needed in the future)
   send(destination, body, headers = {}) {
     if (!this.isConnected()) {
-      throw new Error('WebSocket not connected');
+      throw new Error("WebSocket not connected");
     }
-    
+
     this.client.publish({
       destination,
       body: JSON.stringify(body),
-      headers
+      headers,
     });
   }
 }
