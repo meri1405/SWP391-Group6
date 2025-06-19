@@ -271,73 +271,68 @@ const HealthChecksSection = () => {
         });
 
     return (
-        <div className="health-checks-section">
-            {contextHolder}
-            <Card>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-                    <Tabs activeKey={activeTab} onChange={setActiveTab}>
-                        <TabPane
-                            tab={
-                                <span>
-                                    <CalendarOutlined />
-                                    Đợt kiểm tra ({campaigns.length})
-                                </span>
-                            }
-                            key="campaigns"
-                        />
-                        <TabPane
-                            tab={
-                                <span>
-                                    <CheckCircleOutlined />
-                                    Kết quả ({results.length})
-                                </span>
-                            }
-                            key="results"
-                        />
-                    </Tabs>
-                    <Button
-                        type="primary"
-                        icon={<PlusOutlined />}
-                        onClick={() => {
-                            setEditingRecord(null);
-                            form.resetFields();
-                            setShowAddModal(true);
-                        }}
+        <div className="dashboard-section">
+            <div className="section-header">
+                <h2 style={{ fontSize: 24, fontWeight: 600, color: '#333', margin: 0 }}>Khám sức khỏe</h2>
+                <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => {
+                        setEditingRecord(null);
+                        form.resetFields();
+                        setShowAddModal(true);
+                    }}
+                    style={{ background: '#ff6b35', borderColor: '#ff6b35', borderRadius: 6, fontWeight: 500 }}
+                >
+                    Thêm mới
+                </Button>
+            </div>
+            <Card style={{ borderRadius: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.08)', marginBottom: 24 }} bodyStyle={{ padding: 24 }}>
+                <Tabs activeKey={activeTab} onChange={setActiveTab} style={{ marginBottom: 24 }}>
+                    <TabPane
+                        tab={
+                            <span>
+                                <CalendarOutlined /> Đợt kiểm tra ({campaigns.length})
+                            </span>
+                        }
+                        key="campaigns"
+                    />
+                    <TabPane
+                        tab={
+                            <span>
+                                <CheckCircleOutlined /> Kết quả ({results.length})
+                            </span>
+                        }
+                        key="results"
+                    />
+                </Tabs>
+                <div style={{ display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
+                    <Input
+                        placeholder="Tìm kiếm..."
+                        prefix={<SearchOutlined />}
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        style={{ maxWidth: 300, borderRadius: 6 }}
+                    />
+                    <Select
+                        style={{ minWidth: 180, borderRadius: 6 }}
+                        value={statusFilter}
+                        onChange={setStatusFilter}
                     >
-                        Thêm mới
-                    </Button>
+                        <Option value="all">Tất cả trạng thái</Option>
+                        <Option value="upcoming">Sắp tới</Option>
+                        <Option value="completed">Đã hoàn thành</Option>
+                        <Option value="cancelled">Đã hủy</Option>
+                        <Option value="pending">Đang chờ</Option>
+                    </Select>
                 </div>
-
-                <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-                    <Col xs={24} sm={12} md={8}>
-                        <Input
-                            placeholder="Tìm kiếm..."
-                            prefix={<SearchOutlined />}
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                    </Col>
-                    <Col xs={24} sm={12} md={8}>
-                        <Select
-                            style={{ width: '100%' }}
-                            value={statusFilter}
-                            onChange={setStatusFilter}
-                        >
-                            <Option value="all">Tất cả trạng thái</Option>
-                            <Option value="upcoming">Sắp tới</Option>
-                            <Option value="completed">Đã hoàn thành</Option>
-                            <Option value="cancelled">Đã hủy</Option>
-                            <Option value="pending">Đang chờ</Option>
-                        </Select>
-                    </Col>
-                </Row>
-
                 {activeTab === 'campaigns' ? (
                     <Table
                         columns={campaignColumns}
                         dataSource={filteredData}
                         rowKey="id"
                         pagination={{ pageSize: 10 }}
+                        style={{ borderRadius: 8, overflow: 'hidden' }}
                     />
                 ) : (
                     <Table
@@ -345,6 +340,7 @@ const HealthChecksSection = () => {
                         dataSource={filteredData}
                         rowKey="id"
                         pagination={{ pageSize: 10 }}
+                        style={{ borderRadius: 8, overflow: 'hidden' }}
                     />
                 )}
             </Card>

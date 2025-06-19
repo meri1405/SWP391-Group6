@@ -232,72 +232,67 @@ const NotificationsSection = () => {
         });
 
     return (
-        <div className="notifications-section">
-            {contextHolder}
-            <Card>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-                    <Tabs activeKey={activeTab} onChange={setActiveTab}>
-                        <TabPane
-                            tab={
-                                <span>
-                                    <BellOutlined />
-                                    Đã gửi ({sentNotifications.length})
-                                </span>
-                            }
-                            key="sent"
-                        />
-                        <TabPane
-                            tab={
-                                <span>
-                                    <EditOutlined />
-                                    Bản nháp ({draftNotifications.length})
-                                </span>
-                            }
-                            key="drafts"
-                        />
-                    </Tabs>
-                    <Button
-                        type="primary"
-                        icon={<PlusOutlined />}
-                        onClick={() => {
-                            setEditingRecord(null);
-                            form.resetFields();
-                            setShowAddModal(true);
-                        }}
+        <div className="dashboard-section">
+            <div className="section-header">
+                <h2 style={{ fontSize: 24, fontWeight: 600, color: '#333', margin: 0 }}>Thông báo</h2>
+                <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => {
+                        setEditingRecord(null);
+                        form.resetFields();
+                        setShowAddModal(true);
+                    }}
+                    style={{ background: '#ff6b35', borderColor: '#ff6b35', borderRadius: 6, fontWeight: 500 }}
+                >
+                    Thêm mới
+                </Button>
+            </div>
+            <Card style={{ borderRadius: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.08)', marginBottom: 24 }} bodyStyle={{ padding: 24 }}>
+                <Tabs activeKey={activeTab} onChange={setActiveTab} style={{ marginBottom: 24 }}>
+                    <TabPane
+                        tab={
+                            <span>
+                                <BellOutlined /> Đã gửi ({sentNotifications.length})
+                            </span>
+                        }
+                        key="sent"
+                    />
+                    <TabPane
+                        tab={
+                            <span>
+                                <EditOutlined /> Bản nháp ({draftNotifications.length})
+                            </span>
+                        }
+                        key="drafts"
+                    />
+                </Tabs>
+                <div style={{ display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
+                    <Input
+                        placeholder="Tìm kiếm..."
+                        prefix={<SearchOutlined />}
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        style={{ maxWidth: 300, borderRadius: 6 }}
+                    />
+                    <Select
+                        style={{ minWidth: 180, borderRadius: 6 }}
+                        value={typeFilter}
+                        onChange={setTypeFilter}
                     >
-                        Thêm mới
-                    </Button>
+                        <Option value="all">Tất cả loại</Option>
+                        <Option value="health_check">Khám sức khỏe</Option>
+                        <Option value="vaccination">Tiêm chủng</Option>
+                        <Option value="health_alert">Cảnh báo y tế</Option>
+                        <Option value="other">Khác</Option>
+                    </Select>
                 </div>
-
-                <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-                    <Col xs={24} sm={12} md={8}>
-                        <Input
-                            placeholder="Tìm kiếm..."
-                            prefix={<SearchOutlined />}
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                    </Col>
-                    <Col xs={24} sm={12} md={8}>
-                        <Select
-                            style={{ width: '100%' }}
-                            value={typeFilter}
-                            onChange={setTypeFilter}
-                        >
-                            <Option value="all">Tất cả loại</Option>
-                            <Option value="health_check">Khám sức khỏe</Option>
-                            <Option value="vaccination">Tiêm chủng</Option>
-                            <Option value="health_alert">Cảnh báo y tế</Option>
-                            <Option value="other">Khác</Option>
-                        </Select>
-                    </Col>
-                </Row>
-
                 <Table
                     columns={columns}
                     dataSource={filteredData}
                     rowKey="id"
                     pagination={{ pageSize: 10 }}
+                    style={{ borderRadius: 8, overflow: 'hidden' }}
                 />
             </Card>
 
