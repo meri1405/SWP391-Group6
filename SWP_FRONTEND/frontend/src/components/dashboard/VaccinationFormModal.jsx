@@ -271,11 +271,9 @@ const VaccinationFormModal = ({
                       </div>                      {form.parentNotes && (
                         <div className="info-item full-width">
                           <label>Ghi chú của phụ huynh:</label>
-                          <div className="parent-notes">
-                            {form.parentNotes.split('\n').map((line, index) => (
+                          {form.parentNotes.split('\n').map((line, index) => (
                               <div key={index}>{line}</div>
                             ))}
-                          </div>
                         </div>
                       )}
                     </div>
