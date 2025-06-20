@@ -31,6 +31,7 @@ public class HealthProfileDTO {
     private Long studentId;
     
     private Long nurseId;
+
     private Long parentId;
 
     // Lists to hold the related health information

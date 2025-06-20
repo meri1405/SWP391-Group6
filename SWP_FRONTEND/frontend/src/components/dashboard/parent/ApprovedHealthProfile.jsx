@@ -1,139 +1,33 @@
-import React, { useState, useEffect } from 'react';
 import {
-  Card,
-  Select,
-  Row,
-  Col,
-  Spin,
-  message,
-  Tag,
-  Tabs,
-  List,
-  Descriptions,
-  Empty,
-  Alert,
-  Space,
-  Button,
-  Modal,
-  Typography
+  Card, Select, Row, Col, Spin, Tag, Tabs, List, Descriptions, Empty,
+  Alert, Button, Modal, Typography
 } from 'antd';
 import {
-  HeartOutlined,
-  MedicineBoxOutlined,
-  EyeOutlined,
-  UserOutlined,
-  CalendarOutlined,
-  InfoCircleOutlined
+  HeartOutlined, EyeOutlined, UserOutlined, InfoCircleOutlined
 } from '@ant-design/icons';
-import { parentApi } from '../../../api/parentApi';
-import { useAuth } from '../../../contexts/AuthContext';
+import { useApprovedHealthProfile } from '../../../hooks/parent/useApprovedHealthProfile';
 import dayjs from 'dayjs';
 import '../../../styles/ApprovedHealthProfile.css';
 
 const { Option } = Select;
+const { Text } = Typography;
 
 const ApprovedHealthProfile = () => {
-  const { getToken } = useAuth();
-  const [loading, setLoading] = useState(false);
-  const [students, setStudents] = useState([]);
-  const [selectedStudent, setSelectedStudent] = useState(null);
-  const [approvedProfiles, setApprovedProfiles] = useState([]);
-  const [selectedProfile, setSelectedProfile] = useState(null);
-  const [profilesLoading, setProfilesLoading] = useState(false);
-  const [detailModalVisible, setDetailModalVisible] = useState(false);
-  const [viewDetailData, setViewDetailData] = useState(null);
-  const [viewDetailType, setViewDetailType] = useState(null);
-  // Fetch students on component mount
-  useEffect(() => {
-    const fetchStudentsData = async () => {
-      setLoading(true);
-      try {
-        const token = getToken();
-        const response = await parentApi.getMyStudents(token);
-        
-        if (response && Array.isArray(response)) {
-          setStudents(response);
-        } else {
-          console.warn('Unexpected response format for students:', response);
-          setStudents([]);
-        }
-      } catch (error) {
-        console.error('Error fetching students:', error);
-        message.error('Không thể tải danh sách học sinh');
-        setStudents([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const {
+    loading, students, selectedStudent, approvedProfiles, selectedProfile,
+    profilesLoading, detailModalVisible, viewDetailData, viewDetailType,
+    handleStudentSelect, handleProfileSelect, handleViewDetail, handleCloseDetailModal,
+    getBMICategory, getStudentName, getStudentId
+  } = useApprovedHealthProfile();
 
-    fetchStudentsData();
-  }, [getToken]);
-
-  useEffect(() => {
-    const loadApprovedProfiles = async () => {
-      if (!selectedStudent) return;
-      
-      try {
-        setProfilesLoading(true);
-        const studentId = selectedStudent.id || selectedStudent.studentID;
-        
-        // Use the new API to get approved profiles
-        const profiles = await parentApi.getApprovedHealthProfiles(studentId, getToken());
-        setApprovedProfiles(profiles || []);
-        
-        // Auto-select the latest profile
-        if (profiles && profiles.length > 0) {
-          const latestProfile = profiles.sort((a, b) => 
-            dayjs(b.updatedAt).unix() - dayjs(a.updatedAt).unix()
-          )[0];
-          setSelectedProfile(latestProfile);
-        }
-      } catch (error) {
-        console.error('Error loading approved profiles:', error);
-        message.error('Không thể tải hồ sơ sức khỏe đã duyệt');
-        setApprovedProfiles([]);
-      } finally {
-        setProfilesLoading(false);
-      }
-    };
-
-    loadApprovedProfiles();
-  }, [selectedStudent, getToken]);
-
-  const handleStudentSelect = (studentId) => {
-    const student = students.find(s => s.id === studentId || s.studentID === studentId);
-    if (student) {
-      setSelectedStudent(student);
-      // fetchApprovedHealthProfiles(studentId);
-    }
-  };
-
-  const handleProfileSelect = (profileId) => {
-    const profile = approvedProfiles.find(p => p.id === profileId);
-    setSelectedProfile(profile);
-  };
-
-  const handleViewDetail = (item, type) => {
-    setViewDetailData(item);
-    setViewDetailType(type);
-    setDetailModalVisible(true);
-  };
-
-  // Helper function for BMI category
-  const getBMICategory = (weight, height) => {
-    const bmi = weight / Math.pow(height / 100, 2);
-    if (bmi < 18.5) return 'Thiếu cân';
-    if (bmi < 25) return 'Bình thường';
-    if (bmi < 30) return 'Thừa cân';
-    return 'Béo phì';
-  };
-
-  // Update renderBasicInfo to show nurse information
-  const renderBasicInfo = (profile) => {
+  console.log('Component rendered - selectedProfile:', selectedProfile);
+  console.log('approvedProfiles:', approvedProfiles);const renderBasicInfo = (profile) => {
     if (!profile) return null;
 
-    return (
-      <Descriptions bordered size="small" column={2}>
+    console.log('Profile:', profile);
+
+    return (      
+    <Descriptions bordered size="small" column={2}>
         <Descriptions.Item label="Cân nặng" span={1}>
           {profile.weight} kg
         </Descriptions.Item>
@@ -419,20 +313,17 @@ const ApprovedHealthProfile = () => {
               <Select
                 placeholder="Chọn học sinh để xem hồ sơ sức khỏe đã duyệt"
                 style={{ width: '100%' }}
-                value={selectedStudent?.id || selectedStudent?.studentID}
+                value={getStudentId(selectedStudent)}
                 onChange={handleStudentSelect}
                 size="large"
                 showSearch
                 optionFilterProp="children"
                 filterOption={(input, option) =>
                   option?.children?.toLowerCase().includes(input.toLowerCase())
-                }
-              >
+                }              >
                 {students.map((student, index) => {
-                  const studentId = student.id || student.studentID;
-                  const studentName = student.firstName && student.lastName 
-                    ? `${student.lastName} ${student.firstName}` 
-                    : student.name || 'Tên không có';
+                  const studentId = getStudentId(student);
+                  const studentName = getStudentName(student);
                   
                   if (!studentId) return null;
                   
@@ -501,12 +392,7 @@ const ApprovedHealthProfile = () => {
             )}
 
             {/* Profile Content */}
-            {selectedProfile && (
-              <Card title={`Hồ sơ sức khỏe của ${
-                selectedStudent.firstName && selectedStudent.lastName 
-                  ? `${selectedStudent.lastName} ${selectedStudent.firstName}` 
-                  : selectedStudent.name || 'Học sinh'
-              }`}>                <Tabs 
+            {selectedProfile && (              <Card title={`Hồ sơ sức khỏe của ${getStudentName(selectedStudent)}`}><Tabs 
                   defaultActiveKey="basic" 
                   type="card"
                   items={[
@@ -550,7 +436,7 @@ const ApprovedHealthProfile = () => {
         {/* Detail Modal */}        <Modal
           title="Chi tiết thông tin"
           open={detailModalVisible}
-          onCancel={() => setDetailModalVisible(false)}
+          onCancel={handleCloseDetailModal}
           footer={null}
           width={600}
         >
