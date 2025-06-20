@@ -134,7 +134,17 @@ const ConsultationsSection = () => {
     };
 
     return (
-        <div className="consultations-section">
+        <div className="dashboard-section">
+            <div className="section-header">
+                <h2>Tư vấn sức khỏe</h2>
+                <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => setShowAddModal(true)}
+                >
+                    Thêm lịch tư vấn
+                </Button>
+            </div>
             <Card>
                 <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
                     <Col xs={24} sm={12} md={8}>
@@ -157,17 +167,7 @@ const ConsultationsSection = () => {
                             <Option value="cancelled">Đã hủy</Option>
                         </Select>
                     </Col>
-                    <Col xs={24} sm={24} md={8} style={{ textAlign: 'right' }}>
-                        <Button
-                            type="primary"
-                            icon={<PlusOutlined />}
-                            onClick={() => setShowAddModal(true)}
-                        >
-                            Thêm lịch tư vấn
-                        </Button>
-                    </Col>
                 </Row>
-
                 <Table
                     columns={columns}
                     dataSource={filteredConsultations}
