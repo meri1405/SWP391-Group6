@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -127,11 +128,10 @@ public class StudentService implements IStudentService {
             dto.setMotherId(student.getMother().getId());
         }
           return dto;
-    }
-
-    /**
+    }    /**
      * Create students with parents in one transaction
      * This method handles creating multiple students and their parents (father, mother, or both)
+     * Now supports finding existing parents by phone to avoid duplicates
      * @param request DTO containing student and parent information
      * @return Response containing created students and parents
      */
@@ -142,51 +142,51 @@ public class StudentService implements IStudentService {
         if (request.getStudents() == null || request.getStudents().isEmpty()) {
             throw new IllegalArgumentException("Danh sách học sinh không được rỗng");
         }
-
+        
         if (!request.hasAnyParent()) {
             throw new IllegalArgumentException("Phải có ít nhất một phụ huynh (cha hoặc mẹ)");
         }
-
+        
         // Get PARENT role
         Role parentRole = roleRepository.findByRoleName("PARENT")
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy role PARENT"));
-
-        // Create father if provided
+        
+        // Find or create father
         User father = null;
         if (request.getFather() != null) {
-            father = createParentUser(request.getFather(), parentRole);
+            father = findOrCreateParent(request.getFather(), parentRole);
         }
-
-        // Create mother if provided
+        
+        // Find or create mother
         User mother = null;
         if (request.getMother() != null) {
-            mother = createParentUser(request.getMother(), parentRole);
+            mother = findOrCreateParent(request.getMother(), parentRole);
         }
-
+        
         // Create students
         List<Student> createdStudents = new ArrayList<>();
         for (StudentCreationDTO studentDto : request.getStudents()) {
             Student student = createStudent(studentDto, father, mother);
             createdStudents.add(student);
         }
-
+        
         // Save all students
         createdStudents = studentRepository.saveAll(createdStudents);
-
+        
         // Prepare response
         StudentWithParentsCreationResponseDTO response = new StudentWithParentsCreationResponseDTO();
         response.setStudents(createdStudents.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList()));
-
+        
         if (father != null) {
             response.setFather(convertUserToParentDTO(father));
         }
-
+        
         if (mother != null) {
             response.setMother(convertUserToParentDTO(mother));
         }
-
+        
         int studentCount = createdStudents.size();
         String parentInfo = "";
         if (request.hasBothParents()) {
@@ -196,10 +196,78 @@ public class StudentService implements IStudentService {
         } else {
             parentInfo = "mẹ";
         }
-
+        
         response.setMessage(String.format("Tạo thành công %d học sinh và %s", studentCount, parentInfo));
-
+        
         return response;
+    }
+    
+    /**
+     * Find existing parent by phone or create new one
+     * This prevents duplicate parents when multiple students have the same parent
+     */
+    private User findOrCreateParent(ParentCreationDTO parentDto, Role parentRole) {
+        // Try to find existing parent by phone
+        Optional<User> existingParent = userRepository.findByPhone(parentDto.getPhone());
+        
+        if (existingParent.isPresent()) {
+            User parent = existingParent.get();
+            
+            // Verify it's actually a parent
+            if (!parent.getRole().getRoleName().equals("PARENT")) {
+                throw new IllegalArgumentException("Số điện thoại " + parentDto.getPhone() + " đã được sử dụng bởi tài khoản khác");
+            }
+            
+            // Update parent information if needed (optional)
+            updateParentIfNeeded(parent, parentDto);
+            
+            return parent;
+        } else {
+            // Create new parent
+            return createParentUser(parentDto, parentRole);
+        }
+    }
+    
+    /**
+     * Update parent information if needed when found existing parent
+     */
+    private void updateParentIfNeeded(User parent, ParentCreationDTO parentDto) {
+        boolean needsUpdate = false;
+        
+        // Update basic info if different and not null
+        if (parentDto.getFirstName() != null && !parentDto.getFirstName().equals(parent.getFirstName())) {
+            parent.setFirstName(parentDto.getFirstName());
+            needsUpdate = true;
+        }
+        
+        if (parentDto.getLastName() != null && !parentDto.getLastName().equals(parent.getLastName())) {
+            parent.setLastName(parentDto.getLastName());
+            needsUpdate = true;
+        }
+        
+        if (parentDto.getGender() != null && !parentDto.getGender().equals(parent.getGender())) {
+            parent.setGender(parentDto.getGender());
+            needsUpdate = true;
+        }
+        
+        if (parentDto.getJobTitle() != null && !parentDto.getJobTitle().equals(parent.getJobTitle())) {
+            parent.setJobTitle(parentDto.getJobTitle());
+            needsUpdate = true;
+        }
+        
+        if (parentDto.getAddress() != null && !parentDto.getAddress().equals(parent.getAddress())) {
+            parent.setAddress(parentDto.getAddress());
+            needsUpdate = true;
+        }
+        
+        if (parentDto.getDob() != null && !parentDto.getDob().equals(parent.getDob())) {
+            parent.setDob(parentDto.getDob());
+            needsUpdate = true;
+        }
+        
+        if (needsUpdate) {
+            userRepository.save(parent);
+        }
     }
 
     /**
