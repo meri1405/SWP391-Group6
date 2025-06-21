@@ -4,12 +4,16 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.StudentDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.StudentWithParentsCreationDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.StudentWithParentsCreationResponseDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IStudentService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IExcelService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -25,6 +29,9 @@ public class ManagerStudentController {
     
     @Autowired
     private IStudentService studentService;
+    
+    @Autowired
+    private IExcelService excelService;
     
     /**
      * Tạo học sinh cùng với phụ huynh trong cùng một form
@@ -122,6 +129,51 @@ public class ManagerStudentController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ErrorResponse("Có lỗi xảy ra khi xóa học sinh: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * Upload Excel file để tạo học sinh và phụ huynh hàng loạt
+     * Manager có thể upload file Excel chứa thông tin nhiều học sinh và phụ huynh
+     * 
+     * @param file File Excel (.xlsx hoặc .xls)
+     * @return Response chứa thông tin học sinh và phụ huynh đã được tạo
+     */
+    @PostMapping("/import-excel")
+    public ResponseEntity<?> importStudentsFromExcel(@RequestParam("file") MultipartFile file) {
+        try {
+            StudentWithParentsCreationResponseDTO response = excelService.importStudentsFromExcel(file);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Có lỗi xảy ra khi xử lý file Excel: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * Tải template Excel để import học sinh
+     * Manager có thể tải file template để biết định dạng dữ liệu cần thiết
+     * 
+     * @return File Excel template
+     */
+    @GetMapping("/excel-template")
+    public ResponseEntity<byte[]> downloadExcelTemplate() {
+        try {
+            byte[] templateBytes = excelService.generateExcelTemplate();
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+            headers.setContentDispositionFormData("attachment", "Template_Import_Hoc_Sinh.xlsx");
+            headers.setContentLength(templateBytes.length);
+            
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .body(templateBytes);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(null);
         }
     }
     
