@@ -51,7 +51,7 @@ public class SchoolMedicalManagementSystemApplication {
 
 		/**
 		 * Khởi tạo các vai trò trong hệ thống
-		 * Tạo các vai trò: ADMIN, MANAGER, SCHOOLNURSE, PARENT, STUDENT
+		 * Tạo các vai trò: ADMIN, MANAGER, SCHOOLNURSE, PARENT
 		 */
 		private void initializeRoles() {
 			try {
@@ -79,26 +79,7 @@ public class SchoolMedicalManagementSystemApplication {
 						"PARENT"
 					);
 
-					jdbcTemplate.update(
-						"INSERT INTO role (role_name) VALUES (?)",
-						"STUDENT"
-					);
-
-					System.out.println("Tạo các vai trò thành công");				} else {
-					// Kiểm tra xem vai trò STUDENT có tồn tại không, thêm vào nếu thiếu
-					Integer studentRoleCount = jdbcTemplate.queryForObject(
-						"SELECT COUNT(*) FROM role WHERE role_name = ?", 
-						Integer.class, "STUDENT");
-					
-					if (studentRoleCount == null || studentRoleCount == 0) {
-						jdbcTemplate.update(
-							"INSERT INTO role (role_name) VALUES (?)",
-							"STUDENT"
-						);
-						System.out.println("Thêm vai trò STUDENT thành công");
-					} else {
-						System.out.println("Tất cả vai trò đã tồn tại");
-					}
+					System.out.println("Tạo các vai trò thành công");
 				}
 			} catch (Exception e) {
 				System.err.println("Lỗi khi khởi tạo vai trò: " + e.getMessage());

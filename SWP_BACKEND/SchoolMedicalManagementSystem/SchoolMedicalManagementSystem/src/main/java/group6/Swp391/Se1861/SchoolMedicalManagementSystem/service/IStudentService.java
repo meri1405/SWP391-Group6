@@ -46,7 +46,8 @@ public interface IStudentService {
      * This method handles creating multiple students and their parents (father, mother, or both)
      * @param request DTO containing student and parent information
      * @return Response containing created students and parents
-     */    StudentWithParentsCreationResponseDTO createStudentWithParents(StudentWithParentsCreationDTO request);
+     */
+    StudentWithParentsCreationResponseDTO createStudentWithParents(StudentWithParentsCreationDTO request);
 
     /**
      * Delete a student by ID
