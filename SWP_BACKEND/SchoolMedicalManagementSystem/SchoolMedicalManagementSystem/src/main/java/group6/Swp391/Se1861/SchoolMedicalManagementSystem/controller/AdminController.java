@@ -1,9 +1,7 @@
 package group6.Swp391.Se1861.SchoolMedicalManagementSystem.controller;
 
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.StudentDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.UserRepository;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IStudentService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.SystemSettingsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -22,16 +20,12 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/api/admin")
-public class AdminController {
-
+public class AdminController {    
     @Autowired
     private UserRepository userRepository;
 
     @Autowired
     private SystemSettingsService systemSettingsService;
-    
-    @Autowired
-    private IStudentService studentService;
 
 
     /**
@@ -205,19 +199,6 @@ public class AdminController {
             errorResponse.put("error", "Update failed");
             errorResponse.put("message", "An error occurred while updating the profile: " + e.getMessage());
             return ResponseEntity.internalServerError().body(errorResponse);
-        }
-    }
-    
-    /**
-     * Get all students (admin access for medical events)
-     */
-    @GetMapping("/students")
-    public ResponseEntity<List<StudentDTO>> getAllStudents() {
-        try {
-            List<StudentDTO> students = studentService.getAllStudents();
-            return ResponseEntity.ok(students);
-        } catch (Exception e) {
-            return ResponseEntity.status(500).build();
         }
     }
 }

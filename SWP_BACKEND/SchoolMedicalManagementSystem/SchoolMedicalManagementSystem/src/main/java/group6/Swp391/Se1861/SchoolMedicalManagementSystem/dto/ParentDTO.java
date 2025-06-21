@@ -4,6 +4,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -12,4 +14,16 @@ public class ParentDTO {
     private String firstName;
     private String lastName;
     private String phone;
+    private String gender;
+    private String jobTitle;
+    private String address;
+    private LocalDate dob;
+    private Boolean enabled;
+    
+    /**
+     * Lấy tên đầy đủ của phụ huynh
+     */
+    public String getFullName() {
+        return firstName + " " + lastName;
+    }
 }
