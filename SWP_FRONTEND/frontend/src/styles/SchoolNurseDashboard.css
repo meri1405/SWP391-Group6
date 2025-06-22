@@ -74,6 +74,21 @@
   gap: 16px;
 }
 
+.nurse-header-actions {
+  display: flex;
+  align-items: center;
+}
+
+.nurse-header-actions .anticon {
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.nurse-header-actions .anticon:hover {
+  transform: scale(1.1);
+}
+
 .nurse-header-avatar {
   width: 40px;
   height: 40px;
@@ -905,4 +920,10 @@
     flex-direction: column;
     gap: 8px;
   }
+}
+
+/* Dropdown overrides */
+.ant-dropdown-menu {
+  max-height: 400px;
+  overflow-y: auto;
 }

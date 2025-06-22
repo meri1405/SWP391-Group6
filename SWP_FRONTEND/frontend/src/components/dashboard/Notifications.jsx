@@ -1,18 +1,23 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { parentApi } from '../../api/parentApi';
+import { nurseApi } from '../../api/nurseApi';
 import webSocketService from '../../services/webSocketService';
 import VaccinationFormModal from './VaccinationFormModal';
 import '../../styles/Notifications.css';
 
-const Notifications = () => {
+const Notifications = ({ role = 'parent' }) => {
   const [filter, setFilter] = useState('all');
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showVaccinationModal, setShowVaccinationModal] = useState(false);  const [selectedVaccinationFormId, setSelectedVaccinationFormId] = useState(null);
   const { getToken } = useAuth();
-    // Helper functions for notification processing
+  
+  // Use appropriate API based on role
+  const api = role === 'schoolnurse' ? nurseApi : parentApi;
+  
+  // Helper functions for notification processing
   const getNotificationType = (notification) => {
     // Check for medication-related notifications first
     if (notification.medicationRequest || notification.medicationSchedule) {
@@ -38,7 +43,9 @@ const Notifications = () => {
     // Check for vaccination keywords
     if (titleLower.includes('vaccination') || messageLower.includes('vaccination') ||
         titleLower.includes('tiêm chủng') || messageLower.includes('tiêm chủng') ||
-        titleLower.includes('vaccine') || messageLower.includes('vaccine')) {
+        titleLower.includes('vaccine') || messageLower.includes('vaccine') ||
+        titleLower.includes('chiến dịch') || messageLower.includes('chiến dịch') ||
+        titleLower.includes('campaign') || messageLower.includes('campaign')) {
       return 'vaccination';
     }
     
@@ -91,7 +98,13 @@ const Notifications = () => {
     // Regex to match ISO date format (YYYY-MM-DDTHH:mm or similar)
     const isoDateRegex = /(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})/g;
     
-    return message.replace(isoDateRegex, (match) => {
+    // Replace English phrases with Vietnamese equivalents
+    let translatedMessage = message
+      .replace(/Your vaccination campaign/gi, 'Chiến dịch tiêm chủng của bạn')
+      .replace(/has been approved by/gi, 'đã được phê duyệt bởi')
+      .replace(/Campaign Approved/gi, 'Chiến dịch được phê duyệt');
+    
+    return translatedMessage.replace(isoDateRegex, (match) => {
       try {
         const date = new Date(match);
         const day = date.getDate().toString().padStart(2, '0');
@@ -118,21 +131,33 @@ const Notifications = () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await parentApi.getAllNotifications(token);        // Transform backend notification data to frontend format
-      const transformedNotifications = data.map(notification => ({
-        id: notification.id,
-        type: getNotificationType(notification),
-        title: notification.title,
-        message: formatNotificationMessage(notification.message),
-        time: formatTimeAgo(notification.createdAt),
-        date: notification.createdAt,
-        read: notification.read,
-        priority: determinePriority(notification),
-        actionRequired: determineActionRequired(notification),
-        medicationRequest: notification.medicationRequest,
-        medicationSchedule: notification.medicationSchedule,
-        vaccinationFormId: notification.vaccinationFormId
-      }));        setNotifications(transformedNotifications);
+      const data = await api.getAllNotifications(token);        
+      
+      // Transform backend notification data to frontend format
+      const transformedNotifications = data.map(notification => {
+        // Translate notification title if it's in English
+        let translatedTitle = notification.title;
+        if (translatedTitle === 'Campaign Approved') {
+          translatedTitle = 'Chiến dịch được phê duyệt';
+        }
+        
+        return {
+          id: notification.id,
+          type: getNotificationType(notification),
+          title: translatedTitle,
+          message: formatNotificationMessage(notification.message),
+          time: formatTimeAgo(notification.createdAt),
+          date: notification.createdAt,
+          read: notification.read,
+          priority: determinePriority(notification),
+          actionRequired: determineActionRequired(notification),
+          medicationRequest: notification.medicationRequest,
+          medicationSchedule: notification.medicationSchedule,
+          vaccinationFormId: notification.vaccinationFormId
+        };
+      });        
+      
+      setNotifications(transformedNotifications);
     } catch (error) {
       console.error('Error loading notifications:', error);
       setError('Không thể tải thông báo. Vui lòng thử lại.');
@@ -150,11 +175,17 @@ const Notifications = () => {
       await webSocketService.connect(token);
         // Add message handler for real-time notifications
       webSocketService.addMessageHandler('notifications', (newNotification) => {
-          // Transform the new notification
+        // Translate notification title if it's in English
+        let translatedTitle = newNotification.title;
+        if (translatedTitle === 'Campaign Approved') {
+          translatedTitle = 'Chiến dịch được phê duyệt';
+        }
+        
+        // Transform the new notification
         const transformedNotification = {
           id: newNotification.id,
           type: getNotificationType(newNotification),
-          title: newNotification.title,
+          title: translatedTitle,
           message: formatNotificationMessage(newNotification.message),
           time: 'Vừa xong',
           date: newNotification.createdAt,
@@ -169,7 +200,7 @@ const Notifications = () => {
         // Add new notification to the beginning of the list
         setNotifications(prev => [transformedNotification, ...prev]);
       });
-        } catch (error) {
+    } catch (error) {
       console.error('Error setting up WebSocket connection:', error);
     }
   }, [getToken, formatNotificationMessage]);
@@ -181,7 +212,7 @@ const Notifications = () => {
     return () => {
       // Cleanup WebSocket connection when component unmounts
       webSocketService.removeMessageHandler('notifications');
-    };  }, [loadNotifications, setupWebSocketConnection]);
+    };  }, [loadNotifications, setupWebSocketConnection, api]);
   
   // Helper functions for formatting
   const formatVietnameseDate = useCallback((dateString) => {
@@ -213,7 +244,7 @@ const Notifications = () => {
     if (!token) return;
     
     try {
-      await parentApi.markNotificationAsRead(id, token);
+      await api.markNotificationAsRead(id, token);
       setNotifications(prev => 
         prev.map(notification => 
           notification.id === id 
