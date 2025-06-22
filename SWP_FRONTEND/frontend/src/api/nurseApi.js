@@ -1310,7 +1310,52 @@ export const nurseApi = {
       console.error('Error deleting vaccination rule:', error);
       throw error; // Re-throw to let the component handle the error
     }
-  }
+  },
+  // Notification endpoints
+  getAllNotifications: async (token = getTokenFromStorage(), limit = null) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const params = limit ? { limit } : {};
+      const response = await authAxios.get('/api/notifications', { params });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching school nurse notifications:', error);
+      throw error;
+    }
+  },
+
+  getUnreadNotifications: async (token = getTokenFromStorage()) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.get('/api/notifications/unread');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching unread school nurse notifications:', error);
+      throw error;
+    }
+  },
+
+  getUnreadNotificationCount: async (token = getTokenFromStorage()) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.get('/api/notifications/unread/count');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching unread notification count for school nurse:', error);
+      throw error;
+    }
+  },
+
+  markNotificationAsRead: async (notificationId, token = getTokenFromStorage()) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.put(`/api/notifications/${notificationId}/read`);
+      return response.data;
+    } catch (error) {
+      console.error('Error marking school nurse notification as read:', error);
+      throw error;
+    }
+  },
 };
 
 export default nurseApi;

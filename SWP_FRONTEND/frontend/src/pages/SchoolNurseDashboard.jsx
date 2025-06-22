@@ -7,7 +7,6 @@ import {
   Spin,
   message,
   Upload,
-  Badge,
   Progress,
 } from "antd";
 import { useAuth } from "../contexts/AuthContext";
@@ -35,11 +34,13 @@ import {
   CheckCircleOutlined,
   TrophyOutlined,
   StarOutlined,
+  BellOutlined,
 } from "@ant-design/icons";
 import NurseMedicationRequests from "../components/dashboard/NurseMedicationRequests";
 import NurseMedicationSchedules from "../components/dashboard/NurseMedicationSchedules";
 import VaccinationRuleManagement from "../components/dashboard/VaccinationRuleManagement";
 import MedicalSupplyInventory from "../components/dashboard/MedicalSupplyInventory";
+import Notifications from "../components/dashboard/Notifications";
 // Import nurseApi
 import { nurseApi } from "../api/nurseApi";
 import {
@@ -78,7 +79,7 @@ const { Header, Sider, Content } = Layout;
 
 const SchoolNurseDashboard = () => {
   const navigate = useNavigate();
-  const { user, isAuthenticated, isSchoolNurse, setUserInfo } = useAuth();
+  const { user, isAuthenticated, isSchoolNurse, setUserInfo, getToken } = useAuth();
   const [activeSection, setActiveSection] = useState("dashboard");
   const [userInfo, setUserInfoState] = useState(null);
   const [collapsed, setCollapsed] = useState(false);
@@ -98,6 +99,11 @@ const SchoolNurseDashboard = () => {
       key: "dashboard",
       icon: <DashboardOutlined />,
       label: "Tổng quan",
+    },
+    {
+      key: "notifications",
+      icon: <BellOutlined />,
+      label: "Thông báo",
     },
     {
       key: "medication-requests",
@@ -232,6 +238,7 @@ const SchoolNurseDashboard = () => {
     if (tabParam) {
       const validTabs = [
         "dashboard",
+        "notifications",
         "medication-requests",
         "medication-schedules",
         "medical-events",
@@ -1369,12 +1376,23 @@ const SchoolNurseDashboard = () => {
     );
   };
 
+  // Add NotificationsTab component
+  const NotificationsTab = () => (
+    <div className="nurse-content-card">
+      <h2 className="nurse-section-title">Thông báo</h2>
+      <Notifications role="schoolnurse" />
+    </div>
+  );
+
+  // Update renderContent function to include NotificationsTab
   const renderContent = () => {
     console.log("Rendering content for section:", activeSection);
 
     switch (activeSection) {
       case "dashboard":
         return <DashboardOverview />;
+      case "notifications":
+        return <NotificationsTab />;
       case "medication-requests":
         return <NurseMedicationRequests />;
       case "medication-schedules":
@@ -1494,6 +1512,7 @@ const SchoolNurseDashboard = () => {
               Bảng điều khiển Y tá Trường học
             </h1>
           </div>
+          
           <div className="nurse-header-user">
             <div className="nurse-header-avatar">
               <UserOutlined style={{ fontSize: 20, color: "#1976d2" }} />

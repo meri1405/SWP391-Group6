@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { parentApi } from "../api/parentApi";
+import { nurseApi } from "../api/nurseApi";
 import webSocketService from "../services/webSocketService";
 import { useSystemSettings } from "../contexts/SystemSettingsContext";
 import "../styles/Navbar.css";
@@ -14,7 +15,7 @@ const Navbar = () => {
   const [notifications, setNotifications] = useState([]);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
   const navigate = useNavigate();
-  const { user, logout, isParent, isStaff, getToken } = useAuth();
+  const { user, logout, isParent, isStaff, isSchoolNurse, getToken } = useAuth();
   const { settings } = useSystemSettings();
   const location = useLocation();
 
@@ -27,10 +28,14 @@ const Navbar = () => {
 
     try {
       setLoadingNotifications(true);
+      
+      // Chọn API phù hợp với role
+      const api = isSchoolNurse() ? nurseApi : parentApi;
+      
       // Load only 5 most recent notifications to show in dropdown
-      const allData = await parentApi.getAllNotifications(token, 5);
+      const allData = await api.getAllNotifications(token, 5);
       // Load unread notifications to get count
-      const unreadData = await parentApi.getUnreadNotifications(token);
+      const unreadData = await api.getUnreadNotifications(token);
 
       // Transform backend notifications to frontend format
       const transformedNotifications = allData.map((notification) => ({
@@ -52,7 +57,7 @@ const Navbar = () => {
     } finally {
       setLoadingNotifications(false);
     }
-  }, [getToken]);
+  }, [getToken, isSchoolNurse]);
 
   const setupWebSocketConnection = useCallback(async () => {
     const token = getToken();
@@ -125,9 +130,14 @@ const Navbar = () => {
   // Remove the old useEffect that calculated unread count
   // This is now handled by the notification loading
 
-  // Load notifications for parent users
+  // Load notifications for users who can see them (parent and schoolnurse)
   useEffect(() => {
-    if (isParent() && user.loginMethod !== "username") {
+    // Check if user can see notifications
+    const canSeeNotifications = 
+      (isParent() && user.loginMethod !== "username") || // Parent who logged in via phone
+      (isSchoolNurse()); // SchoolNurse role
+    
+    if (user && canSeeNotifications) {
       loadNotifications();
       setupWebSocketConnection();
     }
@@ -138,7 +148,7 @@ const Navbar = () => {
         webSocketService.removeMessageHandler("navbar-notifications");
       }
     };
-  }, [isParent, user, loadNotifications, setupWebSocketConnection]);
+  }, [isParent, isSchoolNurse, user, loadNotifications, setupWebSocketConnection]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -211,9 +221,10 @@ const Navbar = () => {
     if (!showNotifications && notifications.length > 0) {
       // Mark unread notifications as read when opening dropdown
       try {
+        const api = isSchoolNurse() ? nurseApi : parentApi;
         const unreadNotifications = notifications.filter((n) => !n.read);
         for (const notification of unreadNotifications) {
-          await parentApi.markNotificationAsRead(notification.id, getToken());
+          await api.markNotificationAsRead(notification.id, getToken());
         }
 
         // Update local state
@@ -232,7 +243,8 @@ const Navbar = () => {
   const handleNotificationClick = async (id) => {
     try {
       // Mark the specific notification as read
-      await parentApi.markNotificationAsRead(id, getToken());
+      const api = isSchoolNurse() ? nurseApi : parentApi;
+      await api.markNotificationAsRead(id, getToken());
 
       // Update local notification state
       const updatedNotifications = notifications.map((notification) =>
@@ -241,7 +253,7 @@ const Navbar = () => {
       setNotifications(updatedNotifications);
 
       // Reload unread count from server to ensure accuracy
-      const unreadData = await parentApi.getUnreadNotifications(getToken());
+      const unreadData = await api.getUnreadNotifications(getToken());
       setNotificationCount(unreadData.length);
     } catch (error) {
       console.error("Error marking notification as read:", error);
@@ -317,8 +329,8 @@ const Navbar = () => {
                 Quản lý
               </button>
 
-              {/* Only show notification bell for parent users who logged in via phone */}
-              {isParent() && user.loginMethod !== "username" && (
+              {/* Show notification bell for appropriate users */}
+              {((isParent() && user.loginMethod !== "username") || isSchoolNurse()) && (
                 <div className="nav-notifications" ref={notificationRef}>
                   <button
                     className="notification-btn"
@@ -355,7 +367,9 @@ const Navbar = () => {
                           notifications.map((notification) => (
                             <Link
                               key={notification.id}
-                              to="/parent-dashboard?tab=notifications"
+                              to={isSchoolNurse() 
+                                ? "/nurse-dashboard?tab=notifications" 
+                                : "/parent-dashboard?tab=notifications"}
                               className={`notification-item ${
                                 !notification.read ? "unread" : ""
                               }`}
@@ -396,7 +410,9 @@ const Navbar = () => {
                       </div>
                       <div className="notifications-footer">
                         <Link
-                          to="/parent-dashboard?tab=notifications"
+                          to={isSchoolNurse() 
+                              ? "/nurse-dashboard?tab=notifications" 
+                              : "/parent-dashboard?tab=notifications"}
                           className="view-all-link"
                           onClick={() => {
                             // Đảm bảo đóng dropdown sau khi chuyển hướng
