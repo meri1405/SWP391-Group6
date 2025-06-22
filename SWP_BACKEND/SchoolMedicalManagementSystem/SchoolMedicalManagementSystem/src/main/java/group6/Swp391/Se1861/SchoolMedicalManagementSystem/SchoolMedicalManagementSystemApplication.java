@@ -35,7 +35,7 @@ public class SchoolMedicalManagementSystemApplication {
 
 		@Autowired
 		private JdbcTemplate jdbcTemplate;
-
+ 
 		/**
 		 * Hàm chạy khi ứng dụng khởi động
 		 * Khởi tạo các vai trò và tài khoản admin mặc định

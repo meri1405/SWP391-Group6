@@ -167,6 +167,9 @@ const UserManagement = ({
   handleSaveUser,
   userFormInstance,
   handleRoleChange,
+  selectedRoleForNewUser,
+  setSelectedRoleForNewUser,
+  handleRoleSelection,
   loading,
 }) => {
   const [currentPassword, setCurrentPassword] = useState("");
@@ -315,6 +318,7 @@ const UserManagement = ({
         onCancel={() => {
           setShowUserModal(false);
           setCurrentPassword("");
+          setSelectedRoleForNewUser(""); // Reset role selection
         }}
         footer={
           modalMode === "view"
@@ -326,12 +330,28 @@ const UserManagement = ({
                   Đóng
                 </Button>,
               ]
-            : [
+            : modalMode === "add" && !selectedRoleForNewUser
+            ? [
                 <Button
-                  key="form-cancel"
+                  key="role-cancel"
                   onClick={() => setShowUserModal(false)}
                 >
                   Hủy
+                </Button>,
+              ]
+            : [
+                <Button
+                  key="form-cancel"
+                  onClick={() => {
+                    if (modalMode === "add") {
+                      setSelectedRoleForNewUser(""); // Go back to role selection
+                      userFormInstance.resetFields();
+                    } else {
+                      setShowUserModal(false);
+                    }
+                  }}
+                >
+                  {modalMode === "add" ? "Quay lại" : "Hủy"}
                 </Button>,
                 <Button
                   key="form-submit"
@@ -440,9 +460,115 @@ const UserManagement = ({
                 : "Chưa cập nhật"}
             </Descriptions.Item>
           </Descriptions>
+        ) : modalMode === "add" && !selectedRoleForNewUser ? (
+          <div>
+            {/* Role Selection Step */}
+            <div
+              style={{
+                textAlign: "center",
+                padding: "40px 20px",
+              }}
+            >
+              <h3 style={{ marginBottom: "32px", color: "#1890ff" }}>
+                Chọn vai trò cho người dùng mới
+              </h3>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                  gap: "20px",
+                  marginBottom: "20px",
+                }}
+              >
+                <div
+                  onClick={() => handleRoleSelection("SCHOOLNURSE")}
+                  style={{
+                    border: "2px solid #1890ff",
+                    borderRadius: "12px",
+                    padding: "24px",
+                    cursor: "pointer",
+                    transition: "all 0.3s ease",
+                    backgroundColor: "#f6ffed",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.transform = "translateY(-2px)";
+                    e.target.style.boxShadow =
+                      "0 4px 12px rgba(24, 144, 255, 0.15)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.transform = "translateY(0)";
+                    e.target.style.boxShadow = "none";
+                  }}
+                >
+                  <h4 style={{ color: "#1890ff", marginBottom: "8px" }}>
+                    Y tá
+                  </h4>
+                  <p style={{ color: "#666", fontSize: "14px", margin: 0 }}>
+                    Quản lý sức khỏe học sinh, xử lý các vấn đề y tế
+                  </p>
+                </div>
+
+                <div
+                  onClick={() => handleRoleSelection("MANAGER")}
+                  style={{
+                    border: "2px solid #fa8c16",
+                    borderRadius: "12px",
+                    padding: "24px",
+                    cursor: "pointer",
+                    transition: "all 0.3s ease",
+                    backgroundColor: "#fff7e6",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.transform = "translateY(-2px)";
+                    e.target.style.boxShadow =
+                      "0 4px 12px rgba(250, 140, 22, 0.15)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.transform = "translateY(0)";
+                    e.target.style.boxShadow = "none";
+                  }}
+                >
+                  <h4 style={{ color: "#fa8c16", marginBottom: "8px" }}>
+                    Quản lý
+                  </h4>
+                  <p style={{ color: "#666", fontSize: "14px", margin: 0 }}>
+                    Quản lý tổng thể hệ thống y tế trường học
+                  </p>
+                </div>
+
+                <div
+                  onClick={() => handleRoleSelection("ADMIN")}
+                  style={{
+                    border: "2px solid #f5222d",
+                    borderRadius: "12px",
+                    padding: "24px",
+                    cursor: "pointer",
+                    transition: "all 0.3s ease",
+                    backgroundColor: "#fff1f0",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.transform = "translateY(-2px)";
+                    e.target.style.boxShadow =
+                      "0 4px 12px rgba(245, 34, 45, 0.15)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.transform = "translateY(0)";
+                    e.target.style.boxShadow = "none";
+                  }}
+                >
+                  <h4 style={{ color: "#f5222d", marginBottom: "8px" }}>
+                    Quản trị viên
+                  </h4>
+                  <p style={{ color: "#666", fontSize: "14px", margin: 0 }}>
+                    Quản trị hệ thống, cấu hình và bảo mật
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         ) : (
           <div>
-            {/* Validation Guidelines */}
+            {/* Information Guidelines for selected role */}
             <div
               style={{
                 marginBottom: "24px",
@@ -453,28 +579,28 @@ const UserManagement = ({
               }}
             >
               <h4 style={{ margin: "0 0 12px 0", color: "#389e0d" }}>
-                📋 Hướng dẫn nhập thông tin
+                📋 Thông tin cho vai trò:{" "}
+                {selectedRoleForNewUser === "SCHOOLNURSE"
+                  ? "Y tá"
+                  : selectedRoleForNewUser === "MANAGER"
+                  ? "Quản lý"
+                  : "Quản trị viên"}
               </h4>
               <div style={{ fontSize: "13px", color: "#52c41a" }}>
                 <div style={{ marginBottom: "8px" }}>
-                  <strong>Thông tin bắt buộc cho tất cả vai trò:</strong>
+                  <strong>Thông tin bắt buộc:</strong>
                   <ul style={{ margin: "4px 0", paddingLeft: "20px" }}>
                     <li>Họ và tên: 2-50 ký tự, chỉ chữ cái tiếng Việt</li>
                     <li>
                       Số điện thoại: 10 số, bắt đầu bằng 03, 05, 07, 08, 09
                     </li>
+                    <li>Email: Địa chỉ email hợp lệ</li>
+                    <li>Tên đăng nhập: 3-30 ký tự, bắt đầu bằng chữ cái</li>
+                    <li>
+                      Mật khẩu: Ít nhất 8 ký tự, độ mạnh từ 'Trung bình' trở lên
+                    </li>
                     <li>Ngày sinh: Tuổi từ 16-100</li>
                     <li>Địa chỉ: 10-200 ký tự</li>
-                  </ul>
-                </div>
-                <div>
-                  <strong>Thông tin bổ sung theo vai trò:</strong>
-                  <ul style={{ margin: "4px 0", paddingLeft: "20px" }}>
-                    <li>
-                      <strong>Y tá/Quản lý/Admin:</strong> Email, tên đăng nhập
-                      (3-30 ký tự), mật khẩu độ mạnh từ 'Trung bình' trở lên (8+
-                      ký tự)
-                    </li>
                   </ul>
                 </div>
               </div>
@@ -907,29 +1033,9 @@ const UserManagement = ({
                     ) : null;
                   }}
                 </Form.Item>
-                <Form.Item
-                  label="Vai trò"
-                  name="role"
-                  rules={[
-                    { required: true, message: "Vui lòng chọn vai trò!" },
-                  ]}
-                >
-                  <Select
-                    placeholder="Chọn vai trò"
-                    onChange={(value) =>
-                      handleRoleChange(value, userFormInstance)
-                    }
-                  >
-                    <Select.Option key="SCHOOLNURSE" value="SCHOOLNURSE">
-                      Y tá
-                    </Select.Option>
-                    <Select.Option key="MANAGER" value="MANAGER">
-                      Quản lý
-                    </Select.Option>
-                    <Select.Option key="ADMIN" value="ADMIN">
-                      Quản trị viên
-                    </Select.Option>
-                  </Select>
+                {/* Hidden role field - role is already selected in previous step */}
+                <Form.Item name="role" style={{ display: "none" }}>
+                  <Input />
                 </Form.Item>
               </div>
               <Form.Item
@@ -1689,6 +1795,7 @@ const AdminDashboard = () => {
   const [showUserModal, setShowUserModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [modalMode, setModalMode] = useState("add"); // "add", "edit", "view"
+  const [selectedRoleForNewUser, setSelectedRoleForNewUser] = useState(""); // New state for role selection
   const [users, setUsers] = useState([]);
   const [stats, setStats] = useState({
     totalUsers: 0,
@@ -1879,11 +1986,33 @@ const AdminDashboard = () => {
   const openAddUserModal = () => {
     setModalMode("add");
     setSelectedUser(null);
+    setSelectedRoleForNewUser(""); // Reset role selection for new user
     setShowUserModal(true);
 
     // Reset form after modal is shown to ensure form is mounted
     setTimeout(() => {
       resetUserForm();
+    }, 100);
+  };
+
+  const handleRoleSelection = (role) => {
+    setSelectedRoleForNewUser(role);
+    // Initialize form with selected role
+    setTimeout(() => {
+      userFormInstance.setFieldsValue({
+        role: role,
+        username: "",
+        password: "",
+        email: "",
+        jobTitle: "",
+        firstName: "",
+        lastName: "",
+        phone: "",
+        address: "",
+        gender: "",
+        dob: null,
+        status: "ACTIVE",
+      });
     }, 100);
   };
 
@@ -2027,6 +2156,7 @@ const AdminDashboard = () => {
 
           // Close modal and reset form
           setShowUserModal(false);
+          setSelectedRoleForNewUser(""); // Reset role selection
           resetUserForm();
 
           console.log("createUser process completed successfully");
@@ -2136,6 +2266,9 @@ const AdminDashboard = () => {
             handleSaveUser={handleSaveUser}
             userFormInstance={userFormInstance}
             handleRoleChange={handleRoleChange}
+            selectedRoleForNewUser={selectedRoleForNewUser}
+            setSelectedRoleForNewUser={setSelectedRoleForNewUser}
+            handleRoleSelection={handleRoleSelection}
             loading={loading}
           />
         );
@@ -2167,6 +2300,9 @@ const AdminDashboard = () => {
             handleSaveUser={handleSaveUser}
             userFormInstance={userFormInstance}
             handleRoleChange={handleRoleChange}
+            selectedRoleForNewUser={selectedRoleForNewUser}
+            setSelectedRoleForNewUser={setSelectedRoleForNewUser}
+            handleRoleSelection={handleRoleSelection}
             loading={loading}
           />
         );
