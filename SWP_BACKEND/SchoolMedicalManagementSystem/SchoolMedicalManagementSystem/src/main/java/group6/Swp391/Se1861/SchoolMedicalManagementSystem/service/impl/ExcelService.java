@@ -228,7 +228,9 @@ public class ExcelService implements IExcelService {
              ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
             
             Sheet sheet = workbook.createSheet("Template Import Học Sinh");
-            
+
+
+
             // Create header row
             Row headerRow = sheet.createRow(0);
             createHeaderCell(headerRow, COL_STUDENT_FIRST_NAME, "Tên học sinh *");
@@ -236,7 +238,8 @@ public class ExcelService implements IExcelService {
             createHeaderCell(headerRow, COL_STUDENT_DOB, "Ngày sinh học sinh * (dd/MM/yyyy)");
             createHeaderCell(headerRow, COL_STUDENT_GENDER, "Giới tính học sinh * (M/F)");
             createHeaderCell(headerRow, COL_STUDENT_CLASS, "Lớp *");
-            createHeaderCell(headerRow, COL_STUDENT_BIRTH_PLACE, "Nơi sinh *");            createHeaderCell(headerRow, COL_STUDENT_ADDRESS, "Địa chỉ học sinh *");
+            createHeaderCell(headerRow, COL_STUDENT_BIRTH_PLACE, "Nơi sinh *");
+            createHeaderCell(headerRow, COL_STUDENT_ADDRESS, "Địa chỉ học sinh *");
             createHeaderCell(headerRow, COL_STUDENT_CITIZENSHIP, "Quốc tịch *");
             
             createHeaderCell(headerRow, COL_FATHER_FIRST_NAME, "Tên cha");
@@ -261,7 +264,8 @@ public class ExcelService implements IExcelService {
             sampleRow1.createCell(COL_STUDENT_DOB).setCellValue("15/05/2015");
             sampleRow1.createCell(COL_STUDENT_GENDER).setCellValue("M");
             sampleRow1.createCell(COL_STUDENT_CLASS).setCellValue("5A");
-            sampleRow1.createCell(COL_STUDENT_BIRTH_PLACE).setCellValue("Hà Nội");            sampleRow1.createCell(COL_STUDENT_ADDRESS).setCellValue("123 Đường ABC, Hà Nội");
+            sampleRow1.createCell(COL_STUDENT_BIRTH_PLACE).setCellValue("Hà Nội");
+            sampleRow1.createCell(COL_STUDENT_ADDRESS).setCellValue("123 Đường ABC, Hà Nội");
             sampleRow1.createCell(COL_STUDENT_CITIZENSHIP).setCellValue("Việt Nam");
             
             sampleRow1.createCell(COL_FATHER_FIRST_NAME).setCellValue("Bình");
@@ -284,9 +288,9 @@ public class ExcelService implements IExcelService {
             Row sampleRow2 = sheet.createRow(2);
             sampleRow2.createCell(COL_STUDENT_FIRST_NAME).setCellValue("Bảo");
             sampleRow2.createCell(COL_STUDENT_LAST_NAME).setCellValue("Nguyễn Văn");
-            sampleRow2.createCell(COL_STUDENT_DOB).setCellValue("10/08/2017");
+            sampleRow2.createCell(COL_STUDENT_DOB).setCellValue("10/08/2020");
             sampleRow2.createCell(COL_STUDENT_GENDER).setCellValue("M");
-            sampleRow2.createCell(COL_STUDENT_CLASS).setCellValue("3B");
+            sampleRow2.createCell(COL_STUDENT_CLASS).setCellValue("Mầm non");
             sampleRow2.createCell(COL_STUDENT_BIRTH_PLACE).setCellValue("Hà Nội");
             sampleRow2.createCell(COL_STUDENT_ADDRESS).setCellValue("123 Đường ABC, Hà Nội");
             sampleRow2.createCell(COL_STUDENT_CITIZENSHIP).setCellValue("Việt Nam");
@@ -310,12 +314,11 @@ public class ExcelService implements IExcelService {
             sampleRow2.createCell(COL_MOTHER_DOB).setCellValue("10/08/1987");
             
             // Third student with DIFFERENT parents
-            Row sampleRow3 = sheet.createRow(3);
-            sampleRow3.createCell(COL_STUDENT_FIRST_NAME).setCellValue("Mai");
+            Row sampleRow3 = sheet.createRow(3);            sampleRow3.createCell(COL_STUDENT_FIRST_NAME).setCellValue("Mai");
             sampleRow3.createCell(COL_STUDENT_LAST_NAME).setCellValue("Lê Thị");
             sampleRow3.createCell(COL_STUDENT_DOB).setCellValue("20/02/2016");
             sampleRow3.createCell(COL_STUDENT_GENDER).setCellValue("F");
-            sampleRow3.createCell(COL_STUDENT_CLASS).setCellValue("4B");
+            sampleRow3.createCell(COL_STUDENT_CLASS).setCellValue("3A");
             sampleRow3.createCell(COL_STUDENT_BIRTH_PLACE).setCellValue("TP.HCM");
             sampleRow3.createCell(COL_STUDENT_ADDRESS).setCellValue("456 Đường XYZ, TP.HCM");
             sampleRow3.createCell(COL_STUDENT_CITIZENSHIP).setCellValue("Việt Nam");
@@ -399,9 +402,9 @@ public class ExcelService implements IExcelService {
         student.setDob(getRequiredDateValue(row, COL_STUDENT_DOB, "Ngày sinh học sinh"));
         student.setGender(getRequiredStringValue(row, COL_STUDENT_GENDER, "Giới tính học sinh"));
         student.setClassName(getRequiredStringValue(row, COL_STUDENT_CLASS, "Lớp"));
-        student.setBirthPlace(getRequiredStringValue(row, COL_STUDENT_BIRTH_PLACE, "Nơi sinh"));        student.setAddress(getRequiredStringValue(row, COL_STUDENT_ADDRESS, "Địa chỉ học sinh"));
-        student.setCitizenship(getRequiredStringValue(row, COL_STUDENT_CITIZENSHIP, "Quốc tịch"));
-        
+        student.setBirthPlace(getRequiredStringValue(row, COL_STUDENT_BIRTH_PLACE, "Nơi sinh"));
+        student.setAddress(getRequiredStringValue(row, COL_STUDENT_ADDRESS, "Địa chỉ học sinh"));
+        student.setCitizenship(getRequiredStringValue(row, COL_STUDENT_CITIZENSHIP, "Quốc tịch"));        
         // Default to true (disabled) since this field is not in Excel
         student.setIsDisabled(true);
         
@@ -409,6 +412,9 @@ public class ExcelService implements IExcelService {
         if (!student.getGender().equals("M") && !student.getGender().equals("F")) {
             throw new IllegalArgumentException("Giới tính học sinh phải là 'M' hoặc 'F'");
         }
+        
+        // Validate age (must be <= 12 years old)
+        validateStudentAge(student.getDob());
         
         return student;
     }
@@ -570,5 +576,51 @@ public class ExcelService implements IExcelService {
     
     private boolean isEmpty(String str) {
         return str == null || str.trim().isEmpty();
+    }
+    
+    private void validateStudentAge(LocalDate dateOfBirth) {
+        if (dateOfBirth == null) {
+            throw new IllegalArgumentException("Ngày sinh học sinh không được để trống");
+        }
+        
+        LocalDate currentDate = LocalDate.now();
+        int age = currentDate.getYear() - dateOfBirth.getYear();
+        
+        // Check if birthday has passed this year
+        if (dateOfBirth.plusYears(age).isAfter(currentDate)) {
+            age--;
+        }
+        
+        if (age > 12) {
+            throw new IllegalArgumentException("Học sinh phải dưới hoặc bằng 12 tuổi. Tuổi hiện tại: " + age);
+        }
+        
+        // Check for minimum age (at least 2 years old for kindergarten)
+        if (age < 2) {
+            throw new IllegalArgumentException("Học sinh phải ít nhất 2 tuổi. Tuổi hiện tại: " + age);
+        }
+    }    /**
+     * Auto-set className based on student's age
+     * 2-5 years old: "Mầm non"
+     * 6-12 years old: Keep existing className unchanged
+     */
+    private void autoSetClassNameForAge(StudentCreationDTO student) {
+        if (student.getDob() == null) {
+            return; // Age validation will catch this
+        }
+        
+        LocalDate currentDate = LocalDate.now();
+        int age = currentDate.getYear() - student.getDob().getYear();
+        
+        // Check if birthday has passed this year
+        if (student.getDob().plusYears(age).isAfter(currentDate)) {
+            age--;
+        }
+        
+        if (age >= 2 && age <= 5) {
+            // For kindergarten age (2-5), always set to "Mầm non"
+            student.setClassName("Mầm non");
+        }
+        // For age 6-12, keep existing className unchanged - no automatic setting
     }
 }
