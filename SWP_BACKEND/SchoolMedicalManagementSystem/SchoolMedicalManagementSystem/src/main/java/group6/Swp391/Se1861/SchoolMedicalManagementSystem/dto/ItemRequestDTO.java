@@ -10,6 +10,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import java.time.LocalDate;
 import java.util.List;
 
 @Data
@@ -34,10 +35,14 @@ public class ItemRequestDTO {
 
     @NotNull(message = "Frequency is required")
     @Min(value = 0, message = "Frequency must be at least 0.1")
-    private Integer frequency;
-
-    @Size(max = 500, message = "Note cannot exceed 500 characters")
+    private Integer frequency;    @Size(max = 500, message = "Note cannot exceed 500 characters")
     private String note;
+
+    @NotNull(message = "Start date is required")
+    private LocalDate startDate;
+
+    @NotNull(message = "End date is required")
+    private LocalDate endDate;
 
     // List of schedule times in HH:mm format, size must match frequency
     @NotEmpty(message = "Schedule times are required")

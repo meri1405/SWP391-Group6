@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { message } from 'antd';
-import { parentApi } from '../../api/parentApi';
-import { useAuth } from '../../contexts/AuthContext';
+import { parentApi } from '../api/parentApi';
+import { useAuth } from '../contexts/AuthContext';
 import dayjs from 'dayjs';
 
 export const useApprovedHealthProfile = () => {

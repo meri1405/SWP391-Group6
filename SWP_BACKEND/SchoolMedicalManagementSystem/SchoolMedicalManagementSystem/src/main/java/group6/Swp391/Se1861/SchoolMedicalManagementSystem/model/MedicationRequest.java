@@ -22,16 +22,8 @@ public class MedicationRequest {
     private LocalDate requestDate = LocalDate.now();
 
     @Column(name = "note", nullable = false)
-    private String note;
-
-    @Column(name = "nurseNote")
+    private String note;    @Column(name = "nurseNote")
     private String nurseNote;
-
-    @Column(name = "startDate", nullable = false)
-    private LocalDate startDate;
-
-    @Column(name = "endDate", nullable = false)
-    private LocalDate endDate;
 
     @Column(name = "status", nullable = false)
     private String status;

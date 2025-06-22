@@ -403,7 +403,7 @@ public class ExcelService implements IExcelService {
         student.setCitizenship(getRequiredStringValue(row, COL_STUDENT_CITIZENSHIP, "Quốc tịch"));
         
         // Default to true (disabled) since this field is not in Excel
-        student.setIsDisabled(true);
+        student.setIsDisabled(false);
         
         // Validate gender
         if (!student.getGender().equals("M") && !student.getGender().equals("F")) {
