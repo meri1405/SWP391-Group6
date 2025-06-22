@@ -118,7 +118,7 @@ public class StudentService implements IStudentService {
         dto.setBirthPlace(student.getBirthPlace());
         dto.setAddress(student.getAddress());
         dto.setCitizenship(student.getCitizenship());
-        dto.setDisabled(true);
+        dto.setDisabled(false);
 
         // Set father and mother IDs
         if (student.getFather() != null) {
@@ -311,7 +311,7 @@ public class StudentService implements IStudentService {
         student.setBirthPlace(studentDto.getBirthPlace());
         student.setAddress(studentDto.getAddress());
         student.setCitizenship(studentDto.getCitizenship());
-        student.setDisabled(true);
+        student.setDisabled(false);
 
         // Set parents
         student.setFather(father);

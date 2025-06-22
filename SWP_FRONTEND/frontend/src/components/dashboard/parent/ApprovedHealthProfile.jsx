@@ -5,7 +5,7 @@ import {
 import {
   HeartOutlined, EyeOutlined, UserOutlined, InfoCircleOutlined
 } from '@ant-design/icons';
-import { useApprovedHealthProfile } from '../../../hooks/parent/useApprovedHealthProfile';
+import { useApprovedHealthProfile } from '../../../hooks/useApprovedHealthProfile';
 import dayjs from 'dayjs';
 import '../../../styles/ApprovedHealthProfile.css';
 

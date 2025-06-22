@@ -135,14 +135,13 @@ const MedicationManagement = () => {
     setIsEdit(false);
     setCurrentMedication(null);
     setIsConfirmed(false);
-    form.resetFields();
-      // Set default values
+    form.resetFields();    // Set default values
     const defaultValues = {
-      startDate: dayjs(),
-      endDate: dayjs().add(7, 'day'),
       itemRequests: [{ 
         itemType: 'TABLET',
         frequency: 1,
+        startDate: dayjs(),
+        endDate: dayjs().add(7, 'day'),
         timeSlots: [dayjs().hour(8).minute(0)]  // Default first medication time to 8:00 AM
       }] // Default first empty medication item
     };
@@ -193,12 +192,9 @@ const MedicationManagement = () => {
       console.log('Detailed data for edit modal:', detailedData);
         // Use detailed data if available, fallback to record data
       const medicationData = detailedData || record;
-      
-      // Format the data for the form with proper item IDs
+        // Format the data for the form with proper item IDs
       const formData = {
         studentId: medicationData.studentId,
-        startDate: dayjs(medicationData.startDate),
-        endDate: dayjs(medicationData.endDate),
         note: medicationData.note,
         itemRequests: (medicationData.itemRequests || []).map(item => {
           console.log('Processing item for form:', item);
@@ -238,6 +234,8 @@ const MedicationManagement = () => {
           
           return {
             ...item,
+            startDate: item.startDate ? dayjs(item.startDate) : dayjs(),
+            endDate: item.endDate ? dayjs(item.endDate) : dayjs().add(7, 'day'),
             timeSlots,
             note: cleanedNote,
             ...(item.id && typeof item.id === 'number' && item.id > 0 ? { id: item.id } : {})
@@ -296,12 +294,10 @@ const MedicationManagement = () => {
       if (hasInvalidTimeSlots) {
         setLoading(false);
         return;
-      }// Prepare data for API according to the expected format
+      }      // Prepare data for API according to the expected format
       const medicationData = {
         studentId: values.studentId,
         requestDate: today,
-        startDate: values.startDate.format('YYYY-MM-DD'),
-        endDate: values.endDate.format('YYYY-MM-DD'),
         note: values.note || "Yêu cầu dùng thuốc cho học sinh",
         itemRequests: values.itemRequests.map((item, index) => {
           // Format schedule times in HH:mm format
@@ -325,11 +321,14 @@ const MedicationManagement = () => {
           };
 
           const processedItem = {
-            ...(item.id && typeof item.id === 'number' && item.id > 0 ? { id: item.id } : {}),            itemName: item.itemName,
+            ...(item.id && typeof item.id === 'number' && item.id > 0 ? { id: item.id } : {}),            
+            itemName: item.itemName,
             purpose: item.purpose,
             itemType: item.itemType,
             dosage: parseFloat(item.dosage),
             frequency: parseInt(item.frequency, 10),
+            startDate: item.startDate.format('YYYY-MM-DD'),
+            endDate: item.endDate.format('YYYY-MM-DD'),
             // Properly separate note and schedule time JSON with a clear marker
             note: noteStr ? `${noteStr} scheduleTimeJson:${JSON.stringify(scheduleTimeJson)}` : `scheduleTimeJson:${JSON.stringify(scheduleTimeJson)}`,
             scheduleTimes
@@ -535,15 +534,29 @@ const MedicationManagement = () => {
         const student = students.find(s => s.id === record.studentId);
         return student ? `${student.lastName} ${student.firstName}` : 'N/A';
       }
-    },
-    {
+    },    {
       title: 'Thời gian sử dụng',
       key: 'period',
-      render: (_, record) => (
-        <span>
-          {dayjs(record.startDate).format('DD/MM/YYYY')} - {dayjs(record.endDate).format('DD/MM/YYYY')}
-        </span>
-      )
+      render: (_, record) => {
+        // Since dates are now at item level, show min-max dates across all items
+        if (!record.itemRequests || record.itemRequests.length === 0) {
+          return 'N/A';
+        }
+        
+        const dates = record.itemRequests.map(item => ({
+          start: dayjs(item.startDate),
+          end: dayjs(item.endDate)
+        }));
+        
+        const minStart = dates.reduce((min, curr) => curr.start.isBefore(min) ? curr.start : min, dates[0].start);
+        const maxEnd = dates.reduce((max, curr) => curr.end.isAfter(max) ? curr.end : max, dates[0].end);
+        
+        return (
+          <span>
+            {minStart.format('DD/MM/YYYY')} - {maxEnd.format('DD/MM/YYYY')}
+          </span>
+        );
+      }
     },
     {
       title: 'Số loại thuốc',
@@ -678,7 +691,6 @@ const MedicationManagement = () => {
     console.log('Filtered medication data:', filteredData);
     return filteredData;
   };
-
   // Validation functions
   const validateStartDate = (date) => {
     if (!date) return Promise.resolve();
@@ -690,10 +702,11 @@ const MedicationManagement = () => {
     return Promise.resolve();
   };
 
-  const validateEndDate = (date) => {
+  const validateEndDate = (date, itemIndex) => {
     if (!date) return Promise.resolve();
     
-    const startDate = form.getFieldValue('startDate');
+    // Get start date for this specific item
+    const startDate = form.getFieldValue(['itemRequests', itemIndex, 'startDate']);
     if (startDate && date.isBefore(startDate)) {
       return Promise.reject(new Error('Ngày kết thúc phải sau hoặc bằng ngày bắt đầu'));
     }
@@ -787,10 +800,9 @@ const MedicationManagement = () => {
           layout="vertical"
           onFinish={handleSubmit}
           className="medication-form"
-        >
-          <div style={{ marginBottom: '15px', padding: '10px', backgroundColor: '#f0f9ff', border: '1px solid #1890ff', borderRadius: '4px' }}>
+        >          <div style={{ marginBottom: '15px', padding: '10px', backgroundColor: '#f0f9ff', border: '1px solid #1890ff', borderRadius: '4px' }}>
             <div style={{ color: '#1890ff', fontWeight: 'bold', marginBottom: '5px' }}>Thông báo quan trọng:</div>
-            <div>Bạn phải thiết lập thời gian uống thuốc cụ thể cho mỗi loại thuốc. Hệ thống sẽ sử dụng các thời gian này để tạo lịch uống thuốc.</div>
+            <div>Mỗi loại thuốc sẽ có thời gian bắt đầu, kết thúc và thời gian uống riêng biệt. Bạn phải thiết lập đầy đủ thông tin cho từng loại thuốc.</div>
           </div>
 
           <Form.Item
@@ -814,38 +826,6 @@ const MedicationManagement = () => {
                 ))}
             </Select>
           </Form.Item>          <Form.Item
-            name="startDate"
-            label="Ngày bắt đầu"
-            rules={[
-              { required: true, message: 'Vui lòng chọn ngày bắt đầu' },
-              { validator: (_, value) => validateStartDate(value) }
-            ]}
-            validateTrigger="onChange"
-          >
-            <DatePicker 
-              format="DD/MM/YYYY" 
-              placeholder="Chọn ngày bắt đầu" 
-              style={{ width: '100%' }}
-              disabledDate={disabledDate}
-            />
-          </Form.Item>          <Form.Item
-            name="endDate"
-            label="Ngày kết thúc"
-            rules={[
-              { required: true, message: 'Vui lòng chọn ngày kết thúc' },
-              { validator: (_, value) => validateEndDate(value) }
-            ]}
-            validateTrigger="onChange"
-          >
-            <DatePicker 
-              format="DD/MM/YYYY" 
-              placeholder="Chọn ngày kết thúc" 
-              style={{ width: '100%' }}
-              disabledDate={disabledDate}
-            />
-          </Form.Item>
-
-          <Form.Item
             name="note"
             label="Ghi chú chung"
           >
@@ -896,8 +876,7 @@ const MedicationManagement = () => {
                       >
                         <Input type="hidden" />
                       </Form.Item>
-                      
-                      <div className="form-row">
+                        <div className="form-row">
                         <Form.Item
                           {...restField}
                           name={[name, 'itemName']}
@@ -914,6 +893,43 @@ const MedicationManagement = () => {
                           rules={[{ required: true, message: 'Vui lòng nhập mục đích sử dụng' }]}
                         >
                           <Input placeholder="Nhập mục đích sử dụng thuốc" />
+                        </Form.Item>
+                      </div>
+                      
+                      <div className="form-row">
+                        <Form.Item
+                          {...restField}
+                          name={[name, 'startDate']}
+                          label="Ngày bắt đầu"
+                          rules={[
+                            { required: true, message: 'Vui lòng chọn ngày bắt đầu' },
+                            { validator: (_, value) => validateStartDate(value) }
+                          ]}
+                          validateTrigger="onChange"
+                        >
+                          <DatePicker 
+                            format="DD/MM/YYYY" 
+                            placeholder="Chọn ngày bắt đầu" 
+                            style={{ width: '100%' }}
+                            disabledDate={disabledDate}
+                          />
+                        </Form.Item>
+                          <Form.Item
+                          {...restField}
+                          name={[name, 'endDate']}
+                          label="Ngày kết thúc"
+                          rules={[
+                            { required: true, message: 'Vui lòng chọn ngày kết thúc' },
+                            { validator: (_, value) => validateEndDate(value, name) }
+                          ]}
+                          validateTrigger="onChange"
+                        >
+                          <DatePicker 
+                            format="DD/MM/YYYY" 
+                            placeholder="Chọn ngày kết thúc" 
+                            style={{ width: '100%' }}
+                            disabledDate={disabledDate}
+                          />
                         </Form.Item>
                       </div>
                       
@@ -1052,11 +1068,14 @@ const MedicationManagement = () => {
                     {fields.length > 1 && <Divider />}
                   </div>
                 ))}
-                
-                <Form.Item>
+                  <Form.Item>
                   <Button
                     type="dashed"
-                    onClick={() => add({ itemType: 'TABLET' })}
+                    onClick={() => add({ 
+                      itemType: 'TABLET',
+                      startDate: dayjs(),
+                      endDate: dayjs().add(7, 'day')
+                    })}
                     block
                     icon={<PlusOutlined />}
                     className="add-medication-item-btn"
@@ -1134,14 +1153,12 @@ const MedicationManagement = () => {
                   </Tag>
                 </div>
                 
-                <div className="medication-detail-info">
-                  <p><strong>Học sinh:</strong> {selectedMedicationDetail.studentName || (() => {
+                <div className="medication-detail-info">                  <p><strong>Học sinh:</strong> {selectedMedicationDetail.studentName || (() => {
                     const student = students.find(s => s.id === selectedMedicationDetail.studentId);
                     return student ? `${student.firstName} ${student.lastName}` : 'N/A';
                   })()}</p>
                   <p><strong>Mã yêu cầu:</strong> {selectedMedicationDetail.id}</p>
                   <p><strong>Ngày yêu cầu:</strong> {selectedMedicationDetail.requestDate ? dayjs(selectedMedicationDetail.requestDate).format('DD/MM/YYYY') : dayjs().format('DD/MM/YYYY')}</p>
-                  <p><strong>Thời gian sử dụng:</strong> {dayjs(selectedMedicationDetail.startDate).format('DD/MM/YYYY')} - {dayjs(selectedMedicationDetail.endDate).format('DD/MM/YYYY')}</p>
                   <p><strong>Ghi chú chung:</strong> {selectedMedicationDetail.note ? (
                     <span className="general-note">{selectedMedicationDetail.note}</span>
                   ) : (
@@ -1189,10 +1206,11 @@ const MedicationManagement = () => {
                              item.itemType === 'CREAM' ? 'Kem' :
                              item.itemType === 'POWDER' ? 'Bột' :
                              item.itemType === 'INJECTION' ? 'Tiêm' : item.itemType}
-                          </Tag> </strong></h4>
-                  
-                          <div className="medication-item-details">
+                          </Tag> </strong></h4>                          <div className="medication-item-details">
                           <p><strong>Mục đích:</strong> <span className="medication-purpose">{item.purpose || 'Không có mục đích'}</span></p>
+                          <p><strong>Thời gian sử dụng:</strong> <span className="medication-period">
+                            {item.startDate ? dayjs(item.startDate).format('DD/MM/YYYY') : 'N/A'} - {item.endDate ? dayjs(item.endDate).format('DD/MM/YYYY') : 'N/A'}
+                          </span></p>
                           <p><strong>Liều lượng:</strong> <span className="medication-dosage">{item.dosage} {
                             item.itemType === 'TABLET' || item.itemType === 'CAPSULE' ? 'viên' :
                             item.itemType === 'LIQUID' || item.itemType === 'INJECTION' ? 'ml' :

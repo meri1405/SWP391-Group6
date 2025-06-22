@@ -3,6 +3,8 @@ package group6.Swp391.Se1861.SchoolMedicalManagementSystem.model;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDate;
+
 
 @Entity
 @Getter
@@ -34,6 +36,12 @@ public class ItemRequest {
 
     @Column(name = "note", nullable = true)
     private String note;
+
+    @Column(name = "startDate", nullable = false)
+    private LocalDate startDate;
+
+    @Column(name = "endDate", nullable = false)
+    private LocalDate endDate;
 
     @ManyToOne
     @JoinColumn(name = "medicationRequestId", nullable = false)
