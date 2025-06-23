@@ -379,9 +379,15 @@ const Login = () => {
         navigate("/parent-dashboard");
       } else {
         // Handle different HTTP status codes
-        let errorMessage = "Mã OTP không đúng";        try {
+        let errorMessage = "Mã OTP không đúng";
+
+        try {
           const errorData = await response.json();
-          errorMessage = errorData.message || errorMessage;
+          if (errorData.message && errorData.message.includes("Account is disabled")) {
+            errorMessage = "Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.";
+          } else {
+            errorMessage = errorData.message || errorMessage;
+          }
         } catch (parseError) {
           // If response body is not JSON, use status-based message
           console.log("Could not parse error response as JSON:", parseError);
@@ -407,14 +413,21 @@ const Login = () => {
           });
           setShowOtp(false); // Go back to phone input screen
           setOtp(""); // Clear OTP field
-          return;        } else if (
+          return;
+        } else if (
+          errorMessage.includes("Account is disabled")
+        ) {
+          // Handle disabled account specifically
+          setErrors({ otp: errorMessage });
+        } else if (
           errorMessage.includes("invalid") ||
           errorMessage.includes("wrong") ||
           errorMessage.includes("incorrect") ||
           errorMessage.includes("không đúng")
         ) {
           errorMessage = "Mã OTP không đúng. Vui lòng kiểm tra lại.";
-          // Don't clear confirmationResult for invalid OTP, allow retry        } else if (errorMessage.includes("expired") || response.status === 401) {
+          // Don't clear confirmationResult for invalid OTP, allow retry
+        } else if (errorMessage.includes("expired") || response.status === 401) {
           errorMessage = "Mã OTP đã hết hạn hoặc không hợp lệ. Vui lòng bấm 'Gửi lại OTP' để nhận mã mới.";
           setConfirmationResult(null); // Clear for expired OTP
         } else if (errorMessage.includes("used") || errorMessage.includes("already")) {
@@ -514,12 +527,26 @@ const Login = () => {
             break;
           default:
             navigate("/");
-        }
-      } else {
-        // Handle error responses with simplified message
+        }      } else {
+        // Handle error responses
         let errorMessage = "Tên đăng nhập hoặc mật khẩu không hợp lệ";
+        
+        try {
+          const errorData = await response.json();
+          if (errorData.message) {
+            if (errorData.message.includes("Account is disabled")) {
+              errorMessage = "Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.";
+            } else if (errorData.message.includes("Bad credentials")) {
+              errorMessage = "Tên đăng nhập hoặc mật khẩu không hợp lệ";
+            } else {
+              errorMessage = errorData.message;
+            }
+          }
+        } catch (parseError) {
+          // If can't parse error response, use default message
+          console.log("Could not parse error response:", parseError);
+        }
 
-        // For all authentication errors, just show the simple message
         setErrors({ username: errorMessage });
       }
     } catch (networkError) {

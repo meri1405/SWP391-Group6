@@ -94,15 +94,18 @@ public class AuthService implements IAuthService {
 
         if (!isValid) {
             throw new BadCredentialsException("Invalid OTP");
-        }
-
-        User user = userRepository.findByPhone(phoneNumber)
+        }        User user = userRepository.findByPhone(phoneNumber)
                 .orElseThrow(() -> new BadCredentialsException("User not found"));
+
+        // Check if user is enabled
+        if (!user.isEnabled()) {
+            throw new BadCredentialsException("Account is disabled");
+        }
 
         // Check if user is a parent
         if (!"PARENT".equals(user.getRole().getRoleName())) {
             throw new BadCredentialsException("Only parents can use OTP authentication");
-        }        // Generate JWT token - use phone number as username for parents since they don't have usernames
+        }// Generate JWT token - use phone number as username for parents since they don't have usernames
         // Create a custom UserDetails that uses phone as username for JWT generation
         UserDetails userDetails = new org.springframework.security.core.userdetails.User(
                 user.getPhone(), // Use phone as username for JWT token
@@ -164,12 +167,16 @@ public class AuthService implements IAuthService {
      */
 
     private User processOAuthUserData(Map<String, Object> attributes, String provider) {
-        String email = (String) attributes.get("email");
-
-        // Since providerId is transient, we can only search by email
+        String email = (String) attributes.get("email");        // Since providerId is transient, we can only search by email
         Optional<User> existingUserByEmail = userRepository.findByEmail(email);
         if (existingUserByEmail.isPresent()) {
             User existingUser = existingUserByEmail.get();
+            
+            // Check if user is enabled
+            if (!existingUser.isEnabled()) {
+                throw new BadCredentialsException("Account is disabled");
+            }
+            
             // Set attributes in memory (these won't be persisted to DB)
             existingUser.setAttributes(attributes);
             return existingUser;
