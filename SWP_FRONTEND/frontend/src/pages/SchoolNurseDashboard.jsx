@@ -37,9 +37,9 @@ import {
 } from "@ant-design/icons";
 import NurseMedicationRequests from "../components/dashboard/NurseMedicationRequests";
 import NurseMedicationSchedules from "../components/dashboard/NurseMedicationSchedules";
-import VaccinationRuleManagement from "../components/dashboard/VaccinationRuleManagement";
-import MedicalSupplyInventory from "../components/dashboard/MedicalSupplyInventory";
-import Notifications from "../components/dashboard/Notifications";
+import { VaccinationRuleManagement } from "../components/dashboard/admin/vaccinations";
+import { MedicalSupplyInventory } from "../components/dashboard/admin/inventory";
+import { Notifications } from "../components/dashboard/admin/notifications";
 // Import nurseApi
 import { nurseApi } from "../api/nurseApi";
 import {
@@ -58,7 +58,7 @@ import { Bar, Doughnut } from "react-chartjs-2";
 import "../styles/SchoolNurseDashboard.css";
 import "../styles/SidebarTrigger.css";
 import NurseHealthProfiles from "../components/dashboard/NurseHealthProfiles";
-import MedicalEventManagement from "../components/dashboard/MedicalEventManagement";
+import { MedicalEventManagement } from "../components/dashboard/admin/events";
 // Import the vaccination campaign management component
 import VaccinationCampaignManagement from "../components/schoolnurse/vaccinationCampaign/VaccinationCampaignManagement";
 
@@ -116,7 +116,7 @@ const SchoolNurseDashboard = () => {
       label: "Quản lý lịch uống thuốc",
     },
     {
-      key: "medical-events",
+      key: "events",
       icon: <AlertOutlined />,
       label: "Ghi nhận sự kiện y tế",
     },
@@ -231,7 +231,7 @@ const SchoolNurseDashboard = () => {
         "notifications",
         "medication-requests",
         "medication-schedules",
-        "medical-events",
+        "events",
         "inventory",
         "restock-requests",
         "vaccination",
@@ -1312,7 +1312,8 @@ const SchoolNurseDashboard = () => {
 
     React.useEffect(() => {
       // Import động sử dụng ES6 import()
-      import("../components/dashboard/RestockRequestList")
+      import("../components/dashboard/admin/inventory")
+        .then((module) => ({ default: module.RestockRequestList }))
         .then((module) => {
           setRestockRequestListComponent(() => module.default);
           setLoading(false);
@@ -1371,7 +1372,7 @@ const SchoolNurseDashboard = () => {
         return <NurseMedicationRequests />;
       case "medication-schedules":
         return <NurseMedicationSchedules />;
-      case "medical-events":
+      case "events":
         return <MedicalEvents />;
       case "inventory":
         return <Inventory />;

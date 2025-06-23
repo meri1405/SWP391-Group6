@@ -1,28 +1,28 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Card, 
-  Table, 
-  Tag, 
-  Typography, 
-  Select, 
-  Input, 
-  Button, 
+import React, { useState, useEffect } from "react";
+import {
+  Card,
+  Table,
+  Tag,
+  Typography,
+  Select,
+  Input,
+  Button,
   Space,
   message,
   Tooltip,
   Badge,
-  Divider
-} from 'antd';
-import { 
-  SearchOutlined, 
-  ReloadOutlined, 
+  Divider,
+} from "antd";
+import {
+  SearchOutlined,
+  ReloadOutlined,
   ClockCircleOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
-  EyeOutlined
-} from '@ant-design/icons';
-import { restockRequestApi } from '../../api/restockRequestApi';
-import dayjs from 'dayjs';
+  EyeOutlined,
+} from "@ant-design/icons";
+import { restockRequestApi } from "../../../../api/restockRequestApi";
+import dayjs from "dayjs";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -30,21 +30,21 @@ const { Option } = Select;
 const RestockRequestList = () => {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [searchText, setSearchText] = useState('');
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [searchText, setSearchText] = useState("");
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 10,
-    total: 0
+    total: 0,
   });
   const [messageApi, contextHolder] = message.useMessage();
 
   // Status options for filter
   const statusOptions = [
-    { value: 'all', label: 'Tất cả trạng thái' },
-    { value: 'PENDING', label: 'Chờ duyệt' },
-    { value: 'APPROVED', label: 'Đã duyệt' },
-    { value: 'REJECTED', label: 'Đã từ chối' },
+    { value: "all", label: "Tất cả trạng thái" },
+    { value: "PENDING", label: "Chờ duyệt" },
+    { value: "APPROVED", label: "Đã duyệt" },
+    { value: "REJECTED", label: "Đã từ chối" },
   ];
 
   // Load requests on component mount and when filter dependencies change
@@ -58,39 +58,47 @@ const RestockRequestList = () => {
     setLoading(true);
     try {
       let data;
-      
-      if (statusFilter === 'all') {
+
+      if (statusFilter === "all") {
         data = await restockRequestApi.getAllRequests();
       } else {
         data = await restockRequestApi.getRequestsByStatus(statusFilter);
       }
-      
+
       // Apply search filter if text entered
       if (searchText) {
         const searchLower = searchText.toLowerCase();
-        data = data.filter(request => 
-          // Search in request properties
-          (request.requesterName && request.requesterName.toLowerCase().includes(searchLower)) ||
-          // Search in items
-          (request.restockItems && request.restockItems.some(item => 
-            (item.name && item.name.toLowerCase().includes(searchLower)) ||
-            (item.category && item.category.toLowerCase().includes(searchLower))
-          ))
+        data = data.filter(
+          (request) =>
+            // Search in request properties
+            (request.requesterName &&
+              request.requesterName.toLowerCase().includes(searchLower)) ||
+            // Search in items
+            (request.restockItems &&
+              request.restockItems.some(
+                (item) =>
+                  (item.name &&
+                    item.name.toLowerCase().includes(searchLower)) ||
+                  (item.category &&
+                    item.category.toLowerCase().includes(searchLower))
+              ))
         );
       }
 
       // Update pagination
-      setPagination(prev => ({
+      setPagination((prev) => ({
         ...prev,
-        total: data.length
+        total: data.length,
       }));
 
       setRequests(data);
       setLoading(false);
     } catch (error) {
       setLoading(false);
-      messageApi.error('Không thể tải dữ liệu yêu cầu bổ sung. Vui lòng thử lại sau.');
-      console.error('Error fetching restock requests:', error);
+      messageApi.error(
+        "Không thể tải dữ liệu yêu cầu bổ sung. Vui lòng thử lại sau."
+      );
+      console.error("Error fetching restock requests:", error);
     }
   };
 
@@ -98,10 +106,10 @@ const RestockRequestList = () => {
   const handleSearch = (e) => {
     const value = e.target.value;
     setSearchText(value);
-    
+
     // Reset to first page when searching
-    setPagination(prev => ({...prev, current: 1}));
-    
+    setPagination((prev) => ({ ...prev, current: 1 }));
+
     // Debounce search
     setTimeout(() => {
       fetchRequests();
@@ -111,26 +119,38 @@ const RestockRequestList = () => {
   // Handle status filter change
   const handleStatusChange = (value) => {
     setStatusFilter(value);
-    setPagination(prev => ({...prev, current: 1}));
+    setPagination((prev) => ({ ...prev, current: 1 }));
   };
 
   // Handle refresh
   const handleRefresh = () => {
-    setSearchText('');
-    setStatusFilter('all');
-    setPagination(prev => ({...prev, current: 1}));
+    setSearchText("");
+    setStatusFilter("all");
+    setPagination((prev) => ({ ...prev, current: 1 }));
     fetchRequests();
   };
 
   // Get status tag based on status value
   const getStatusTag = (status) => {
     switch (status) {
-      case 'PENDING':
-        return <Tag color="blue" icon={<ClockCircleOutlined />}>Chờ duyệt</Tag>;
-      case 'APPROVED':
-        return <Tag color="green" icon={<CheckCircleOutlined />}>Đã duyệt</Tag>;
-      case 'REJECTED':
-        return <Tag color="red" icon={<CloseCircleOutlined />}>Đã từ chối</Tag>;
+      case "PENDING":
+        return (
+          <Tag color="blue" icon={<ClockCircleOutlined />}>
+            Chờ duyệt
+          </Tag>
+        );
+      case "APPROVED":
+        return (
+          <Tag color="green" icon={<CheckCircleOutlined />}>
+            Đã duyệt
+          </Tag>
+        );
+      case "REJECTED":
+        return (
+          <Tag color="red" icon={<CloseCircleOutlined />}>
+            Đã từ chối
+          </Tag>
+        );
       default:
         return <Tag>Không xác định</Tag>;
     }
@@ -139,11 +159,11 @@ const RestockRequestList = () => {
   // Get priority tag based on priority value
   const getPriorityTag = (priority) => {
     switch (priority) {
-      case 'HIGH':
+      case "HIGH":
         return <Tag color="red">Cao</Tag>;
-      case 'MEDIUM':
+      case "MEDIUM":
         return <Tag color="orange">Trung bình</Tag>;
-      case 'LOW':
+      case "LOW":
         return <Tag color="green">Thấp</Tag>;
       default:
         return <Tag>Không xác định</Tag>;
@@ -153,55 +173,56 @@ const RestockRequestList = () => {
   // Show request detail modal
   const showRequestDetail = (request) => {
     // Implement detail view logic here
-    console.log('Show detail for request:', request);
+    console.log("Show detail for request:", request);
   };
 
   // Define table columns
   const columns = [
     {
-      title: 'Mã yêu cầu',
-      dataIndex: 'id',
-      key: 'id',
+      title: "Mã yêu cầu",
+      dataIndex: "id",
+      key: "id",
       width: 100,
     },
     {
-      title: 'Người yêu cầu',
-      dataIndex: 'requesterName',
-      key: 'requesterName',
-      render: (text) => text || 'Không có thông tin',
+      title: "Người yêu cầu",
+      dataIndex: "requesterName",
+      key: "requesterName",
+      render: (text) => text || "Không có thông tin",
     },
     {
-      title: 'Thời gian yêu cầu',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
-      render: (date) => dayjs(date).format('DD/MM/YYYY HH:mm'),
+      title: "Thời gian yêu cầu",
+      dataIndex: "createdAt",
+      key: "createdAt",
+      render: (date) => dayjs(date).format("DD/MM/YYYY HH:mm"),
       sorter: (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
     },
     {
-      title: 'Độ ưu tiên',
-      dataIndex: 'priority',
-      key: 'priority',
+      title: "Độ ưu tiên",
+      dataIndex: "priority",
+      key: "priority",
       render: (priority) => getPriorityTag(priority),
     },
     {
-      title: 'Số lượng vật tư',
-      key: 'itemCount',
-      render: (_, record) => record.restockItems ? record.restockItems.length : 0,
+      title: "Số lượng vật tư",
+      key: "itemCount",
+      render: (_, record) =>
+        record.restockItems ? record.restockItems.length : 0,
     },
     {
-      title: 'Trạng thái',
-      dataIndex: 'status',
-      key: 'status',
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
       render: (status) => getStatusTag(status),
     },
     {
-      title: 'Thao tác',
-      key: 'action',
+      title: "Thao tác",
+      key: "action",
       render: (_, record) => (
         <Space>
           <Tooltip title="Xem chi tiết">
-            <Button 
-              icon={<EyeOutlined />} 
+            <Button
+              icon={<EyeOutlined />}
               onClick={() => showRequestDetail(record)}
               type="primary"
               size="small"
@@ -216,31 +237,31 @@ const RestockRequestList = () => {
   const expandedRowRender = (record) => {
     const itemColumns = [
       {
-        title: 'Tên vật tư',
-        dataIndex: 'name',
-        key: 'name',
+        title: "Tên vật tư",
+        dataIndex: "name",
+        key: "name",
       },
       {
-        title: 'Loại',
-        dataIndex: 'category',
-        key: 'category',
+        title: "Loại",
+        dataIndex: "category",
+        key: "category",
       },
       {
-        title: 'Số lượng yêu cầu',
-        dataIndex: 'requestedQuantity',
-        key: 'requestedQuantity',
-        render: (quantity, item) => `${quantity} ${item.unit || ''}`,
+        title: "Số lượng yêu cầu",
+        dataIndex: "requestedQuantity",
+        key: "requestedQuantity",
+        render: (quantity, item) => `${quantity} ${item.unit || ""}`,
       },
       {
-        title: 'Ghi chú',
-        dataIndex: 'notes',
-        key: 'notes',
+        title: "Ghi chú",
+        dataIndex: "notes",
+        key: "notes",
         ellipsis: true,
       },
     ];
 
     return (
-      <div style={{ padding: '0 20px' }}>
+      <div style={{ padding: "0 20px" }}>
         <Text strong>Chi tiết vật tư yêu cầu:</Text>
         <Table
           columns={itemColumns}
@@ -250,7 +271,7 @@ const RestockRequestList = () => {
         />
         {record.reason && (
           <>
-            <Divider style={{ margin: '12px 0' }} />
+            <Divider style={{ margin: "12px 0" }} />
             <Text strong>Lý do yêu cầu:</Text> {record.reason}
           </>
         )}
@@ -262,20 +283,28 @@ const RestockRequestList = () => {
     <div className="restock-request-list">
       {contextHolder}
       <Card>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            marginBottom: 16,
+          }}
+        >
           <div>
             <Title level={4}>Danh sách yêu cầu bổ sung vật tư y tế</Title>
-            {statusFilter !== 'all' && (
+            {statusFilter !== "all" && (
               <div style={{ marginTop: -8 }}>
                 <Tag color="blue">
-                  Đang lọc theo trạng thái: {statusOptions.find(s => s.value === statusFilter)?.label || statusFilter}
+                  Đang lọc theo trạng thái:{" "}
+                  {statusOptions.find((s) => s.value === statusFilter)?.label ||
+                    statusFilter}
                 </Tag>
               </div>
             )}
           </div>
         </div>
-        
-        <div style={{ display: 'flex', marginBottom: 16 }}>
+
+        <div style={{ display: "flex", marginBottom: 16 }}>
           <Input
             placeholder="Tìm kiếm theo tên vật tư, người yêu cầu..."
             value={searchText}
@@ -284,8 +313,8 @@ const RestockRequestList = () => {
             prefix={<SearchOutlined />}
             allowClear
             onClear={() => {
-              setSearchText('');
-              setPagination(prev => ({...prev, current: 1}));
+              setSearchText("");
+              setPagination((prev) => ({ ...prev, current: 1 }));
               fetchRequests();
             }}
           />
@@ -295,33 +324,40 @@ const RestockRequestList = () => {
             style={{ width: 200, marginRight: 8 }}
             placeholder="Lọc theo trạng thái"
           >
-            {statusOptions.map(option => (
+            {statusOptions.map((option) => (
               <Option key={option.value} value={option.value}>
                 {option.label}
-                {option.value !== 'all' && (
-                  <Badge 
-                    count={requests.filter(r => r.status === option.value).length}
-                    style={{ 
+                {option.value !== "all" && (
+                  <Badge
+                    count={
+                      requests.filter((r) => r.status === option.value).length
+                    }
+                    style={{
                       marginLeft: 8,
-                      backgroundColor: option.value === 'PENDING' ? '#1890ff' : 
-                                      option.value === 'APPROVED' ? '#52c41a' : 
-                                      option.value === 'REJECTED' ? '#f5222d' : '#999999'
-                    }} 
+                      backgroundColor:
+                        option.value === "PENDING"
+                          ? "#1890ff"
+                          : option.value === "APPROVED"
+                          ? "#52c41a"
+                          : option.value === "REJECTED"
+                          ? "#f5222d"
+                          : "#999999",
+                    }}
                     overflowCount={999}
                   />
                 )}
               </Option>
             ))}
           </Select>
-          <Button 
-            icon={<ReloadOutlined />} 
+          <Button
+            icon={<ReloadOutlined />}
             onClick={handleRefresh}
             style={{ marginRight: 8 }}
           >
             Làm mới
           </Button>
         </div>
-        
+
         <Table
           columns={columns}
           dataSource={requests}
@@ -333,10 +369,14 @@ const RestockRequestList = () => {
             expandedRowRender,
             expandRowByClick: true,
           }}
-          locale={{ 
-            emptyText: statusFilter !== 'all' 
-              ? `Không tìm thấy yêu cầu bổ sung nào với trạng thái "${statusOptions.find(s => s.value === statusFilter)?.label || statusFilter}"` 
-              : 'Không có dữ liệu yêu cầu bổ sung vật tư y tế' 
+          locale={{
+            emptyText:
+              statusFilter !== "all"
+                ? `Không tìm thấy yêu cầu bổ sung nào với trạng thái "${
+                    statusOptions.find((s) => s.value === statusFilter)
+                      ?.label || statusFilter
+                  }"`
+                : "Không có dữ liệu yêu cầu bổ sung vật tư y tế",
           }}
         />
       </Card>
@@ -344,4 +384,4 @@ const RestockRequestList = () => {
   );
 };
 
-export default RestockRequestList; 
+export default RestockRequestList;

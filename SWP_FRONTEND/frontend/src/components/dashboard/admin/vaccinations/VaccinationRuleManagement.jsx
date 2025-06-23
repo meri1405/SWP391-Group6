@@ -22,8 +22,8 @@ import {
   EyeOutlined,
   MedicineBoxOutlined,
 } from "@ant-design/icons";
-import { useAuth } from "../../contexts/AuthContext";
-import { nurseApi } from "../../api/nurseApi";
+import { useAuth } from "../../../../contexts/AuthContext";
+import { nurseApi } from "../../../../api/nurseApi";
 
 const { TextArea } = Input;
 
@@ -61,7 +61,8 @@ const VaccinationRuleManagement = () => {
     } finally {
       setLoading(false);
     }
-  };  useEffect(() => {
+  };
+  useEffect(() => {
     loadVaccinationRules();
   }, [getToken]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -78,7 +79,8 @@ const VaccinationRuleManagement = () => {
         maxAge: values.maxAge,
         intervalDays: values.intervalDays,
         mandatory: values.mandatory || false,
-      };      if (editingRule) {
+      };
+      if (editingRule) {
         // Update existing rule
         await nurseApi.updateVaccinationRule(editingRule.id, ruleData);
         message.success("Cập nhật quy tắc tiêm chủng thành công!");
