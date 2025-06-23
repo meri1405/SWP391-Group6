@@ -35,9 +35,9 @@ import {
   getMedicalEventById,
   updateMedicalEventStatus,
   getAllStudents,
-} from "../../api/medicalEventApi";
-import { medicalSupplyApi } from "../../api/medicalSupplyApi";
-import "../../styles/MedicalEventManagement.css";
+} from "../../../../api/medicalEventApi";
+import { medicalSupplyApi } from "../../../../api/medicalSupplyApi";
+import "../../../../styles/MedicalEventManagement.css";
 
 const { Title, Text } = Typography;
 const { Option } = Select;

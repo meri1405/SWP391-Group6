@@ -1,33 +1,38 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Modal, 
-  Form, 
-  Select, 
-  Input, 
-  InputNumber, 
-  Button, 
-  Table, 
-  Space, 
+import React, { useState, useEffect } from "react";
+import {
+  Modal,
+  Form,
+  Select,
+  Input,
+  InputNumber,
+  Button,
+  Table,
+  Space,
   Tag,
   Spin,
   message,
-  Typography
-} from 'antd';
-import { 
-  PlusOutlined, 
-  DeleteOutlined, 
-  InboxOutlined, 
+  Typography,
+} from "antd";
+import {
+  PlusOutlined,
+  DeleteOutlined,
+  InboxOutlined,
   WarningOutlined,
-  ExclamationCircleOutlined
-} from '@ant-design/icons';
-import { medicalSupplyApi } from '../../api/medicalSupplyApi';
-import { restockRequestApi } from '../../api/restockRequestApi';
+  ExclamationCircleOutlined,
+} from "@ant-design/icons";
+import { medicalSupplyApi } from "../../../../api/medicalSupplyApi";
+import { restockRequestApi } from "../../../../api/restockRequestApi";
 
 const { Option } = Select;
 const { TextArea } = Input;
 const { Text } = Typography;
 
-const RestockRequestForm = ({ visible, onCancel, selectedSupplies = [], onSuccess }) => {
+const RestockRequestForm = ({
+  visible,
+  onCancel,
+  selectedSupplies = [],
+  onSuccess,
+}) => {
   const [form] = Form.useForm();
   const [supplies, setSupplies] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -39,26 +44,27 @@ const RestockRequestForm = ({ visible, onCancel, selectedSupplies = [], onSucces
   useEffect(() => {
     if (visible) {
       fetchMedicalSupplies();
-      
+
       // Initialize with pre-selected supplies if any
       if (selectedSupplies.length > 0) {
-        const items = selectedSupplies.map(supply => ({
+        const items = selectedSupplies.map((supply) => ({
           medicalSupplyId: supply.id,
-          requestedQuantity: supply.isLowStock ? 
-            Math.max(supply.minStockLevel - supply.quantity, 10) : 10,
+          requestedQuantity: supply.isLowStock
+            ? Math.max(supply.minStockLevel - supply.quantity, 10)
+            : 10,
           name: supply.name,
           currentQuantity: supply.quantity,
           unit: supply.unit,
-          minStockLevel: supply.minStockLevel
+          minStockLevel: supply.minStockLevel,
         }));
-        
+
         setRequestItems(items);
       }
-      
+
       // Reset form
       form.setFieldsValue({
-        priority: 'MEDIUM',
-        reason: ''
+        priority: "MEDIUM",
+        reason: "",
       });
     }
   }, [visible, selectedSupplies, form]);
@@ -72,8 +78,10 @@ const RestockRequestForm = ({ visible, onCancel, selectedSupplies = [], onSucces
       setLoading(false);
     } catch (error) {
       setLoading(false);
-      messageApi.error('Không thể tải dữ liệu vật tư y tế. Vui lòng thử lại sau.');
-      console.error('Error fetching supplies:', error);
+      messageApi.error(
+        "Không thể tải dữ liệu vật tư y tế. Vui lòng thử lại sau."
+      );
+      console.error("Error fetching supplies:", error);
     }
   };
 
@@ -81,65 +89,65 @@ const RestockRequestForm = ({ visible, onCancel, selectedSupplies = [], onSucces
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
-      
+
       if (requestItems.length === 0) {
-        messageApi.error('Vui lòng thêm ít nhất một vật tư vào yêu cầu.');
+        messageApi.error("Vui lòng thêm ít nhất một vật tư vào yêu cầu.");
         return;
       }
-      
+
       setSubmitting(true);
-      
+
       // Create restock request DTO
       const requestData = {
         priority: values.priority,
         reason: values.reason,
-        status: 'PENDING',
-        restockItems: requestItems.map(item => ({
+        status: "PENDING",
+        restockItems: requestItems.map((item) => ({
           medicalSupplyId: item.medicalSupplyId,
           requestedQuantity: item.requestedQuantity,
-          notes: item.notes || ''
-        }))
+          notes: item.notes || "",
+        })),
       };
 
       try {
         const response = await restockRequestApi.createRequest(requestData);
-        messageApi.success('Gửi yêu cầu bổ sung thành công!');
+        messageApi.success("Gửi yêu cầu bổ sung thành công!");
         setSubmitting(false);
-        
+
         // Reset form and close modal
         form.resetFields();
         setRequestItems([]);
         onSuccess && onSuccess(response);
       } catch (error) {
         setSubmitting(false);
-        messageApi.error('Không thể gửi yêu cầu. Vui lòng thử lại sau.');
-        console.error('Error creating restock request:', error);
+        messageApi.error("Không thể gửi yêu cầu. Vui lòng thử lại sau.");
+        console.error("Error creating restock request:", error);
       }
     } catch (error) {
-      console.error('Form validation failed:', error);
+      console.error("Form validation failed:", error);
     }
   };
 
   // Add a new item to the restock request
   const addItem = () => {
-    const newItemId = form.getFieldValue('newItemSupply');
-    const newItemQuantity = form.getFieldValue('newItemQuantity');
-    const newItemNotes = form.getFieldValue('newItemNotes');
-    
+    const newItemId = form.getFieldValue("newItemSupply");
+    const newItemQuantity = form.getFieldValue("newItemQuantity");
+    const newItemNotes = form.getFieldValue("newItemNotes");
+
     if (!newItemId || !newItemQuantity) {
-      messageApi.error('Vui lòng chọn vật tư và nhập số lượng.');
+      messageApi.error("Vui lòng chọn vật tư và nhập số lượng.");
       return;
     }
-    
-    const supplyToAdd = supplies.find(s => s.id === newItemId);
+
+    const supplyToAdd = supplies.find((s) => s.id === newItemId);
     if (!supplyToAdd) return;
-    
+
     // Check if item already exists in the list
-    if (requestItems.some(item => item.medicalSupplyId === newItemId)) {
-      messageApi.warning('Vật tư này đã có trong danh sách.');
+    if (requestItems.some((item) => item.medicalSupplyId === newItemId)) {
+      messageApi.warning("Vật tư này đã có trong danh sách.");
       return;
     }
-    
+
     const newItem = {
       medicalSupplyId: supplyToAdd.id,
       requestedQuantity: newItemQuantity,
@@ -147,16 +155,16 @@ const RestockRequestForm = ({ visible, onCancel, selectedSupplies = [], onSucces
       name: supplyToAdd.name,
       currentQuantity: supplyToAdd.quantity,
       unit: supplyToAdd.unit,
-      minStockLevel: supplyToAdd.minStockLevel
+      minStockLevel: supplyToAdd.minStockLevel,
     };
-    
+
     setRequestItems([...requestItems, newItem]);
-    
+
     // Reset add item fields
     form.setFieldsValue({
       newItemSupply: undefined,
       newItemQuantity: undefined,
-      newItemNotes: undefined
+      newItemNotes: undefined,
     });
   };
 
@@ -168,37 +176,37 @@ const RestockRequestForm = ({ visible, onCancel, selectedSupplies = [], onSucces
   // Table columns for restock items
   const itemColumns = [
     {
-      title: 'Tên vật tư',
-      dataIndex: 'name',
-      key: 'name',
+      title: "Tên vật tư",
+      dataIndex: "name",
+      key: "name",
     },
     {
-      title: 'SL hiện tại',
-      key: 'currentQuantity',
+      title: "SL hiện tại",
+      key: "currentQuantity",
       render: (_, record) => (
         <Space>
           {record.currentQuantity} {record.unit}
           {record.currentQuantity < record.minStockLevel && (
-            <WarningOutlined style={{ color: 'orange' }} />
+            <WarningOutlined style={{ color: "orange" }} />
           )}
         </Space>
-      )
+      ),
     },
     {
-      title: 'SL yêu cầu',
-      dataIndex: 'requestedQuantity',
-      key: 'requestedQuantity',
-      render: (value, record) => `${value} ${record.unit}`
+      title: "SL yêu cầu",
+      dataIndex: "requestedQuantity",
+      key: "requestedQuantity",
+      render: (value, record) => `${value} ${record.unit}`,
     },
     {
-      title: 'Ghi chú',
-      dataIndex: 'notes',
-      key: 'notes',
+      title: "Ghi chú",
+      dataIndex: "notes",
+      key: "notes",
       ellipsis: true,
     },
     {
-      title: 'Thao tác',
-      key: 'action',
+      title: "Thao tác",
+      key: "action",
       render: (_, record, index) => (
         <Button
           danger
@@ -212,7 +220,7 @@ const RestockRequestForm = ({ visible, onCancel, selectedSupplies = [], onSucces
 
   // Filter out already selected items from dropdown
   const filteredSupplies = supplies.filter(
-    supply => !requestItems.some(item => item.medicalSupplyId === supply.id)
+    (supply) => !requestItems.some((item) => item.medicalSupplyId === supply.id)
   );
 
   return (
@@ -243,13 +251,15 @@ const RestockRequestForm = ({ visible, onCancel, selectedSupplies = [], onSucces
             form={form}
             layout="vertical"
             initialValues={{
-              priority: 'MEDIUM'
+              priority: "MEDIUM",
             }}
           >
             <Form.Item
               name="priority"
               label="Mức độ ưu tiên"
-              rules={[{ required: true, message: 'Vui lòng chọn mức độ ưu tiên' }]}
+              rules={[
+                { required: true, message: "Vui lòng chọn mức độ ưu tiên" },
+              ]}
             >
               <Select>
                 <Option value="HIGH">
@@ -267,13 +277,26 @@ const RestockRequestForm = ({ visible, onCancel, selectedSupplies = [], onSucces
             <Form.Item
               name="reason"
               label="Lý do yêu cầu"
-              rules={[{ required: true, message: 'Vui lòng nhập lý do yêu cầu' }]}
+              rules={[
+                { required: true, message: "Vui lòng nhập lý do yêu cầu" },
+              ]}
             >
-              <TextArea rows={3} placeholder="Nhập lý do cần bổ sung vật tư..." />
+              <TextArea
+                rows={3}
+                placeholder="Nhập lý do cần bổ sung vật tư..."
+              />
             </Form.Item>
 
-            <div className="add-item-section" style={{ marginBottom: 16, padding: 16, border: '1px dashed #d9d9d9', borderRadius: 4 }}>
-              <Text strong style={{ display: 'block', marginBottom: 16 }}>
+            <div
+              className="add-item-section"
+              style={{
+                marginBottom: 16,
+                padding: 16,
+                border: "1px dashed #d9d9d9",
+                borderRadius: 4,
+              }}
+            >
+              <Text strong style={{ display: "block", marginBottom: 16 }}>
                 <PlusOutlined /> Thêm vật tư vào yêu cầu
               </Text>
               <Form.Item
@@ -288,7 +311,7 @@ const RestockRequestForm = ({ visible, onCancel, selectedSupplies = [], onSucces
                     option.children.toLowerCase().includes(input.toLowerCase())
                   }
                 >
-                  {filteredSupplies.map(supply => (
+                  {filteredSupplies.map((supply) => (
                     <Option key={supply.id} value={supply.id}>
                       {supply.name} ({supply.quantity} {supply.unit} hiện có)
                     </Option>
@@ -301,7 +324,11 @@ const RestockRequestForm = ({ visible, onCancel, selectedSupplies = [], onSucces
                 label="Số lượng yêu cầu"
                 style={{ marginBottom: 12 }}
               >
-                <InputNumber min={1} placeholder="Nhập số lượng" style={{ width: '100%' }} />
+                <InputNumber
+                  min={1}
+                  placeholder="Nhập số lượng"
+                  style={{ width: "100%" }}
+                />
               </Form.Item>
 
               <Form.Item
@@ -312,7 +339,12 @@ const RestockRequestForm = ({ visible, onCancel, selectedSupplies = [], onSucces
                 <Input placeholder="Thêm ghi chú cho vật tư này..." />
               </Form.Item>
 
-              <Button type="dashed" onClick={addItem} icon={<PlusOutlined />} block>
+              <Button
+                type="dashed"
+                onClick={addItem}
+                icon={<PlusOutlined />}
+                block
+              >
                 Thêm vào danh sách
               </Button>
             </div>
@@ -326,7 +358,7 @@ const RestockRequestForm = ({ visible, onCancel, selectedSupplies = [], onSucces
                 rowKey={(record) => record.medicalSupplyId.toString()}
                 size="small"
                 style={{ marginTop: 8 }}
-                locale={{ emptyText: 'Chưa có vật tư nào được thêm' }}
+                locale={{ emptyText: "Chưa có vật tư nào được thêm" }}
               />
             </div>
           </Form>
@@ -336,4 +368,4 @@ const RestockRequestForm = ({ visible, onCancel, selectedSupplies = [], onSucces
   );
 };
 
-export default RestockRequestForm; 
+export default RestockRequestForm;

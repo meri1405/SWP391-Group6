@@ -24,8 +24,8 @@ import {
   Tag,
   Avatar,
 } from "antd";
-import { useAuth } from "../../contexts/AuthContext";
-import "../../styles/AdminProfile.css";
+import { useAuth } from "../../../../contexts/AuthContext";
+import "../../../../styles/AdminProfile.css";
 
 const AdminProfile = ({ userInfo, onProfileUpdate }) => {
   const [isEditing, setIsEditing] = useState(false);
