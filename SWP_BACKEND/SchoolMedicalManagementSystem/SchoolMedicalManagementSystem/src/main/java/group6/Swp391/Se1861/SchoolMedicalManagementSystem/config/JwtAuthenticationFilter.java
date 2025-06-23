@@ -35,9 +35,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 if (jwtUtil.validateToken(jwt)) {
                     String username = jwtUtil.extractUsername(jwt);
-                    logger.debug("JWT token validated for user: " + username);
-
-                    UserDetails userDetails = customUserDetailsService.loadUserByUsername(username);
+                    logger.debug("JWT token validated for user: " + username);                    UserDetails userDetails = customUserDetailsService.loadUserByUsername(username);
+                    
+                    // Check if user is enabled
+                    if (!userDetails.isEnabled()) {
+                        logger.warn("Account is disabled for user: " + username);
+                        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                        return;
+                    }
+                    
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                             userDetails, null, userDetails.getAuthorities());
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
