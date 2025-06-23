@@ -18,7 +18,6 @@ import {
   CalendarOutlined,
   UserOutlined,
   FileTextOutlined,
-  EditOutlined,
   HeartOutlined,
   LeftOutlined,
   RightOutlined,
@@ -79,7 +78,8 @@ const { Header, Sider, Content } = Layout;
 
 const SchoolNurseDashboard = () => {
   const navigate = useNavigate();
-  const { user, isAuthenticated, isSchoolNurse, setUserInfo, getToken } = useAuth();
+  const { user, isAuthenticated, isSchoolNurse, setUserInfo, getToken } =
+    useAuth();
   const [activeSection, setActiveSection] = useState("dashboard");
   const [userInfo, setUserInfoState] = useState(null);
   const [collapsed, setCollapsed] = useState(false);
@@ -149,16 +149,6 @@ const SchoolNurseDashboard = () => {
       key: "health-records",
       icon: <FileTextOutlined />,
       label: "Hồ sơ y tế học sinh",
-    },
-    {
-      key: "blog-management",
-      icon: <EditOutlined />,
-      label: "Quản lý blog",
-    },
-    {
-      key: "school-health",
-      icon: <HeartOutlined />,
-      label: "Thông tin sức khỏe học đường",
     },
     {
       key: "profile",
@@ -248,8 +238,6 @@ const SchoolNurseDashboard = () => {
         "vaccination-rule-management",
         "health-check",
         "health-records",
-        "blog-management",
-        "school-health",
         "profile",
       ];
       if (validTabs.includes(tabParam)) {
@@ -1315,20 +1303,6 @@ const SchoolNurseDashboard = () => {
 
   const HealthRecords = () => <NurseHealthProfiles />;
 
-  const BlogManagement = () => (
-    <div className="nurse-content-card">
-      <h2 className="nurse-section-title">Quản lý blog</h2>
-      <p>Component đang được phát triển...</p>
-    </div>
-  );
-
-  const SchoolHealth = () => (
-    <div className="nurse-content-card">
-      <h2 className="nurse-section-title">Thông tin sức khỏe học đường</h2>
-      <p>Component đang được phát triển...</p>
-    </div>
-  );
-
   // Component cho trang yêu cầu bổ sung vật tư
   const RestockRequests = () => {
     // Sử dụng React.lazy để import động component
@@ -1411,10 +1385,6 @@ const SchoolNurseDashboard = () => {
         return <HealthCheck />;
       case "health-records":
         return <HealthRecords />;
-      case "blog-management":
-        return <BlogManagement />;
-      case "school-health":
-        return <SchoolHealth />;
       case "profile":
         return <ProfileComponent />;
       default:
@@ -1512,7 +1482,7 @@ const SchoolNurseDashboard = () => {
               Bảng điều khiển Y tá Trường học
             </h1>
           </div>
-          
+
           <div className="nurse-header-user">
             <div className="nurse-header-avatar">
               <UserOutlined style={{ fontSize: 20, color: "#1976d2" }} />

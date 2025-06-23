@@ -171,6 +171,7 @@ const UserManagement = ({
   setSelectedRoleForNewUser,
   handleRoleSelection,
   loading,
+  isUserFormMounted,
 }) => {
   const [currentPassword, setCurrentPassword] = useState("");
   return (
@@ -345,7 +346,14 @@ const UserManagement = ({
                   onClick={() => {
                     if (modalMode === "add") {
                       setSelectedRoleForNewUser(""); // Go back to role selection
-                      userFormInstance.resetFields();
+                      // Only reset form if it's mounted to avoid warnings
+                      if (isUserFormMounted) {
+                        try {
+                          userFormInstance.resetFields();
+                        } catch (error) {
+                          console.warn("Error resetting form:", error);
+                        }
+                      }
                     } else {
                       setShowUserModal(false);
                     }
@@ -1805,6 +1813,7 @@ const AdminDashboard = () => {
 
   // Ant Design form instances
   const [userFormInstance] = Form.useForm();
+  const [isUserFormMounted, setIsUserFormMounted] = useState(false);
 
   const { user, isAuthenticated, isStaff } = useAuth();
 
@@ -1864,6 +1873,31 @@ const AdminDashboard = () => {
     setUserInfo(user);
   }, [navigate, isAuthenticated, isStaff, user]);
 
+  // Effect to handle form mounting when modal is shown
+  useEffect(() => {
+    if (showUserModal && modalMode === "add") {
+      // Modal is shown, wait a moment for form to mount then mark it as mounted
+      const timer = setTimeout(() => {
+        setIsUserFormMounted(true);
+      }, 100);
+
+      return () => {
+        clearTimeout(timer);
+      };
+    } else {
+      // Modal is hidden, mark form as unmounted
+      setIsUserFormMounted(false);
+    }
+  }, [showUserModal, modalMode]);
+
+  // Effect to handle form resetting when it becomes mounted
+  useEffect(() => {
+    if (isUserFormMounted && modalMode === "add" && !selectedRoleForNewUser) {
+      // Form is mounted and modal is open for adding, reset the form
+      resetUserForm();
+    }
+  }, [isUserFormMounted, modalMode, selectedRoleForNewUser]);
+
   // Separate useEffect to handle URL parameter changes
   useEffect(() => {
     const tabParam = searchParams.get("tab");
@@ -1892,9 +1926,14 @@ const AdminDashboard = () => {
   const resetUserForm = () => {
     console.log("Resetting user form...");
 
-    // Wait for next tick to ensure form is properly mounted
-    setTimeout(() => {
-      // Use resetFields to properly reset the form
+    // Only proceed if form is mounted
+    if (!isUserFormMounted) {
+      console.warn("Form not mounted yet, skipping reset");
+      return;
+    }
+
+    try {
+      // Form is mounted, proceed with reset
       userFormInstance.resetFields();
 
       // Set initial default values explicitly to ensure proper field registration
@@ -1917,7 +1956,9 @@ const AdminDashboard = () => {
       userFormInstance.setFieldsValue(initialValues);
 
       console.log("User form reset with proper initial values");
-    }, 0);
+    } catch (error) {
+      console.warn("Error resetting form:", error);
+    }
   };
 
   // Handle role change to clear irrelevant fields
@@ -1957,14 +1998,23 @@ const AdminDashboard = () => {
 
     console.log("fieldsToUpdate before setFieldsValue:", fieldsToUpdate);
 
-    // Update all fields at once
-    form.setFieldsValue(fieldsToUpdate);
+    try {
+      // Check if form instance is properly connected before calling methods
+      if (form && form.getFieldsValue) {
+        // Update all fields at once
+        form.setFieldsValue(fieldsToUpdate);
 
-    // Debug: Check if fields were set correctly
-    setTimeout(() => {
-      const currentValues = form.getFieldsValue();
-      console.log("After setFieldsValue - all form values:", currentValues);
-    }, 100);
+        // Debug: Check if fields were set correctly
+        setTimeout(() => {
+          const currentValues = form.getFieldsValue();
+          console.log("After setFieldsValue - all form values:", currentValues);
+        }, 100);
+      } else {
+        console.warn("Form instance not properly connected yet");
+      }
+    } catch (error) {
+      console.warn("Error updating form values:", error);
+    }
 
     console.log("Role-specific fields initialized for:", newRole);
   };
@@ -1988,17 +2038,20 @@ const AdminDashboard = () => {
     setSelectedUser(null);
     setSelectedRoleForNewUser(""); // Reset role selection for new user
     setShowUserModal(true);
-
-    // Reset form after modal is shown to ensure form is mounted
-    setTimeout(() => {
-      resetUserForm();
-    }, 100);
+    // Form will be reset when it becomes mounted via the useEffect hook
   };
 
   const handleRoleSelection = (role) => {
     setSelectedRoleForNewUser(role);
-    // Initialize form with selected role
-    setTimeout(() => {
+
+    // Only proceed if form is mounted
+    if (!isUserFormMounted) {
+      console.warn("Form not mounted yet, skipping role selection");
+      return;
+    }
+
+    try {
+      // Form is mounted, proceed with setting values
       userFormInstance.setFieldsValue({
         role: role,
         username: "",
@@ -2013,7 +2066,9 @@ const AdminDashboard = () => {
         dob: null,
         status: "ACTIVE",
       });
-    }, 100);
+    } catch (error) {
+      console.warn("Error setting form values:", error);
+    }
   };
 
   const openViewUserModal = (user) => {
@@ -2043,6 +2098,12 @@ const AdminDashboard = () => {
 
   const handleSaveUser = async () => {
     try {
+      // Check if form instance is properly connected before validation
+      if (!userFormInstance || !userFormInstance.validateFields) {
+        message.error("Form chưa sẵn sàng. Vui lòng thử lại.");
+        return;
+      }
+
       const values = await userFormInstance.validateFields();
 
       // Check if critical fields are missing or undefined
@@ -2270,6 +2331,7 @@ const AdminDashboard = () => {
             setSelectedRoleForNewUser={setSelectedRoleForNewUser}
             handleRoleSelection={handleRoleSelection}
             loading={loading}
+            isUserFormMounted={isUserFormMounted}
           />
         );
       case "profile":
@@ -2304,6 +2366,7 @@ const AdminDashboard = () => {
             setSelectedRoleForNewUser={setSelectedRoleForNewUser}
             handleRoleSelection={handleRoleSelection}
             loading={loading}
+            isUserFormMounted={isUserFormMounted}
           />
         );
     }

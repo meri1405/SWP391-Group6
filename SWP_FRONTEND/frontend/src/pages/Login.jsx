@@ -24,7 +24,8 @@ const Login = () => {
   const [otp, setOtp] = useState("");
   const [showOtp, setShowOtp] = useState(false);
   const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");  const [errors, setErrors] = useState({});
+  const [password, setPassword] = useState("");
+  const [errors, setErrors] = useState({});
   const [searchParams] = useSearchParams();
   const [confirmationResult, setConfirmationResult] = useState(null);
   const [otpTimeLeft, setOtpTimeLeft] = useState(0); // Time left for OTP in seconds// Separate loading states for each button
@@ -36,22 +37,23 @@ const Login = () => {
     googleLogin: false,
   });
   const [resendSuccess, setResendSuccess] = useState(false); // Track successful resend
+  const [firebaseBillingEnabled, setFirebaseBillingEnabled] = useState(true); // Track Firebase billing status
 
   const { login } = useAuth();
   const navigate = useNavigate();
-  const { settings } = useSystemSettings();  // Check for OAuth2 error messages from URL parameters
+  const { settings } = useSystemSettings(); // Check for OAuth2 error messages from URL parameters
   useEffect(() => {
     const error = searchParams.get("error");
     if (error) {
       setErrors({ google: decodeURIComponent(error) });
-      
+
       // Clear the error parameter from URL after a short delay
       setTimeout(() => {
-        navigate('/login', { replace: true });
+        navigate("/login", { replace: true });
       }, 100);
     } else {
       // Clear Google errors if no error in URL
-      setErrors(prev => ({ ...prev, google: undefined }));
+      setErrors((prev) => ({ ...prev, google: undefined }));
     }
   }, [searchParams, navigate]);
 
@@ -65,10 +67,10 @@ const Login = () => {
     const handleBeforeUnload = () => {
       cleanupRecaptcha();
     };
-    
-    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
     return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
       cleanupRecaptcha();
     };
   }, []);
@@ -81,15 +83,19 @@ const Login = () => {
   // OTP Timer countdown
   useEffect(() => {
     let interval = null;
-    
+
     if (showOtp) {
       interval = setInterval(() => {
         const remainingTime = getOTPRemainingTime();
         setOtpTimeLeft(remainingTime);
-        
+
         // Only show expired message if not currently verifying OTP and we have confirmation result
-        if (remainingTime <= 0 && confirmationResult && !loadingStates.otpVerify) {
-          setErrors({ otp: 'Mã OTP đã hết hạn. Vui lòng yêu cầu mã mới.' });
+        if (
+          remainingTime <= 0 &&
+          confirmationResult &&
+          !loadingStates.otpVerify
+        ) {
+          setErrors({ otp: "Mã OTP đã hết hạn. Vui lòng yêu cầu mã mới." });
           setConfirmationResult(null);
           resetOTPTimer();
         }
@@ -97,7 +103,7 @@ const Login = () => {
     } else {
       setOtpTimeLeft(0);
     }
-    
+
     return () => {
       if (interval) {
         clearInterval(interval);
@@ -110,159 +116,195 @@ const Login = () => {
       ...prev,
       [key]: value,
     }));
-  };const handlePhoneLogin = async (e) => {
+  };
+  const handlePhoneLogin = async (e) => {
     e.preventDefault();
     setIndividualLoading("phoneOtp", true);
     setErrors({}); // Clear previous errors
-    
+
     // Clear any previous confirmation results and Firebase state completely
     setConfirmationResult(null);
     cleanupRecaptcha();
-    
+
     // Wait a bit to ensure Firebase cleanup is complete
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await new Promise((resolve) => setTimeout(resolve, 200));
 
     try {
       // Initialize Firebase first
       await initializeFirebase();
 
-      // Try Firebase first for OTP sending
-      try {
-        console.log("Attempting to send OTP via Firebase to:", phoneNumber);
-        const result = await sendOTP(phoneNumber);
-        setConfirmationResult(result);
-        setShowOtp(true);
-        console.log("Firebase OTP sent successfully to", phoneNumber);
-      } catch (firebaseError) {
-        console.log(
-          "Firebase OTP failed, falling back to backend:",
-          firebaseError
-        );
-
-        // Fallback to backend OTP generation
-        if (isDevelopment) {
-          logCorsInfo(API_ENDPOINTS.auth.requestOtp);
-        }
-
-        const response = await fetch(API_ENDPOINTS.auth.requestOtp, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ phoneNumber }),
-        });
-
-        if (response.ok) {
+      // Check if Firebase billing is enabled before attempting to use it
+      if (firebaseBillingEnabled) {
+        // Try Firebase first for OTP sending
+        try {
+          console.log("Attempting to send OTP via Firebase to:", phoneNumber);
+          const result = await sendOTP(phoneNumber);
+          setConfirmationResult(result);
           setShowOtp(true);
-          console.log("Backend OTP sent successfully to", phoneNumber);
-        } else {
-          // Handle different HTTP status codes
-          let errorMessage = "Có lỗi xảy ra khi gửi OTP";
-
-          try {
-            const errorData = await response.json();
-            errorMessage = errorData.message || errorMessage;
-          } catch (parseError) {
-            console.log("Could not parse error response as JSON:", parseError);
-            if (response.status === 401) {
-              errorMessage =
-                "Chỉ tài khoản phụ huynh mới được phép đăng nhập bằng số điện thoại. Vui lòng đăng nhập bằng tài khoản nhân viên.";
-            } else if (response.status === 400) {
-              errorMessage =
-                "Thông tin không hợp lệ. Vui lòng kiểm tra lại số điện thoại.";
-            } else if (response.status === 404) {
-              errorMessage = "Số điện thoại không tồn tại trong hệ thống.";
-            }
+          console.log("Firebase OTP sent successfully to", phoneNumber);
+          return; // Success, exit function
+        } catch (firebaseError) {
+          // Check if it's a billing error and disable Firebase for future attempts
+          if (firebaseError.code === "auth/billing-not-enabled") {
+            console.log(
+              "Firebase billing not enabled, disabling Firebase OTP for this session"
+            );
+            setFirebaseBillingEnabled(false);
+          } else {
+            console.log(
+              "Firebase OTP failed, falling back to backend:",
+              firebaseError
+            );
           }
+        }
+      } else {
+        console.log("Firebase billing disabled, using backend OTP directly");
+      }
 
-          // Handle specific backend error messages
-          if (
-            errorMessage.includes("Only parents can use OTP authentication") ||
-            errorMessage.includes("parents") ||
-            errorMessage.includes("PARENT")
-          ) {
+      // Fallback to backend OTP generation
+      if (isDevelopment) {
+        logCorsInfo(API_ENDPOINTS.auth.requestOtp);
+      }
+
+      const response = await fetch(API_ENDPOINTS.auth.requestOtp, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ phoneNumber }),
+      });
+
+      if (response.ok) {
+        setShowOtp(true);
+        console.log("Backend OTP sent successfully to", phoneNumber);
+      } else {
+        // Handle different HTTP status codes
+        let errorMessage = "Có lỗi xảy ra khi gửi OTP";
+
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch (parseError) {
+          console.log("Could not parse error response as JSON:", parseError);
+          if (response.status === 401) {
             errorMessage =
               "Chỉ tài khoản phụ huynh mới được phép đăng nhập bằng số điện thoại. Vui lòng đăng nhập bằng tài khoản nhân viên.";
-          } else if (
-            errorMessage.includes("not found") ||
-            errorMessage.includes("không tồn tại")
-          ) {
-            errorMessage = "Số điện thoại không tồn tại trong hệ thống.";
-          } else if (
-            errorMessage.includes("authentication") ||
-            errorMessage.includes("unauthorized")
-          ) {
+          } else if (response.status === 400) {
             errorMessage =
-              "Không có quyền truy cập. Vui lòng kiểm tra lại thông tin.";
+              "Thông tin không hợp lệ. Vui lòng kiểm tra lại số điện thoại.";
+          } else if (response.status === 404) {
+            errorMessage = "Số điện thoại không tồn tại trong hệ thống.";
           }
-
-          setErrors({ phone: errorMessage });
         }
+
+        // Handle specific backend error messages
+        if (
+          errorMessage.includes("Only parents can use OTP authentication") ||
+          errorMessage.includes("parents") ||
+          errorMessage.includes("PARENT")
+        ) {
+          errorMessage =
+            "Chỉ tài khoản phụ huynh mới được phép đăng nhập bằng số điện thoại. Vui lòng đăng nhập bằng tài khoản nhân viên.";
+        } else if (
+          errorMessage.includes("not found") ||
+          errorMessage.includes("không tồn tại")
+        ) {
+          errorMessage = "Số điện thoại không tồn tại trong hệ thống.";
+        } else if (
+          errorMessage.includes("authentication") ||
+          errorMessage.includes("unauthorized")
+        ) {
+          errorMessage =
+            "Không có quyền truy cập. Vui lòng kiểm tra lại thông tin.";
+        }
+
+        setErrors({ phone: errorMessage });
       }
     } catch (networkError) {
       console.error("Network error:", networkError);
-      setErrors({ phone: "Không thể kết nối đến server. Vui lòng thử lại." });    } finally {
+      setErrors({ phone: "Không thể kết nối đến server. Vui lòng thử lại." });
+    } finally {
       setIndividualLoading("phoneOtp", false);
-    }  };
+    }
+  };
 
   // Handle resend OTP
   const handleResendOtp = async () => {
     setIndividualLoading("resendOtp", true);
     setErrors({}); // Clear previous errors
     setOtp(""); // Clear current OTP input
-    
+
     // Reset OTP timer
     resetOTPTimer();
     setOtpTimeLeft(0);
-    
+
     // Clear any previous confirmation results and Firebase state completely
     setConfirmationResult(null);
     cleanupRecaptcha();
-    
+
     // Wait a bit to ensure Firebase cleanup is complete
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await new Promise((resolve) => setTimeout(resolve, 200));
 
     try {
       // Initialize Firebase first
-      await initializeFirebase();      // Try Firebase first for OTP sending
-      try {        console.log("Attempting to resend OTP via Firebase to:", phoneNumber);
-        const result = await sendOTP(phoneNumber);
-        setConfirmationResult(result);
-        console.log("Firebase OTP resent successfully to", phoneNumber);
-        setErrors({ otp: undefined }); // Clear any OTP errors
-        
-        // Show success state
-        setResendSuccess(true);
-        setTimeout(() => setResendSuccess(false), 2000); // Reset after 2 seconds
-      } catch (firebaseError) {
-        console.log(
-          "Firebase OTP resend failed, falling back to backend:",
-          firebaseError
-        );
+      await initializeFirebase();
 
-        // Fallback to backend OTP generation
-        const response = await fetch(API_ENDPOINTS.auth.requestOtp, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },          body: JSON.stringify({ phoneNumber }),
-        });        if (response.ok) {
-          console.log("Backend OTP resent successfully to", phoneNumber);
+      // Check if Firebase billing is enabled before attempting to use it
+      if (firebaseBillingEnabled) {
+        // Try Firebase first for OTP sending
+        try {
+          console.log("Attempting to resend OTP via Firebase to:", phoneNumber);
+          const result = await sendOTP(phoneNumber);
+          setConfirmationResult(result);
+          console.log("Firebase OTP resent successfully to", phoneNumber);
           setErrors({ otp: undefined }); // Clear any OTP errors
-          
+
           // Show success state
           setResendSuccess(true);
           setTimeout(() => setResendSuccess(false), 2000); // Reset after 2 seconds
-        } else {
-          let errorMessage = "Có lỗi xảy ra khi gửi lại OTP";
-          try {
-            const errorData = await response.json();
-            errorMessage = errorData.message || errorMessage;
-          } catch (parseError) {
-            console.log("Could not parse error response as JSON:", parseError);
+          return; // Success, exit function
+        } catch (firebaseError) {
+          // Check if it's a billing error and disable Firebase for future attempts
+          if (firebaseError.code === "auth/billing-not-enabled") {
+            console.log(
+              "Firebase billing not enabled, disabling Firebase OTP for this session"
+            );
+            setFirebaseBillingEnabled(false);
+          } else {
+            console.log(
+              "Firebase OTP resend failed, falling back to backend:",
+              firebaseError
+            );
           }
-          setErrors({ otp: errorMessage });
         }
+      } else {
+        console.log("Firebase billing disabled, using backend OTP directly");
+      }
+
+      // Fallback to backend OTP generation
+      const response = await fetch(API_ENDPOINTS.auth.requestOtp, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ phoneNumber }),
+      });
+      if (response.ok) {
+        console.log("Backend OTP resent successfully to", phoneNumber);
+        setErrors({ otp: undefined }); // Clear any OTP errors
+
+        // Show success state
+        setResendSuccess(true);
+        setTimeout(() => setResendSuccess(false), 2000); // Reset after 2 seconds
+      } else {
+        let errorMessage = "Có lỗi xảy ra khi gửi lại OTP";
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch (parseError) {
+          console.log("Could not parse error response as JSON:", parseError);
+        }
+        setErrors({ otp: errorMessage });
       }
     } catch (networkError) {
       console.error("Network error:", networkError);
@@ -275,9 +317,9 @@ const Login = () => {
   const handleOtpVerification = async (e) => {
     e.preventDefault();
     setIndividualLoading("otpVerify", true);
-    
+
     // Clear errors when starting verification, especially expiration errors
-    setErrors({}); 
+    setErrors({});
 
     try {
       let firebaseIdToken = null;
@@ -291,29 +333,31 @@ const Login = () => {
           firebaseIdToken = firebaseResult.idToken;
           console.log("Firebase OTP verification successful");
         } catch (firebaseError) {
-          console.log(
-            "Firebase OTP verification failed:",
-            firebaseError
-          );
-          
+          console.log("Firebase OTP verification failed:", firebaseError);
+
           // Check if the error is due to expiration
-          if (firebaseError.message && firebaseError.message.includes('hết hạn')) {
+          if (
+            firebaseError.message &&
+            firebaseError.message.includes("hết hạn")
+          ) {
             setErrors({ otp: firebaseError.message });
             setConfirmationResult(null);
             setIndividualLoading("otpVerify", false);
             return;
           }
-          
+
           // Check if it's an invalid OTP error (allow retry)
-          if (firebaseError.code === 'auth/invalid-verification-code' || 
-              firebaseError.message.includes('invalid') ||
-              firebaseError.message.includes('verification code') ||
-              firebaseError.message.includes('không đúng')) {
-            setErrors({ otp: 'Mã OTP không đúng. Vui lòng thử lại.' });
+          if (
+            firebaseError.code === "auth/invalid-verification-code" ||
+            firebaseError.message.includes("invalid") ||
+            firebaseError.message.includes("verification code") ||
+            firebaseError.message.includes("không đúng")
+          ) {
+            setErrors({ otp: "Mã OTP không đúng. Vui lòng thử lại." });
             setIndividualLoading("otpVerify", false);
             return; // Don't clear confirmationResult, allow retry
           }
-          
+
           // For other errors, fall back to backend but don't clear confirmationResult yet
           console.log("Will try backend verification as fallback");
           useBackendFallback = true;
@@ -324,17 +368,26 @@ const Login = () => {
       }
 
       // Choose endpoint based on whether we have Firebase token or need backend fallback
-      const endpoint = firebaseIdToken && !useBackendFallback
-        ? API_ENDPOINTS.auth.verifyFirebaseOtp
-        : API_ENDPOINTS.auth.verifyOtp;      if (isDevelopment) {
+      const endpoint =
+        firebaseIdToken && !useBackendFallback
+          ? API_ENDPOINTS.auth.verifyFirebaseOtp
+          : API_ENDPOINTS.auth.verifyOtp;
+      if (isDevelopment) {
         logCorsInfo(endpoint);
-      }      const requestBody = firebaseIdToken && !useBackendFallback
-        ? { phoneNumber, firebaseIdToken, otp }
-        : { phoneNumber, otp };
+      }
+      const requestBody =
+        firebaseIdToken && !useBackendFallback
+          ? { phoneNumber, firebaseIdToken, otp }
+          : { phoneNumber, otp };
 
-      console.log(`Using ${firebaseIdToken && !useBackendFallback ? 'Firebase' : 'Backend'} verification for phone:`, phoneNumber);
-      console.log('Request body:', requestBody);
-      console.log('Endpoint:', endpoint);
+      console.log(
+        `Using ${
+          firebaseIdToken && !useBackendFallback ? "Firebase" : "Backend"
+        } verification for phone:`,
+        phoneNumber
+      );
+      console.log("Request body:", requestBody);
+      console.log("Endpoint:", endpoint);
 
       // API call to verify OTP and login
       const response = await fetch(endpoint, {
@@ -383,8 +436,12 @@ const Login = () => {
 
         try {
           const errorData = await response.json();
-          if (errorData.message && errorData.message.includes("Account is disabled")) {
-            errorMessage = "Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.";
+          if (
+            errorData.message &&
+            errorData.message.includes("Account is disabled")
+          ) {
+            errorMessage =
+              "Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.";
           } else {
             errorMessage = errorData.message || errorMessage;
           }
@@ -392,7 +449,8 @@ const Login = () => {
           // If response body is not JSON, use status-based message
           console.log("Could not parse error response as JSON:", parseError);
           if (response.status === 401) {
-            errorMessage = "Mã OTP không hợp lệ hoặc đã hết hạn. Vui lòng gửi lại OTP.";
+            errorMessage =
+              "Mã OTP không hợp lệ hoặc đã hết hạn. Vui lòng gửi lại OTP.";
           } else if (response.status === 400) {
             errorMessage = "Mã OTP không đúng. Vui lòng kiểm tra lại.";
           } else if (response.status === 404) {
@@ -414,9 +472,7 @@ const Login = () => {
           setShowOtp(false); // Go back to phone input screen
           setOtp(""); // Clear OTP field
           return;
-        } else if (
-          errorMessage.includes("Account is disabled")
-        ) {
+        } else if (errorMessage.includes("Account is disabled")) {
           // Handle disabled account specifically
           setErrors({ otp: errorMessage });
         } else if (
@@ -427,11 +483,19 @@ const Login = () => {
         ) {
           errorMessage = "Mã OTP không đúng. Vui lòng kiểm tra lại.";
           // Don't clear confirmationResult for invalid OTP, allow retry
-        } else if (errorMessage.includes("expired") || response.status === 401) {
-          errorMessage = "Mã OTP đã hết hạn hoặc không hợp lệ. Vui lòng bấm 'Gửi lại OTP' để nhận mã mới.";
+        } else if (
+          errorMessage.includes("expired") ||
+          response.status === 401
+        ) {
+          errorMessage =
+            "Mã OTP đã hết hạn hoặc không hợp lệ. Vui lòng bấm 'Gửi lại OTP' để nhận mã mới.";
           setConfirmationResult(null); // Clear for expired OTP
-        } else if (errorMessage.includes("used") || errorMessage.includes("already")) {
-          errorMessage = "Mã OTP này đã được sử dụng. Vui lòng bấm 'Gửi lại OTP' để nhận mã mới.";
+        } else if (
+          errorMessage.includes("used") ||
+          errorMessage.includes("already")
+        ) {
+          errorMessage =
+            "Mã OTP này đã được sử dụng. Vui lòng bấm 'Gửi lại OTP' để nhận mã mới.";
           setConfirmationResult(null); // Clear for used OTP
         }
 
@@ -527,15 +591,17 @@ const Login = () => {
             break;
           default:
             navigate("/");
-        }      } else {
+        }
+      } else {
         // Handle error responses
         let errorMessage = "Tên đăng nhập hoặc mật khẩu không hợp lệ";
-        
+
         try {
           const errorData = await response.json();
           if (errorData.message) {
             if (errorData.message.includes("Account is disabled")) {
-              errorMessage = "Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.";
+              errorMessage =
+                "Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.";
             } else if (errorData.message.includes("Bad credentials")) {
               errorMessage = "Tên đăng nhập hoặc mật khẩu không hợp lệ";
             } else {
@@ -563,10 +629,10 @@ const Login = () => {
   const handleGoogleLogin = async () => {
     setIndividualLoading("googleLogin", true);
     setErrors({}); // Clear previous errors
-    
+
     // Clear URL parameters to prevent error persistence
-    if (searchParams.has('error')) {
-      navigate('/login', { replace: true });
+    if (searchParams.has("error")) {
+      navigate("/login", { replace: true });
     }
 
     try {
@@ -616,7 +682,9 @@ const Login = () => {
             <h2>Dành cho phụ huynh</h2>
             {!showOtp ? (
               <form onSubmit={handlePhoneLogin}>
-                <div className="form-group">                  <input
+                <div className="form-group">
+                  {" "}
+                  <input
                     type="tel"
                     placeholder="Nhập số điện thoại"
                     value={phoneNumber}
@@ -624,7 +692,7 @@ const Login = () => {
                       setPhoneNumber(e.target.value);
                       // Clear phone errors when user starts typing
                       if (errors.phone) {
-                        setErrors(prev => ({ ...prev, phone: undefined }));
+                        setErrors((prev) => ({ ...prev, phone: undefined }));
                       }
                     }}
                     required
@@ -643,59 +711,89 @@ const Login = () => {
                 </button>
               </form>
             ) : (
-              <form onSubmit={handleOtpVerification}>                <div className="form-group">
+              <form onSubmit={handleOtpVerification}>
+                {" "}
+                <div className="form-group">
                   <input
                     type="text"
                     placeholder="Nhập mã OTP"
-                    value={otp}                    onChange={(e) => {
+                    value={otp}
+                    onChange={(e) => {
                       setOtp(e.target.value);
                       // Only clear OTP errors when user starts typing if not currently verifying
                       if (errors.otp && !loadingStates.otpVerify) {
-                        setErrors(prev => ({ ...prev, otp: undefined }));
+                        setErrors((prev) => ({ ...prev, otp: undefined }));
                       }
                     }}
                     onFocus={() => {
                       // Only clear errors when user focuses on input if not currently verifying
-                      if (errors.otp && !errors.otp.includes('hết hạn') && !loadingStates.otpVerify) {
-                        setErrors(prev => ({ ...prev, otp: undefined }));
+                      if (
+                        errors.otp &&
+                        !errors.otp.includes("hết hạn") &&
+                        !loadingStates.otpVerify
+                      ) {
+                        setErrors((prev) => ({ ...prev, otp: undefined }));
                       }
                     }}
                     required
                     disabled={loadingStates.otpVerify || isOTPExpired()}
-                  />                  {/* OTP Timer Display */}
+                  />{" "}
+                  {/* OTP Timer Display */}
                   {otpTimeLeft > 0 && (
-                    <div className={`otp-timer ${otpTimeLeft <= 30 ? 'expired' : 'active'}`}>
-                      Mã OTP sẽ hết hạn sau: {Math.floor(otpTimeLeft / 60)}:{(otpTimeLeft % 60).toString().padStart(2, '0')}
+                    <div
+                      className={`otp-timer ${
+                        otpTimeLeft <= 30 ? "expired" : "active"
+                      }`}
+                    >
+                      Mã OTP sẽ hết hạn sau: {Math.floor(otpTimeLeft / 60)}:
+                      {(otpTimeLeft % 60).toString().padStart(2, "0")}
                     </div>
                   )}
                   {errors.otp && (
                     <div className="error-message">{errors.otp}</div>
                   )}
-                </div>                <button
+                </div>{" "}
+                <button
                   type="submit"
                   className="login-button"
                   disabled={loadingStates.otpVerify || isOTPExpired()}
-                  style={isOTPExpired() ? { backgroundColor: '#ccc', cursor: 'not-allowed' } : {}}
+                  style={
+                    isOTPExpired()
+                      ? { backgroundColor: "#ccc", cursor: "not-allowed" }
+                      : {}
+                  }
                 >
                   {loadingStates.otpVerify
                     ? "Đang xác nhận..."
-                    : isOTPExpired() 
+                    : isOTPExpired()
                     ? "Mã OTP đã hết hạn"
                     : "Xác Nhận OTP"}
-                </button>                <button
+                </button>{" "}
+                <button
                   type="button"
-                  className={`resend-otp-button ${loadingStates.resendOtp ? 'loading' : ''} ${
-                    resendSuccess ? 'success' : 
-                    isOTPExpired() ? 'urgent' : 
-                    otpTimeLeft > 0 && otpTimeLeft <= 30 ? 'can-resend' : ''
+                  className={`resend-otp-button ${
+                    loadingStates.resendOtp ? "loading" : ""
+                  } ${
+                    resendSuccess
+                      ? "success"
+                      : isOTPExpired()
+                      ? "urgent"
+                      : otpTimeLeft > 0 && otpTimeLeft <= 30
+                      ? "can-resend"
+                      : ""
                   }`}
                   onClick={handleResendOtp}
                   disabled={loadingStates.resendOtp || loadingStates.otpVerify}
                 >
-                  {loadingStates.resendOtp ? "Đang gửi lại..." : 
-                   resendSuccess ? "✓ Đã gửi thành công!" :
-                   isOTPExpired() ? "Gửi lại OTP (Đã hết hạn)" : "Gửi lại OTP"}
-                </button><button
+                  {loadingStates.resendOtp
+                    ? "Đang gửi lại..."
+                    : resendSuccess
+                    ? "✓ Đã gửi thành công!"
+                    : isOTPExpired()
+                    ? "Gửi lại OTP (Đã hết hạn)"
+                    : "Gửi lại OTP"}
+                </button>
+                <button
                   type="button"
                   className="back-button"
                   onClick={() => {
@@ -706,12 +804,12 @@ const Login = () => {
                     cleanupRecaptcha(); // Clean Firebase state (this also resets OTP timer)
                     setConfirmationResult(null); // Clear confirmation result
                     setOtpTimeLeft(0); // Reset timer display
-                    
+
                     // Force clear any cached Firebase auth state
                     setTimeout(() => {
                       cleanupRecaptcha();
                     }, 100);
-                    
+
                     // Reset OTP loading state
                     setIndividualLoading("otpVerify", false);
                   }}
@@ -729,7 +827,9 @@ const Login = () => {
             </div>
             <h2>Dành cho nhân viên</h2>
             <form onSubmit={handleUsernameLogin}>
-              <div className="form-group">                <input
+              <div className="form-group">
+                {" "}
+                <input
                   type="text"
                   placeholder="Tên đăng nhập"
                   value={username}
@@ -737,14 +837,16 @@ const Login = () => {
                     setUsername(e.target.value);
                     // Clear username errors when user starts typing
                     if (errors.username) {
-                      setErrors(prev => ({ ...prev, username: undefined }));
+                      setErrors((prev) => ({ ...prev, username: undefined }));
                     }
                   }}
                   required
                   disabled={loadingStates.usernameLogin}
                 />
               </div>
-              <div className="form-group">                <input
+              <div className="form-group">
+                {" "}
+                <input
                   type="password"
                   placeholder="Mật khẩu"
                   value={password}
@@ -752,7 +854,7 @@ const Login = () => {
                     setPassword(e.target.value);
                     // Clear username errors when user starts typing password
                     if (errors.username) {
-                      setErrors(prev => ({ ...prev, username: undefined }));
+                      setErrors((prev) => ({ ...prev, username: undefined }));
                     }
                   }}
                   required
