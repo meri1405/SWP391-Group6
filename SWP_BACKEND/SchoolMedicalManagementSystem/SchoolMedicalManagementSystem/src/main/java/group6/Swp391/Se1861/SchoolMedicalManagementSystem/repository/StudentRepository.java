@@ -2,6 +2,8 @@ package group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.Student;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -33,4 +35,8 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
     // Find all students with eager loading of father and mother
     @Query("SELECT DISTINCT s FROM Student s LEFT JOIN FETCH s.father LEFT JOIN FETCH s.mother")
     List<Student> findAllWithParents();
+    
+    // Find all students with pagination and eager loading of father and mother
+    @Query("SELECT DISTINCT s FROM Student s LEFT JOIN FETCH s.father LEFT JOIN FETCH s.mother")
+    Page<Student> findAllWithParentsPagination(Pageable pageable);
 }

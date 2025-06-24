@@ -9,6 +9,9 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.StudentRepo
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.UserRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IStudentService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,6 +53,19 @@ public class StudentService implements IStudentService {
         return students.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Get all students with pagination
+     * @param page page number (0-based)
+     * @param size page size
+     * @return page of students
+     */
+    @Override
+    public Page<StudentDTO> getAllStudentsWithPagination(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Student> studentsPage = studentRepository.findAllWithParentsPagination(pageable);
+        return studentsPage.map(this::convertToDTO);
     }
 
     /**
@@ -331,7 +347,6 @@ public class StudentService implements IStudentService {
     public void deleteStudent(Long studentId) {
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy học sinh với ID: " + studentId));
-
         studentRepository.delete(student);
     }
 

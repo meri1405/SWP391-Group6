@@ -7,6 +7,7 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IStudentServic
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IExcelService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpHeaders;
@@ -16,6 +17,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 /**
  * Controller cho việc quản lý học sinh dành cho Manager
@@ -54,16 +57,33 @@ public class ManagerStudentController {
     }
     
     /**
-     * Lấy danh sách tất cả học sinh
+     * Lấy danh sách tất cả học sinh với pagination
      * Manager có thể xem danh sách học sinh
      * 
-     * @return Danh sách tất cả học sinh trong hệ thống
+     * @param page Số trang (bắt đầu từ 0)
+     * @param size Kích thước trang
+     * @return Danh sách học sinh với thông tin pagination
      */
     @GetMapping
-    public ResponseEntity<?> getAllStudents() {
+    public ResponseEntity<?> getAllStudents(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
         try {
-            List<StudentDTO> students = studentService.getAllStudents();
-            return ResponseEntity.ok(students);
+            Page<StudentDTO> studentsPage = studentService.getAllStudentsWithPagination(page, size);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("content", studentsPage.getContent());
+            response.put("totalElements", studentsPage.getTotalElements());
+            response.put("totalPages", studentsPage.getTotalPages());
+            response.put("currentPage", studentsPage.getNumber());
+            response.put("size", studentsPage.getSize());
+            response.put("pageable", Map.of(
+                "pageNumber", studentsPage.getNumber(),
+                "pageSize", studentsPage.getSize(),
+                "totalElements", studentsPage.getTotalElements()
+            ));
+            
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ErrorResponse("Có lỗi xảy ra khi lấy danh sách học sinh: " + e.getMessage()));

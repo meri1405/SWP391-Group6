@@ -27,6 +27,7 @@ import ParentDashboard from "./pages/ParentDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import SchoolNurseDashboard from "./pages/SchoolNurseDashboard";
 import ManagerDashboard from "./pages/ManagerDashboard";
+import AddStudentsPage from "./pages/AddStudentsPage";
 import "./styles/App.css";
 
 function App() {
@@ -76,6 +77,14 @@ function App() {
                 element={
                   <ProtectedRoute allowedRoles={["MANAGER"]}>
                     <ManagerDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/manager-dashboard/add-students"
+                element={
+                  <ProtectedRoute allowedRoles={["MANAGER"]}>
+                    <AddStudentsPage />
                   </ProtectedRoute>
                 }
               />
