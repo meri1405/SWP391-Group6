@@ -6,6 +6,7 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.StudentWithParents
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.StudentWithParentsCreationResponseDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.Student;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
+import org.springframework.data.domain.Page;
 
 import java.util.List;
 
@@ -20,6 +21,11 @@ public interface IStudentService {
      * Get all students
      */
     List<StudentDTO> getAllStudents();
+
+    /**
+     * Get all students with pagination
+     */
+    Page<StudentDTO> getAllStudentsWithPagination(int page, int size);
 
     /**
      * Get student by ID

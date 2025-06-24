@@ -1,0 +1,331 @@
+.disabled-row {
+    background: #f2f2f2 !important;
+    color: #a0a0a0 !important;
+    opacity: 1 !important;
+    pointer-events: none;
+    font-style: italic;
+}
+
+.dashboard-section {
+    background: #f8fafc;
+    min-height: 100vh;
+    padding: 32px 0 48px 0;
+}
+
+.section-header h2 {
+    color: #fff !important;
+    font-weight: 600 !important;
+    font-size: 28px !important;
+    margin-bottom: 0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 24px 32px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.15);
+    display: inline-block;
+}
+
+.ant-card,
+.ant-modal-content {
+    background: #fff !important;
+    color: #374151 !important;
+    border-radius: 12px !important;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1) !important;
+    border: 2px solid #e0e7ff !important;
+    padding: 0 !important;
+}
+
+.ant-form {
+    background: #f1f5f9 !important;
+    border-radius: 8px;
+    padding: 24px 24px 8px 24px;
+    border: 2px solid #e0e7ff;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+/* Label, dấu hoa thị trên nền đậm */
+.card-dark-label .ant-form-item-label>label,
+.card-dark-label .ant-form-item-required,
+.card-dark-label .ant-form-item-required::before {
+    color: #fff !important;
+    font-weight: 700 !important;
+    font-size: 17px !important;
+    letter-spacing: 0.3px;
+    margin-bottom: 8px !important;
+    line-height: 1.2;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+}
+
+.card-dark-label .ant-form-item-required::before {
+    color: #fff !important;
+    font-size: 18px !important;
+    font-weight: 900 !important;
+}
+
+/* Label trên nền sáng */
+.ant-form-item-label>label,
+.ant-form-item-required,
+.ant-form-item-required::before {
+    color: #374151 !important;
+    font-weight: 500 !important;
+    font-size: 15px !important;
+    margin-bottom: 8px !important;
+    line-height: 1.2;
+    display: block;
+}
+
+.ant-form-item-required::before {
+    color: #d32f2f !important;
+    font-size: 18px !important;
+    font-weight: 900 !important;
+}
+
+.ant-typography,
+.ant-typography h5,
+.ant-typography h4,
+.ant-typography h3 {
+    color: #222 !important;
+    font-weight: 700 !important;
+}
+
+.ant-input,
+.ant-select-selector,
+.ant-picker {
+    background: #fff !important;
+    color: #222 !important;
+    border: 2px solid #e0e7ff !important;
+    border-radius: 8px !important;
+    font-size: 15px !important;
+    font-weight: 500 !important;
+    box-shadow: none !important;
+    padding: 12px 16px !important;
+    transition: border 0.2s, box-shadow 0.2s;
+    min-height: 44px;
+}
+
+.ant-input:focus,
+.ant-select-focused .ant-select-selector,
+.ant-picker-focused {
+    border-color: #667eea !important;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
+}
+
+.ant-input::placeholder,
+.ant-select-selection-placeholder,
+.ant-picker-input>input::placeholder {
+    color: #888 !important;
+    opacity: 1 !important;
+    font-weight: 400 !important;
+    font-size: 15px !important;
+}
+
+.ant-table-thead>tr>th {
+    background: #f0f2f5 !important;
+    color: #222 !important;
+    font-weight: 700 !important;
+    font-size: 15px !important;
+    border-bottom: 2px solid #e0e0e0 !important;
+}
+
+.ant-table-tbody>tr>td {
+    background: #fff !important;
+    color: #222 !important;
+    font-size: 15px !important;
+    border-bottom: 1.5px solid #f0f0f0 !important;
+}
+
+.ant-btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    color: #fff !important;
+    font-weight: 600 !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-size: 15px !important;
+    padding: 12px 24px !important;
+    height: 44px !important;
+    letter-spacing: 0.2px;
+    transition: all 0.3s ease;
+}
+
+.ant-btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+}
+
+.ant-btn-dangerous {
+    background: #ff4d4f !important;
+    color: #fff !important;
+    font-weight: 600 !important;
+    border: none !important;
+    border-radius: 8px !important;
+}
+
+.ant-btn {
+    font-size: 15px !important;
+    border-radius: 8px !important;
+    padding: 12px 20px !important;
+    height: 44px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.2px;
+    transition: all 0.3s ease;
+}
+
+.ant-btn:hover,
+.ant-btn:focus {
+    filter: brightness(0.97);
+    opacity: 0.97;
+}
+
+.ant-form-item-explain-error {
+    color: #d32f2f !important;
+    background: #fff0f0 !important;
+    font-weight: 500 !important;
+    padding: 2px 8px !important;
+    border-radius: 5px !important;
+    font-size: 13px !important;
+    margin-top: 4px !important;
+    box-shadow: none;
+}
+
+/* Card hướng dẫn nền đậm, chữ trắng */
+.ant-card-guidance,
+.ant-card-guidance * {
+    background: #f1f5f9 !important;
+    color: #374151 !important;
+    border: 2px solid #e0e7ff !important;
+    border-radius: 8px !important;
+    box-shadow: 0 2px 6px rgba(102, 126, 234, 0.05);
+    padding: 24px 24px !important;
+}
+
+/* Nút nổi bật */
+.btn-highlight {
+    background: linear-gradient(135deg, #ff6b35 0%, #ffb347 100%) !important;
+    color: #fff !important;
+    font-weight: 700 !important;
+    border: none !important;
+    border-radius: 8px !important;
+}
+
+/* Khoảng cách giữa các form item */
+.ant-form-item {
+    margin-bottom: 16px !important;
+}
+
+/* Responsive Table: scroll ngang trên mobile */
+@media (max-width: 900px) {
+    .ant-table-wrapper {
+        overflow-x: auto;
+        width: 100vw;
+        margin-left: -16px;
+        margin-right: -16px;
+    }
+
+    .ant-table-content {
+        min-width: 700px;
+    }
+
+    .ant-table-thead>tr>th,
+    .ant-table-tbody>tr>td {
+        font-size: 13px !important;
+        padding: 6px 4px !important;
+    }
+
+    .ant-table-thead>tr>th:last-child,
+    .ant-table-tbody>tr>td:last-child {
+        min-width: 90px;
+    }
+}
+
+/* Ẩn bớt cột phụ trên mobile, chỉ giữ lại Họ tên, Lớp, Trạng thái, Thao tác */
+@media (max-width: 600px) {
+    .ant-table-wrapper {
+        overflow-x: auto;
+    }
+
+    .ant-table-content {
+        min-width: 520px;
+    }
+
+    .ant-table-thead>tr>th:nth-child(2),
+    /* Ngày sinh */
+    .ant-table-thead>tr>th:nth-child(3),
+    /* Giới tính */
+    .ant-table-thead>tr>th:nth-child(5),
+    /* Nơi sinh */
+    .ant-table-thead>tr>th:nth-child(6),
+    /* Quốc tịch */
+    .ant-table-thead>tr>th:nth-child(7),
+    /* Địa chỉ */
+    .ant-table-thead>tr>th:nth-child(9)
+
+    /* Phụ huynh */
+        {
+        display: none !important;
+    }
+
+    .ant-table-tbody>tr>td:nth-child(2),
+    .ant-table-tbody>tr>td:nth-child(3),
+    .ant-table-tbody>tr>td:nth-child(5),
+    .ant-table-tbody>tr>td:nth-child(6),
+    .ant-table-tbody>tr>td:nth-child(7),
+    .ant-table-tbody>tr>td:nth-child(9) {
+        display: none !important;
+    }
+}
+
+/* Responsive section header & button group */
+@media (max-width: 600px) {
+    .section-header {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 10px !important;
+    }
+
+    .section-header h2 {
+        font-size: 20px !important;
+        padding: 12px 10px !important;
+        border-radius: 8px !important;
+    }
+
+    .section-header .ant-space {
+        width: 100%;
+        flex-direction: column !important;
+        gap: 8px !important;
+    }
+
+    .section-header .ant-btn {
+        width: 100%;
+        min-width: 0;
+        margin-bottom: 0 !important;
+    }
+}
+
+/* Responsive modal */
+@media (max-width: 600px) {
+    .ant-modal {
+        width: 98vw !important;
+        max-width: 98vw !important;
+        padding: 0 !important;
+    }
+
+    .ant-modal-content {
+        padding: 8px 2px !important;
+        border-radius: 8px !important;
+    }
+
+    .ant-card {
+        padding: 0 !important;
+    }
+}
+
+/* Responsive Card padding */
+@media (max-width: 600px) {
+    .ant-card {
+        padding: 0 !important;
+        border-radius: 8px !important;
+    }
+}
