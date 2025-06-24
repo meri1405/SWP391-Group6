@@ -146,4 +146,63 @@ public interface INotificationService {
      * Delete all notifications for a user
      */
     NotificationDTO convertToDTO(Notification notification);
+    
+
+    /***
+     * HEALTH CHECK CAMPAIGN NOTIFICATIONS
+     * */
+    /**
+     * Notify managers about a campaign pending approval
+     */
+    void notifyManagersAboutCampaignApproval(HealthCheckCampaign campaign);
+
+    /**
+     * Notify nurse about campaign approval
+     */
+    void notifyNurseAboutCampaignApproval(HealthCheckCampaign campaign);
+
+    /**
+     * Notify nurse about campaign rejection
+     */
+    void notifyNurseAboutCampaignRejection(HealthCheckCampaign campaign, String notes);
+
+    /**
+     * Notify manager about campaign scheduling
+     */
+    void notifyManagerAboutCampaignSchedule(HealthCheckCampaign campaign);
+
+    /**
+     * Notify manager about campaign completion
+     */
+    void notifyManagerAboutCampaignCompletion(HealthCheckCampaign campaign);
+
+    /**
+     * Notify parent about health check
+     */
+    void notifyParentAboutHealthCheck(HealthCheckForm form);
+
+    /**
+     * Notify nurse about parent confirmation
+     */
+    void notifyNurseAboutParentConfirmation(HealthCheckForm form);
+
+    /**
+     * Notify parent about abnormal health check result
+     */
+    void notifyParentAboutAbnormalResult(HealthCheckResult result);
+
+    /**
+     * Notify manager about abnormal health check result
+     */
+    void notifyManagerAboutAbnormalResult(HealthCheckResult result);
+
+    /**
+     * Notify parent about consultation
+     */
+    void notifyParentAboutConsultation(HealthCheckResult result);
+
+    /**
+     * Notify parent about appointment scheduling
+     */
+    void notifyParentAboutAppointment(HealthCheckForm form);
 }

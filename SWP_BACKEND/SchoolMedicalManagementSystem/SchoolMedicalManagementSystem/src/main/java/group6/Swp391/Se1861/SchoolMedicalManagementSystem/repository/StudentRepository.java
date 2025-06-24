@@ -33,4 +33,10 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
     // Find all students with eager loading of father and mother
     @Query("SELECT DISTINCT s FROM Student s LEFT JOIN FETCH s.father LEFT JOIN FETCH s.mother")
     List<Student> findAllWithParents();
+
+    // Find students by date of birth between two dates (for age filtering)
+    List<Student> findByDobBetween(LocalDate startDate, LocalDate endDate);
+
+    // Find students by class name
+    List<Student> findByClassName(String className);
 }

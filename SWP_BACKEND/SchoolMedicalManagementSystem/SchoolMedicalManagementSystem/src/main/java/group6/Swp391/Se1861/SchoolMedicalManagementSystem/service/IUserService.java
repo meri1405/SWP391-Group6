@@ -27,5 +27,14 @@ public interface IUserService extends UserDetailsService {
     boolean existsByEmail(String email);
 
     boolean existsByPhone(String phone);
+    
+    /**
+     * Check if a user is the parent of a student
+     *
+     * @param userId    the user ID to check
+     * @param studentId the student ID to check
+     * @return true if the user is a parent of the student, false otherwise
+     */
+    boolean isParentOfStudent(Long userId, Long studentId);
 
 }
