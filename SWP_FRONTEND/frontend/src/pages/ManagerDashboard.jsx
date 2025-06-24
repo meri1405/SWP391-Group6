@@ -21,14 +21,14 @@ import {
   LogoutOutlined,
   DashboardOutlined,
 } from "@ant-design/icons";
-import { ConsultationsSection } from "../components/dashboard/admin/health";
-import { HealthChecksSection } from "../components/dashboard/admin/health";
+import ConsultationsSection from "../components/dashboard/ConsultationsSection";
+import HealthChecksSection from "../components/dashboard/HealthChecksSection";
 import { VaccinationSchedule } from "../components/dashboard/admin/vaccinations";
-import { MedicalEventsSection } from "../components/dashboard/admin/events";
-import { InventorySection } from "../components/dashboard/admin/inventory";
-import { NotificationsSection } from "../components/dashboard/admin/notifications";
-import { BlogSection } from "../components/dashboard/admin/blog";
-import { StudentsSection } from "../components/dashboard/admin/students";
+import MedicalEventsSection from "../components/dashboard/MedicalEventsSection";
+import InventorySection from "../components/dashboard/InventorySection";
+import NotificationsSection from "../components/dashboard/NotificationsSection";
+import BlogSection from "../components/dashboard/BlogSection";
+import StudentsSection from "../components/dashboard/StudentsSection";
 import "../styles/AdminDashboard.css";
 
 const { Header, Sider, Content } = Layout;
