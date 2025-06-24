@@ -304,6 +304,281 @@ public class NotificationService implements INotificationService {
 
         return notificationDTO;
     }
+    
+    /**
+     * Notify managers about a campaign pending approval
+     */
+    @Transactional
+    @Override
+    public void notifyManagersAboutCampaignApproval(HealthCheckCampaign campaign) {
+        // Find all manager users
+        List<User> managers = userRepository.findByRole_RoleName("ROLE_MANAGER");
+
+        for (User manager : managers) {
+            Notification notification = new Notification();
+            notification.setTitle("Health Check Campaign Pending Approval");
+            notification.setMessage("A new health check campaign '" + campaign.getName() + "' requires your approval.");
+            notification.setNotificationType("CAMPAIGN_PENDING_APPROVAL");
+            notification.setRecipient(manager);
+
+            Notification savedNotification = notificationRepository.save(notification);
+
+            // Send WebSocket notification
+            sendWebSocketNotification(savedNotification);
+        }
+    }
+
+    /**
+     * Notify nurse about campaign approval
+     */
+    @Transactional
+    @Override
+    public void notifyNurseAboutCampaignApproval(HealthCheckCampaign campaign) {
+        User nurse = campaign.getCreatedBy();
+
+        Notification notification = new Notification();
+        notification.setTitle("Health Check Campaign Approved");
+        notification.setMessage("Your health check campaign '" + campaign.getName() + "' has been approved.");
+        notification.setNotificationType("CAMPAIGN_APPROVED");
+        notification.setRecipient(nurse);
+
+        Notification savedNotification = notificationRepository.save(notification);
+
+        // Send WebSocket notification
+        sendWebSocketNotification(savedNotification);
+    }
+
+    /**
+     * Notify nurse about campaign rejection
+     */
+    @Transactional
+    @Override
+    public void notifyNurseAboutCampaignRejection(HealthCheckCampaign campaign, String notes) {
+        User nurse = campaign.getCreatedBy();
+
+        Notification notification = new Notification();
+        notification.setTitle("Health Check Campaign Needs Revision");
+        notification.setMessage("Your health check campaign '" + campaign.getName() +
+                "' requires revisions. Notes: " + notes);
+        notification.setNotificationType("CAMPAIGN_REJECTED");
+        notification.setRecipient(nurse);
+
+        Notification savedNotification = notificationRepository.save(notification);
+
+        // Send WebSocket notification
+        sendWebSocketNotification(savedNotification);
+    }
+
+    /**
+     * Notify manager about campaign scheduling
+     */
+    @Transactional
+    @Override
+    public void notifyManagerAboutCampaignSchedule(HealthCheckCampaign campaign) {
+        User approver = campaign.getApprovedBy();
+        if (approver == null) {
+            return; // No approver to notify
+        }
+
+        Notification notification = new Notification();
+        notification.setTitle("Health Check Campaign Scheduled");
+        notification.setMessage("The health check campaign '" + campaign.getName() +
+                "' has been scheduled with " + campaign.getTargetCount() + " target students.");
+        notification.setNotificationType("CAMPAIGN_SCHEDULED");
+        notification.setRecipient(approver);
+
+        Notification savedNotification = notificationRepository.save(notification);
+
+        // Send WebSocket notification
+        sendWebSocketNotification(savedNotification);
+    }
+
+    /**
+     * Notify manager about campaign completion
+     */
+    @Transactional
+    @Override
+    public void notifyManagerAboutCampaignCompletion(HealthCheckCampaign campaign) {
+        User approver = campaign.getApprovedBy();
+        if (approver == null) {
+            return; // No approver to notify
+        }
+
+        Notification notification = new Notification();
+        notification.setTitle("Health Check Campaign Completed");
+        notification.setMessage("The health check campaign '" + campaign.getName() + "' has been completed.");
+        notification.setNotificationType("CAMPAIGN_COMPLETED");
+        notification.setRecipient(approver);
+
+        Notification savedNotification = notificationRepository.save(notification);
+
+        // Send WebSocket notification
+        sendWebSocketNotification(savedNotification);
+    }
+
+    /**
+     * Notify parent about health check
+     */
+    @Transactional
+    @Override
+    public void notifyParentAboutHealthCheck(HealthCheckForm form) {
+        User parent = form.getParent();
+        Student student = form.getStudent();
+        HealthCheckCampaign campaign = form.getCampaign();
+
+        Notification notification = new Notification();
+        notification.setTitle("Health Check Notification");
+        notification.setMessage("Your child " + student.getFullName() + " is scheduled for a health check: '" +
+                campaign.getName() + "'. Please confirm or decline.");
+        notification.setNotificationType("HEALTH_CHECK_NOTIFICATION");
+        notification.setRecipient(parent);
+
+        Notification savedNotification = notificationRepository.save(notification);
+
+        // Send WebSocket notification
+        sendWebSocketNotification(savedNotification);
+    }
+
+    /**
+     * Notify nurse about parent confirmation
+     */
+    @Transactional
+    @Override
+    public void notifyNurseAboutParentConfirmation(HealthCheckForm form) {
+        User nurse = form.getCampaign().getCreatedBy();
+        Student student = form.getStudent();
+
+        Notification notification = new Notification();
+        notification.setTitle("Health Check Confirmation");
+        notification.setMessage("Parent has confirmed health check for student: " + student.getFullName());
+        notification.setNotificationType("HEALTH_CHECK_CONFIRMED");
+        notification.setRecipient(nurse);
+
+        Notification savedNotification = notificationRepository.save(notification);
+
+        // Send WebSocket notification
+        sendWebSocketNotification(savedNotification);
+    }
+
+    /**
+     * Notify parent about abnormal health check result
+     */
+    @Transactional
+    @Override
+    public void notifyParentAboutAbnormalResult(HealthCheckResult result) {
+        User parent = result.getStudent().getParent();
+        if (parent == null) {
+            return; // No parent to notify
+        }
+
+        Notification notification = new Notification();
+        notification.setTitle("Health Check Result - Attention Required");
+        notification.setMessage("Your child " + result.getStudent().getFullName() +
+                " requires attention for their " + result.getCategory().toString().toLowerCase() + " health check.");
+        notification.setNotificationType("ABNORMAL_HEALTH_RESULT");
+        notification.setRecipient(parent);
+
+        Notification savedNotification = notificationRepository.save(notification);
+
+        // Send WebSocket notification
+        sendWebSocketNotification(savedNotification);
+    }
+
+    /**
+     * Notify manager about abnormal health check result
+     */
+    @Transactional
+    @Override
+    public void notifyManagerAboutAbnormalResult(HealthCheckResult result) {
+        User manager = result.getForm().getCampaign().getApprovedBy();
+        if (manager == null) {
+            return; // No manager to notify
+        }
+
+        Notification notification = new Notification();
+        notification.setTitle("Abnormal Health Check Result");
+        notification.setMessage("Student " + result.getStudent().getFullName() +
+                " has an abnormal " + result.getCategory().toString().toLowerCase() + " health check result.");
+        notification.setNotificationType("MANAGER_ABNORMAL_RESULT");
+        notification.setRecipient(manager);
+
+        Notification savedNotification = notificationRepository.save(notification);
+
+        // Send WebSocket notification
+        sendWebSocketNotification(savedNotification);
+    }
+
+    /**
+     * Notify parent about consultation
+     */
+    @Transactional
+    @Override
+    public void notifyParentAboutConsultation(HealthCheckResult result) {
+        User parent = result.getStudent().getParent();
+        if (parent == null) {
+            return; // No parent to notify
+        }
+
+        String location = result.getIsOnline() != null && result.getIsOnline() ?
+                "Online meeting (link has been sent)" : result.getConsultationLocation();
+
+        Notification notification = new Notification();
+        notification.setTitle("Health Consultation Scheduled");
+        notification.setMessage("A consultation has been scheduled for " + result.getStudent().getFullName() +
+                " on " + result.getConsultationDate() + " at " + result.getConsultationTime() +
+                ". Location: " + location);
+        notification.setNotificationType("CONSULTATION_SCHEDULED");
+        notification.setRecipient(parent);
+
+        Notification savedNotification = notificationRepository.save(notification);
+
+        // Send WebSocket notification
+        sendWebSocketNotification(savedNotification);
+    }
+
+    /**
+     * Notify parent about appointment scheduling
+     */
+    @Transactional
+    @Override
+    public void notifyParentAboutAppointment(HealthCheckForm form) {
+        User parent = form.getParent();
+        Student student = form.getStudent();
+
+        if (parent == null) {
+            return; // No parent to notify
+        }
+
+        Notification notification = new Notification();
+        notification.setTitle("Health Check Appointment Scheduled");
+        notification.setMessage("An appointment has been scheduled for " + student.getFullName() +
+                " on " + form.getAppointmentTime().toLocalDate() +
+                " at " + form.getAppointmentTime().toLocalTime() +
+                ". Location: " + form.getAppointmentLocation());
+        notification.setNotificationType("APPOINTMENT_SCHEDULED");
+        notification.setRecipient(parent);
+
+        Notification savedNotification = notificationRepository.save(notification);
+
+        // Send WebSocket notification
+        sendWebSocketNotification(savedNotification);
+    }
+
+    /**
+     * Helper method to send WebSocket notification
+     */
+    private void sendWebSocketNotification(Notification notification) {
+        try {
+            NotificationDTO notificationDTO = convertToDTO(notification);
+            messagingTemplate.convertAndSendToUser(
+                    notification.getRecipient().getEmail(),
+                    "/queue/notifications",
+                    notificationDTO
+            );
+        } catch (Exception e) {
+            System.err.println("Failed to send WebSocket notification: " + e.getMessage());
+        }
+    }
 
     /**
      * Convert Notification entity to DTO
