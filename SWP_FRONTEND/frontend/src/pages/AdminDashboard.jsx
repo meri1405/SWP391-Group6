@@ -347,7 +347,11 @@ const UserManagement = ({
                     if (modalMode === "add") {
                       setSelectedRoleForNewUser(""); // Go back to role selection
                       // Only reset form if it's mounted to avoid warnings
-                      if (isUserFormMounted) {
+                      if (
+                        isUserFormMounted &&
+                        userFormInstance &&
+                        typeof userFormInstance.resetFields === "function"
+                      ) {
                         try {
                           userFormInstance.resetFields();
                         } catch (error) {
@@ -601,13 +605,18 @@ const UserManagement = ({
                     <li>Họ và tên: 2-50 ký tự, chỉ chữ cái tiếng Việt</li>
                     <li>
                       Số điện thoại: 10 số, bắt đầu bằng 03, 05, 07, 08, 09
+                      (không được trùng lặp)
                     </li>
-                    <li>Email: Địa chỉ email hợp lệ</li>
-                    <li>Tên đăng nhập: 3-30 ký tự, bắt đầu bằng chữ cái</li>
+                    <li>Email: Địa chỉ email hợp lệ (không được trùng lặp)</li>
+                    <li>
+                      Tên đăng nhập: 3-30 ký tự, bắt đầu bằng chữ cái (không
+                      được trùng lặp)
+                    </li>
                     <li>
                       Mật khẩu: Ít nhất 8 ký tự, độ mạnh từ 'Trung bình' trở lên
                     </li>
                     <li>Ngày sinh: Tuổi từ 16-100</li>
+                    <li>Giới tính: Bắt buộc chọn</li>
                     <li>Địa chỉ: 10-200 ký tự</li>
                   </ul>
                 </div>
@@ -727,6 +736,21 @@ const UserManagement = ({
                           return Promise.reject(
                             new Error("Số điện thoại phải có đúng 10 chữ số!")
                           );
+                        }
+                        // Check for duplicate phone number
+                        if (value && modalMode === "add") {
+                          const existingUser = users.find(
+                            (user) =>
+                              user.phone === value &&
+                              user.id !== selectedUser?.id
+                          );
+                          if (existingUser) {
+                            return Promise.reject(
+                              new Error(
+                                "Số điện thoại này đã được sử dụng bởi người dùng khác!"
+                              )
+                            );
+                          }
                         }
                         return Promise.resolve();
                       },
@@ -870,6 +894,21 @@ const UserManagement = ({
                                   )
                                 );
                               }
+                              // Check for duplicate email
+                              if (value && modalMode === "add") {
+                                const existingUser = users.find(
+                                  (user) =>
+                                    user.email === value &&
+                                    user.id !== selectedUser?.id
+                                );
+                                if (existingUser) {
+                                  return Promise.reject(
+                                    new Error(
+                                      "Email này đã được sử dụng bởi người dùng khác!"
+                                    )
+                                  );
+                                }
+                              }
                               return Promise.resolve();
                             },
                           },
@@ -933,6 +972,21 @@ const UserManagement = ({
                                     "Tên đăng nhập không được bắt đầu bằng số!"
                                   )
                                 );
+                              }
+                              // Check for duplicate username
+                              if (value && modalMode === "add") {
+                                const existingUser = users.find(
+                                  (user) =>
+                                    user.username === value &&
+                                    user.id !== selectedUser?.id
+                                );
+                                if (existingUser) {
+                                  return Promise.reject(
+                                    new Error(
+                                      "Tên đăng nhập này đã được sử dụng bởi người dùng khác!"
+                                    )
+                                  );
+                                }
                               }
                               return Promise.resolve();
                             },
@@ -1894,7 +1948,10 @@ const AdminDashboard = () => {
   useEffect(() => {
     if (isUserFormMounted && modalMode === "add" && !selectedRoleForNewUser) {
       // Form is mounted and modal is open for adding, reset the form
-      resetUserForm();
+      // Add a small delay to ensure form is fully connected to DOM
+      setTimeout(() => {
+        resetUserForm();
+      }, 50);
     }
   }, [isUserFormMounted, modalMode, selectedRoleForNewUser]);
 
@@ -1929,6 +1986,15 @@ const AdminDashboard = () => {
     // Only proceed if form is mounted
     if (!isUserFormMounted) {
       console.warn("Form not mounted yet, skipping reset");
+      return;
+    }
+
+    // Additional check to ensure form instance is properly connected
+    if (
+      !userFormInstance ||
+      typeof userFormInstance.resetFields !== "function"
+    ) {
+      console.warn("Form instance not properly connected, skipping reset");
       return;
     }
 
@@ -2047,6 +2113,17 @@ const AdminDashboard = () => {
     // Only proceed if form is mounted
     if (!isUserFormMounted) {
       console.warn("Form not mounted yet, skipping role selection");
+      return;
+    }
+
+    // Additional check to ensure form instance is properly connected
+    if (
+      !userFormInstance ||
+      typeof userFormInstance.setFieldsValue !== "function"
+    ) {
+      console.warn(
+        "Form instance not properly connected, skipping role selection"
+      );
       return;
     }
 
