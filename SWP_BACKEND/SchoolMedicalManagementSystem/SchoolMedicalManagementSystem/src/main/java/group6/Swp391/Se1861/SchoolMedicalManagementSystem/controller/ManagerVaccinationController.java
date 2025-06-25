@@ -20,6 +20,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/manager/vaccination-campaigns")
 @RequiredArgsConstructor
+@PreAuthorize("hasRole('MANAGER')")
 public class ManagerVaccinationController {
 
     private final IVaccinationCampaignService campaignService;

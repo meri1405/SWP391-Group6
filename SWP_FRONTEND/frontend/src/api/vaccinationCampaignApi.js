@@ -269,4 +269,75 @@ export const vaccinationCampaignApi = {
   }
 };
 
-export default vaccinationCampaignApi; 
+// Manager Vaccination Campaign APIs
+export const managerVaccinationApi = {
+  // Get pending campaigns for approval
+  getPendingCampaigns: async (page = 0, size = 10) => {
+    try {
+      const response = await vaccinationApiClient.get(`/manager/vaccination-campaigns/pending?page=${page}&size=${size}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching pending campaigns:', error);
+      throw error;
+    }
+  },
+
+  // Get campaigns by status
+  getCampaignsByStatus: async (status, page = 0, size = 10) => {
+    try {
+      const response = await vaccinationApiClient.get(`/manager/vaccination-campaigns/status/${status}?page=${page}&size=${size}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching campaigns with status ${status}:`, error);
+      throw error;
+    }
+  },
+
+  // Get campaign details by ID
+  getCampaignById: async (id) => {
+    try {
+      const response = await vaccinationApiClient.get(`/manager/vaccination-campaigns/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching campaign ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Approve a vaccination campaign
+  approveCampaign: async (id) => {
+    try {
+      const response = await vaccinationApiClient.post(`/manager/vaccination-campaigns/${id}/approve`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error approving campaign ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Reject a vaccination campaign
+  rejectCampaign: async (id, reason) => {
+    try {
+      const response = await vaccinationApiClient.post(`/manager/vaccination-campaigns/${id}/reject`, {
+        reason: reason
+      });
+      return response.data;
+    } catch (error) {
+      console.error(`Error rejecting campaign ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Get campaign statistics
+  getCampaignStatistics: async () => {
+    try {
+      const response = await vaccinationApiClient.get('/manager/vaccination-campaigns/statistics');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching campaign statistics:', error);
+      throw error;
+    }
+  }
+};
+
+export default vaccinationCampaignApi;

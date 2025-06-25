@@ -37,9 +37,13 @@ export const createStudentWithParents = async (studentData) => {
  */
 export const getAllStudents = async () => {
   try {
-    const response = await fetch(STUDENT_API_BASE, {
+    const response = await fetch(`${STUDENT_API_BASE}?_t=${Date.now()}`, {
       method: 'GET',
-      headers: getAuthHeaders(),
+      headers: {
+        ...getAuthHeaders(),
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      },
     });
 
     if (!response.ok) {
@@ -77,15 +81,19 @@ export const getStudentById = async (studentId) => {
 };
 
 /**
- * Xóa học sinh
- * @param {number} studentId - ID của học sinh cần xóa
+ * Toggle trạng thái học sinh (enable/disable)
+ * @param {number} studentId - ID của học sinh cần toggle status
  * @returns {Promise<Object>} Response data
  */
 export const deleteStudent = async (studentId) => {
   try {
     const response = await fetch(`${STUDENT_API_BASE}/${studentId}`, {
       method: 'DELETE',
-      headers: getAuthHeaders(),
+      headers: {
+        ...getAuthHeaders(),
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      },
     });
 
     if (!response.ok) {
@@ -95,7 +103,7 @@ export const deleteStudent = async (studentId) => {
 
     return await response.json();
   } catch (error) {
-    throw new Error(handleApiError(error, 'Không thể xóa học sinh'));
+    throw new Error(handleApiError(error, 'Không thể thay đổi trạng thái học sinh'));
   }
 };
 
