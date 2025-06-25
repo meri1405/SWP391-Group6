@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useAuth } from "../../../../contexts/AuthContext";
-import { parentApi } from "../../../../api/parentApi";
-import "../../../../styles/VaccinationFormModal.css";
+import { useAuth } from "../../../contexts/AuthContext";
+import { parentApi } from "../../../api/parentApi";
+import "../../../styles/VaccinationFormModal.css";
 
 const VaccinationFormModal = ({
   isOpen,

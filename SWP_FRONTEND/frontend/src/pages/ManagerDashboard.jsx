@@ -23,7 +23,7 @@ import {
 } from "@ant-design/icons";
 import ConsultationsSection from "../components/dashboard/ConsultationsSection";
 import HealthChecksSection from "../components/dashboard/HealthChecksSection";
-import { VaccinationSchedule } from "../components/dashboard/admin/vaccinations";
+import { VaccinationSchedule } from "../components/dashboard/vaccinations";
 import MedicalEventsSection from "../components/dashboard/MedicalEventsSection";
 import InventorySection from "../components/dashboard/InventorySection";
 import NotificationsSection from "../components/dashboard/NotificationsSection";

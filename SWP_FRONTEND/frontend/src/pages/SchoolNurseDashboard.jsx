@@ -37,9 +37,9 @@ import {
 } from "@ant-design/icons";
 import NurseMedicationRequests from "../components/dashboard/NurseMedicationRequests";
 import NurseMedicationSchedules from "../components/dashboard/NurseMedicationSchedules";
-import { VaccinationRuleManagement } from "../components/dashboard/admin/vaccinations";
-import { MedicalSupplyInventory } from "../components/dashboard/admin/inventory";
-import { Notifications } from "../components/dashboard/admin/notifications";
+import { VaccinationRuleManagement } from "../components/dashboard/vaccinations";
+import { MedicalSupplyInventory } from "../components/dashboard/inventory";
+import { Notifications } from "../components/dashboard/notifications";
 // Import nurseApi
 import { nurseApi } from "../api/nurseApi";
 import {
@@ -58,7 +58,7 @@ import { Bar, Doughnut } from "react-chartjs-2";
 import "../styles/SchoolNurseDashboard.css";
 import "../styles/SidebarTrigger.css";
 import NurseHealthProfiles from "../components/dashboard/NurseHealthProfiles";
-import { MedicalEventManagement } from "../components/dashboard/admin/events";
+import { MedicalEventManagement } from "../components/dashboard/events";
 // Import the vaccination campaign management component
 import VaccinationCampaignManagement from "../components/schoolnurse/vaccinationCampaign/VaccinationCampaignManagement";
 
@@ -1312,7 +1312,7 @@ const SchoolNurseDashboard = () => {
 
     React.useEffect(() => {
       // Import động sử dụng ES6 import()
-      import("../components/dashboard/admin/inventory")
+      import("../components/dashboard/inventory")
         .then((module) => ({ default: module.RestockRequestList }))
         .then((module) => {
           setRestockRequestListComponent(() => module.default);

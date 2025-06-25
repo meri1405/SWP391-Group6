@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useAuth } from "../../../../contexts/AuthContext";
-import { parentApi } from "../../../../api/parentApi";
-import { nurseApi } from "../../../../api/nurseApi";
-import webSocketService from "../../../../services/webSocketService";
+import { useAuth } from "../../../contexts/AuthContext";
+import { parentApi } from "../../../api/parentApi";
+import { nurseApi } from "../../../api/nurseApi";
+import webSocketService from "../../../services/webSocketService";
 import { VaccinationFormModal } from "../vaccinations";
-import "../../../../styles/Notifications.css";
+import "../../../styles/Notifications.css";
 
 const Notifications = ({ role = "parent" }) => {
   const [filter, setFilter] = useState("all");

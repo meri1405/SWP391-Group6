@@ -15,9 +15,9 @@ import {
 } from "@ant-design/icons";
 import Overview from "../components/dashboard/parent/Overview";
 import "../styles/SidebarTrigger.css";
-import { Notifications } from "../components/dashboard/admin/notifications";
+import { Notifications } from "../components/dashboard/notifications";
 import MedicationManagement from "../components/dashboard/parent/MedicationManagement";
-import { VaccinationSchedule } from "../components/dashboard/admin/vaccinations";
+import { VaccinationSchedule } from "../components/dashboard/vaccinations";
 import Profile from "../components/dashboard/parent/Profile";
 import HealthProfileDeclaration from "../components/dashboard/parent/HealthProfileDeclaration";
 import ApprovedHealthProfile from "../components/dashboard/parent/ApprovedHealthProfile";

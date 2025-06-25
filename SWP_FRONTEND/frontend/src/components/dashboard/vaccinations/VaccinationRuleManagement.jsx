@@ -22,8 +22,8 @@ import {
   EyeOutlined,
   MedicineBoxOutlined,
 } from "@ant-design/icons";
-import { useAuth } from "../../../../contexts/AuthContext";
-import { nurseApi } from "../../../../api/nurseApi";
+import { useAuth } from "../../../contexts/AuthContext";
+import { nurseApi } from "../../../api/nurseApi";
 
 const { TextArea } = Input;
 

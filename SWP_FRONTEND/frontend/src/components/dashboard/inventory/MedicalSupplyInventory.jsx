@@ -30,10 +30,10 @@ import {
   DeleteOutlined,
   ExclamationCircleOutlined,
 } from "@ant-design/icons";
-import { medicalSupplyApi } from "../../../../api/medicalSupplyApi";
+import { medicalSupplyApi } from "../../../api/medicalSupplyApi";
 import RestockRequestForm from "./RestockRequestForm";
 import dayjs from "dayjs";
-import "../../../../styles/MedicalSupplyInventory.css";
+import "../../../styles/MedicalSupplyInventory.css";
 
 const { Option } = Select;
 const { TabPane } = Tabs;

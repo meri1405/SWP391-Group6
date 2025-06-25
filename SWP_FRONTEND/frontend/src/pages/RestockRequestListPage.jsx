@@ -1,7 +1,7 @@
 import React from "react";
 import { Layout, Breadcrumb } from "antd";
 import { HomeOutlined } from "@ant-design/icons";
-import { RestockRequestList } from "../components/dashboard/admin/inventory";
+import { RestockRequestList } from "../components/dashboard/inventory";
 
 const { Content } = Layout;
 

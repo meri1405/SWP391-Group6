@@ -20,8 +20,8 @@ import {
   WarningOutlined,
   ExclamationCircleOutlined,
 } from "@ant-design/icons";
-import { medicalSupplyApi } from "../../../../api/medicalSupplyApi";
-import { restockRequestApi } from "../../../../api/restockRequestApi";
+import { medicalSupplyApi } from "../../../api/medicalSupplyApi";
+import { restockRequestApi } from "../../../api/restockRequestApi";
 
 const { Option } = Select;
 const { TextArea } = Input;

@@ -21,7 +21,7 @@ import {
   CloseCircleOutlined,
   EyeOutlined,
 } from "@ant-design/icons";
-import { restockRequestApi } from "../../../../api/restockRequestApi";
+import { restockRequestApi } from "../../../api/restockRequestApi";
 import dayjs from "dayjs";
 
 const { Title, Text } = Typography;

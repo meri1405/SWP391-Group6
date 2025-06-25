@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import "../../../../styles/VaccinationSchedule.css";
+import "../../../styles/VaccinationSchedule.css";
 
 const VaccinationSchedule = () => {
   const [activeTab, setActiveTab] = useState("completed");
