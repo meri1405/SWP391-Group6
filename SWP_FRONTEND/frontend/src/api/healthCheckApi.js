@@ -261,4 +261,170 @@ export const healthCheckApi = {
       throw error;
     }
   },
+
+  // Manager-specific APIs
+  
+  // Approve campaign (Manager only)
+  approveCampaign: async (id) => {
+    try {
+      const response = await healthCheckApiClient.post(`/health-check/campaigns/${id}/approve`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error approving campaign ${id}:`, error);
+      throw error;
+    }
+  },
+  
+  // Reject campaign (Manager only)
+  rejectCampaign: async (id, notes) => {
+    try {
+      const response = await healthCheckApiClient.post(`/health-check/campaigns/${id}/reject?notes=${encodeURIComponent(notes)}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error rejecting campaign ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Health Check Forms APIs for Manager
+  getFormsByCampaign: async (campaignId) => {
+    try {
+      const response = await healthCheckApiClient.get(`/health-check/forms/campaign/${campaignId}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching forms for campaign ${campaignId}:`, error);
+      throw error;
+    }
+  },
+
+  getFormsByCampaignAndStatus: async (campaignId, status) => {
+    try {
+      const response = await healthCheckApiClient.get(`/health-check/forms/campaign/${campaignId}/status/${status}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching forms for campaign ${campaignId} with status ${status}:`, error);
+      throw error;
+    }
+  },
+
+  getFormById: async (formId) => {
+    try {
+      const response = await healthCheckApiClient.get(`/health-check/forms/${formId}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching form ${formId}:`, error);
+      throw error;
+    }
+  },
+
+  getConfirmedCountByCampaign: async (campaignId) => {
+    try {
+      const response = await healthCheckApiClient.get(`/health-check/forms/campaign/${campaignId}/count/confirmed`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching confirmed count for campaign ${campaignId}:`, error);
+      throw error;
+    }
+  },
+
+  getPendingCountByCampaign: async (campaignId) => {
+    try {
+      const response = await healthCheckApiClient.get(`/health-check/forms/campaign/${campaignId}/count/pending`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching pending count for campaign ${campaignId}:`, error);
+      throw error;
+    }
+  },
+
+  // Health Check Results APIs for Manager
+  getResultsByStudent: async (studentId) => {
+    try {
+      const response = await healthCheckApiClient.get(`/health-check/results/student/${studentId}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching results for student ${studentId}:`, error);
+      throw error;
+    }
+  },
+
+  getResultsByCategory: async (category) => {
+    try {
+      const response = await healthCheckApiClient.get(`/health-check/results/category/${category}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching results for category ${category}:`, error);
+      throw error;
+    }
+  },
+
+  getAbnormalResults: async () => {
+    try {
+      const response = await healthCheckApiClient.get('/health-check/results/abnormal');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching abnormal results:', error);
+      throw error;
+    }
+  },
+
+  getResultsByStatus: async (status) => {
+    try {
+      const response = await healthCheckApiClient.get(`/health-check/results/status/${status}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching results with status ${status}:`, error);
+      throw error;
+    }
+  },
+
+  getResultsRequiringConsultation: async () => {
+    try {
+      const response = await healthCheckApiClient.get('/health-check/results/consultation-required');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching results requiring consultation:', error);
+      throw error;
+    }
+  },
+
+  getResultsByCampaignAndCategory: async (campaignId, category) => {
+    try {
+      const response = await healthCheckApiClient.get(`/health-check/results/campaign/${campaignId}/category/${category}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching results for campaign ${campaignId} and category ${category}:`, error);
+      throw error;
+    }
+  },
+
+  countAbnormalResultsByCampaign: async (campaignId) => {
+    try {
+      const response = await healthCheckApiClient.get(`/health-check/results/campaign/${campaignId}/abnormal/count`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error counting abnormal results for campaign ${campaignId}:`, error);
+      throw error;
+    }
+  },
+
+  getResultById: async (resultId) => {
+    try {
+      const response = await healthCheckApiClient.get(`/health-check/results/${resultId}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching result ${resultId}:`, error);
+      throw error;
+    }
+  },
+
+  getActiveCampaignsByClass: async (className) => {
+    try {
+      const response = await healthCheckApiClient.get(`/health-check/campaigns/class/${className}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching active campaigns for class ${className}:`, error);
+      throw error;
+    }
+  }
 };

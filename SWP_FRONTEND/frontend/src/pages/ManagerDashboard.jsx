@@ -23,7 +23,9 @@ import {
 } from "@ant-design/icons";
 import ConsultationsSection from "../components/dashboard/ConsultationsSection";
 import HealthChecksSection from "../components/dashboard/HealthChecksSection";
-import { VaccinationSchedule } from "../components/dashboard/vaccinations";
+import ManagerVaccinationManagement from "../components/dashboard/ManagerVaccinationManagement";
+import ManagerHealthCheckManagement from "../components/dashboard/ManagerHealthCheckManagement";
+import ManagerOverview from "../components/dashboard/ManagerOverview";
 import MedicalEventsSection from "../components/dashboard/MedicalEventsSection";
 import InventorySection from "../components/dashboard/InventorySection";
 import NotificationsSection from "../components/dashboard/NotificationsSection";
@@ -58,12 +60,12 @@ const ManagerDashboard = () => {
     {
       key: "health-checks",
       icon: <TeamOutlined />,
-      label: "Khám sức khỏe",
+      label: "Quản lý khám sức khỏe",
     },
     {
       key: "vaccinations",
       icon: <MedicineBoxOutlined />,
-      label: "Tiêm chủng",
+      label: "Quản lý tiêm chủng",
     },
     {
       key: "events",
@@ -99,96 +101,15 @@ const ManagerDashboard = () => {
   const renderContent = () => {
     switch (activeSection) {
       case "overview":
-        return (
-          <div className="dashboard-overview">
-            <div className="stats-grid">
-              <div className="stat-card">
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 16,
-                  }}
-                >
-                  <UserOutlined style={{ fontSize: 32, color: "#ff6b35" }} />
-                  <div>
-                    <div className="stat-info">
-                      <h3>150</h3>
-                      <p>Tổng số học sinh</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="stat-card">
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 16,
-                  }}
-                >
-                  <CalendarOutlined
-                    style={{ fontSize: 32, color: "#ff6b35" }}
-                  />
-                  <div>
-                    <div className="stat-info">
-                      <h3>5</h3>
-                      <p>Lịch hẹn hôm nay</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="stat-card">
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 16,
-                  }}
-                >
-                  <TeamOutlined style={{ fontSize: 32, color: "#ff6b35" }} />
-                  <div>
-                    <div className="stat-info">
-                      <h3>3</h3>
-                      <p>Khám sức khỏe chờ xử lý</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="stat-card">
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 16,
-                  }}
-                >
-                  <MedicineBoxOutlined
-                    style={{ fontSize: 32, color: "#ff6b35" }}
-                  />
-                  <div>
-                    <div className="stat-info">
-                      <h3>2</h3>
-                      <p>Thuốc cần bổ sung</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
+        return <ManagerOverview />;
       case "students":
         return <StudentsSection />;
       case "consultations":
         return <ConsultationsSection />;
       case "health-checks":
-        return <HealthChecksSection />;
+        return <ManagerHealthCheckManagement />;
       case "vaccinations":
-        return <VaccinationSchedule />;
+        return <ManagerVaccinationManagement />;
       case "events":
         return <MedicalEventsSection />;
       case "inventory":

@@ -33,13 +33,17 @@ const StudentsSection = () => {
   const [showImportModal, setShowImportModal] = useState(false);
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState(Date.now());
 
   // Fetch students data
   const fetchStudents = async () => {
     setLoading(true);
     try {
       const data = await getAllStudents();
+      console.log('Fetched students data:', data); // Debug log
+      console.log('First student structure:', data[0]); // Debug first student
       setStudents(data);
+      setLastUpdate(Date.now()); // Update timestamp to trigger re-render
     } catch (error) {
       message.error('Không thể tải danh sách học sinh: ' + error.message);
     } finally {
@@ -53,15 +57,27 @@ const StudentsSection = () => {
 
   const handleToggleStudentStatus = async (student) => {
     try {
-      await deleteStudent(student.id); // Backend handles toggle logic
+      setLoading(true);
+      console.log('Toggling status for student:', student.id, 'Current isDisabled:', student.isDisabled);
+      
+      // Call API first
+      const response = await deleteStudent(student.id);
+      console.log('API response:', response);
+      
+      // Show success message based on original status (what we're changing FROM)
       if (student.isDisabled) {
         message.success('Đã kích hoạt lại học sinh thành công');
       } else {
         message.success('Đã vô hiệu hóa học sinh thành công');
       }
-      fetchStudents(); // Refresh data
+      
+      // Force refresh data from server to get the latest state
+      await fetchStudents();
     } catch (error) {
+      console.error('Error toggling student status:', error);
       message.error('Không thể thay đổi trạng thái học sinh: ' + error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -113,40 +129,48 @@ const StudentsSection = () => {
     {
       title: 'Trạng thái',
       key: 'status',
-      render: (_, record) => (
-        <Tag color={record.isDisabled ? 'red' : 'green'}>
-          {record.isDisabled ? 'Vô hiệu hóa' : 'Hoạt động'}
-        </Tag>
-      ),
+      render: (_, record) => {
+        console.log('Rendering status for student:', record.id, 'isDisabled:', record.isDisabled);
+        console.log('Full record:', record); // Debug full record
+        const isDisabled = record.isDisabled || record.disabled || false; // Handle different field names
+        return (
+          <Tag color={isDisabled ? 'red' : 'green'}>
+            {isDisabled ? 'Vô hiệu hóa' : 'Hoạt động'}
+          </Tag>
+        );
+      },
     },
     {
       title: 'Thao tác',
       key: 'actions',
-      render: (_, record) => (
-        <Space size="middle">
-          <Popconfirm
-            title={record.isDisabled ? "Xác nhận kích hoạt lại" : "Xác nhận vô hiệu hóa"}
-            description={
-              record.isDisabled 
-                ? "Bạn có chắc chắn muốn kích hoạt lại học sinh này?" 
-                : "Bạn có chắc chắn muốn vô hiệu hóa học sinh này? Tài khoản phụ huynh cũng sẽ bị vô hiệu hóa."
-            }
-            onConfirm={() => handleToggleStudentStatus(record)}
-            okText={record.isDisabled ? "Kích hoạt" : "Vô hiệu hóa"}
-            cancelText="Hủy"
-            okType={record.isDisabled ? "primary" : "danger"}
-          >
-            <Button 
-              danger={!record.isDisabled}
-              type={record.isDisabled ? "primary" : "default"}
-              icon={record.isDisabled ? <CheckCircleOutlined /> : <StopOutlined />} 
-              size="small"
+      render: (_, record) => {
+        const isDisabled = record.isDisabled || record.disabled || false; // Handle different field names
+        return (
+          <Space size="middle">
+            <Popconfirm
+              title={isDisabled ? "Xác nhận kích hoạt lại" : "Xác nhận vô hiệu hóa"}
+              description={
+                isDisabled 
+                  ? "Bạn có chắc chắn muốn kích hoạt lại học sinh này?" 
+                  : "Bạn có chắc chắn muốn vô hiệu hóa học sinh này? Tài khoản phụ huynh cũng sẽ bị vô hiệu hóa."
+              }
+              onConfirm={() => handleToggleStudentStatus({ ...record, isDisabled })}
+              okText={isDisabled ? "Kích hoạt" : "Vô hiệu hóa"}
+              cancelText="Hủy"
+              okType={isDisabled ? "primary" : "danger"}
             >
-              {record.isDisabled ? 'Kích hoạt' : 'Vô hiệu hóa'}
-            </Button>
-          </Popconfirm>
-        </Space>
-      ),
+              <Button 
+                danger={!isDisabled}
+                type={isDisabled ? "primary" : "default"}
+                icon={isDisabled ? <CheckCircleOutlined /> : <StopOutlined />} 
+                size="small"
+              >
+                {isDisabled ? 'Kích hoạt' : 'Vô hiệu hóa'}
+              </Button>
+            </Popconfirm>
+          </Space>
+        );
+      },
     },
   ];
 
@@ -198,6 +222,7 @@ const StudentsSection = () => {
         bodyStyle={{ padding: 24 }}
       >
         <Table
+          key={lastUpdate} // Force re-render when data updates
           columns={columns}
           dataSource={students}
           rowKey="id"
