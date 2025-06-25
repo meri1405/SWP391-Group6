@@ -59,8 +59,9 @@ import "../styles/SchoolNurseDashboard.css";
 import "../styles/SidebarTrigger.css";
 import NurseHealthProfiles from "../components/dashboard/NurseHealthProfiles";
 import { MedicalEventManagement } from "../components/dashboard/events";
-// Import the vaccination campaign management component
+// Import the campaign management components
 import VaccinationCampaignManagement from "../components/schoolnurse/vaccinationCampaign/VaccinationCampaignManagement";
+import { HealthCheckCampaignManagement } from "../components/schoolnurse/healthCheck";
 
 ChartJS.register(
   CategoryScale,
@@ -1296,8 +1297,7 @@ const SchoolNurseDashboard = () => {
 
   const HealthCheck = () => (
     <div className="nurse-content-card">
-      <h2 className="nurse-section-title">Đợt khám sức khỏe</h2>
-      <p>Component đang được phát triển...</p>
+      <HealthCheckCampaignManagement />
     </div>
   );
 
