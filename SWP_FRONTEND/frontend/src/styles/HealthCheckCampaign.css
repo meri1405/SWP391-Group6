@@ -1,0 +1,78 @@
+/* Health Check Campaign Styles */
+
+.health-check-campaign-management {
+  width: 100%;
+}
+
+.health-check-campaign-management .cancelled-row {
+  background-color: #ffecec;
+}
+
+.health-check-campaign-management .ant-table-row:hover {
+  cursor: pointer;
+}
+
+.health-check-campaign-management .ant-statistic {
+  margin-bottom: 16px;
+}
+
+.health-check-campaign-management .campaign-header {
+  margin-bottom: 24px;
+}
+
+.health-check-campaign-management .campaign-status {
+  margin-right: 16px;
+}
+
+.health-check-campaign-management .campaign-actions {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.health-check-campaign-management .campaign-description {
+  margin-bottom: 24px;
+  white-space: pre-line;
+}
+
+/* Detail view */
+.health-check-campaign-detail .back-button {
+  margin-right: 16px;
+}
+
+.health-check-campaign-detail .ant-descriptions-item-label {
+  font-weight: 500;
+}
+
+.health-check-campaign-detail .ant-card-head {
+  border-bottom: none;
+}
+
+.health-check-campaign-detail .ant-card-body {
+  padding-top: 0;
+}
+
+/* Form styles */
+.health-check-campaign-form .ant-form-item-label {
+  font-weight: 500;
+}
+
+.health-check-campaign-form .ant-select-multiple {
+  min-height: 60px;
+}
+
+/* Results tab */
+.health-check-results-tab .ant-table-thead > tr > th {
+  background-color: #f0f5ff;
+}
+
+.health-check-results-tab .abnormal-result {
+  background-color: #fff1f0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .health-check-campaign-management .ant-statistic {
+    margin-bottom: 24px;
+  }
+} 

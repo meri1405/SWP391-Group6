@@ -25,6 +25,9 @@ export * from "./restockRequestApi";
 // User APIs
 export * from "./userApi";
 
+// Health Check APIs
+export * from './healthCheckApi';
+
 // ==================== LEGACY SUPPORT ====================
 // Provide legacy imports to ensure backward compatibility
 
