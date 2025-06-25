@@ -25,6 +25,9 @@ export * from "./restockRequestApi";
 // User APIs
 export * from "./userApi";
 
+// Student APIs
+export * from "./studentApi";
+
 // Health Check APIs
 export * from './healthCheckApi';
 
