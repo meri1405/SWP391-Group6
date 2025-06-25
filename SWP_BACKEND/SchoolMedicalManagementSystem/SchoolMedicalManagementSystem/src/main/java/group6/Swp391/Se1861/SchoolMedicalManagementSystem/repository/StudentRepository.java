@@ -49,4 +49,10 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
     
     // Find students by both age range and class name
     List<Student> findByDobBetweenAndClassName(LocalDate startDate, LocalDate endDate, String className);
+
+    // Find all active (not disabled) children of a father
+    List<Student> findByFatherAndIsDisabledFalse(User father);
+
+    // Find all active (not disabled) children of a mother
+    List<Student> findByMotherAndIsDisabledFalse(User mother);
 }

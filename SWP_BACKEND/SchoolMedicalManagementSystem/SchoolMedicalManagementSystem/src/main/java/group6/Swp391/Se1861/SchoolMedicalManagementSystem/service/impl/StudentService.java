@@ -35,7 +35,10 @@ public class StudentService implements IStudentService {
      */
     @Override
     public List<StudentDTO> getStudentsByParent(User parent) {
-        List<Student> students = studentRepository.findByParentWithParents(parent);
+        List<Student> students = studentRepository.findByParentWithParents(parent)
+                .stream()
+                .filter(student -> !student.isDisabled()) // Filter out disabled students
+                .collect(Collectors.toList());
         return students.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -119,7 +122,7 @@ public class StudentService implements IStudentService {
         dto.setBirthPlace(student.getBirthPlace());
         dto.setAddress(student.getAddress());
         dto.setCitizenship(student.getCitizenship());
-        dto.setDisabled(false); // Assuming disabled is always false for DTO
+        dto.setDisabled(student.isDisabled()); // Include disabled status
 
         // Set father and mother IDs
         if (student.getFather() != null) {
@@ -331,9 +334,11 @@ public class StudentService implements IStudentService {
     }
 
     /**
-     * Delete a student by ID
-     * Only MANAGER can delete students
-     * @param studentId the student ID to delete
+     * Toggle student status (enable/disable)
+     * If disabling: set isDisabled = true and disable parent accounts if they only have one child
+     * If enabling: set isDisabled = false and auto-enable parent accounts
+     * Only MANAGER can toggle student status
+     * @param studentId the student ID to toggle
      * @throws IllegalArgumentException if student not found
      */
     @Transactional
@@ -342,7 +347,65 @@ public class StudentService implements IStudentService {
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy học sinh với ID: " + studentId));
 
-        studentRepository.delete(student);
+        // Toggle the disabled status
+        boolean newDisabledStatus = !student.isDisabled();
+        student.setDisabled(newDisabledStatus);
+        studentRepository.save(student);
+
+        if (newDisabledStatus) {
+            // Student is being disabled - check and disable parent accounts if they only have one child
+            disableParentAccountsIfOnlyChild(student);
+        } else {
+            // Student is being enabled - auto-enable parent accounts
+            enableParentAccounts(student);
+        }
+    }
+
+    /**
+     * Helper method to enable parent accounts when student is re-enabled
+     * @param student the student being enabled
+     */
+    private void enableParentAccounts(Student student) {
+        // Enable father if exists
+        if (student.getFather() != null) {
+            User father = student.getFather();
+            father.setEnabled(true);
+            userRepository.save(father);
+        }
+
+        // Enable mother if exists
+        if (student.getMother() != null) {
+            User mother = student.getMother();
+            mother.setEnabled(true);
+            userRepository.save(mother);
+        }
+    }
+
+    
+    /**
+     * Helper method to disable parent accounts if they only have one child
+     * @param student the student being disabled
+     */
+    private void disableParentAccountsIfOnlyChild(Student student) {
+        // Check father
+        if (student.getFather() != null) {
+            User father = student.getFather();
+            List<Student> fatherChildren = studentRepository.findByFatherAndIsDisabledFalse(father);
+            if (fatherChildren.size() <= 1) { // Only this child or no active children
+                father.setEnabled(false);
+                userRepository.save(father);
+            }
+        }
+
+        // Check mother
+        if (student.getMother() != null) {
+            User mother = student.getMother();
+            List<Student> motherChildren = studentRepository.findByMotherAndIsDisabledFalse(mother);
+            if (motherChildren.size() <= 1) { // Only this child or no active children
+                mother.setEnabled(false);
+                userRepository.save(mother);
+            }
+        }
     }
 
     /**
