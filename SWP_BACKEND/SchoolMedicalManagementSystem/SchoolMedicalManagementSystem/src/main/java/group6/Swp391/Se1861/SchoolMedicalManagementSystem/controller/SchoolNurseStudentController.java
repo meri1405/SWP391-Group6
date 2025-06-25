@@ -149,4 +149,4 @@ public class SchoolNurseStudentController {
             return ResponseEntity.status(500).build();
         }
     }
-} 
+}

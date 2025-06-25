@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
 public interface StudentRepository extends JpaRepository<Student, Long> {
@@ -39,4 +40,13 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
 
     // Find students by class name
     List<Student> findByClassName(String className);
+    
+    // Find students by multiple class names
+    List<Student> findByClassNameIn(Set<String> classNames);
+    
+    // Find students by age range and multiple class names
+    List<Student> findByDobBetweenAndClassNameIn(LocalDate startDate, LocalDate endDate, Set<String> classNames);
+    
+    // Find students by both age range and class name
+    List<Student> findByDobBetweenAndClassName(LocalDate startDate, LocalDate endDate, String className);
 }

@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -458,6 +459,85 @@ public class StudentService implements IStudentService {
             }
         }
     }
+
+    @Override
+    public List<StudentDTO> getStudentsByAgeRange(int minAge, int maxAge) {
+        java.time.LocalDate now = java.time.LocalDate.now();
+        java.time.LocalDate minDob = now.minusYears(maxAge);  // Older students (smaller date)
+        java.time.LocalDate maxDob = now.minusYears(minAge);  // Younger students (larger date)
+        
+        List<Student> students = studentRepository.findByDobBetween(minDob, maxDob);
+        return students.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
     
-    // ...existing code...
+    @Override
+    public List<StudentDTO> getStudentsByClassName(String className) {
+        List<Student> students = studentRepository.findByClassName(className);
+        return students.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+    
+    @Override
+    public List<StudentDTO> getStudentsByAgeRangeAndClass(int minAge, int maxAge, String className) {
+        java.time.LocalDate now = java.time.LocalDate.now();
+        java.time.LocalDate minDob = now.minusYears(maxAge);  // Older students (smaller date)
+        java.time.LocalDate maxDob = now.minusYears(minAge);  // Younger students (larger date)
+        
+        List<Student> students = studentRepository.findByDobBetweenAndClassName(minDob, maxDob, className);
+        return students.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<StudentDTO> getEligibleStudentsForClasses(Set<String> classNames, Integer minAge, Integer maxAge) {
+        // Handle null or empty classNames
+        if (classNames == null || classNames.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        // Check if "toàn trường" is in the class names
+        boolean isAllSchool = classNames.stream()
+                .anyMatch(className -> "toàn trường".equalsIgnoreCase(className) || 
+                                     "toan truong".equalsIgnoreCase(className) ||
+                                     "all".equalsIgnoreCase(className));
+        
+        boolean hasAgeRange = minAge != null && maxAge != null;
+
+        // Logic 1: Toàn trường + có độ tuổi → lọc theo độ tuổi
+        if (isAllSchool && hasAgeRange) {
+            return getStudentsByAgeRange(minAge, maxAge);
+        }
+        
+        // Logic 2: Toàn trường + không có độ tuổi → lấy tất cả
+        if (isAllSchool && !hasAgeRange) {
+            return getAllStudents();
+        }
+        
+        // Logic 3: Lớp cụ thể + có độ tuổi → lọc theo các lớp và độ tuổi
+        if (!isAllSchool && hasAgeRange) {
+            java.time.LocalDate now = java.time.LocalDate.now();
+            java.time.LocalDate minDob = now.minusYears(maxAge);
+            java.time.LocalDate maxDob = now.minusYears(minAge);
+            
+            List<Student> students = studentRepository.findByDobBetweenAndClassNameIn(minDob, maxDob, classNames);
+            return students.stream()
+                    .map(this::convertToDTO)
+                    .collect(Collectors.toList());
+        }
+        
+        // Logic 4: Lớp cụ thể + không có độ tuổi → lọc theo các lớp
+        if (!isAllSchool && !hasAgeRange) {
+            List<Student> students = studentRepository.findByClassNameIn(classNames);
+            return students.stream()
+                    .map(this::convertToDTO)
+                    .collect(Collectors.toList());
+        }
+
+        // Fallback - trả về danh sách rỗng
+        return new ArrayList<>();
+    }
 }

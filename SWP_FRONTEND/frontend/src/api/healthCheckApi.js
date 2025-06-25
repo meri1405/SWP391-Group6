@@ -211,5 +211,54 @@ export const healthCheckApi = {
       console.error(`Error scheduling consultation for result ${resultId}:`, error);
       throw error;
     }
-  }
-}; 
+  },
+
+  // Get eligible students with flexible filtering (supports single/multiple classes, with/without age range)
+  getEligibleStudentsWithFilters: async (campaignId, filters = {}) => {
+    try {
+      const params = new URLSearchParams();
+      
+      if (filters.minAge !== undefined && filters.minAge !== null) {
+        params.append('minAge', filters.minAge);
+      }
+      if (filters.maxAge !== undefined && filters.maxAge !== null) {
+        params.append('maxAge', filters.maxAge);
+      }
+      
+      // Support both single className and multiple classNames
+      if (filters.className) {
+        params.append('classNames', filters.className);
+      }
+      if (filters.classNames && filters.classNames.length > 0) {
+        filters.classNames.forEach(className => {
+          params.append('classNames', className);
+        });
+      }
+      
+      const queryString = params.toString();
+      const url = `/health-check/forms/campaign/${campaignId}/eligible-students${queryString ? `?${queryString}` : ''}`;
+      
+      const response = await healthCheckApiClient.get(url);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching eligible students with filters for campaign ${campaignId}:`, error);
+      throw error;
+    }
+  },
+
+  // Generate forms for eligible students based on filters
+  generateFormsForEligibleStudents: async (campaignId, filters = {}) => {
+    try {
+      // First get eligible students using the unified filter API
+      const eligibleResponse = await healthCheckApi.getEligibleStudentsWithFilters(campaignId, filters);
+      const studentIds = eligibleResponse.students.map(student => student.studentID);
+      
+      // Then generate forms for these students
+      const response = await healthCheckApiClient.post(`/health-check/forms/campaign/${campaignId}/students`, studentIds);
+      return response.data;
+    } catch (error) {
+      console.error(`Error generating forms for eligible students in campaign ${campaignId}:`, error);
+      throw error;
+    }
+  },
+};

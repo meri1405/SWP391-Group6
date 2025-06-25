@@ -395,7 +395,7 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
                       {campaign.minAge} - {campaign.maxAge} tuổi
                     </Descriptions.Item>
                     <Descriptions.Item label="Lớp mục tiêu">
-                      {campaign.targetClass || 'Tất cả các lớp'}
+                      {campaign.targetClasses || 'Tất cả các lớp'}
                     </Descriptions.Item>
                     <Descriptions.Item label="Loại khám">
                       <div>

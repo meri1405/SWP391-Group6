@@ -13,6 +13,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -27,7 +32,7 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
     @Transactional
     public HealthCheckCampaign createCampaign(String name, String description, LocalDate startDate,
                                              LocalDate endDate, String location, Set<HealthCheckCategory> categories,
-                                             User nurse, Integer minAge, Integer maxAge, String targetClass) {
+                                             User nurse, Integer minAge, Integer maxAge, Set<String> targetClasses) {
 
         HealthCheckCampaign campaign = new HealthCheckCampaign();
         campaign.setName(name);
@@ -40,7 +45,7 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
         campaign.setStatus(CampaignStatus.DRAFT);
         campaign.setMinAge(minAge);
         campaign.setMaxAge(maxAge);
-        campaign.setTargetClass(targetClass);
+        campaign.setTargetClasses(targetClasses != null ? targetClasses : new HashSet<>());
         campaign.setCreatedAt(LocalDateTime.now());
         campaign.setUpdatedAt(LocalDateTime.now());
 
@@ -50,7 +55,7 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
     @Transactional
     public HealthCheckCampaign updateCampaign(Long id, String name, String description, LocalDate startDate,
                                              LocalDate endDate, String location, Set<HealthCheckCategory> categories,
-                                             Integer minAge, Integer maxAge, String targetClass) {
+                                             Integer minAge, Integer maxAge, Set<String> targetClasses) {
 
         Optional<HealthCheckCampaign> optionalCampaign = campaignRepository.findById(id);
         if (optionalCampaign.isEmpty()) {
@@ -72,7 +77,7 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
         campaign.setCategories(categories);
         campaign.setMinAge(minAge);
         campaign.setMaxAge(maxAge);
-        campaign.setTargetClass(targetClass);
+        campaign.setTargetClasses(targetClasses != null ? targetClasses : new HashSet<>());
         campaign.setUpdatedAt(LocalDateTime.now());
 
         return campaignRepository.save(campaign);

@@ -61,8 +61,11 @@ public class HealthCheckCampaign {
     @Column(name = "maxAge", nullable = true)
     private Integer maxAge;
 
-    @Column(name = "targetClass", nullable = true)
-    private String targetClass;
+    @ElementCollection
+    @CollectionTable(name = "campaign_target_classes",
+                   joinColumns = @JoinColumn(name = "campaign_id"))
+    @Column(name = "class_name")
+    private Set<String> targetClasses = new HashSet<>();
 
     @ManyToOne
     @JoinColumn(name = "createdById", nullable = false)

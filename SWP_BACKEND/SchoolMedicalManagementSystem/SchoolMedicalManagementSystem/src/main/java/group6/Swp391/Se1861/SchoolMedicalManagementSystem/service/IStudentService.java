@@ -8,6 +8,7 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.Student;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
 
 import java.util.List;
+import java.util.Set;
 
 public interface IStudentService {
     
@@ -55,4 +56,38 @@ public interface IStudentService {
      * @throws IllegalArgumentException if student not found
      */
     void deleteStudent(Long studentId);
+
+    /**
+     * Get students by age range
+     * @param minAge minimum age
+     * @param maxAge maximum age
+     * @return list of students within the age range
+     */
+    List<StudentDTO> getStudentsByAgeRange(int minAge, int maxAge);
+
+    /**
+     * Get students by class name
+     * @param className the class name
+     * @return list of students in the specified class
+     */
+    List<StudentDTO> getStudentsByClassName(String className);
+    
+    /**
+     * Get students by both age range and class name
+     * @param minAge minimum age
+     * @param maxAge maximum age
+     * @param className the class name
+     * @return list of students within the age range and in the specified class
+     */
+    List<StudentDTO> getStudentsByAgeRangeAndClass(int minAge, int maxAge, String className);
+
+    /**
+     * Get eligible students with smart filtering logic
+     * Supports both single and multiple class names with optional age filtering
+     * @param classNames set of class names (can contain "toàn trường" for all classes)
+     * @param minAge minimum age (nullable)
+     * @param maxAge maximum age (nullable)
+     * @return list of eligible students
+     */
+    List<StudentDTO> getEligibleStudentsForClasses(Set<String> classNames, Integer minAge, Integer maxAge);
 }

@@ -45,7 +45,7 @@ public class HealthCheckCampaignController {
             nurse,
             dto.getMinAge(),
             dto.getMaxAge(),
-            dto.getTargetClass()
+            dto.getTargetClasses()
         );
 
         return ResponseEntity.ok(campaign);
@@ -65,7 +65,7 @@ public class HealthCheckCampaignController {
             dto.getCategories(),
             dto.getMinAge(),
             dto.getMaxAge(),
-            dto.getTargetClass()
+            dto.getTargetClasses()
         );
 
         return ResponseEntity.ok(campaign);
