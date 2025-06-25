@@ -35,12 +35,14 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
     fetchCategories();
     if (isEditing) {
       // Set form values from campaign data
-      form.setFieldsValue({
+      const formData = {
         ...campaign,
         dateRange: campaign.startDate && campaign.endDate ? 
           [dayjs(campaign.startDate), dayjs(campaign.endDate)] : 
           undefined,
-      });
+        targetClasses: campaign.targetClasses || []
+      };
+      form.setFieldsValue(formData);
     }
   }, [campaign, form, isEditing]);
 
@@ -201,10 +203,32 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item
-              name="targetClass"
+              name="targetClasses"
               label="Lớp mục tiêu (tuỳ chọn)"
             >
-              <Input placeholder="Nhập lớp mục tiêu (Ví dụ: 1A, 2B, 3C)" />
+              <Select 
+                mode="tags"
+                placeholder="Chọn hoặc nhập lớp mục tiêu (Ví dụ: 1A, 2B, 3C, toàn trường)"
+                style={{ width: '100%' }}
+                tokenSeparators={[',']}
+              >
+                <Option value="toàn trường">Toàn trường</Option>
+                <Option value="1A">Lớp 1A</Option>
+                <Option value="1B">Lớp 1B</Option>
+                <Option value="1C">Lớp 1C</Option>
+                <Option value="2A">Lớp 2A</Option>
+                <Option value="2B">Lớp 2B</Option>
+                <Option value="2C">Lớp 2C</Option>
+                <Option value="3A">Lớp 3A</Option>
+                <Option value="3B">Lớp 3B</Option>
+                <Option value="3C">Lớp 3C</Option>
+                <Option value="4A">Lớp 4A</Option>
+                <Option value="4B">Lớp 4B</Option>
+                <Option value="4C">Lớp 4C</Option>
+                <Option value="5A">Lớp 5A</Option>
+                <Option value="5B">Lớp 5B</Option>
+                <Option value="5C">Lớp 5C</Option>
+              </Select>
             </Form.Item>
           </Col>
           <Col span={12}>

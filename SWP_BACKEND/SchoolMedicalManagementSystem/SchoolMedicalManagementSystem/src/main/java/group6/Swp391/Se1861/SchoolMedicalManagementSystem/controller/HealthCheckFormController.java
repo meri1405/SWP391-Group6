@@ -18,6 +18,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/health-check/forms")
@@ -48,6 +49,29 @@ public class HealthCheckFormController {
         return ResponseEntity.ok(Map.of(
             "message", "Generated " + forms.size() + " notification forms by age range",
             "forms", forms
+        ));
+    }
+
+    @GetMapping("/campaign/{campaignId}/eligible-students")
+    @PreAuthorize("hasRole('SCHOOLNURSE')")
+    public ResponseEntity<?> getEligibleStudentsWithFilters(@PathVariable Long campaignId,
+                                                           @RequestParam(required = false) Set<String> classNames,
+                                                           @RequestParam(required = false) Integer minAge,
+                                                           @RequestParam(required = false) Integer maxAge) {
+        List<group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.StudentDTO> students =
+            studentService.getEligibleStudentsForClasses(classNames, minAge, maxAge);
+
+        String message = "Found " + students.size() + " eligible students";
+        if (classNames != null && !classNames.isEmpty()) {
+            message += " for classes: " + String.join(", ", classNames);
+        }
+        if (minAge != null && maxAge != null) {
+            message += " with age range: " + minAge + "-" + maxAge;
+        }
+
+        return ResponseEntity.ok(Map.of(
+            "message", message,
+            "students", students
         ));
     }
 

@@ -12,11 +12,11 @@ import java.util.Set;
 public interface IHealthCheckCampaignService {
     HealthCheckCampaign createCampaign(String name, String description, LocalDate startDate,
                                        LocalDate endDate, String location, Set<HealthCheckCategory> categories,
-                                       User nurse, Integer minAge, Integer maxAge, String targetClass);
+                                       User nurse, Integer minAge, Integer maxAge, Set<String> targetClasses);
 
     HealthCheckCampaign updateCampaign(Long id, String name, String description, LocalDate startDate,
                                        LocalDate endDate, String location, Set<HealthCheckCategory> categories,
-                                       Integer minAge, Integer maxAge, String targetClass);
+                                       Integer minAge, Integer maxAge, Set<String> targetClasses);
 
     HealthCheckCampaign submitForApproval(Long id);
 

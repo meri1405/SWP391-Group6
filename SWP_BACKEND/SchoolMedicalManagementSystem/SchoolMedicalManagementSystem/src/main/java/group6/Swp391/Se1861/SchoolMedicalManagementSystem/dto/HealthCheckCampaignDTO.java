@@ -21,5 +21,5 @@ public class HealthCheckCampaignDTO {
     private Set<HealthCheckCategory> categories;
     private Integer minAge;
     private Integer maxAge;
-    private String targetClass;
+    private Set<String> targetClasses;
 }
