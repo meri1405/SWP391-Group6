@@ -22,7 +22,9 @@ public class MedicationRequestDTO {
     private LocalDate requestDate;
 
     @Size(max = 500, message = "Note cannot exceed 500 characters")
-    private String note;    @Size(max = 500, message = "Nurse note cannot exceed 500 characters")
+    private String note;
+    
+    @Size(max = 500, message = "Nurse note cannot exceed 500 characters")
     private String nurseNote;
 
     private String status = "PENDING"; // Default status for new requests
@@ -37,6 +39,10 @@ public class MedicationRequestDTO {
     private Long nurseId;
 
     private String nurseName;
+
+    // Add prescription images field - list of base64 encoded images
+    @NotEmpty(message = "At least one prescription image is required")
+    private List<String> prescriptionImages;
 
     @Valid
     @NotEmpty(message = "At least one medication item is required")

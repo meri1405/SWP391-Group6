@@ -48,9 +48,17 @@ public class MedicationRequestService implements IMedicationRequestService {
             throw new UnauthorizedAccessException("You are not authorized to create medication requests for this student");
         }
 
+        // Validate prescription images are provided
+        if (medicationRequestDTO.getPrescriptionImages() == null || 
+            medicationRequestDTO.getPrescriptionImages().isEmpty()) {
+            throw new IllegalArgumentException("At least one prescription image is required");
+        }
+
         // Get student entity
         Student student = studentRepository.findById(studentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Student not found with id: " + studentId));        // Create medication request
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found with id: " + studentId));        
+        
+        // Create medication request
         MedicationRequest medicationRequest = new MedicationRequest();
         medicationRequest.setRequestDate(LocalDate.now());
         medicationRequest.setNote(medicationRequestDTO.getNote());
@@ -59,6 +67,9 @@ public class MedicationRequestService implements IMedicationRequestService {
         medicationRequest.setStudent(student);
         medicationRequest.setParent(parent);
         medicationRequest.setNurse(null); // Nurse will be assigned when processing the request
+        
+        // Set prescription images
+        medicationRequest.setPrescriptionImages(medicationRequestDTO.getPrescriptionImages());
 
         // Save the medication request first to get an ID
         MedicationRequest savedRequest = medicationRequestRepository.save(medicationRequest);
@@ -259,8 +270,17 @@ public class MedicationRequestService implements IMedicationRequestService {
         // Verify the request is in PENDING status
         if (!"PENDING".equals(request.getStatus())) {
             throw new IllegalStateException("Only medication requests with PENDING status can be updated");
+        }
+
+        // Validate prescription images are provided
+        if (medicationRequestDTO.getPrescriptionImages() == null || 
+            medicationRequestDTO.getPrescriptionImages().isEmpty()) {
+            throw new IllegalArgumentException("At least one prescription image is required");
         }        // Update medication request basic information
         request.setNote(medicationRequestDTO.getNote());
+        
+        // Update prescription images
+        request.setPrescriptionImages(medicationRequestDTO.getPrescriptionImages());
 
         // Get current item requests to track which ones should be deleted
         List<ItemRequest> existingItems = new ArrayList<>(request.getItemRequests());
@@ -386,6 +406,9 @@ public class MedicationRequestService implements IMedicationRequestService {
         dto.setStudentId(request.getStudent().getStudentID());
         dto.setStudentName(request.getStudent().getLastName() + " " + request.getStudent().getFirstName());
 
+        // Add prescription images
+        dto.setPrescriptionImages(request.getPrescriptionImages());
+
         if (request.getNurse() != null) {
             dto.setNurseId(request.getNurse().getId());
             dto.setNurseName(request.getNurse().getLastName() + " " + request.getNurse().getFirstName());
@@ -426,6 +449,9 @@ public class MedicationRequestService implements IMedicationRequestService {
         dto.setConfirm(request.isConfirm());
         dto.setStudentId(request.getStudent().getStudentID());
         dto.setStudentName(request.getStudent().getLastName() + " " + request.getStudent().getFirstName());
+
+        // Add prescription images
+        dto.setPrescriptionImages(request.getPrescriptionImages());
 
         if (request.getNurse() != null) {
             dto.setNurseId(request.getNurse().getId());

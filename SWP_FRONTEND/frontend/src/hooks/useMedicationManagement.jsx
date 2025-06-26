@@ -33,9 +33,6 @@ export const useMedicationManagement = () => {
         parentApi.getMedicationRequests(token)
       ]);
       
-      console.log('Students data received:', studentsData);
-      console.log('Medication data received:', medicationData);
-      
       // Filter out any students with null or undefined IDs
       // Backend returns studentID, so we need to map it to id for frontend compatibility
       const validStudents = Array.isArray(studentsData) 
@@ -159,10 +156,20 @@ export const useMedicationManagement = () => {
       // Use detailed data if available, fallback to record data
       const medicationData = detailedData || record;
       
+      // Format prescription images from base64 strings to upload component format
+      const prescriptionImages = (medicationData.prescriptionImages || []).map((base64, index) => ({
+        uid: `existing-${index}`,
+        name: `prescription-${index + 1}.png`,
+        status: 'done',
+        url: base64,
+        thumbUrl: base64,
+      }));
+
       // Format the data for the form with proper item IDs
       const formData = {
         studentId: medicationData.studentId,
         note: medicationData.note,
+        prescriptionImages: prescriptionImages, // Add prescription images in upload component format
         itemRequests: (medicationData.itemRequests || []).map(item => {
           console.log('Processing item for form:', item);
           let timeSlots = [];
@@ -235,6 +242,12 @@ export const useMedicationManagement = () => {
       message.error('Vui lòng chọn học sinh');
       return;
     }
+
+    // Validate prescription images (required for both new and edit requests)
+    if (!values.prescriptionImages || values.prescriptionImages.length === 0) {
+      message.error('Vui lòng tải lên ít nhất một ảnh đơn thuốc');
+      return;
+    }
     
     try {
       setLoading(true);
@@ -264,11 +277,17 @@ export const useMedicationManagement = () => {
         return;
       }
       
+      // Extract base64 data from prescription images
+      const prescriptionImages = values.prescriptionImages 
+        ? values.prescriptionImages.map(img => img.url || img.thumbUrl)
+        : [];
+      
       // Prepare data for API according to the expected format
       const medicationData = {
         studentId: values.studentId,
         requestDate: today,
         note: values.note || "Yêu cầu dùng thuốc cho học sinh",
+        prescriptionImages: prescriptionImages, // Add prescription images
         itemRequests: values.itemRequests.map((item, index) => {
           // Format schedule times in HH:mm format
           let scheduleTimes = [];
@@ -481,13 +500,9 @@ export const useMedicationManagement = () => {
       console.log('Fetching details for medication request ID:', record.id);
       
       const detailedData = await parentApi.getMedicationRequestDetails(token, record.id);
-      console.log('Detailed medication data received:', detailedData);
       
       // Use the detailed data from backend, fallback to record data if needed
       const medicationData = detailedData || record;
-      const items = medicationData.itemRequests || [];
-      
-      console.log('Items to display:', items);
       
       // Set the data and show the modal
       setSelectedMedicationDetail(medicationData);
