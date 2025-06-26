@@ -23,6 +23,12 @@ public interface RestockRequestRepository extends JpaRepository<RestockRequest, 
     @Query("SELECT r FROM RestockRequest r WHERE r.status = :status ORDER BY r.requestDate ASC")
     List<RestockRequest> findByStatusOrderByRequestDateAsc(@Param("status") RestockRequest.RestockStatus status);
     
+    @Query("SELECT r FROM RestockRequest r LEFT JOIN FETCH r.restockItems ri LEFT JOIN FETCH ri.medicalSupply WHERE r.status = :status ORDER BY r.requestDate ASC")
+    List<RestockRequest> findByStatusWithItemsOrderByRequestDateAsc(@Param("status") RestockRequest.RestockStatus status);
+    
+    @Query("SELECT r FROM RestockRequest r LEFT JOIN FETCH r.restockItems ri LEFT JOIN FETCH ri.medicalSupply ORDER BY r.requestDate DESC")
+    List<RestockRequest> findAllWithItems();
+    
     @Query("SELECT r FROM RestockRequest r WHERE r.priority = :priority AND r.status = :status")
     List<RestockRequest> findByPriorityAndStatus(@Param("priority") String priority, @Param("status") RestockRequest.RestockStatus status);
     

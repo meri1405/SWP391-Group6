@@ -47,7 +47,7 @@ public class RestockRequest {
     @Column
     private LocalDateTime completedDate;
     
-    @OneToMany(mappedBy = "restockRequest", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "restockRequest", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     private List<RestockItem> restockItems;
     
     @PrePersist

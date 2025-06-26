@@ -5,6 +5,7 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.RestockItemDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.RestockRequest;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public interface IRestockRequestService {
@@ -44,4 +45,6 @@ public interface IRestockRequestService {
     RestockRequestDTO convertToDTO(RestockRequest restockRequest);
     
     RestockRequest convertToEntity(RestockRequestDTO restockRequestDTO);
+
+    RestockRequestDTO approveRequestWithQuantities(Long id, Long reviewerId, String reviewNotes, List<Map<String, Object>> itemApprovals);
 }

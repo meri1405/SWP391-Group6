@@ -186,6 +186,7 @@ public class MedicalSupplyService implements IMedicalSupplyService {
         medicalSupply.setQuantity(dto.getQuantity());
         medicalSupply.setUnit(dto.getUnit());
         medicalSupply.setMinStockLevel(dto.getMinStockLevel());
+        // Set expiration date or default far future date if null
         medicalSupply.setExpirationDate(dto.getExpirationDate());
         medicalSupply.setSupplier(dto.getSupplier());
         medicalSupply.setLocation(dto.getLocation());

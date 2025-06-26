@@ -110,5 +110,61 @@ export const restockRequestApi = {
       console.error(`Error updating item ${itemId} in restock request ${requestId}:`, error);
       throw error;
     }
+  },
+
+  // Manager endpoints
+  // Get pending requests (for managers)
+  getPendingRequests: async () => {
+    try {
+      const response = await axios.get(`${BASE_URL}/pending`);
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching pending restock requests:", error);
+      throw error;
+    }
+  },
+
+  // Get all requests (for managers)
+  getAllRequestsForManager: async () => {
+    try {
+      const response = await axios.get(`${BASE_URL}/all`);
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching all restock requests for manager:", error);
+      throw error;
+    }
+  },
+
+  // Approve request with quantities (for managers)
+  approveRequestWithQuantities: async (requestId, approvalData) => {
+    try {
+      const response = await axios.put(`${BASE_URL}/${requestId}/approve`, approvalData);
+      return response.data;
+    } catch (error) {
+      console.error(`Error approving restock request ${requestId}:`, error);
+      throw error;
+    }
+  },
+
+  // Reject request (for managers)
+  rejectRequest: async (requestId, rejectionData) => {
+    try {
+      const response = await axios.put(`${BASE_URL}/${requestId}/reject`, rejectionData);
+      return response.data;
+    } catch (error) {
+      console.error(`Error rejecting restock request ${requestId}:`, error);
+      throw error;
+    }
+  },
+
+  // Complete request (for managers)
+  completeRequest: async (requestId) => {
+    try {
+      const response = await axios.put(`${BASE_URL}/${requestId}/complete`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error completing restock request ${requestId}:`, error);
+      throw error;
+    }
   }
-}; 
+};

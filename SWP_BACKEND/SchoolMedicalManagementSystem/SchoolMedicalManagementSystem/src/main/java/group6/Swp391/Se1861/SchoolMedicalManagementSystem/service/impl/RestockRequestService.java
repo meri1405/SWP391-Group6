@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -33,7 +34,7 @@ public class RestockRequestService implements IRestockRequestService {
     
     @Override
     public List<RestockRequestDTO> getAllRestockRequests() {
-        return restockRequestRepository.findAll()
+        return restockRequestRepository.findAllWithItems()
                 .stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -47,9 +48,23 @@ public class RestockRequestService implements IRestockRequestService {
     
     @Override
     public RestockRequestDTO createRestockRequest(RestockRequestDTO restockRequestDTO) {
+        System.out.println("Service: Creating restock request with items count: " + 
+            (restockRequestDTO.getRestockItems() != null ? restockRequestDTO.getRestockItems().size() : 0));
+        
         RestockRequest restockRequest = convertToEntity(restockRequestDTO);
+        System.out.println("Service: Converted to entity with items count: " + 
+            (restockRequest.getRestockItems() != null ? restockRequest.getRestockItems().size() : 0));
+        
         RestockRequest savedRequest = restockRequestRepository.save(restockRequest);
-        return convertToDTO(savedRequest);
+        System.out.println("Service: Saved request with ID: " + savedRequest.getId());
+        System.out.println("Service: Saved request items count: " + 
+            (savedRequest.getRestockItems() != null ? savedRequest.getRestockItems().size() : 0));
+        
+        RestockRequestDTO result = convertToDTO(savedRequest);
+        System.out.println("Service: Converting back to DTO with items count: " + 
+            (result.getRestockItems() != null ? result.getRestockItems().size() : 0));
+        
+        return result;
     }
     
     @Override
@@ -86,7 +101,7 @@ public class RestockRequestService implements IRestockRequestService {
     
     @Override
     public List<RestockRequestDTO> getRequestsByStatus(RestockRequest.RestockStatus status) {
-        return restockRequestRepository.findByStatusOrderByRequestDateAsc(status)
+        return restockRequestRepository.findByStatusWithItemsOrderByRequestDateAsc(status)
                 .stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -116,6 +131,61 @@ public class RestockRequestService implements IRestockRequestService {
     }
     
     @Override
+    public RestockRequestDTO approveRequestWithQuantities(Long id, Long reviewerId, String reviewNotes, List<Map<String, Object>> itemApprovals) {
+        RestockRequest request = restockRequestRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Restock request not found with id: " + id));
+        
+        if (request.getStatus() != RestockRequest.RestockStatus.PENDING) {
+            throw new RuntimeException("Only PENDING requests can be approved");
+        }
+
+        System.out.println("Approving restock request ID: " + id);
+        System.out.println("Number of item approvals: " + itemApprovals.size());
+        
+        // Update approved quantities for each item AND update inventory
+        for (Map<String, Object> approval : itemApprovals) {
+            Long itemId = Long.valueOf(approval.get("itemId").toString());
+            Integer approvedQuantity = Integer.valueOf(approval.get("approvedQuantity").toString());
+            
+            System.out.println("Processing item ID: " + itemId + " with approved quantity: " + approvedQuantity);
+            
+            RestockItem item = restockItemRepository.findById(itemId)
+                    .orElseThrow(() -> new RuntimeException("Restock item not found with id: " + itemId));
+            
+            if (!item.getRestockRequest().getId().equals(id)) {
+                throw new RuntimeException("Item does not belong to the specified request");
+            }
+            
+            // Update approved quantity for the restock item
+            item.setApprovedQuantity(approvedQuantity);
+            restockItemRepository.save(item);
+            
+            // UPDATE MEDICAL SUPPLY INVENTORY - This is the crucial part!
+            MedicalSupply medicalSupply = item.getMedicalSupply();
+            int currentQuantity = medicalSupply.getQuantity();
+            int newQuantity = currentQuantity + approvedQuantity;
+            
+            System.out.println("Updating medical supply ID: " + medicalSupply.getId());
+            System.out.println("Current quantity: " + currentQuantity + " -> New quantity: " + newQuantity);
+            
+            medicalSupply.setQuantity(newQuantity);
+            medicalSupplyRepository.save(medicalSupply);
+            
+            System.out.println("Successfully updated inventory for medical supply: " + medicalSupply.getName());
+        }
+        
+        request.setStatus(RestockRequest.RestockStatus.APPROVED);
+        request.setReviewedBy(reviewerId);
+        request.setReviewNotes(reviewNotes);
+        request.setReviewDate(LocalDateTime.now());
+        
+        RestockRequest updatedRequest = restockRequestRepository.save(request);
+        System.out.println("Restock request approved successfully with inventory updates");
+        
+        return convertToDTO(updatedRequest);
+    }
+    
+    @Override
     public RestockRequestDTO rejectRequest(Long id, Long reviewerId, String reviewNotes) {
         RestockRequest request = restockRequestRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Restock request not found with id: " + id));
@@ -124,12 +194,18 @@ public class RestockRequestService implements IRestockRequestService {
             throw new RuntimeException("Only PENDING requests can be rejected");
         }
         
+        System.out.println("Rejecting restock request ID: " + id);
+        System.out.println("Reason: " + reviewNotes);
+        System.out.println("Note: Inventory will NOT be updated for rejected requests");
+        
         request.setStatus(RestockRequest.RestockStatus.REJECTED);
         request.setReviewedBy(reviewerId);
         request.setReviewNotes(reviewNotes);
         request.setReviewDate(LocalDateTime.now());
         
         RestockRequest updatedRequest = restockRequestRepository.save(request);
+        System.out.println("Restock request rejected successfully - no inventory changes made");
+        
         return convertToDTO(updatedRequest);
     }
     
@@ -255,12 +331,19 @@ public class RestockRequestService implements IRestockRequestService {
         // Get user names
         if (restockRequest.getRequestedBy() != null) {
             userRepository.findById(restockRequest.getRequestedBy())
-                    .ifPresent(user -> dto.setRequestedByName(user.getFirstName() + " " + user.getLastName()));
+                    .ifPresent(user -> {
+                        String fullName = user.getLastName() + " " + user.getFirstName();
+                        dto.setRequestedByName(fullName);
+                        System.out.println("Set requestedByName to: " + fullName + " for user ID: " + restockRequest.getRequestedBy());
+                    });
         }
         
         if (restockRequest.getReviewedBy() != null) {
             userRepository.findById(restockRequest.getReviewedBy())
-                    .ifPresent(user -> dto.setReviewedByName(user.getFirstName() + " " + user.getLastName()));
+                    .ifPresent(user -> {
+                        String fullName = user.getLastName() + " " + user.getFirstName();
+                        dto.setReviewedByName(fullName);
+                    });
         }
         
         // Convert restock items
@@ -302,6 +385,29 @@ public class RestockRequestService implements IRestockRequestService {
         restockRequest.setRequestDate(dto.getRequestDate());
         restockRequest.setReviewDate(dto.getReviewDate());
         restockRequest.setCompletedDate(dto.getCompletedDate());
+        
+        // Convert restock items
+        if (dto.getRestockItems() != null) {
+            List<RestockItem> restockItems = dto.getRestockItems().stream()
+                    .map(itemDto -> {
+                        RestockItem item = new RestockItem();
+                        item.setId(itemDto.getId());
+                        item.setRestockRequest(restockRequest);
+                        
+                        // Load the medical supply entity
+                        MedicalSupply medicalSupply = medicalSupplyRepository.findById(itemDto.getMedicalSupplyId())
+                                .orElseThrow(() -> new RuntimeException("Medical supply not found with id: " + itemDto.getMedicalSupplyId()));
+                        item.setMedicalSupply(medicalSupply);
+                        
+                        item.setRequestedQuantity(itemDto.getRequestedQuantity());
+                        item.setApprovedQuantity(itemDto.getApprovedQuantity());
+                        item.setNotes(itemDto.getNotes());
+                        return item;
+                    })
+                    .collect(Collectors.toList());
+            restockRequest.setRestockItems(restockItems);
+        }
+        
         return restockRequest;
     }
 }

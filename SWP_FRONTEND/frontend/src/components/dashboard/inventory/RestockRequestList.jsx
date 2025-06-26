@@ -71,14 +71,14 @@ const RestockRequestList = () => {
         data = data.filter(
           (request) =>
             // Search in request properties
-            (request.requesterName &&
-              request.requesterName.toLowerCase().includes(searchLower)) ||
+            (request.requestedByName &&
+              request.requestedByName.toLowerCase().includes(searchLower)) ||
             // Search in items
             (request.restockItems &&
               request.restockItems.some(
                 (item) =>
-                  (item.name &&
-                    item.name.toLowerCase().includes(searchLower)) ||
+                  (item.medicalSupplyName &&
+                    item.medicalSupplyName.toLowerCase().includes(searchLower)) ||
                   (item.category &&
                     item.category.toLowerCase().includes(searchLower))
               ))
@@ -186,16 +186,16 @@ const RestockRequestList = () => {
     },
     {
       title: "Người yêu cầu",
-      dataIndex: "requesterName",
-      key: "requesterName",
+      dataIndex: "requestedByName",
+      key: "requestedByName",
       render: (text) => text || "Không có thông tin",
     },
     {
       title: "Thời gian yêu cầu",
-      dataIndex: "createdAt",
-      key: "createdAt",
+      dataIndex: "requestDate",
+      key: "requestDate",
       render: (date) => dayjs(date).format("DD/MM/YYYY HH:mm"),
-      sorter: (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
+      sorter: (a, b) => new Date(a.requestDate) - new Date(b.requestDate),
     },
     {
       title: "Độ ưu tiên",
@@ -238,8 +238,8 @@ const RestockRequestList = () => {
     const itemColumns = [
       {
         title: "Tên vật tư",
-        dataIndex: "name",
-        key: "name",
+        dataIndex: "medicalSupplyName",
+        key: "medicalSupplyName",
       },
       {
         title: "Loại",
@@ -267,6 +267,7 @@ const RestockRequestList = () => {
           columns={itemColumns}
           dataSource={record.restockItems || []}
           pagination={false}
+          size="small"
           rowKey={(item) => `${record.id}-${item.id || item.medicalSupplyId}`}
         />
         {record.reason && (
