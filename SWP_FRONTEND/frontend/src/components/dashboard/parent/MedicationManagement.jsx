@@ -1,13 +1,15 @@
 import { 
   Card,  Button,  Form, Input,  Select,  DatePicker,  TimePicker,  Checkbox, Modal, 
-  Table,  Tag,  Spin,  Tabs,  Tooltip,  Popconfirm, Space, Divider, Typography
+  Table,  Tag,  Spin,  Tabs,  Tooltip,  Popconfirm, Space, Divider, Typography, Image
 } from 'antd';
 import { 
   PlusOutlined,  EditOutlined,  DeleteOutlined,  InfoCircleOutlined, MinusCircleOutlined } from '@ant-design/icons';
+import { useState } from 'react';
 import dayjs from 'dayjs';
 import { useMedicationManagement } from '../../../hooks/useMedicationManagement.jsx';
 import '../../../styles/MedicationManagement.css';
 import ParentMedicationSchedules from './ParentMedicationSchedules';
+import PrescriptionImageUpload from '../../common/PrescriptionImageUpload';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -16,6 +18,9 @@ const { Title } = Typography;
 
 const MedicationManagement = () => {
   const [form] = Form.useForm();
+  const [imagePreviewVisible, setImagePreviewVisible] = useState(false);
+  const [previewImageUrl, setPreviewImageUrl] = useState('');
+  const [previewImageTitle, setPreviewImageTitle] = useState('');
   
   const {    
     loading, students, visible, isEdit, tabKey, isConfirmed, detailModalVisible, selectedMedicationDetail,
@@ -29,6 +34,25 @@ const MedicationManagement = () => {
     // Helpers
     getStatusTag, getFilteredMedications, validateStartDate, validateEndDate, validateTimeSlot, disabledDate  
   } = useMedicationManagement();
+
+  // Handle image preview
+  const handleImagePreview = (imageUrl, index) => {
+    if (!imageUrl) {
+      return;
+    }
+    
+    if (typeof imageUrl !== 'string') {
+      return;
+    }
+    
+    if (!imageUrl.startsWith('data:image/')) {
+      return;
+    }
+    
+    setPreviewImageUrl(imageUrl);
+    setPreviewImageTitle(`Đơn thuốc ${index + 1}`);
+    setImagePreviewVisible(true);
+  };
 
   // Table columns for medication requests
   const columns = [
@@ -102,7 +126,8 @@ const MedicationManagement = () => {
       title: 'Trạng thái',
       key: 'status',
       render: (_, record) => getStatusTag(record.status)
-    },    {
+    },    
+    {
       title: 'Thao tác',
       key: 'action',
       render: (_, record) => (
@@ -110,7 +135,8 @@ const MedicationManagement = () => {
           {record.status === 'PENDING' && (
             <>
               <Tooltip title="Chỉnh sửa yêu cầu">
-                <Button                  type="link" 
+                <Button                  
+                  type="link" 
                   icon={<EditOutlined />} 
                   onClick={() => showEditModal(record, form)}
                 />
@@ -176,7 +202,9 @@ const MedicationManagement = () => {
           activeKey={tabKey} 
           onChange={setTabKey}
         >
-          <TabPane tab="Đang xử lý" key="active">
+          <TabPane 
+            tab="Đang xử lý" 
+            key="active">
             {loading ? (
               <div className="loading-container">
                 <Spin size="large" />
@@ -239,7 +267,6 @@ const MedicationManagement = () => {
             <Select 
               placeholder="Chọn học sinh"
               onChange={(value) => {
-                console.log('Selected student ID:', value);
                 setSelectedStudentId(value);
               }}
             >
@@ -259,6 +286,28 @@ const MedicationManagement = () => {
             <TextArea 
               rows={2} 
               placeholder="Nhập ghi chú chung về yêu cầu thuốc" 
+            />
+          </Form.Item>
+
+          {/* Prescription Images Upload - Show for both new and edit */}
+          <Form.Item
+            name="prescriptionImages"
+            label="Ảnh đơn thuốc"
+            rules={[
+              { required: true, message: 'Vui lòng tải lên ít nhất một ảnh đơn thuốc' },
+              {
+                validator: (_, value) => {
+                  if (!value || value.length === 0) {
+                    return Promise.reject(new Error('Bắt buộc phải có ít nhất 1 ảnh đơn thuốc'));
+                  }
+                  return Promise.resolve();
+                }
+              }
+            ]}
+          >
+            <PrescriptionImageUpload 
+              maxCount={5}
+              required={true}
             />
           </Form.Item>
 
@@ -294,7 +343,7 @@ const MedicationManagement = () => {
                         </Button>
                       )}
                     </div>
-                      <div className="medication-item-form">
+                    <div className="medication-item-form">
                       {/* Hidden field to store item ID for existing items */}
                       <Form.Item
                         {...restField}
@@ -303,7 +352,7 @@ const MedicationManagement = () => {
                       >
                         <Input type="hidden" />
                       </Form.Item>
-                        <div className="form-row">
+                      <div className="form-row">
                         <Form.Item
                           {...restField}
                           name={[name, 'itemName']}
@@ -341,7 +390,7 @@ const MedicationManagement = () => {
                             disabledDate={disabledDate}
                           />
                         </Form.Item>
-                          <Form.Item
+                        <Form.Item
                           {...restField}
                           name={[name, 'endDate']}
                           label="Ngày kết thúc"
@@ -368,13 +417,11 @@ const MedicationManagement = () => {
                           rules={[{ required: true, message: 'Vui lòng chọn loại thuốc' }]}
                         >
                           <Select placeholder="Chọn loại thuốc">
-                            <Option value="TABLET">Viên</Option>
-                            <Option value="LIQUID">Nước</Option>
-                            <Option value="CAPSULE">Viên nang</Option>
                             <Option value="CREAM">Kem</Option>
-                            <Option value="POWDER">Bột</Option>
-                            <Option value="INJECTION">Tiêm</Option>
-                            <Option value="OTHER">Khác</Option>
+                            <Option value="DROPS">Giọt</Option>
+                            <Option value="SPOONFUL">Thìa</Option>
+                            <Option value="SPRAY">Xịt</Option>
+                            <Option value="TABLET">Viên</Option>
                           </Select>
                         </Form.Item>                          
                         <Form.Item
@@ -405,9 +452,9 @@ const MedicationManagement = () => {
                         <Form.Item
                           {...restField}
                           name={[name, 'frequency']}
-                          label="Tần suất (lần/ngày)"
+                          label="Số lần uống hàng ngày"
                           rules={[
-                            { required: true, message: 'Vui lòng nhập tần suất' },
+                            { required: true, message: 'Vui lòng nhập số lần uống hàng ngày' },
                             { 
                               pattern: /^[0-9]+$/, 
                               message: 'Vui lòng nhập số nguyên' 
@@ -475,7 +522,7 @@ const MedicationManagement = () => {
                                     className="time-slot-input"
                                     validateTrigger="onChange"
                                   >                                    
-                                  <TimePicker 
+                                    <TimePicker 
                                       format="HH:mm" 
                                       placeholder={`Thời gian ${timeIndex + 1}`}
                                       minuteStep={5}
@@ -500,7 +547,7 @@ const MedicationManagement = () => {
                     {fields.length > 1 && <Divider />}
                   </div>
                 ))}
-                  <Form.Item>
+                <Form.Item>
                   <Button
                     type="dashed"
                     onClick={() => add({ 
@@ -521,12 +568,18 @@ const MedicationManagement = () => {
           </Form.List>
 
           <Form.Item>
-            <div style={{ border: '1px solid #d9d9d9', padding: '10px', borderRadius: '5px', backgroundColor: '#f8f8f8' }}>
+            <div 
+              style={{ 
+                border: '1px solid #d9d9d9', 
+                padding: '10px', 
+                borderRadius: '5px', 
+                backgroundColor: '#f8f8f8' 
+              }}
+            >
               <Checkbox 
                 checked={isConfirmed} 
                 onChange={(e) => {
                   setIsConfirmed(e.target.checked);
-                  console.log('Confirmation checkbox changed:', e.target.checked);
                 }}
                 style={{ color: '#ff4d4f', fontWeight: 'bold' }}
               >
@@ -574,32 +627,102 @@ const MedicationManagement = () => {
           <div className="medication-detail-modal">
             <div className="medication-detail-content">
               <div className="medication-detail-section">
-                <div className="medication-detail-header" style={{marginBottom: '10px'}}>
+                <div 
+                  className="medication-detail-header" 
+                  style={{marginBottom: '10px'}}
+                >
                   <h3>Thông tin cơ bản</h3>
                   <strong>Trạng thái: </strong>
-                  <Tag color={selectedMedicationDetail.status === 'PENDING' ? 'processing' : (selectedMedicationDetail.status === 'APPROVED' ? 'success' : selectedMedicationDetail.status === 'REJECTED' ? 'error' : 'default')}>
-                    {selectedMedicationDetail.status === 'PENDING' ? 'Đang chờ duyệt' : 
-                     selectedMedicationDetail.status === 'APPROVED' ? 'Đã duyệt' : 
-                     selectedMedicationDetail.status === 'REJECTED' ? 'Từ chối' : 
-                     selectedMedicationDetail.status === 'COMPLETED' ? 'Hoàn thành' : 'Không xác định'}
+                  <Tag 
+                    color={
+                      selectedMedicationDetail.status === 'PENDING' ? 'processing' : 
+                      (selectedMedicationDetail.status === 'APPROVED' ? 'success' : 
+                      selectedMedicationDetail.status === 'REJECTED' ? 'error' : 'default')
+                    }
+                  >
+                    {
+                      selectedMedicationDetail.status === 'PENDING' ? 'Đang chờ duyệt' : 
+                      selectedMedicationDetail.status === 'APPROVED' ? 'Đã duyệt' : 
+                      selectedMedicationDetail.status === 'REJECTED' ? 'Từ chối' : 
+                      selectedMedicationDetail.status === 'COMPLETED' ? 'Hoàn thành' : 'Không xác định'
+                    }
                   </Tag>
                 </div>
                 
-                <div className="medication-detail-info">                  <p><strong>Học sinh:</strong> {selectedMedicationDetail.studentName || (() => {
-                    const student = students.find(s => s.id === selectedMedicationDetail.studentId);
-                    return student ? `${student.firstName} ${student.lastName}` : 'N/A';
-                  })()}</p>
-                  <p><strong>Mã yêu cầu:</strong> {selectedMedicationDetail.id}</p>
-                  <p><strong>Ngày yêu cầu:</strong> {selectedMedicationDetail.requestDate ? dayjs(selectedMedicationDetail.requestDate).format('DD/MM/YYYY') : dayjs().format('DD/MM/YYYY')}</p>
-                  <p><strong>Ghi chú chung:</strong> {selectedMedicationDetail.note ? (
-                    <span className="general-note">{selectedMedicationDetail.note}</span>
-                  ) : (
-                    <span className="empty-note">Không có ghi chú</span>
-                  )}</p>
+                <div className="medication-detail-info">                  
+                  <p>
+                    <strong>Học sinh: </strong> 
+                    {selectedMedicationDetail.studentName || (() => {
+                      const student = students.find(s => s.id === selectedMedicationDetail.studentId);
+                      return student ? `${student.firstName} ${student.lastName}` : 'N/A';
+                      })()
+                    }
+                  </p>
+                  <p>
+                    <strong>Mã yêu cầu: </strong> 
+                    {selectedMedicationDetail.id}
+                  </p>
+                  <p>
+                    <strong>Ngày yêu cầu: </strong> 
+                    {selectedMedicationDetail.requestDate ? dayjs(selectedMedicationDetail.requestDate).format('DD/MM/YYYY') : dayjs().format('DD/MM/YYYY')}
+                  </p>
+                  <p>
+                    <strong>Ghi chú chung: </strong> 
+                    {selectedMedicationDetail.note ? (
+                      <span className="general-note">{selectedMedicationDetail.note}</span>
+                    ) : (
+                      <span className="empty-note">Không có ghi chú</span>
+                    )}
+                  </p>
                   {selectedMedicationDetail.nurseName && (
                     <p><strong>Y tá phụ trách:</strong> {selectedMedicationDetail.nurseName}</p>
                   )}
                 </div>
+
+                {/* Prescription Images Display */}
+                {selectedMedicationDetail.prescriptionImages && selectedMedicationDetail.prescriptionImages.length > 0 && (
+                  <div className="prescription-images-section" style={{ marginTop: '16px' }}>
+                    <h4><strong>Ảnh đơn thuốc ({selectedMedicationDetail.prescriptionImages.length})</strong></h4>
+                    
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                      {selectedMedicationDetail.prescriptionImages.map((imageUrl, index) => (
+                        <div key={index} style={{ position: 'relative' }}>
+                          <img
+                            src={imageUrl || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2VlZSIvPjx0ZXh0IHg9IjUwIiB5PSI1MCIgZm9udC1zaXplPSIxMiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPk5vIEltYWdlPC90ZXh0Pjwvc3ZnPg=='}
+                            alt={`Đơn thuốc ${index + 1}`}
+                            style={{
+                              width: '100px',
+                              height: '100px',
+                              objectFit: 'cover',
+                              borderRadius: '4px',
+                              border: '1px solid #d9d9d9',
+                              cursor: 'pointer'
+                            }}
+                            onClick={() => handleImagePreview(imageUrl, index)}
+                            onError={(e) => {
+                              e.target.style.border = '2px solid red';
+                            }}
+                          />
+                          <div style={{
+                            position: 'absolute',
+                            bottom: '2px',
+                            left: '2px',
+                            backgroundColor: 'rgba(0,0,0,0.6)',
+                            color: 'white',
+                            padding: '2px 6px',
+                            borderRadius: '2px',
+                            fontSize: '10px'
+                          }}>
+                            {index + 1}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                      Click vào ảnh để xem kích thước đầy đủ
+                    </div>
+                  </div>
+                )}
               </div>
               
               <Divider />
@@ -619,26 +742,22 @@ const MedicationManagement = () => {
                           <h4><strong>{index + 1}. {item.itemName}</strong></h4>
                           </div>
 
-                          <h4><strong>Loại: <Tag color={
-                            item.itemType === 'PRESCRIPTION' ? 'red' :
-                            item.itemType === 'OTC' ? 'green' :
-                            item.itemType === 'TABLET' ? 'blue' :
-                            item.itemType === 'LIQUID' ? 'cyan' :
-                            item.itemType === 'CAPSULE' ? 'magenta' :
-                            item.itemType === 'CREAM' ? 'orange' :
-                            item.itemType === 'POWDER' ? 'purple' :
-                            item.itemType === 'INJECTION' ? 'red' :
-                            'default'
-                          }>
-                            {item.itemType === 'PRESCRIPTION' ? 'Thuốc kê đơn' :
-                             item.itemType === 'OTC' ? 'Thuốc không kê đơn' :
-                             item.itemType === 'TABLET' ? 'Viên' :
-                             item.itemType === 'LIQUID' ? 'Nước' :
-                             item.itemType === 'CAPSULE' ? 'Viên nang' :
-                             item.itemType === 'CREAM' ? 'Kem' :
-                             item.itemType === 'POWDER' ? 'Bột' :
-                             item.itemType === 'INJECTION' ? 'Tiêm' : item.itemType}
-                          </Tag> </strong></h4>                          <div className="medication-item-details">
+                          <h4>
+                            <strong>Loại: </strong>
+                              <Tag color={
+                                item.itemType === 'CREAM' ? 'red' :
+                                item.itemType === 'DROPS' ? 'green' :
+                                item.itemType === 'TABLET' ? 'blue' :
+                                item.itemType === 'SPOONFUL' ? 'cyan' : 'magenta'
+                              }>
+                                {item.itemType === 'CREAM' ? 'Kem' :
+                                item.itemType === 'DROPS' ? 'Giọt' :
+                                item.itemType === 'TABLET' ? 'Viên' :
+                                item.itemType === 'SPOONFUL' ? 'Thìa' : 'Xịt'
+                              }</Tag> 
+                            
+                          </h4>
+                        <div className="medication-item-details">
                           <p><strong>Mục đích:</strong> <span className="medication-purpose">{item.purpose || 'Không có mục đích'}</span></p>
                           <p><strong>Thời gian sử dụng:</strong> <span className="medication-period">
                             {item.startDate ? dayjs(item.startDate).format('DD/MM/YYYY') : 'N/A'} - {item.endDate ? dayjs(item.endDate).format('DD/MM/YYYY') : 'N/A'}
@@ -721,6 +840,35 @@ const MedicationManagement = () => {
               </div>
             </div>
           </div>
+        )}
+      </Modal>
+
+      {/* Image Preview Modal */}
+      <Modal
+        title={previewImageTitle}
+        open={imagePreviewVisible}
+        onCancel={() => setImagePreviewVisible(false)}
+        footer={null}
+        width={800}
+        centered
+        bodyStyle={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center',
+          padding: '20px'
+        }}
+      >
+        {previewImageUrl && (
+          <Image
+            src={previewImageUrl}
+            alt={previewImageTitle}
+            style={{ 
+              maxWidth: '100%', 
+              maxHeight: '70vh', 
+              objectFit: 'contain' 
+            }}
+            preview={false}
+          />
         )}
       </Modal>
     </div>
