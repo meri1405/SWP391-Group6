@@ -8,8 +8,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -42,14 +40,26 @@ public class RestockRequestController {
     @PreAuthorize("hasRole('SCHOOLNURSE')")
     public ResponseEntity<RestockRequestDTO> createRestockRequest(@RequestBody RestockRequestDTO restockRequestDTO) {
         try {
-            // Set the requesting user from security context
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            Long userId = getUserIdFromAuthentication(auth);
-            restockRequestDTO.setRequestedBy(userId);
+            System.out.println("Received restock request: " + restockRequestDTO);
+            System.out.println("Number of restock items: " + 
+                (restockRequestDTO.getRestockItems() != null ? restockRequestDTO.getRestockItems().size() : 0));
+            
+            // Use user ID from frontend request
+            if (restockRequestDTO.getRequestedBy() == null) {
+                throw new RuntimeException("User ID is required");
+            }
+            
+            System.out.println("Using user ID: " + restockRequestDTO.getRequestedBy());
             
             RestockRequestDTO createdRequest = restockRequestService.createRestockRequest(restockRequestDTO);
+            System.out.println("Created request with ID: " + createdRequest.getId());
+            System.out.println("Created request items count: " + 
+                (createdRequest.getRestockItems() != null ? createdRequest.getRestockItems().size() : 0));
+            System.out.println("Created request requestedByName: " + createdRequest.getRequestedByName());
+            
             return ResponseEntity.status(HttpStatus.CREATED).body(createdRequest);
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.badRequest().build();
         }
     }
@@ -83,10 +93,8 @@ public class RestockRequestController {
     @GetMapping("/my-requests")
     @PreAuthorize("hasRole('SCHOOLNURSE')")
     public ResponseEntity<List<RestockRequestDTO>> getMyRestockRequests() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        Long userId = getUserIdFromAuthentication(auth);
-        
-        List<RestockRequestDTO> requests = restockRequestService.getRequestsByUser(userId);
+        // For now, return all requests - this should be improved to get actual user ID
+        List<RestockRequestDTO> requests = restockRequestService.getAllRestockRequests();
         return ResponseEntity.ok(requests);
     }
     
@@ -142,9 +150,66 @@ public class RestockRequestController {
         }
     }
     
-    private Long getUserIdFromAuthentication(Authentication auth) {
-        // This would depend on your UserDetails implementation
-        // For now, return a placeholder - implement based on your security setup
-        return 1L; // TODO: Implement proper user ID extraction from JWT or UserDetails
+    // Manager endpoints
+    @GetMapping("/pending")
+    @PreAuthorize("hasRole('MANAGER')")
+    public ResponseEntity<List<RestockRequestDTO>> getPendingRequests() {
+        List<RestockRequestDTO> pendingRequests = restockRequestService.getPendingRequests();
+        return ResponseEntity.ok(pendingRequests);
+    }
+    
+    @GetMapping("/all")
+    @PreAuthorize("hasRole('MANAGER')")
+    public ResponseEntity<List<RestockRequestDTO>> getAllRequestsForManager() {
+        List<RestockRequestDTO> requests = restockRequestService.getAllRestockRequests();
+        return ResponseEntity.ok(requests);
+    }
+    
+    @PutMapping("/{id}/approve")
+    @PreAuthorize("hasRole('MANAGER')")
+    public ResponseEntity<RestockRequestDTO> approveRequest(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> approvalData) {
+        try {
+            // For now, use a default manager ID - this should be improved
+            Long managerId = 1L; // Default manager ID
+            
+            String reviewNotes = (String) approvalData.get("reviewNotes");
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> itemApprovals = (List<Map<String, Object>>) approvalData.get("itemApprovals");
+            
+            RestockRequestDTO approvedRequest = restockRequestService.approveRequestWithQuantities(id, managerId, reviewNotes, itemApprovals);
+            return ResponseEntity.ok(approvedRequest);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+    
+    @PutMapping("/{id}/reject")
+    @PreAuthorize("hasRole('MANAGER')")
+    public ResponseEntity<RestockRequestDTO> rejectRequest(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> rejectionData) {
+        try {
+            // For now, use a default manager ID - this should be improved
+            Long managerId = 1L; // Default manager ID
+            
+            String reviewNotes = rejectionData.get("reviewNotes");
+            RestockRequestDTO rejectedRequest = restockRequestService.rejectRequest(id, managerId, reviewNotes);
+            return ResponseEntity.ok(rejectedRequest);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+    
+    @PutMapping("/{id}/complete")
+    @PreAuthorize("hasRole('MANAGER')")
+    public ResponseEntity<RestockRequestDTO> completeRequest(@PathVariable Long id) {
+        try {
+            RestockRequestDTO completedRequest = restockRequestService.completeRequest(id);
+            return ResponseEntity.ok(completedRequest);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 }

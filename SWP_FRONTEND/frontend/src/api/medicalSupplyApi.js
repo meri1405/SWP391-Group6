@@ -220,4 +220,65 @@ export const medicalSupplyApi = {
       throw error;
     }
   },
+
+  // Create new medical supply
+  createSupply: async (supplyData) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/medical-supplies`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: JSON.stringify(supplyData),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error("Error creating medical supply:", error);
+      throw error;
+    }
+  },
+
+  // Update medical supply
+  updateSupply: async (id, supplyData) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/medical-supplies/${id}`, {
+        method: "PUT",
+        headers: getAuthHeaders(),
+        body: JSON.stringify(supplyData),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error(`Error updating medical supply ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Delete medical supply
+  deleteSupply: async (id) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/medical-supplies/${id}`, {
+        method: "DELETE",
+        headers: getAuthHeaders(),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return true;
+    } catch (error) {
+      console.error(`Error deleting medical supply ${id}:`, error);
+      throw error;
+    }
+  },
 };

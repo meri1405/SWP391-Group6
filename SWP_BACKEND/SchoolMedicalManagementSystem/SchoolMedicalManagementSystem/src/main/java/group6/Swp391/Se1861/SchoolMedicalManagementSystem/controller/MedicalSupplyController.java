@@ -20,31 +20,68 @@ public class MedicalSupplyController {
     private final IMedicalSupplyService medicalSupplyService;
     
     @GetMapping
-    @PreAuthorize("hasRole('SCHOOLNURSE')")
+    @PreAuthorize("hasRole('SCHOOLNURSE') or hasRole('MANAGER')")
     public ResponseEntity<List<MedicalSupplyDTO>> getAllMedicalSupplies() {
         List<MedicalSupplyDTO> supplies = medicalSupplyService.getAllMedicalSupplies();
         return ResponseEntity.ok(supplies);
     }
     
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('SCHOOLNURSE')")
+    @PreAuthorize("hasRole('SCHOOLNURSE') or hasRole('MANAGER')")
     public ResponseEntity<MedicalSupplyDTO> getMedicalSupplyById(@PathVariable Long id) {
         return medicalSupplyService.getMedicalSupplyById(id)
                 .map(supply -> ResponseEntity.ok(supply))
                 .orElse(ResponseEntity.notFound().build());
     }
     
-   
-
+    @PostMapping
+    @PreAuthorize("hasRole('MANAGER')")
+    public ResponseEntity<MedicalSupplyDTO> createMedicalSupply(@RequestBody MedicalSupplyDTO medicalSupplyDTO) {
+        try {
+            MedicalSupplyDTO createdSupply = medicalSupplyService.createMedicalSupply(medicalSupplyDTO);
+            return ResponseEntity.status(HttpStatus.CREATED).body(createdSupply);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+    
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('MANAGER')")
+    public ResponseEntity<MedicalSupplyDTO> updateMedicalSupply(
+            @PathVariable Long id, 
+            @RequestBody MedicalSupplyDTO medicalSupplyDTO) {
+        try {
+            MedicalSupplyDTO updatedSupply = medicalSupplyService.updateMedicalSupply(id, medicalSupplyDTO);
+            return ResponseEntity.ok(updatedSupply);
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+    
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('MANAGER')")
+    public ResponseEntity<Void> deleteMedicalSupply(@PathVariable Long id) {
+        try {
+            medicalSupplyService.deleteMedicalSupply(id);
+            return ResponseEntity.noContent().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+    
     @GetMapping("/low-stock")
-    @PreAuthorize("hasRole('SCHOOLNURSE')")
+    @PreAuthorize("hasRole('SCHOOLNURSE') or hasRole('MANAGER')")
     public ResponseEntity<List<MedicalSupplyDTO>> getLowStockItems() {
         List<MedicalSupplyDTO> lowStockItems = medicalSupplyService.getLowStockItems();
         return ResponseEntity.ok(lowStockItems);
     }
     
     @GetMapping("/expiring-soon")
-    @PreAuthorize("hasRole('SCHOOLNURSE')")
+    @PreAuthorize("hasRole('SCHOOLNURSE') or hasRole('MANAGER')")
     public ResponseEntity<List<MedicalSupplyDTO>> getExpiringSoonItems(
             @RequestParam(defaultValue = "30") int days) {
         List<MedicalSupplyDTO> expiringSoonItems = medicalSupplyService.getExpiringSoonItems(days);
@@ -52,28 +89,28 @@ public class MedicalSupplyController {
     }
     
     @GetMapping("/expired")
-    @PreAuthorize("hasRole('SCHOOLNURSE')")
+    @PreAuthorize("hasRole('SCHOOLNURSE') or hasRole('MANAGER')")
     public ResponseEntity<List<MedicalSupplyDTO>> getExpiredItems() {
         List<MedicalSupplyDTO> expiredItems = medicalSupplyService.getExpiredItems();
         return ResponseEntity.ok(expiredItems);
     }
     
     @GetMapping("/category/{category}")
-    @PreAuthorize("hasRole('SCHOOLNURSE')")
+    @PreAuthorize("hasRole('SCHOOLNURSE') or hasRole('MANAGER')")
     public ResponseEntity<List<MedicalSupplyDTO>> getSuppliesByCategory(@PathVariable String category) {
         List<MedicalSupplyDTO> supplies = medicalSupplyService.getSuppliesByCategory(category);
         return ResponseEntity.ok(supplies);
     }
     
     @GetMapping("/search")
-    @PreAuthorize("hasRole('SCHOOLNURSE')")
+    @PreAuthorize("hasRole('SCHOOLNURSE') or hasRole('MANAGER')")
     public ResponseEntity<List<MedicalSupplyDTO>> searchSuppliesByName(@RequestParam String name) {
         List<MedicalSupplyDTO> supplies = medicalSupplyService.searchSuppliesByName(name);
         return ResponseEntity.ok(supplies);
     }
     
     @GetMapping("/location/{location}")
-    @PreAuthorize("hasRole('SCHOOLNURSE')")
+    @PreAuthorize("hasRole('SCHOOLNURSE') or hasRole('MANAGER')")
     public ResponseEntity<List<MedicalSupplyDTO>> getSuppliesByLocation(@PathVariable String location) {
         List<MedicalSupplyDTO> supplies = medicalSupplyService.getSuppliesByLocation(location);
         return ResponseEntity.ok(supplies);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Modal,
   Form,
@@ -22,6 +22,7 @@ import {
 } from "@ant-design/icons";
 import { medicalSupplyApi } from "../../../api/medicalSupplyApi";
 import { restockRequestApi } from "../../../api/restockRequestApi";
+import { useAuth } from "../../../contexts/AuthContext";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -33,12 +34,29 @@ const RestockRequestForm = ({
   selectedSupplies = [],
   onSuccess,
 }) => {
+  const { user } = useAuth();
   const [form] = Form.useForm();
   const [supplies, setSupplies] = useState([]);
   const [loading, setLoading] = useState(false);
   const [requestItems, setRequestItems] = useState([]);
   const [messageApi, contextHolder] = message.useMessage();
   const [submitting, setSubmitting] = useState(false);
+
+  // Fetch all medical supplies to populate dropdown
+  const fetchMedicalSupplies = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await medicalSupplyApi.getAllSupplies();
+      setSupplies(data);
+      setLoading(false);
+    } catch (error) {
+      setLoading(false);
+      messageApi.error(
+        "Không thể tải dữ liệu vật tư y tế. Vui lòng thử lại sau."
+      );
+      console.error("Error fetching medical supplies:", error);
+    }
+  }, [messageApi]);
 
   // Load all medical supplies when modal opens
   useEffect(() => {
@@ -56,6 +74,7 @@ const RestockRequestForm = ({
           currentQuantity: supply.quantity,
           unit: supply.unit,
           minStockLevel: supply.minStockLevel,
+          notes: "",
         }));
 
         setRequestItems(items);
@@ -67,23 +86,7 @@ const RestockRequestForm = ({
         reason: "",
       });
     }
-  }, [visible, selectedSupplies, form]);
-
-  // Fetch all medical supplies to populate dropdown
-  const fetchMedicalSupplies = async () => {
-    setLoading(true);
-    try {
-      const data = await medicalSupplyApi.getAllSupplies();
-      setSupplies(data);
-      setLoading(false);
-    } catch (error) {
-      setLoading(false);
-      messageApi.error(
-        "Không thể tải dữ liệu vật tư y tế. Vui lòng thử lại sau."
-      );
-      console.error("Error fetching supplies:", error);
-    }
-  };
+  }, [visible, selectedSupplies, form, fetchMedicalSupplies]);
 
   // Handle form submission
   const handleSubmit = async () => {
@@ -97,11 +100,10 @@ const RestockRequestForm = ({
 
       setSubmitting(true);
 
-      // Create restock request DTO
       const requestData = {
+        requestedBy: user.id,
         priority: values.priority,
         reason: values.reason,
-        status: "PENDING",
         restockItems: requestItems.map((item) => ({
           medicalSupplyId: item.medicalSupplyId,
           requestedQuantity: item.requestedQuantity,
@@ -109,60 +111,74 @@ const RestockRequestForm = ({
         })),
       };
 
-      try {
-        const response = await restockRequestApi.createRequest(requestData);
-        messageApi.success("Gửi yêu cầu bổ sung thành công!");
-        setSubmitting(false);
+      console.log("Submitting restock request:", requestData);
 
-        // Reset form and close modal
-        form.resetFields();
-        setRequestItems([]);
-        onSuccess && onSuccess(response);
-      } catch (error) {
-        setSubmitting(false);
-        messageApi.error("Không thể gửi yêu cầu. Vui lòng thử lại sau.");
-        console.error("Error creating restock request:", error);
-      }
+      await restockRequestApi.createRequest(requestData);
+      messageApi.success("Tạo yêu cầu nhập kho thành công!");
+
+      // Reset form and close modal
+      form.resetFields();
+      setRequestItems([]);
+      onSuccess?.();
+      onCancel();
     } catch (error) {
-      console.error("Form validation failed:", error);
+      console.error("Error creating restock request:", error);
+      messageApi.error(
+        error.response?.data?.message ||
+          "Có lỗi xảy ra khi tạo yêu cầu. Vui lòng thử lại."
+      );
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  // Add a new item to the restock request
-  const addItem = () => {
-    const newItemId = form.getFieldValue("newItemSupply");
-    const newItemQuantity = form.getFieldValue("newItemQuantity");
-    const newItemNotes = form.getFieldValue("newItemNotes");
+  // Add new item to the restock request
+  const addNewItem = () => {
+    const newItemData = form.getFieldsValue([
+      "newItemId",
+      "newItemQuantity",
+      "newItemNotes",
+    ]);
 
-    if (!newItemId || !newItemQuantity) {
-      messageApi.error("Vui lòng chọn vật tư và nhập số lượng.");
+    if (!newItemData.newItemId || !newItemData.newItemQuantity) {
+      messageApi.error("Vui lòng chọn vật tư và nhập số lượng!");
       return;
     }
 
-    const supplyToAdd = supplies.find((s) => s.id === newItemId);
-    if (!supplyToAdd) return;
-
-    // Check if item already exists in the list
-    if (requestItems.some((item) => item.medicalSupplyId === newItemId)) {
-      messageApi.warning("Vật tư này đã có trong danh sách.");
+    // Check if item already exists
+    const exists = requestItems.some(
+      (item) => item.medicalSupplyId === newItemData.newItemId
+    );
+    if (exists) {
+      messageApi.error("Vật tư này đã có trong danh sách!");
       return;
     }
 
+    // Find selected supply details
+    const selectedSupply = supplies.find(
+      (supply) => supply.id === newItemData.newItemId
+    );
+    if (!selectedSupply) {
+      messageApi.error("Không tìm thấy thông tin vật tư!");
+      return;
+    }
+
+    // Add item to list
     const newItem = {
-      medicalSupplyId: supplyToAdd.id,
-      requestedQuantity: newItemQuantity,
-      notes: newItemNotes,
-      name: supplyToAdd.name,
-      currentQuantity: supplyToAdd.quantity,
-      unit: supplyToAdd.unit,
-      minStockLevel: supplyToAdd.minStockLevel,
+      medicalSupplyId: selectedSupply.id,
+      requestedQuantity: newItemData.newItemQuantity,
+      name: selectedSupply.name,
+      currentQuantity: selectedSupply.quantity,
+      unit: selectedSupply.unit,
+      minStockLevel: selectedSupply.minStockLevel,
+      notes: newItemData.newItemNotes || "",
     };
 
     setRequestItems([...requestItems, newItem]);
 
-    // Reset add item fields
+    // Reset new item form fields
     form.setFieldsValue({
-      newItemSupply: undefined,
+      newItemId: undefined,
       newItemQuantity: undefined,
       newItemNotes: undefined,
     });
@@ -171,6 +187,22 @@ const RestockRequestForm = ({
   // Remove an item from the restock request
   const removeItem = (itemIndex) => {
     setRequestItems(requestItems.filter((_, index) => index !== itemIndex));
+  };
+
+  // Update quantity for an item in the request list
+  const updateItemQuantity = (itemIndex, newQuantity) => {
+    if (newQuantity && newQuantity > 0) {
+      const updatedItems = [...requestItems];
+      updatedItems[itemIndex].requestedQuantity = newQuantity;
+      setRequestItems(updatedItems);
+    }
+  };
+
+  // Update notes for an item in the request list
+  const updateItemNotes = (itemIndex, newNotes) => {
+    const updatedItems = [...requestItems];
+    updatedItems[itemIndex].notes = newNotes || "";
+    setRequestItems(updatedItems);
   };
 
   // Table columns for restock items
@@ -196,13 +228,32 @@ const RestockRequestForm = ({
       title: "SL yêu cầu",
       dataIndex: "requestedQuantity",
       key: "requestedQuantity",
-      render: (value, record) => `${value} ${record.unit}`,
+      render: (value, record, index) => (
+        <Space>
+          <InputNumber
+            min={1}
+            value={value}
+            onChange={(newValue) => updateItemQuantity(index, newValue)}
+            style={{ width: 80 }}
+            size="small"
+          />
+          <span>{record.unit}</span>
+        </Space>
+      ),
     },
     {
       title: "Ghi chú",
       dataIndex: "notes",
       key: "notes",
-      ellipsis: true,
+      render: (value, record, index) => (
+        <Input
+          value={value || ""}
+          onChange={(e) => updateItemNotes(index, e.target.value)}
+          placeholder="Thêm ghi chú..."
+          size="small"
+          style={{ width: "100%" }}
+        />
+      ),
     },
     {
       title: "Thao tác",
@@ -213,27 +264,29 @@ const RestockRequestForm = ({
           icon={<DeleteOutlined />}
           onClick={() => removeItem(index)}
           type="text"
+          size="small"
         />
       ),
     },
   ];
 
-  // Filter out already selected items from dropdown
-  const filteredSupplies = supplies.filter(
-    (supply) => !requestItems.some((item) => item.medicalSupplyId === supply.id)
+  // Filter available supplies (exclude already added ones)
+  const availableSupplies = supplies.filter(
+    (supply) =>
+      !requestItems.some((item) => item.medicalSupplyId === supply.id)
   );
 
   return (
     <>
       {contextHolder}
       <Modal
-        title="Gửi yêu cầu bổ sung vật tư y tế"
+        title="Tạo yêu cầu nhập kho"
         open={visible}
-        width={800}
         onCancel={onCancel}
+        width={1000}
         footer={[
-          <Button key="back" onClick={onCancel}>
-            Hủy bỏ
+          <Button key="cancel" onClick={onCancel}>
+            Hủy
           </Button>,
           <Button
             key="submit"
@@ -242,78 +295,75 @@ const RestockRequestForm = ({
             onClick={handleSubmit}
             disabled={requestItems.length === 0}
           >
-            Gửi yêu cầu
+            Tạo yêu cầu
           </Button>,
         ]}
+        destroyOnClose
       >
-        <Spin spinning={loading}>
-          <Form
-            form={form}
-            layout="vertical"
-            initialValues={{
-              priority: "MEDIUM",
-            }}
-          >
-            <Form.Item
-              name="priority"
-              label="Mức độ ưu tiên"
-              rules={[
-                { required: true, message: "Vui lòng chọn mức độ ưu tiên" },
-              ]}
-            >
-              <Select>
-                <Option value="HIGH">
-                  <Tag color="red">Cao</Tag>
-                </Option>
-                <Option value="MEDIUM">
-                  <Tag color="blue">Trung bình</Tag>
-                </Option>
-                <Option value="LOW">
-                  <Tag color="green">Thấp</Tag>
-                </Option>
-              </Select>
-            </Form.Item>
-
-            <Form.Item
-              name="reason"
-              label="Lý do yêu cầu"
-              rules={[
-                { required: true, message: "Vui lòng nhập lý do yêu cầu" },
-              ]}
-            >
-              <TextArea
-                rows={3}
-                placeholder="Nhập lý do cần bổ sung vật tư..."
-              />
-            </Form.Item>
-
-            <div
-              className="add-item-section"
-              style={{
-                marginBottom: 16,
-                padding: 16,
-                border: "1px dashed #d9d9d9",
-                borderRadius: 4,
-              }}
-            >
-              <Text strong style={{ display: "block", marginBottom: 16 }}>
-                <PlusOutlined /> Thêm vật tư vào yêu cầu
-              </Text>
+        <Form form={form} layout="vertical">
+          {/* Request Info */}
+          <div style={{ marginBottom: 24 }}>
+            <Text strong>Thông tin yêu cầu</Text>
+            <div style={{ display: "flex", gap: 16, marginTop: 12 }}>
               <Form.Item
-                name="newItemSupply"
-                label="Chọn vật tư"
-                style={{ marginBottom: 12 }}
+                name="priority"
+                label="Mức độ ưu tiên"
+                style={{ flex: 1 }}
+                initialValue="MEDIUM"
+                rules={[{ required: true, message: "Vui lòng chọn mức độ ưu tiên!" }]}
+              >
+                <Select>
+                  <Option value="LOW">Thấp</Option>
+                  <Option value="MEDIUM">Trung bình</Option>
+                  <Option value="HIGH">Cao</Option>
+                  <Option value="URGENT">Khẩn cấp</Option>
+                </Select>
+              </Form.Item>
+
+              <Form.Item
+                name="reason"
+                label="Lý do"
+                style={{ flex: 2 }}
+                rules={[{ required: true, message: "Vui lòng nhập lý do!" }]}
+              >
+                <TextArea
+                  rows={2}
+                  placeholder="Nhập lý do cần nhập kho..."
+                />
+              </Form.Item>
+            </div>
+          </div>
+
+          {/* Add New Item */}
+          <div style={{ marginBottom: 24 }}>
+            <Text strong>Thêm vật tư</Text>
+            <div style={{ display: "flex", gap: 12, marginTop: 12, alignItems: "end" }}>
+              <Form.Item
+                name="newItemId"
+                label="Vật tư y tế"
+                style={{ flex: 2 }}
               >
                 <Select
-                  placeholder="Chọn vật tư cần bổ sung"
+                  placeholder="Chọn vật tư y tế"
                   showSearch
                   filterOption={(input, option) =>
-                    option.children.toLowerCase().includes(input.toLowerCase())
+                    option?.children?.toLowerCase().includes(input.toLowerCase())
                   }
+                  loading={loading}
                 >
-                  {filteredSupplies.map((supply) => (
+                  {availableSupplies.map((supply) => (
                     <Option key={supply.id} value={supply.id}>
-                      {supply.name} ({supply.quantity} {supply.unit} hiện có)
+                      <Space>
+                        {supply.name}
+                        {supply.quantity < supply.minStockLevel && (
+                          <Tag color="orange" size="small">
+                            Thiếu hàng
+                          </Tag>
+                        )}
+                        <Text type="secondary">
+                          ({supply.quantity} {supply.unit})
+                        </Text>
+                      </Space>
                     </Option>
                   ))}
                 </Select>
@@ -321,48 +371,64 @@ const RestockRequestForm = ({
 
               <Form.Item
                 name="newItemQuantity"
-                label="Số lượng yêu cầu"
-                style={{ marginBottom: 12 }}
+                label="Số lượng"
+                style={{ flex: 1 }}
               >
                 <InputNumber
                   min={1}
-                  placeholder="Nhập số lượng"
+                  placeholder="SL"
                   style={{ width: "100%" }}
                 />
               </Form.Item>
 
               <Form.Item
                 name="newItemNotes"
-                label="Ghi chú (không bắt buộc)"
-                style={{ marginBottom: 12 }}
+                label="Ghi chú"
+                style={{ flex: 1 }}
               >
-                <Input placeholder="Thêm ghi chú cho vật tư này..." />
+                <Input placeholder="Ghi chú..." />
               </Form.Item>
 
-              <Button
-                type="dashed"
-                onClick={addItem}
-                icon={<PlusOutlined />}
-                block
-              >
-                Thêm vào danh sách
-              </Button>
+              <Form.Item>
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={addNewItem}
+                >
+                  Thêm
+                </Button>
+              </Form.Item>
             </div>
+          </div>
 
-            <div style={{ marginBottom: 16 }}>
-              <Text strong>Danh sách vật tư yêu cầu:</Text>
+          {/* Request Items List */}
+          <div>
+            <Text strong>Danh sách vật tư ({requestItems.length})</Text>
+            {requestItems.length === 0 ? (
+              <div
+                style={{
+                  textAlign: "center",
+                  padding: "40px 0",
+                  color: "#999",
+                  marginTop: 12,
+                }}
+              >
+                <InboxOutlined style={{ fontSize: 48, marginBottom: 16 }} />
+                <br />
+                Chưa có vật tư nào được thêm vào yêu cầu
+              </div>
+            ) : (
               <Table
                 columns={itemColumns}
                 dataSource={requestItems}
+                rowKey={(record, index) => `${record.medicalSupplyId}-${index}`}
                 pagination={false}
-                rowKey={(record) => record.medicalSupplyId.toString()}
                 size="small"
-                style={{ marginTop: 8 }}
-                locale={{ emptyText: "Chưa có vật tư nào được thêm" }}
+                style={{ marginTop: 12 }}
               />
-            </div>
-          </Form>
-        </Spin>
+            )}
+          </div>
+        </Form>
       </Modal>
     </>
   );
