@@ -174,12 +174,16 @@ const VaccinationCampaignDetail = ({ campaignId, onBack, onEdit }) => {
     switch(status) {
       case 'PENDING':
         return <Tag color="orange">Chưa duyệt</Tag>;
-      case 'ACTIVE':
-        return <Tag color="green">Đang diễn ra</Tag>;
+      case 'APPROVED':
+        return <Tag color="green">Đã duyệt</Tag>;
+      case 'REJECTED':
+        return <Tag color="red">Đã từ chối</Tag>;
+      case 'IN_PROGRESS':
+        return <Tag color="blue">Đang thực hiện</Tag>;
       case 'COMPLETED':
-        return <Tag color="blue">Đã hoàn thành</Tag>;
+        return <Tag color="purple">Đã hoàn thành</Tag>;
       case 'CANCELLED':
-        return <Tag color="red">Đã hủy</Tag>;
+        return <Tag color="gray">Đã hủy</Tag>;
       default:
         return <Tag color="default">{status}</Tag>;
     }
@@ -278,9 +282,9 @@ const VaccinationCampaignDetail = ({ campaignId, onBack, onEdit }) => {
     },
     {
       title: 'Lớp',
-      dataIndex: 'className',
-      key: 'className',
-      render: (_, record) => record.className || 'N/A',
+      dataIndex: 'studentClassName',
+      key: 'studentClassName',
+      render: (className) => className || 'N/A',
     },
     {
       title: 'Phụ huynh',
@@ -393,7 +397,7 @@ const VaccinationCampaignDetail = ({ campaignId, onBack, onEdit }) => {
     {
       title: 'Hành động',
       key: 'action',
-      render: (_, record) => (
+      render: () => (
         <Space size="small">
           <Tooltip title="Cập nhật thông tin">
             <Button 
@@ -507,10 +511,10 @@ const VaccinationCampaignDetail = ({ campaignId, onBack, onEdit }) => {
   ).length;
 
   const canEditCampaign = campaign.status === 'PENDING';
-  const canGenerateForms = campaign.status === 'ACTIVE' && forms.length === 0;
-  const canSendForms = campaign.status === 'ACTIVE' && forms.length > 0 && 
+  const canGenerateForms = campaign.status === 'APPROVED' && forms.length === 0;
+  const canSendForms = campaign.status === 'APPROVED' && forms.length > 0 && 
     !forms.some(form => form.sentDate);
-  const canCompleteCampaign = campaign.status === 'ACTIVE';
+  const canCompleteCampaign = campaign.status === 'APPROVED';
 
   return (
     <div className="vaccination-campaign-detail">

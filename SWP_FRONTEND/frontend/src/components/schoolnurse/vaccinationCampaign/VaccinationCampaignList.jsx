@@ -10,7 +10,6 @@ import {
   SendOutlined,
   FileAddOutlined
 } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import { vaccinationCampaignApi } from '../../../api/vaccinationCampaignApi';
 
@@ -24,7 +23,6 @@ const VaccinationCampaignList = ({ onCreateNew, onViewDetails }) => {
   const [dateRange, setDateRange] = useState(null);
   const [confirmDeleteModal, setConfirmDeleteModal] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState(null);
-  const navigate = useNavigate();
 
   useEffect(() => {
     fetchCampaigns();
@@ -98,12 +96,16 @@ const VaccinationCampaignList = ({ onCreateNew, onViewDetails }) => {
     switch(status) {
       case 'PENDING':
         return <Tag color="orange">Chưa duyệt</Tag>;
-      case 'ACTIVE':
-        return <Tag color="green">Đang diễn ra</Tag>;
+      case 'APPROVED':
+        return <Tag color="green">Đã duyệt</Tag>;
+      case 'REJECTED':
+        return <Tag color="red">Đã từ chối</Tag>;
+      case 'IN_PROGRESS':
+        return <Tag color="blue">Đang thực hiện</Tag>;
       case 'COMPLETED':
-        return <Tag color="blue">Đã hoàn thành</Tag>;
+        return <Tag color="purple">Đã hoàn thành</Tag>;
       case 'CANCELLED':
-        return <Tag color="red">Đã hủy</Tag>;
+        return <Tag color="gray">Đã hủy</Tag>;
       default:
         return <Tag color="default">{status}</Tag>;
     }
@@ -207,7 +209,9 @@ const VaccinationCampaignList = ({ onCreateNew, onViewDetails }) => {
             >
               <Option value="ALL">Tất cả trạng thái</Option>
               <Option value="PENDING">Chưa duyệt</Option>
-              <Option value="ACTIVE">Đang diễn ra</Option>
+              <Option value="APPROVED">Đã duyệt</Option>
+              <Option value="REJECTED">Đã từ chối</Option>
+              <Option value="IN_PROGRESS">Đang thực hiện</Option>
               <Option value="COMPLETED">Đã hoàn thành</Option>
               <Option value="CANCELLED">Đã hủy</Option>
             </Select>

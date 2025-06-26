@@ -171,6 +171,7 @@ public class VaccinationFormService implements IVaccinationFormService {
             dto.setStudentId(form.getStudent().getStudentID());
             dto.setStudentFullName(form.getStudent().getFirstName() + " " + form.getStudent().getLastName());
             dto.setStudentCode(form.getStudent().getStudentID().toString());
+            dto.setStudentClassName(form.getStudent().getClassName());
         }
         
         if (form.getParent() != null) {
