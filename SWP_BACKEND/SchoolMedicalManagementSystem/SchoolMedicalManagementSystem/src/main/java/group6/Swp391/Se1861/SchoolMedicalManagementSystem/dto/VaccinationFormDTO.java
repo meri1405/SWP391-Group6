@@ -33,6 +33,7 @@ public class VaccinationFormDTO {
     private Long studentId;
     private String studentFullName;
     private String studentCode;
+    private String studentClassName;
     
     // Parent info
     private Long parentId;
