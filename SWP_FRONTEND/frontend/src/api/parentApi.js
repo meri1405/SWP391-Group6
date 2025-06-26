@@ -502,4 +502,28 @@ export const parentApi = {
       throw error;
     }
   },
+
+  // Get students with their health profile status
+  getStudentsWithHealthProfileStatus: async (token = getTokenFromStorage()) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.get("/api/parent/students/health-profile-status");
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching students with health profile status:", error);
+      throw error;
+    }
+  },
+
+  // Check if any students are missing health profiles
+  getStudentsMissingHealthProfiles: async (token = getTokenFromStorage()) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.get("/api/parent/students/missing-health-profiles");
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching students missing health profiles:", error);
+      throw error;
+    }
+  },
 };

@@ -2,10 +2,12 @@ package group6.Swp391.Se1861.SchoolMedicalManagementSystem.controller;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.Student;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.HealthProfile;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.MedicationSchedule;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.MedicationStatus;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.UserRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.StudentRepository;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.HealthProfileRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.MedicationScheduleRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IMedicationScheduleService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl.MedicationScheduleService;
@@ -45,6 +47,9 @@ public class ParentController {
     
     @Autowired
     private StudentRepository studentRepository;
+    
+    @Autowired
+    private HealthProfileRepository healthProfileRepository;
     
     @Autowired
     private MedicationScheduleRepository medicationScheduleRepository;
@@ -393,4 +398,117 @@ public class ParentController {
         }
     }
 }
+///*
+//     * Lấy danh sách học sinh của phụ huynh
+//     *
+//     * @param parent Phụ huynh đã xác thực
+//     * @return ResponseEntity chứa danh sách học sinh
+//     */
+//    @GetMapping("/students")
+//    public ResponseEntity<?> getMyStudents(@AuthenticationPrincipal User parent) {
+//        try {
+//            List<Student> students = studentRepository.findByParent(parent);
+//
+//            List<Map<String, Object>> studentList = students.stream()
+//                .map(student -> {
+//                    Map<String, Object> studentInfo = new HashMap<>();
+//                    studentInfo.put("id", student.getStudentID());
+//                    studentInfo.put("firstName", student.getFirstName());
+//                    studentInfo.put("lastName", student.getLastName());
+//                    studentInfo.put("className", student.getClassName());
+//                    studentInfo.put("gender", student.getGender());
+//                    studentInfo.put("dateOfBirth", student.getDob());
+//                    return studentInfo;
+//                })
+//                .collect(Collectors.toList());
+//
+//            return ResponseEntity.ok(studentList);
+//
+//        } catch (Exception e) {
+//            Map<String, Object> errorResponse = new HashMap<>();
+//            errorResponse.put("error", "Failed to fetch students");
+//            errorResponse.put("message", e.getMessage());
+//            return ResponseEntity.internalServerError().body(errorResponse);
+//        }
+//    }
+//
+//    /**
+//     * Lấy danh sách học sinh với trạng thái hồ sơ y tế
+//     *
+//     * @param parent Phụ huynh đã xác thực
+//     * @return ResponseEntity chứa danh sách học sinh với trạng thái hồ sơ y tế
+//     */
+//    @GetMapping("/students/health-profile-status")
+//    public ResponseEntity<?> getStudentsWithHealthProfileStatus(@AuthenticationPrincipal User parent) {
+//        try {
+//            List<Student> students = studentRepository.findByParent(parent);
+//
+//            List<Map<String, Object>> studentList = students.stream()
+//                .map(student -> {
+//                    Map<String, Object> studentInfo = new HashMap<>();
+//                    studentInfo.put("id", student.getStudentID());
+//                    studentInfo.put("firstName", student.getFirstName());
+//                    studentInfo.put("lastName", student.getLastName());
+//                    studentInfo.put("className", student.getClassName());
+//                    studentInfo.put("gender", student.getGender());
+//                    studentInfo.put("dateOfBirth", student.getDob());
+//
+//                    // Kiểm tra xem học sinh có hồ sơ y tế không
+//                    List<HealthProfile> healthProfiles = healthProfileRepository.findByStudent(student);
+//                    studentInfo.put("hasHealthProfile", !healthProfiles.isEmpty());
+//                    studentInfo.put("healthProfileCount", healthProfiles.size());
+//
+//                    return studentInfo;
+//                })
+//                .collect(Collectors.toList());
+//
+//            return ResponseEntity.ok(studentList);
+//
+//        } catch (Exception e) {
+//            Map<String, Object> errorResponse = new HashMap<>();
+//            errorResponse.put("error", "Failed to fetch students with health profile status");
+//            errorResponse.put("message", e.getMessage());
+//            return ResponseEntity.internalServerError().body(errorResponse);
+//        }
+//    }
+//
+//    /**
+//     * Lấy danh sách học sinh chưa có hồ sơ y tế
+//     *
+//     * @param parent Phụ huynh đã xác thực
+//     * @return ResponseEntity chứa danh sách học sinh chưa có hồ sơ y tế
+//     */
+//    @GetMapping("/students/missing-health-profiles")
+//    public ResponseEntity<?> getStudentsMissingHealthProfiles(@AuthenticationPrincipal User parent) {
+//        try {
+//            List<Student> students = studentRepository.findByParent(parent);
+//
+//            List<Map<String, Object>> studentsMissingProfile = students.stream()
+//                .filter(student -> {
+//                    List<HealthProfile> healthProfiles = healthProfileRepository.findByStudent(student);
+//                    return healthProfiles.isEmpty();
+//                })
+//                .map(student -> {
+//                    Map<String, Object> studentInfo = new HashMap<>();
+//                    studentInfo.put("id", student.getStudentID());
+//                    studentInfo.put("firstName", student.getFirstName());
+//                    studentInfo.put("lastName", student.getLastName());
+//                    studentInfo.put("className", student.getClassName());
+//                    studentInfo.put("gender", student.getGender());
+//                    studentInfo.put("dateOfBirth", student.getDob());
+//                    return studentInfo;
+//                })
+//                .collect(Collectors.toList());
+//
+//            return ResponseEntity.ok(studentsMissingProfile);
+//
+//        } catch (Exception e) {
+//            Map<String, Object> errorResponse = new HashMap<>();
+//            errorResponse.put("error", "Failed to fetch students missing health profiles");
+//            errorResponse.put("message", e.getMessage());
+//            return ResponseEntity.internalServerError().body(errorResponse);
+//        }
+//    }
+
+
 
