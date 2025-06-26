@@ -49,7 +49,7 @@ const disabledDateAfterToday = (current) => {
   return dayjs(current).isAfter(dayjs(), 'day');
 };
 
-const HealthProfileDeclaration = () => {
+const HealthProfileDeclaration = ({ onProfileCreated }) => {
   const { getToken } = useAuth();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
@@ -299,6 +299,11 @@ const HealthProfileDeclaration = () => {
       const response = await parentApi.createHealthProfile(healthProfileData);
       console.log('Health profile created successfully:', response);
         message.success('Hồ sơ sức khỏe đã được tạo thành công!');
+      
+      // Call the callback if provided
+      if (onProfileCreated) {
+        onProfileCreated();
+      }
       
       // Refresh health profiles to show updated data
       if (studentId) {

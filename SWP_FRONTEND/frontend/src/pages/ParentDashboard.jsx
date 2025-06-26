@@ -21,6 +21,8 @@ import { VaccinationSchedule } from "../components/dashboard/vaccinations";
 import Profile from "../components/dashboard/parent/Profile";
 import HealthProfileDeclaration from "../components/dashboard/parent/HealthProfileDeclaration";
 import ApprovedHealthProfile from "../components/dashboard/parent/ApprovedHealthProfile";
+import MissingHealthProfileModal from "../components/dashboard/parent/MissingHealthProfileModal";
+import { parentApi } from "../api/parentApi";
 
 const { Header, Sider, Content } = Layout;
 
@@ -28,6 +30,8 @@ const ParentDashboard = () => {
   const [activeSection, setActiveSection] = useState("overview");
   const [userInfo, setUserInfo] = useState(null);
   const [collapsed, setCollapsed] = useState(false);
+  const [showMissingHealthProfileModal, setShowMissingHealthProfileModal] = useState(false);
+  const [studentsMissingHealthProfile, setStudentsMissingHealthProfile] = useState([]);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const menuItems = [
@@ -90,7 +94,57 @@ const ParentDashboard = () => {
       },
     ];
   };
-  const { user, isAuthenticated, isParent } = useAuth();
+  const { user, isAuthenticated, isParent, getToken } = useAuth();
+
+  // Check for missing health profiles after authentication
+  useEffect(() => {
+    const checkMissingHealthProfiles = async () => {
+      if (!isAuthenticated || !isParent() || !getToken()) return;
+
+      try {
+        const studentsMissing = await parentApi.getStudentsMissingHealthProfiles(getToken());
+        if (studentsMissing && studentsMissing.length > 0) {
+          setStudentsMissingHealthProfile(studentsMissing);
+          // Show modal only if user is not already on health profile declaration page
+          const currentTab = searchParams.get("tab");
+          if (currentTab !== "health-profile-declaration") {
+            setShowMissingHealthProfileModal(true);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking missing health profiles:', error);
+        // If API fails, try to get students and check manually
+        try {
+          const students = await parentApi.getMyStudents(getToken());
+          const studentsWithoutProfile = [];
+          
+          for (const student of students) {
+            try {
+              const healthProfiles = await parentApi.getHealthProfilesByStudentId(student.id, getToken());
+              if (!healthProfiles || healthProfiles.length === 0) {
+                studentsWithoutProfile.push(student);
+              }
+            } catch {
+              // If we can't get health profiles, assume student doesn't have one
+              studentsWithoutProfile.push(student);
+            }
+          }
+          
+          if (studentsWithoutProfile.length > 0) {
+            setStudentsMissingHealthProfile(studentsWithoutProfile);
+            const currentTab = searchParams.get("tab");
+            if (currentTab !== "health-profile-declaration") {
+              setShowMissingHealthProfileModal(true);
+            }
+          }
+        } catch (fallbackError) {
+          console.error('Error in fallback health profile check:', fallbackError);
+        }
+      }
+    };
+
+    checkMissingHealthProfiles();
+  }, [isAuthenticated, isParent, getToken, searchParams]);
 
   useEffect(() => {
     // Redirect if not authenticated or not a parent
@@ -129,7 +183,7 @@ const ParentDashboard = () => {
       // If no tab parameter, default to overview
       setActiveSection("overview");
     }
-  }, [searchParams]); // Function to handle profile updates
+  }, [searchParams]);  // Function to handle profile updates
   const handleProfileUpdate = (updatedProfile) => {
     console.log("Profile updated in parent dashboard:", updatedProfile);
 
@@ -151,6 +205,32 @@ const ParentDashboard = () => {
     console.log("Updated user info:", mergedUserInfo);
     setUserInfo(mergedUserInfo);
   };
+
+  // Handle missing health profile modal
+  const handleMissingHealthProfileModalCancel = () => {
+    setShowMissingHealthProfileModal(false);
+  };
+
+  const handleCreateHealthProfile = (student) => {
+    setShowMissingHealthProfileModal(false);
+    setActiveSection("health-profile-declaration");
+    navigate("/parent-dashboard?tab=health-profile-declaration");
+  };
+
+  // Refresh missing health profiles check
+  const refreshMissingHealthProfiles = async () => {
+    if (!isAuthenticated || !isParent() || !getToken()) return;
+
+    try {
+      const studentsMissing = await parentApi.getStudentsMissingHealthProfiles(getToken());
+      setStudentsMissingHealthProfile(studentsMissing || []);
+      if (!studentsMissing || studentsMissing.length === 0) {
+        setShowMissingHealthProfileModal(false);
+      }
+    } catch (error) {
+      console.error('Error refreshing missing health profiles:', error);
+    }
+  };
   const renderContent = () => {
     switch (activeSection) {
       case "overview":
@@ -158,7 +238,7 @@ const ParentDashboard = () => {
       case "notifications":
         return <Notifications />;
       case "health-profile-declaration":
-        return <HealthProfileDeclaration />;
+        return <HealthProfileDeclaration onProfileCreated={refreshMissingHealthProfiles} />;
       case "health-history":
         return <ApprovedHealthProfile userInfo={userInfo} />;
       case "medication":
@@ -346,6 +426,14 @@ const ParentDashboard = () => {
           {renderContent()}
         </Content>
       </Layout>
+
+      {/* Missing Health Profile Modal */}
+      <MissingHealthProfileModal
+        visible={showMissingHealthProfileModal}
+        students={studentsMissingHealthProfile}
+        onCancel={handleMissingHealthProfileModalCancel}
+        onCreateProfile={handleCreateHealthProfile}
+      />
     </Layout>
   );
 };
