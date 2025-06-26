@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Modal, List, Typography, Button, Space, Tag, Alert } from 'antd';
 import { ExclamationCircleOutlined, UserOutlined, MedicineBoxOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
@@ -8,14 +8,11 @@ const { Title, Text } = Typography;
 const MissingHealthProfileModal = ({ 
   visible, 
   students = [], 
-  onCancel, 
   onCreateProfile 
 }) => {
   const navigate = useNavigate();
-  const [selectedStudent, setSelectedStudent] = useState(null);
 
   const handleCreateProfile = (student) => {
-    setSelectedStudent(student);
     onCreateProfile(student);
     // Navigate to health profile declaration page with student info
     navigate('/parent-dashboard?tab=health-profile-declaration', { 
@@ -23,29 +20,36 @@ const MissingHealthProfileModal = ({
     });
   };
 
+  const handleStartDeclaration = () => {
+    if (students.length > 0) {
+      handleCreateProfile(students[0]);
+    }
+  };
+
   return (
     <Modal
       title={
         <Space align="center" style={{ color: '#ff4d4f' }}>
           <ExclamationCircleOutlined style={{ fontSize: 20 }} />
-          <span>Khai báo hồ sơ y tế bắt buộc</span>
+          <span>Khai báo hồ sơ y tế BẮT BUỘC</span>
         </Space>
       }
       open={visible}
-      onCancel={onCancel}
+      onCancel={null} // Không cho phép đóng modal
       footer={null}
-      width={600}
+      width={700}
       centered
-      maskClosable={false}
-      closable={false}
+      maskClosable={false} // Không cho phép đóng bằng cách click outside
+      closable={false} // Không hiển thị nút X để đóng
+      keyboard={false} // Không cho phép đóng bằng ESC
     >
       <div style={{ marginTop: 16 }}>
         <Alert
-          message="Thông báo quan trọng"
-          description="Một số học sinh của bạn chưa có hồ sơ y tế. Việc khai báo hồ sơ y tế là bắt buộc để đảm bảo sức khỏe và an toàn cho học sinh tại trường."
-          type="warning"
+          message="THÔNG BÁO BẮT BUỘC - KHÔNG THỂ BỎ QUA"
+          description="Bạn PHẢI khai báo hồ sơ y tế cho tất cả học sinh trước khi có thể sử dụng các tính năng khác của hệ thống. Đây là yêu cầu bắt buộc để đảm bảo an toàn sức khỏe cho học sinh."
+          type="error"
           showIcon
-          style={{ marginBottom: 20 }}
+          style={{ marginBottom: 20, border: '2px solid #ff4d4f' }}
         />
 
         <Title level={5} style={{ marginBottom: 16 }}>
@@ -116,36 +120,30 @@ const MissingHealthProfileModal = ({
         <div style={{ 
           marginTop: 24, 
           padding: 16, 
-          background: '#f6ffed', 
-          border: '1px solid #b7eb8f',
+          background: '#fff1f0', 
+          border: '2px solid #ff4d4f',
           borderRadius: 8 
         }}>
-          <Text style={{ color: '#389e0d' }}>
-            <strong>Lưu ý:</strong> Bạn cần hoàn thành khai báo hồ sơ y tế cho tất cả học sinh 
-            trước khi có thể sử dụng đầy đủ các tính năng của hệ thống.
+          <Text style={{ color: '#cf1322' }}>
+            <strong>LƯU Ý QUAN TRỌNG:</strong> Bạn KHÔNG THỂ sử dụng bất kỳ tính năng nào khác của hệ thống 
+            cho đến khi hoàn thành khai báo hồ sơ y tế cho tất cả học sinh. Điều này là BẮT BUỘC và không thể bỏ qua.
           </Text>
         </div>
 
         <div style={{ textAlign: 'center', marginTop: 20 }}>
-          <Text type="secondary" style={{ fontSize: 12 }}>
-            Bạn có thể đóng thông báo này và quay lại sau, nhưng thông báo sẽ tiếp tục hiển thị 
-            cho đến khi hoàn thành khai báo cho tất cả học sinh.
-          </Text>
-        </div>
-
-        <div style={{ textAlign: 'center', marginTop: 16 }}>
-          <Button onClick={onCancel} style={{ marginRight: 8 }}>
-            Để sau
-          </Button>
           <Button 
             type="primary" 
-            onClick={() => handleCreateProfile(students[0])}
+            size="large"
+            onClick={handleStartDeclaration}
             style={{ 
               background: '#52c41a',
-              borderColor: '#52c41a'
+              borderColor: '#52c41a',
+              fontSize: '16px',
+              height: '50px',
+              padding: '0 30px'
             }}
           >
-            Bắt đầu khai báo
+            BẮT ĐẦU KHAI BÁO NGAY
           </Button>
         </div>
       </div>

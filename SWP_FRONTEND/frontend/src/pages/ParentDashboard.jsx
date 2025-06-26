@@ -39,41 +39,60 @@ const ParentDashboard = () => {
       key: "overview",
       icon: <DashboardOutlined />,
       label: "Tổng quan",
+      disabled: studentsMissingHealthProfile.length > 0,
     },
     {
       key: "notifications",
       icon: <BellOutlined />,
       label: "Thông báo",
+      disabled: studentsMissingHealthProfile.length > 0,
     },
     {
       key: "health-profile-declaration",
       icon: <MedicineBoxOutlined />,
       label: "Khai báo hồ sơ sức khỏe",
+      style: studentsMissingHealthProfile.length > 0 ? { 
+        backgroundColor: '#fff2f0',
+        border: '2px solid #ff4d4f',
+        borderRadius: '4px',
+        fontWeight: 'bold'
+      } : {},
     },
     {
       key: "health-history",
       icon: <FileTextOutlined />,
       label: "Tiền sử sức khỏe",
+      disabled: studentsMissingHealthProfile.length > 0,
     },
     {
       key: "medication",
       icon: <MedicineBoxOutlined />,
       label: "Quản lý thuốc",
+      disabled: studentsMissingHealthProfile.length > 0,
     },
     {
       key: "vaccination",
       icon: <CalendarOutlined />,
       label: "Lịch tiêm chủng",
+      disabled: studentsMissingHealthProfile.length > 0,
     },
     {
       key: "profile",
       icon: <UserOutlined />,
       label: "Hồ sơ cá nhân",
+      disabled: studentsMissingHealthProfile.length > 0,
     },
   ];
 
   const handleMenuClick = (e) => {
     const tabKey = e.key;
+    
+    // Block all navigation except health profile declaration if students are missing health profiles
+    if (studentsMissingHealthProfile.length > 0 && tabKey !== "health-profile-declaration") {
+      message.warning("Bạn phải hoàn thành khai báo hồ sơ y tế cho tất cả học sinh trước khi sử dụng tính năng này!");
+      return;
+    }
+    
     setActiveSection(tabKey);
 
     if (tabKey === "overview") {
@@ -165,6 +184,15 @@ const ParentDashboard = () => {
 
   // Separate useEffect to handle URL parameter changes
   useEffect(() => {
+    // If there are missing health profiles, force to health-profile-declaration
+    if (studentsMissingHealthProfile.length > 0) {
+      setActiveSection("health-profile-declaration");
+      if (!searchParams.get("tab") || searchParams.get("tab") !== "health-profile-declaration") {
+        navigate("/parent-dashboard?tab=health-profile-declaration", { replace: true });
+      }
+      return;
+    }
+
     const tabParam = searchParams.get("tab");
     if (tabParam) {
       const validTabs = [
@@ -175,6 +203,7 @@ const ParentDashboard = () => {
         "medication",
         "vaccination",
         "profile",
+        "health-profile-declaration"
       ];
       if (validTabs.includes(tabParam)) {
         setActiveSection(tabParam);
@@ -183,7 +212,7 @@ const ParentDashboard = () => {
       // If no tab parameter, default to overview
       setActiveSection("overview");
     }
-  }, [searchParams]);  // Function to handle profile updates
+  }, [searchParams, studentsMissingHealthProfile, navigate]);  // Function to handle profile updates
   const handleProfileUpdate = (updatedProfile) => {
     console.log("Profile updated in parent dashboard:", updatedProfile);
 
@@ -206,12 +235,8 @@ const ParentDashboard = () => {
     setUserInfo(mergedUserInfo);
   };
 
-  // Handle missing health profile modal
-  const handleMissingHealthProfileModalCancel = () => {
-    setShowMissingHealthProfileModal(false);
-  };
-
-  const handleCreateHealthProfile = (student) => {
+  // Handle missing health profile modal (now only for navigation)
+  const handleCreateHealthProfile = () => {
     setShowMissingHealthProfileModal(false);
     setActiveSection("health-profile-declaration");
     navigate("/parent-dashboard?tab=health-profile-declaration");
@@ -232,6 +257,11 @@ const ParentDashboard = () => {
     }
   };
   const renderContent = () => {
+    // Force health profile declaration if there are missing profiles
+    if (studentsMissingHealthProfile.length > 0) {
+      return <HealthProfileDeclaration onProfileCreated={refreshMissingHealthProfiles} />;
+    }
+
     switch (activeSection) {
       case "overview":
         return <Overview userInfo={userInfo} />;
@@ -366,33 +396,73 @@ const ParentDashboard = () => {
         </div>
       </Sider>
       <Layout style={{ marginLeft: 0 }}>
+        {/* Blocking overlay when health profiles are missing */}
+        {studentsMissingHealthProfile.length > 0 && activeSection !== "health-profile-declaration" && (
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'white',
+            fontSize: '24px',
+            fontWeight: 'bold',
+            textAlign: 'center',
+            padding: '20px'
+          }}>
+            <div>
+              <div style={{ marginBottom: '20px' }}>🚫 TÍNH NĂNG BỊ KHÓA</div>
+              <div style={{ fontSize: '16px', fontWeight: 'normal' }}>
+                Bạn phải hoàn thành khai báo hồ sơ y tế trước khi sử dụng tính năng này
+              </div>
+            </div>
+          </div>
+        )}
         <Header
           style={{
-            background: "#fff",
+            background: studentsMissingHealthProfile.length > 0 ? "#fff2f0" : "#fff",
             padding: "16px 32px",
             height: "auto",
             lineHeight: "normal",
             minHeight: 80,
             display: "flex",
             alignItems: "center",
-            borderBottom: "1px solid #f0f0f0",
+            borderBottom: studentsMissingHealthProfile.length > 0 ? "2px solid #ff4d4f" : "1px solid #f0f0f0",
             boxShadow: "0 2px 8px 0 rgba(0,0,0,0.05)",
           }}
         >
           <div style={{ flex: 1 }}>
+            {studentsMissingHealthProfile.length > 0 && (
+              <div style={{ 
+                backgroundColor: '#ff4d4f', 
+                color: 'white', 
+                padding: '8px 16px', 
+                borderRadius: '4px', 
+                marginBottom: '8px',
+                fontWeight: 'bold',
+                textAlign: 'center'
+              }}>
+                ⚠️ BẮT BUỘC: Bạn phải khai báo hồ sơ y tế cho {studentsMissingHealthProfile.length} học sinh trước khi sử dụng các tính năng khác!
+              </div>
+            )}
             <Breadcrumb
               items={getBreadcrumbItems()}
               style={{ fontSize: 14, marginBottom: 4 }}
             />
             <h1
               style={{
-                color: "#1976d2",
+                color: studentsMissingHealthProfile.length > 0 ? "#cf1322" : "#1976d2",
                 margin: 0,
                 fontSize: 28,
                 fontWeight: 700,
               }}
             >
-              Bảng điều khiển phụ huynh
+              {studentsMissingHealthProfile.length > 0 ? "KHAI BÁO HỒ SƠ Y TẾ BẮT BUỘC" : "Bảng điều khiển phụ huynh"}
             </h1>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
@@ -431,7 +501,6 @@ const ParentDashboard = () => {
       <MissingHealthProfileModal
         visible={showMissingHealthProfileModal}
         students={studentsMissingHealthProfile}
-        onCancel={handleMissingHealthProfileModalCancel}
         onCreateProfile={handleCreateHealthProfile}
       />
     </Layout>
