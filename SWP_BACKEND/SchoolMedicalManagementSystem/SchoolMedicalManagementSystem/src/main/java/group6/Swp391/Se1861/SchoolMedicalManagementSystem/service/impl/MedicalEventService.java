@@ -10,11 +10,13 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.ProfileSta
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.SeverityLevel;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.*;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IMedicalEventService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IMedicalSupplyService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.INotificationService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,6 +29,7 @@ public class MedicalEventService implements IMedicalEventService {
     private final MedicalEventRepository medicalEventRepository;
     private final MedicalEventSupplyRepository medicalEventSupplyRepository;
     private final MedicalSupplyRepository medicalSupplyRepository;
+    private final IMedicalSupplyService medicalSupplyService;
     private final StudentRepository studentRepository;
     private final UserRepository userRepository;
     private final INotificationService notificationService;
@@ -72,40 +75,42 @@ public class MedicalEventService implements IMedicalEventService {
 
                 // Find all supplies with the same name, ordered by expiration date (nearest expiration first)
                 String supplyName = referencedSupply.getName();
-                List<MedicalSupply> suppliesOrderedByExpiration = medicalSupplyRepository.findByNameOrderByExpirationDateAsc(supplyName);
+                List<MedicalSupply> suppliesOrderedByExpiration = medicalSupplyRepository.findByNameAndEnabledOrderByExpirationDateAsc(supplyName);
 
-                // Check if there are enough total supplies available
-                int totalAvailable = suppliesOrderedByExpiration.stream().mapToInt(MedicalSupply::getQuantity).sum();
-                if (totalAvailable < supplyUsage.getQuantityUsed()) {
+                // Check if there are enough total supplies available (using new field structure)
+                BigDecimal totalAvailable = suppliesOrderedByExpiration.stream()
+                        .map(MedicalSupply::getQuantityInBaseUnit)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+                        
+                if (totalAvailable.compareTo(BigDecimal.valueOf(supplyUsage.getQuantityUsed())) < 0) {
                     throw new IllegalArgumentException("Not enough supply available. Requested: " +
                         supplyUsage.getQuantityUsed() + ", Total Available: " + totalAvailable);
                 }
 
                 // Consume supplies starting with those closest to expiration
-                int remainingToUse = supplyUsage.getQuantityUsed();
+                BigDecimal remainingToUse = BigDecimal.valueOf(supplyUsage.getQuantityUsed());
                 MedicalSupply usedSupply = null;  // To reference in the event supply record
 
                 for (MedicalSupply supply : suppliesOrderedByExpiration) {
-                    if (remainingToUse <= 0) break;
+                    if (remainingToUse.compareTo(BigDecimal.ZERO) <= 0) break;
 
-                    int quantityToUseFromThisSupply = Math.min(remainingToUse, supply.getQuantity());
+                    BigDecimal quantityToUseFromThisSupply = remainingToUse.min(supply.getQuantityInBaseUnit());
 
-                    // Update this supply's quantity
-                    supply.setQuantity(supply.getQuantity() - quantityToUseFromThisSupply);
-                    medicalSupplyRepository.save(supply);
+                    // Update this supply's quantity using the service method
+                    medicalSupplyService.subtractFromQuantityInBaseUnit(supply.getId(), quantityToUseFromThisSupply);
 
                     // If this is the first or only supply used, reference it in the event
                     if (usedSupply == null) {
                         usedSupply = supply;
                     }
 
-                    remainingToUse -= quantityToUseFromThisSupply;
+                    remainingToUse = remainingToUse.subtract(quantityToUseFromThisSupply);
 
                     // Create medical event supply record for each supply used
                     MedicalEventSupply eventSupply = new MedicalEventSupply();
                     eventSupply.setMedicalEvent(savedEvent);
                     eventSupply.setMedicalSupply(supply);
-                    eventSupply.setQuantityUsed(quantityToUseFromThisSupply);
+                    eventSupply.setQuantityUsed(quantityToUseFromThisSupply.intValue()); // Convert back to int for the event record
                     medicalEventSupplyRepository.save(eventSupply);
                 }
             }
@@ -338,7 +343,7 @@ public class MedicalEventService implements IMedicalEventService {
                     eventSupply.getId(),
                     supply.getId(),
                     supply.getName(),
-                    supply.getUnit(),
+                    supply.getDisplayUnit(),
                     eventSupply.getQuantityUsed()
             ));
         }

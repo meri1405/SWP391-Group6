@@ -55,7 +55,7 @@ public class MedicalEventResponseDTO {
         private Long id;
         private Long medicalSupplyId;
         private String medicalSupplyName;
-        private String unit;
+        private String displayUnit;
         private Integer quantityUsed;
     }
 }

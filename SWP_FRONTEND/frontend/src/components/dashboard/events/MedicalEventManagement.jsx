@@ -333,7 +333,7 @@ const MedicalEventManagement = () => {
       console.log("Using backend supply info:", supplyObject.medicalSupply);
       return {
         name: supplyObject.medicalSupply.name,
-        unit: supplyObject.medicalSupply.unit || "",
+        unit: supplyObject.medicalSupply.displayUnit || "",
       };
     }
 
@@ -343,7 +343,7 @@ const MedicalEventManagement = () => {
       console.log("Using supply info:", supplyInfo);
       return {
         name: supplyInfo.name,
-        unit: supplyInfo.unit,
+        unit: supplyInfo.displayUnit,
       };
     }
 
@@ -762,10 +762,10 @@ const MedicalEventManagement = () => {
                                     >
                                       <span>
                                         {supply.name} - Còn:{" "}
-                                        {supply.quantity ||
+                                        {supply.quantityInDisplayUnit ||
                                           supply.availableQuantity ||
                                           0}{" "}
-                                        {supply.unit}
+                                        {supply.displayUnit}
                                       </span>
                                       {expiryStatus && (
                                         <span
@@ -918,7 +918,7 @@ const MedicalEventManagement = () => {
                             <Text>
                               • {supplyInfo.name} - Số lượng:{" "}
                               {supply.quantityUsed}
-                              {supplyInfo.unit && ` ${supplyInfo.unit}`}
+                              {supply.displayUnit && ` ${supply.displayUnit}`}
                             </Text>
                           </div>
                         );

@@ -68,12 +68,14 @@ const RestockRequestForm = ({
         const items = selectedSupplies.map((supply) => ({
           medicalSupplyId: supply.id,
           requestedQuantity: supply.isLowStock
-            ? Math.max(supply.minStockLevel - supply.quantity, 10)
+            ? Math.max((supply.minStockLevelInBaseUnit || supply.minStockLevel || 0) - (supply.quantityInBaseUnit || supply.quantity || 0), 10)
             : 10,
           name: supply.name,
-          currentQuantity: supply.quantity,
-          unit: supply.unit,
-          minStockLevel: supply.minStockLevel,
+          currentQuantity: supply.displayQuantity || supply.quantity || 0,
+          unit: supply.displayUnit || supply.unit || 'unit',
+          baseQuantity: supply.quantityInBaseUnit || supply.quantity || 0,
+          baseUnit: supply.baseUnit || supply.unit || 'unit',
+          minStockLevel: supply.minStockLevelInBaseUnit || supply.minStockLevel || 0,
           notes: "",
         }));
 
@@ -168,9 +170,11 @@ const RestockRequestForm = ({
       medicalSupplyId: selectedSupply.id,
       requestedQuantity: newItemData.newItemQuantity,
       name: selectedSupply.name,
-      currentQuantity: selectedSupply.quantity,
-      unit: selectedSupply.unit,
-      minStockLevel: selectedSupply.minStockLevel,
+      currentQuantity: selectedSupply.displayQuantity || selectedSupply.quantity || 0,
+      unit: selectedSupply.displayUnit || selectedSupply.unit || 'unit',
+      baseQuantity: selectedSupply.quantityInBaseUnit || selectedSupply.quantity || 0,
+      baseUnit: selectedSupply.baseUnit || selectedSupply.unit || 'unit',
+      minStockLevel: selectedSupply.minStockLevelInBaseUnit || selectedSupply.minStockLevel || 0,
       notes: newItemData.newItemNotes || "",
     };
 
@@ -218,6 +222,11 @@ const RestockRequestForm = ({
       render: (_, record) => (
         <Space>
           {record.currentQuantity} {record.unit}
+          {record.baseQuantity && record.baseUnit && record.baseUnit !== record.unit && (
+            <span style={{ fontSize: '12px', color: '#666' }}>
+              ({record.baseQuantity} {record.baseUnit})
+            </span>
+          )}
           {record.currentQuantity < record.minStockLevel && (
             <WarningOutlined style={{ color: "orange" }} />
           )}

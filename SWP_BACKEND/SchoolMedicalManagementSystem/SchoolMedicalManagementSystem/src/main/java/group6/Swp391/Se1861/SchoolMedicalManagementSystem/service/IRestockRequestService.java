@@ -4,6 +4,7 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.RestockRequestDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.RestockItemDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.RestockRequest;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -46,5 +47,16 @@ public interface IRestockRequestService {
     
     RestockRequest convertToEntity(RestockRequestDTO restockRequestDTO);
 
-    RestockRequestDTO approveRequestWithQuantities(Long id, Long reviewerId, String reviewNotes, List<Map<String, Object>> itemApprovals);
+    RestockRequestDTO approveRequestWithQuantities(Long id, Long reviewerId, String reviewNotes, 
+                                                   List<Map<String, Object>> itemApprovals);
+    
+    // New methods for unit conversion support
+    RestockRequestDTO createRestockRequestWithDisplayUnits(RestockRequestDTO restockRequestDTO);
+    
+    RestockRequestDTO approveRequestWithDisplayQuantities(Long id, Long reviewerId, String reviewNotes, 
+                                                          Map<Long, Map<String, Object>> itemApprovals);
+    
+    void processApprovedRequest(Long requestId);
+    
+    List<RestockRequestDTO> getRequestsRequiringAttention();
 }
