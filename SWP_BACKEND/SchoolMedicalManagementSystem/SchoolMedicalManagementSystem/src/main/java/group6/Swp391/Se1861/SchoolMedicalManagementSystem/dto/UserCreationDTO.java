@@ -5,14 +5,15 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
-
 /**
  * DTO for admin to create new users with different roles
+ * Does not support STUDENT role creation
  */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserCreationDTO {
+    // Basic user fields
     private String username;
     private String password;
     private String firstName;
@@ -24,4 +25,8 @@ public class UserCreationDTO {
     private String address;
     private String jobTitle;
     private String roleName;
+    private String status;
 }
+
+
+

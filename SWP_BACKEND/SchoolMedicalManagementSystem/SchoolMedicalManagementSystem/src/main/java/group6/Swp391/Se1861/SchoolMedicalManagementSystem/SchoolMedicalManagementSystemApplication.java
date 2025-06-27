@@ -5,38 +5,62 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.stereotype.Component;
 
+/**
+ * Lớp chính của ứng dụng Quản lý Y tế Trường học
+ * - Khởi tạo ứng dụng Spring Boot
+ * - Kích hoạt tính năng lập lịch tự động
+ * - Khởi tạo dữ liệu ban đầu cho hệ thống
+ */
 @SpringBootApplication
+@EnableScheduling
 public class SchoolMedicalManagementSystemApplication {
 
+	/**
+	 * Hàm main - điểm khởi đầu của ứng dụng
+	 * Khởi chạy ứng dụng Spring Boot
+	 */
 	public static void main(String[] args) {
 		SpringApplication.run(SchoolMedicalManagementSystemApplication.class, args);
 	}
 
+	/**
+	 * Lớp khởi tạo cơ sở dữ liệu
+	 * Chạy tự động khi ứng dụng khởi động để thiết lập dữ liệu ban đầu
+	 */
 	@Component
 	public class DatabaseInitializer implements CommandLineRunner {
 
 		@Autowired
 		private JdbcTemplate jdbcTemplate;
-
+ 
+		/**
+		 * Hàm chạy khi ứng dụng khởi động
+		 * Khởi tạo các vai trò và tài khoản admin mặc định
+		 */
 		@Override
 		public void run(String... args) throws Exception {
-			// First, ensure roles exist
+			// Đầu tiên, đảm bảo các vai trò tồn tại
 			initializeRoles();
 
-			// Then, initialize admin user
+			// Sau đó, khởi tạo tài khoản admin
 			initializeAdminUser();
 		}
 
+		/**
+		 * Khởi tạo các vai trò trong hệ thống
+		 * Tạo các vai trò: ADMIN, MANAGER, SCHOOLNURSE, PARENT
+		 */
 		private void initializeRoles() {
 			try {
-				// Check if roles already exist
+				// Kiểm tra xem các vai trò đã tồn tại chưa
 				Integer roleCount = jdbcTemplate.queryForObject(
 					"SELECT COUNT(*) FROM role", Integer.class);
 
 				if (roleCount == null || roleCount == 0) {
-					// Create roles if they don't exist
+					// Tạo các vai trò nếu chưa tồn tại
 					jdbcTemplate.update(
 						"INSERT INTO role (role_name) VALUES (?)",
 						"ADMIN"
@@ -50,53 +74,53 @@ public class SchoolMedicalManagementSystemApplication {
 					jdbcTemplate.update(
 						"INSERT INTO role (role_name) VALUES (?)",
 						"SCHOOLNURSE"
-					);
-
-					jdbcTemplate.update(
+					);					jdbcTemplate.update(
 						"INSERT INTO role (role_name) VALUES (?)",
 						"PARENT"
 					);
 
-					System.out.println("Roles created successfully");
-				} else {
-					System.out.println("Roles already exist");
+					System.out.println("Tạo các vai trò thành công");
 				}
 			} catch (Exception e) {
-				System.err.println("Failed to initialize roles: " + e.getMessage());
+				System.err.println("Lỗi khi khởi tạo vai trò: " + e.getMessage());
 				e.printStackTrace();
 			}
 		}
 
+		/**
+		 * Khởi tạo tài khoản admin mặc định
+		 * Tạo tài khoản admin với username: admin, password: admin123
+		 */
 		private void initializeAdminUser() {
-			// Check if admin already exists
+			// Kiểm tra xem admin đã tồn tại chưa
 			try {
 				Integer count = jdbcTemplate.queryForObject(
 					"SELECT COUNT(*) FROM users WHERE username = 'admin'", Integer.class);
 
 				if (count == null || count == 0) {
-					// Add new admin with encrypted password (bcrypt) - password: admin123
+					// Thêm admin mới với mật khẩu đã mã hóa (bcrypt) - mật khẩu: admin123
 					jdbcTemplate.update(
 						"INSERT INTO users (username, password, first_name, last_name, dob, gender, phone, email, address, job_title, created_date, last_modified_date, enabled, roleid) " +
 						"VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), ?, ?)",
 						"admin",
-						"$2a$10$7AioByOIfY4xxdtvy2x4u.qoB4IIV0zYuXBVEoZYeOAYVV67Yqkuy", // BCrypt hash for admin123
+						"$2a$10$7AioByOIfY4xxdtvy2x4u.qoB4IIV0zYuXBVEoZYeOAYVV67Yqkuy", // Mã hash BCrypt cho admin123
 						"System",
 						"Administrator",
-						"1990-01-01", // default DOB
+						"1990-01-01", // Ngày sinh mặc định
 							"M",
 							"+84123456789",
 							"admin@school.edu",
 							"123 Main St, City, Country",
 							"System Admin",
-							true, // enabled
-							1 // Assuming roleid for ADMIN is 1
+							true, // Đã kích hoạt
+							1 // Giả sử roleid của ADMIN là 1
 					);
-					System.out.println("Admin user created successfully");
+					System.out.println("Tạo tài khoản admin thành công");
 				} else {
-					System.out.println("Admin user already exists");
+					System.out.println("Tài khoản admin đã tồn tại");
 				}
 			} catch (Exception e) {
-				System.err.println("Failed to initialize admin user: " + e.getMessage());
+				System.err.println("Lỗi khi khởi tạo tài khoản admin: " + e.getMessage());
 				e.printStackTrace();
 			}
 		}

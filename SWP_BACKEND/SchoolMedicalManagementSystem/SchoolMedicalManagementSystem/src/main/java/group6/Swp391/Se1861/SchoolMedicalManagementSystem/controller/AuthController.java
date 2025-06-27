@@ -1,22 +1,39 @@
 package group6.Swp391.Se1861.SchoolMedicalManagementSystem.controller;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.*;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.AuthService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IFirebaseOtpService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl.FirebaseOtpService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IAuthService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * Controller xử lý xác thực người dùng
+ * Quản lý các chức năng đăng nhập, đăng xuất và xác thực OTP
+ */
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
 
     @Autowired
-    private AuthService authService;
+    private IAuthService authService;
+    
+    @Autowired
+    private IFirebaseOtpService firebaseOtpService;
+    
+    @Value("${app.firebase.project-id:}")
+    private String firebaseProjectId;
 
     /**
-     * Login with username and password (for admin, manager, schoolnurse)
+     * Đăng nhập bằng tên đăng nhập và mật khẩu
+     * Dành cho admin, manager, y tá trường học
+     * 
+     * @param loginRequest Thông tin đăng nhập (username, password)
+     * @return Token JWT và thông tin người dùng
      */
     @PostMapping("/login")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
@@ -28,21 +45,29 @@ public class AuthController {
     }
 
     /**
-     * Request OTP for phone authentication (for parents)
+     * Yêu cầu gửi mã OTP đến số điện thoại
+     * Dành cho phụ huynh đăng nhập bằng số điện thoại
+     * 
+     * @param otpRequest Yêu cầu chứa số điện thoại
+     * @return Thông báo kết quả gửi OTP
      */
     @PostMapping("/parent/request-otp")
     public ResponseEntity<?> requestOtp(@Valid @RequestBody OtpRequest otpRequest) {
         boolean success = authService.requestOtp(otpRequest.getPhoneNumber());
 
         if (success) {
-            return ResponseEntity.ok().body(new MessageResponse("OTP sent successfully"));
+            return ResponseEntity.ok().body(new MessageResponse("Gửi mã OTP thành công"));
         } else {
-            return ResponseEntity.internalServerError().body(new MessageResponse("Failed to send OTP"));
+            return ResponseEntity.internalServerError().body(new MessageResponse("Gửi mã OTP thất bại"));
         }
     }
 
     /**
-     * Verify OTP and authenticate parent
+     * Xác thực mã OTP và đăng nhập cho phụ huynh
+     * Kiểm tra mã OTP được gửi đến số điện thoại
+     * 
+     * @param request Yêu cầu chứa số điện thoại và mã OTP
+     * @return Token JWT và thông tin phụ huynh
      */
     @PostMapping("/parent/verify-otp")
     public ResponseEntity<?> verifyOtp(@Valid @RequestBody OtpVerificationRequest request) {
@@ -54,12 +79,76 @@ public class AuthController {
     }
 
     /**
-     * Handle OAuth2 authenticated users (Google login)
-     * This works with Spring Security's OAuth2 workflow
+     * Xử lý đăng nhập OAuth2 (Google login)
+     * Hoạt động với quy trình OAuth2 của Spring Security
+     * 
+     * @param authentication Token xác thực OAuth2
+     * @return Token JWT và thông tin người dùng
      */
     @GetMapping("/oauth2/callback")
     public ResponseEntity<?> oauth2Callback(OAuth2AuthenticationToken authentication) {
         AuthResponse authResponse = authService.processOAuth2Login(authentication);
         return ResponseEntity.ok(authResponse);
+    }
+
+    /**
+     * Đăng xuất người dùng bằng cách vô hiệu hóa token
+     * Thời gian hết hạn token được thiết lập là 30 phút
+     * 
+     * @param token Token JWT từ header Authorization
+     * @return Thông báo đăng xuất thành công
+     */
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(@RequestHeader("Authorization") String token) {
+        authService.logout(token);
+        return ResponseEntity.ok(new MessageResponse("Đăng xuất thành công"));
+    }
+
+    /**
+     * Get Firebase configuration for frontend
+     */
+    @GetMapping("/firebase-config")
+    public ResponseEntity<FirebaseConfigResponse> getFirebaseConfig() {
+        String webApiKey = firebaseOtpService.getWebApiKey();
+        FirebaseConfigResponse config = new FirebaseConfigResponse(webApiKey, firebaseProjectId);
+        return ResponseEntity.ok(config);
+    }
+
+    /**
+     * Verify Firebase OTP and authenticate parent (new Firebase method)
+     */
+    @PostMapping("/parent/verify-firebase-otp")
+    public ResponseEntity<?> verifyFirebaseOtp(@Valid @RequestBody FirebaseOtpVerificationRequest request) {
+        try {
+            // Try Firebase ID token verification first
+            if (request.getFirebaseIdToken() != null && !request.getFirebaseIdToken().isEmpty()) {
+                boolean isValidToken = firebaseOtpService.verifyFirebaseToken(
+                    request.getFirebaseIdToken(), 
+                    request.getPhoneNumber()
+                );
+                
+                if (isValidToken) {
+                    AuthResponse authResponse = authService.authenticateWithOtp(
+                        request.getPhoneNumber(), 
+                        "FIREBASE_VERIFIED" // Special marker for Firebase verification
+                    );
+                    return ResponseEntity.ok(authResponse);
+                }
+            }
+            
+            // Fallback to manual OTP verification if Firebase token fails
+            if (request.getOtp() != null && !request.getOtp().isEmpty()) {
+                AuthResponse authResponse = authService.authenticateWithOtp(
+                    request.getPhoneNumber(),
+                    request.getOtp()
+                );
+                return ResponseEntity.ok(authResponse);
+            }
+            
+            return ResponseEntity.badRequest().body(new MessageResponse("Invalid verification data"));
+            
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new MessageResponse(e.getMessage()));
+        }
     }
 }

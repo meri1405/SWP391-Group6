@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Getter
@@ -23,23 +25,36 @@ public class VaccinationCampaign {
     @Column(name = "description", nullable = false)
     private String description;
 
-    @Column(name = "vaccinationType", nullable = false)
-    private String vaccinationType;
+    @Column(name = "vaccineName", nullable = false)
+    private String vaccineName;
+
+    @Column(name = "vaccineBrand", nullable = false)
+    private String vaccineBrand;
 
     @Column(name = "location", nullable = false)
     private String location;
 
-    @Column(name = "planningDate", nullable = false)
-    private LocalDate planningDate;
+    @Column(name = "scheduledDate", nullable = false)
+    private LocalDateTime scheduledDate;
 
-    @Column(name = "creationDate", nullable = false)
-    private LocalDate creationDate;
+    @Column(name = "createdDate", nullable = false)
+    private LocalDateTime createdDate;
+
+    @Column(name = "approvedDate")
+    private LocalDateTime approvedDate;
 
     @Column(name = "status", nullable = false)
-    private String status;
+    @Enumerated(EnumType.STRING)
+    private CampaignStatus status;
+
+    @Column(name = "prePostCareInstructions", length = 1000)
+    private String prePostCareInstructions;
+
+    @Column(name = "estimatedVaccineCount")
+    private Integer estimatedVaccineCount;
 
     @ManyToOne
-    @JoinColumn(name = "vaccinationRuleID", referencedColumnName = "id")
+    @JoinColumn(name = "vaccinationRuleId", referencedColumnName = "id")
     private VaccinationRule vaccinationRule;
 
     @ManyToOne
@@ -47,6 +62,16 @@ public class VaccinationCampaign {
     private User createdBy;
 
     @ManyToOne
-    @JoinColumn(name = "managerId")
-    private User manager;
+    @JoinColumn(name = "approvedById")
+    private User approvedBy;
+
+    @OneToMany(mappedBy = "campaign", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<VaccinationForm> vaccinationForms;
+
+    @OneToMany(mappedBy = "campaign", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<VaccinationRecord> vaccinationRecords;
+
+    public enum CampaignStatus {
+        PENDING, APPROVED, REJECTED, IN_PROGRESS, COMPLETED, CANCELLED
+    }
 }

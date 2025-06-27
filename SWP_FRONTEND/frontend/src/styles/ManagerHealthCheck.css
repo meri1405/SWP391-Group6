@@ -1,0 +1,437 @@
+/* Manager Health Check Management Styles */
+.manager-health-check-management {
+  padding: 20px;
+  background: #f5f5f5;
+  min-height: calc(100vh - 200px);
+}
+
+.manager-health-check-management .ant-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e8e8e8;
+}
+
+.manager-health-check-management .ant-card-head {
+  background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+}
+
+.manager-health-check-management .ant-card-head-title {
+  color: white;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.manager-health-check-management .ant-statistic-title {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.manager-health-check-management .ant-statistic-content {
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.manager-health-check-management .ant-table-thead > tr > th {
+  background: #fafafa;
+  border-bottom: 2px solid #e8e8e8;
+  font-weight: 600;
+  color: #333;
+}
+
+.manager-health-check-management .ant-table-tbody > tr:hover > td {
+  background: #f0f8ff;
+}
+
+.manager-health-check-management .ant-btn-primary {
+  background: #52c41a;
+  border-color: #52c41a;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.manager-health-check-management .ant-btn-primary:hover {
+  background: #73d13d;
+  border-color: #73d13d;
+}
+
+.manager-health-check-management .ant-btn-danger {
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.manager-health-check-management .ant-tabs-tab {
+  font-weight: 500;
+  padding: 8px 16px;
+}
+
+.manager-health-check-management .ant-tabs-tab-active {
+  color: #52c41a !important;
+}
+
+.manager-health-check-management .ant-tabs-ink-bar {
+  background: #52c41a;
+}
+
+.manager-health-check-management .ant-badge-status-dot {
+  width: 8px;
+  height: 8px;
+}
+
+.manager-health-check-management .ant-descriptions-bordered .ant-descriptions-item-label {
+  background: #fafafa;
+  font-weight: 600;
+  color: #333;
+}
+
+/* Modal Styling */
+.manager-health-check-management .ant-modal {
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+}
+
+.manager-health-check-management .ant-modal-content {
+  border-radius: 12px;
+  overflow: hidden;
+  padding: 0;
+}
+
+.manager-health-check-management .ant-modal-header {
+  background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%);
+  border-radius: 12px 12px 0 0;
+  border-bottom: none;
+  padding: 20px 24px;
+  margin: 0;
+}
+
+.manager-health-check-management .ant-modal-title {
+  color: white;
+  font-weight: 600;
+  font-size: 18px;
+  margin: 0;
+}
+
+.manager-health-check-management .ant-modal-close {
+  color: white;
+  top: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  line-height: 32px;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.manager-health-check-management .ant-modal-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.manager-health-check-management .ant-modal-close .ant-modal-close-x {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 16px;
+}
+
+.manager-health-check-management .ant-modal-body {
+  padding: 24px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.manager-health-check-management .ant-modal-footer {
+  border-top: 1px solid #f0f0f0;
+  padding: 16px 24px;
+  background: #fafafa;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.manager-health-check-management .ant-modal-footer .ant-btn {
+  border-radius: 6px;
+  font-weight: 500;
+  height: 36px;
+  padding: 0 16px;
+}
+
+/* Detail Modal Specific */
+.manager-health-check-management .ant-descriptions {
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.manager-health-check-management .ant-descriptions-bordered .ant-descriptions-item-label {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  font-weight: 600;
+  color: #495057;
+  border-right: 1px solid #dee2e6;
+  padding: 18px 24px;
+  width: 220px;
+  vertical-align: top;
+  font-size: 15px;
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.manager-health-check-management .ant-descriptions-bordered .ant-descriptions-item-content {
+  padding: 18px 24px;
+  background: white;
+  color: #212529;
+  line-height: 1.6;
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.manager-health-check-management .ant-descriptions-bordered .ant-descriptions-row {
+  border-bottom: 1px solid #e9ecef;
+  transition: background-color 0.2s ease;
+  min-height: 56px;
+}
+
+.manager-health-check-management .ant-descriptions-bordered .ant-descriptions-row:hover {
+  background-color: #f8f9fa;
+}
+
+.manager-health-check-management .ant-descriptions-bordered .ant-descriptions-row:last-child {
+  border-bottom: none;
+}
+
+/* Special styling for span=2 items (description and instructions) */
+.manager-health-check-management .ant-descriptions-item[colspan="2"] .ant-descriptions-item-label {
+  width: 180px !important;
+  padding: 18px 24px;
+  font-size: 15px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #f6ffed 0%, #d9f7be 100%);
+  color: #389e0d;
+}
+
+.manager-health-check-management .ant-descriptions-item[colspan="2"] .ant-descriptions-item-content {
+  padding: 16px 24px;
+  font-size: 14px;
+  line-height: 1.6;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+/* Enhanced content styling for modal */
+.manager-health-check-management .ant-descriptions .ant-tag {
+  margin: 0 4px 4px 0;
+  font-weight: 500;
+}
+
+.manager-health-check-management .ant-descriptions .ant-typography {
+  margin: 0;
+}
+
+/* Status badge styling in modal */
+.manager-health-check-management .ant-descriptions .ant-badge {
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.manager-health-check-management .ant-descriptions .ant-badge-status-text {
+  font-size: 14px;
+  margin-left: 8px;
+}
+
+/* Form styling in Modal */
+.manager-health-check-management .ant-form-item-label > label {
+  font-weight: 600;
+  color: #495057;
+  font-size: 14px;
+}
+
+.manager-health-check-management .ant-input,
+.manager-health-check-management .ant-input:focus,
+.manager-health-check-management .ant-input-focused {
+  border-color: #52c41a;
+  box-shadow: 0 0 0 2px rgba(82, 196, 26, 0.1);
+  border-radius: 6px;
+}
+
+.manager-health-check-management .ant-form-item-explain-error {
+  color: #dc3545;
+  font-size: 13px;
+}
+
+/* Reject Modal Specific */
+.manager-health-check-management .ant-modal.reject-modal .ant-modal-header {
+  background: linear-gradient(135deg, #ff4d4f 0%, #cf1322 100%);
+}
+
+.manager-health-check-management .ant-modal.reject-modal .ant-modal-footer {
+  background: #fff2f0;
+  border-top: 1px solid #ffccc7;
+}
+
+.manager-health-check-management .ant-modal.reject-modal .ant-btn-dangerous {
+  background: #ff4d4f;
+  border-color: #ff4d4f;
+}
+
+.manager-health-check-management .ant-modal.reject-modal .ant-btn-dangerous:hover {
+  background: #ff7875;
+  border-color: #ff7875;
+}
+
+.manager-health-check-management .ant-pagination-item-active {
+  background: #52c41a;
+  border-color: #52c41a;
+}
+
+.manager-health-check-management .ant-pagination-item-active a {
+  color: white;
+}
+
+.manager-health-check-management .ant-pagination-item:hover {
+  border-color: #52c41a;
+}
+
+.manager-health-check-management .ant-pagination-item:hover a {
+  color: #52c41a;
+}
+
+.manager-health-check-management .ant-tag {
+  border-radius: 4px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+/* Custom status badges */
+.manager-health-check-management .ant-badge-status-processing {
+  color: #1890ff;
+}
+
+.manager-health-check-management .ant-badge-status-success {
+  color: #52c41a;
+}
+
+.manager-health-check-management .ant-badge-status-error {
+  color: #ff4d4f;
+}
+
+.manager-health-check-management .ant-badge-status-warning {
+  color: #fa8c16;
+}
+
+.manager-health-check-management .ant-badge-status-default {
+  color: #722ed1;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .manager-health-check-management {
+    padding: 10px;
+  }
+  
+  .manager-health-check-management .ant-table-thead > tr > th,
+  .manager-health-check-management .ant-table-tbody > tr > td {
+    padding: 8px 4px;
+    font-size: 12px;
+  }
+  
+  .manager-health-check-management .ant-btn {
+    padding: 0 8px;
+    font-size: 12px;
+  }
+
+  /* Mobile Modal Adjustments */
+  .manager-health-check-management .ant-modal {
+    margin: 10px;
+    max-width: calc(100vw - 20px);
+  }
+
+  .manager-health-check-management .ant-modal-body {
+    padding: 16px;
+    max-height: 60vh;
+  }
+
+  .manager-health-check-management .ant-descriptions-bordered .ant-descriptions-item-label {
+    width: 140px !important;
+    padding: 14px 16px;
+    font-size: 13px;
+    min-height: 48px;
+  }
+
+  .manager-health-check-management .ant-descriptions-bordered .ant-descriptions-item-content {
+    padding: 14px 16px;
+    font-size: 13px;
+    min-height: 48px;
+  }
+
+  .manager-health-check-management .ant-descriptions-item[colspan="2"] .ant-descriptions-item-label {
+    width: 120px !important;
+    padding: 14px 16px;
+    font-size: 13px;
+  }
+
+  .manager-health-check-management .ant-descriptions-item[colspan="2"] .ant-descriptions-item-content {
+    padding: 12px 16px;
+    font-size: 13px;
+    max-height: 100px;
+  }
+}
+
+/* Loading state */
+.manager-health-check-management .ant-spin-container {
+  min-height: 200px;
+}
+
+/* Empty state */
+.manager-health-check-management .ant-empty {
+  padding: 40px 0;
+}
+
+.manager-health-check-management .ant-empty-description {
+  color: #999;
+  font-style: italic;
+}
+
+/* Animation for modal appearance */
+.manager-health-check-management .ant-modal {
+  animation: modalFadeIn 0.3s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Success/Error message styling */
+.manager-health-check-management .ant-message-notice-content {
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Tab content styling */
+.manager-health-check-management .ant-tabs-content-holder {
+  background: white;
+  border-radius: 0 0 8px 8px;
+  padding: 16px;
+}
+
+.manager-health-check-management .ant-tabs-tab-btn {
+  font-weight: 500;
+}

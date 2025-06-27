@@ -5,7 +5,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -22,16 +21,28 @@ public class MedicationRequestDTO {
     @NotNull(message = "Request date is required")
     private LocalDate requestDate;
 
-    //@NotBlank(message = "Note cannot be blank")
     @Size(max = 500, message = "Note cannot exceed 500 characters")
     private String note;
+    
+    @Size(max = 500, message = "Nurse note cannot exceed 500 characters")
+    private String nurseNote;
 
     private String status = "PENDING"; // Default status for new requests
 
-    private boolean isConfirm = false; // Default confirmation status
+    private boolean confirm = false; // Default confirmation status
 
     @NotNull(message = "Student ID is required")
     private Long studentId;
+
+    private String studentName;
+
+    private Long nurseId;
+
+    private String nurseName;
+
+    // Add prescription images field - list of base64 encoded images
+    @NotEmpty(message = "At least one prescription image is required")
+    private List<String> prescriptionImages;
 
     @Valid
     @NotEmpty(message = "At least one medication item is required")

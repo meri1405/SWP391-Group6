@@ -1,7 +1,7 @@
 package group6.Swp391.Se1861.SchoolMedicalManagementSystem.config;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.AuthResponse;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.AuthService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl.AuthService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;

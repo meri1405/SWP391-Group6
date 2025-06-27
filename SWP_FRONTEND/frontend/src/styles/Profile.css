@@ -71,8 +71,13 @@
 
 .profile-avatar-large {
   margin-bottom: 16px;
-  border: 4px solid #f0f9ff;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+  border: 4px solid #3b82f6 !important; /* Blue border instead of orange */
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25) !important;
+}
+
+/* Override any orange colors in avatar */
+.profile-avatar-large .ant-avatar {
+  border: 4px solid #3b82f6 !important;
 }
 
 .avatar-uploader {
@@ -147,12 +152,12 @@
 }
 
 .form-group input.error {
-  border-color: #ef4444;
+  border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
 }
 
 .error-text {
-  color: #ef4444;
+  color: #3b82f6;
   font-size: 12px;
   font-weight: 500;
   margin-top: 4px;
@@ -195,13 +200,17 @@
   padding: 16px;
   background: #f8fafc;
   border-radius: 8px;
-  border: 1px solid #e2e8f0;
+  border-left: 4px solid #3b82f6 !important; /* Blue left border instead of orange */
+  border-top: 1px solid #e2e8f0;
+  border-right: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
   transition: all 0.3s ease;
 }
 
 .info-item:hover {
   background: #f1f5f9;
-  border-color: #cbd5e1;
+  border-left-color: #1d4ed8 !important; /* Darker blue on hover */
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
 }
 
 .info-item.full-width {
@@ -467,4 +476,17 @@
 /* Error States */
 .ant-message-error {
   border-radius: 8px;
+}
+
+/* Override any orange colors - Force blue theme */
+.profile-main-card h4,
+.info-section h4,
+.form-section h4 {
+  border-bottom: 2px solid #3b82f6 !important;
+  color: #374151 !important;
+}
+
+/* Ensure blue borders for all profile sections */
+.profile-main-card .info-section h4 {
+  border-bottom-color: #3b82f6 !important;
 }

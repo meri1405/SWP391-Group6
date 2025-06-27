@@ -1,7 +1,7 @@
 package group6.Swp391.Se1861.SchoolMedicalManagementSystem.config;
 
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.CustomOAuth2UserService;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.CustomUserDetailsService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl.CustomOAuth2UserService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl.CustomUserDetailsService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -13,7 +13,6 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
@@ -64,18 +63,26 @@ public class SecurityConfig {
         http.cors(cors -> cors.configure(http))
             .csrf(csrf -> csrf.disable())
             .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth ->
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))            .authorizeHttpRequests(auth ->
                 auth.requestMatchers("/api/auth/**").permitAll()
                     .requestMatchers("/api/public/**").permitAll()
                     .requestMatchers("/oauth2/**").permitAll()
                     .requestMatchers("/login/oauth2/**").permitAll()
+                    .requestMatchers("/ws/**").permitAll()  // Allow WebSocket endpoint
+                    .requestMatchers("/api/nurse/students/test").permitAll()  // Debug endpoint
+                    .requestMatchers("/api/nurse/students/debug-user").authenticated()  // Any authenticated user
+                    .requestMatchers("/api/nurse/students/all").authenticated()  // Any authenticated user
                     .requestMatchers("/api/admin/**").hasRole("ADMIN")
                     .requestMatchers("/api/manager/**").hasRole("MANAGER")
+                    .requestMatchers("/api/nurse/**").hasRole("SCHOOLNURSE")
                     .requestMatchers("/api/schoolnurse/**").hasRole("SCHOOLNURSE")
                     .requestMatchers("/api/parent/**").hasRole("PARENT")
+                    .requestMatchers("/api/medical-events/**").hasAnyRole("PARENT", "SCHOOLNURSE", "MANAGER")
+                    .requestMatchers("/api/health-check/campaigns").hasAnyRole( "SCHOOLNURSE", "MANAGER")
+                    .requestMatchers("/api/health-check/forms").hasAnyRole("SCHOOLNURSE", "MANAGER", "PARENT")
+                    .requestMatchers("/api/health-check/results").hasAnyRole("SCHOOLNURSE", "MANAGER", "PARENT")
                     .anyRequest().authenticated()
-            )            .oauth2Login(oauth2 ->
+            ).oauth2Login(oauth2 ->
                 oauth2.authorizationEndpoint(authEndpoint ->
                         authEndpoint.baseUri("/oauth2/authorize"))
                     .redirectionEndpoint(redirectEndpoint ->

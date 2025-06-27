@@ -1,56 +1,154 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { parentApi } from "../api/parentApi";
+import { nurseApi } from "../api/nurseApi";
+import webSocketService from "../services/webSocketService";
+import { useSystemSettings } from "../contexts/SystemSettingsContext";
 import "../styles/Navbar.css";
 
 const Navbar = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [notificationCount, setNotificationCount] = useState(3); // Initial notification count
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [notifications, setNotifications] = useState([]);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
   const navigate = useNavigate();
-  const { user, logout, isParent, isStaff } = useAuth();
+  const { user, logout, isParent, isStaff, isSchoolNurse, getToken } = useAuth();
+  const { settings } = useSystemSettings();
   const location = useLocation();
 
   // Refs for click outside detection
   const notificationRef = useRef(null);
   const userDropdownRef = useRef(null);
+  const loadNotifications = useCallback(async () => {
+    const token = getToken();
+    if (!token) return;
 
-  // Mock notifications data - in a real app, this would come from an API
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      title: "Lịch khám định kỳ",
-      text: "Có lịch khám sức khỏe định kỳ cho con bạn vào ngày 28/05/2025",
-      time: "2 giờ trước",
-      icon: "user-md",
-      read: false,
-    },
-    {
-      id: 2,
-      title: "Tiêm chủng",
-      text: "Nhắc nhở tiêm vaccine DPT lần 2 cho con bạn",
-      time: "1 ngày trước",
-      icon: "syringe",
-      read: false,
-    },
-    {
-      id: 3,
-      title: "Đơn thuốc",
-      text: "Đơn thuốc của con bạn đã được duyệt",
-      time: "3 ngày trước",
-      icon: "pills",
-      read: true,
-    },
-  ]);
+    try {
+      setLoadingNotifications(true);
+      
+      // Chọn API phù hợp với role
+      const api = isSchoolNurse() ? nurseApi : parentApi;
+      
+      // Load only 5 most recent notifications to show in dropdown
+      const allData = await api.getAllNotifications(token, 5);
+      // Load unread notifications to get count
+      const unreadData = await api.getUnreadNotifications(token);
 
-  // Calculate unread notifications count
+      // Transform backend notifications to frontend format
+      const transformedNotifications = allData.map((notification) => ({
+        id: notification.id,
+        title: notification.title,
+        text: notification.message,
+        time: formatTimeAgo(notification.createdAt),
+        icon: getNotificationIcon(notification),
+        read: notification.read,
+      }));
+
+      setNotifications(transformedNotifications);
+      setNotificationCount(unreadData.length); // Only count unread notifications for badge
+    } catch (error) {
+      console.error("Error loading notifications:", error);
+      // Keep empty state if error
+      setNotifications([]);
+      setNotificationCount(0);
+    } finally {
+      setLoadingNotifications(false);
+    }
+  }, [getToken, isSchoolNurse]);
+
+  const setupWebSocketConnection = useCallback(async () => {
+    const token = getToken();
+    if (!token) return;
+
+    try {
+      // Connect to WebSocket if not already connected
+      if (!webSocketService.isConnected()) {
+        await webSocketService.connect(token);
+      }
+
+      // Add message handler for real-time notifications
+      webSocketService.addMessageHandler(
+        "navbar-notifications",
+        (newNotification) => {
+          console.log(
+            "Received real-time notification in navbar:",
+            newNotification
+          );
+
+          // Transform the new notification
+          const transformedNotification = {
+            id: newNotification.id,
+            title: newNotification.title,
+            text: newNotification.message,
+            time: "Vừa xong",
+            icon: getNotificationIcon(newNotification),
+            read: false,
+          };
+
+          // Add new notification to the beginning of the list (keep max 5)
+          setNotifications((prev) =>
+            [transformedNotification, ...prev].slice(0, 5)
+          );
+          setNotificationCount((prev) => prev + 1);
+        }
+      );
+    } catch (error) {
+      console.error("Error setting up WebSocket connection in navbar:", error);
+    }
+  }, [getToken]);
+
+  const getNotificationIcon = (notification) => {
+    if (notification.medicationRequest || notification.medicationSchedule) {
+      return "pills";
+    }
+    return "info-circle";
+  };
+
+  const formatTimeAgo = (dateString) => {
+    if (!dateString) return "Không xác định";
+
+    const now = new Date();
+    const notificationDate = new Date(dateString);
+    const diffInMs = now - notificationDate;
+    const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+    const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+    const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+
+    if (diffInMinutes < 1) {
+      return "Vừa xong";
+    } else if (diffInMinutes < 60) {
+      return `${diffInMinutes} phút trước`;
+    } else if (diffInHours < 24) {
+      return `${diffInHours} giờ trước`;
+    } else {
+      return `${diffInDays} ngày trước`;
+    }
+  };
+  // Remove the old useEffect that calculated unread count
+  // This is now handled by the notification loading
+
+  // Load notifications for users who can see them (parent and schoolnurse)
   useEffect(() => {
-    const unreadCount = notifications.filter(
-      (notification) => !notification.read
-    ).length;
-    setNotificationCount(unreadCount);
-  }, [notifications]);
+    // Check if user can see notifications
+    const canSeeNotifications = 
+      (isParent() && user.loginMethod !== "username") || // Parent who logged in via phone
+      (isSchoolNurse()); // SchoolNurse role
+    
+    if (user && canSeeNotifications) {
+      loadNotifications();
+      setupWebSocketConnection();
+    }
+
+    return () => {
+      // Cleanup WebSocket when component unmounts
+      if (webSocketService.isConnected()) {
+        webSocketService.removeMessageHandler("navbar-notifications");
+      }
+    };
+  }, [isParent, isSchoolNurse, user, loadNotifications, setupWebSocketConnection]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -118,27 +216,48 @@ const Navbar = () => {
     setShowUserDropdown(!showUserDropdown);
     setShowNotifications(false); // Close notifications when opening user dropdown
   };
-
-  const toggleNotifications = () => {
+  const toggleNotifications = async () => {
     setShowNotifications(!showNotifications);
-    if (!showNotifications) {
-      // Mark all notifications as read when opening
-      const updatedNotifications = notifications.map((notification) => ({
-        ...notification,
-        read: true,
-      }));
-      setNotifications(updatedNotifications);
+    if (!showNotifications && notifications.length > 0) {
+      // Mark unread notifications as read when opening dropdown
+      try {
+        const api = isSchoolNurse() ? nurseApi : parentApi;
+        const unreadNotifications = notifications.filter((n) => !n.read);
+        for (const notification of unreadNotifications) {
+          await api.markNotificationAsRead(notification.id, getToken());
+        }
+
+        // Update local state
+        const updatedNotifications = notifications.map((notification) => ({
+          ...notification,
+          read: true,
+        }));
+        setNotifications(updatedNotifications);
+        setNotificationCount(0);
+      } catch (error) {
+        console.error("Error marking notifications as read:", error);
+      }
     }
     setShowUserDropdown(false); // Close user dropdown when opening notifications
   };
+  const handleNotificationClick = async (id) => {
+    try {
+      // Mark the specific notification as read
+      const api = isSchoolNurse() ? nurseApi : parentApi;
+      await api.markNotificationAsRead(id, getToken());
 
-  const handleNotificationClick = (id) => {
-    // Mark the specific notification as read
-    const updatedNotifications = notifications.map((notification) =>
-      notification.id === id ? { ...notification, read: true } : notification
-    );
-    setNotifications(updatedNotifications);
-    // Không đóng dropdown tại đây nữa vì đã xử lý trong onClick của Link
+      // Update local notification state
+      const updatedNotifications = notifications.map((notification) =>
+        notification.id === id ? { ...notification, read: true } : notification
+      );
+      setNotifications(updatedNotifications);
+
+      // Reload unread count from server to ensure accuracy
+      const unreadData = await api.getUnreadNotifications(getToken());
+      setNotificationCount(unreadData.length);
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+    }
   };
 
   return (
@@ -149,7 +268,7 @@ const Navbar = () => {
           className={`navbar-logo${location.pathname === "/" ? " active" : ""}`}
         >
           <img src="/medical-logo.svg" alt="Logo" className="logo-img" />
-          <span>Y Tế Học Đường</span>
+          <span>{settings.systemName}</span>
         </Link>
 
         <div className="search-container">
@@ -197,24 +316,21 @@ const Navbar = () => {
             }`}
           >
             Giới thiệu
-          </Link>
-
+          </Link>{" "}
           {user ? (
             <>
-              {/* Only show management button for ADMIN and staff, not for PARENT */}
-              {!isParent() && (
-                <button
-                  onClick={handleDashboardClick}
-                  className={`nav-link management-btn${
-                    location.pathname.includes("dashboard") ? " active" : ""
-                  }`}
-                >
-                  Quản lý
-                </button>
-              )}
+              {/* Show management button for all authenticated users */}
+              <button
+                onClick={handleDashboardClick}
+                className={`nav-link management-btn${
+                  location.pathname.includes("dashboard") ? " active" : ""
+                }`}
+              >
+                Quản lý
+              </button>
 
-              {/* Only show notification bell for parent users who logged in via phone */}
-              {isParent() && user.loginMethod !== "username" && (
+              {/* Show notification bell for appropriate users */}
+              {((isParent() && user.loginMethod !== "username") || isSchoolNurse()) && (
                 <div className="nav-notifications" ref={notificationRef}>
                   <button
                     className="notification-btn"
@@ -226,55 +342,77 @@ const Navbar = () => {
                         {notificationCount}
                       </span>
                     )}
-                  </button>
-
+                  </button>{" "}
                   {showNotifications && (
                     <div className="notifications-dropdown">
+                      {" "}
                       <div className="notifications-header">
                         <h4>Thông báo</h4>
                         <span className="notifications-count">
                           {notificationCount > 0
                             ? `${notificationCount} mới`
-                            : "Không có thông báo mới"}
+                            : notifications.length > 0
+                            ? "Xem thông báo gần đây"
+                            : "Không có thông báo"}
                         </span>
                       </div>
                       <div className="notifications-list">
-                        {notifications.map((notification) => (
-                          <Link
-                            key={notification.id}
-                            to="/parent-dashboard?tab=notifications"
-                            className={`notification-item ${
-                              !notification.read ? "unread" : ""
-                            }`}
-                            onClick={() => {
-                              // Đánh dấu thông báo đã đọc
-                              handleNotificationClick(notification.id);
-                              // Đảm bảo đóng dropdown sau khi chuyển hướng
-                              setTimeout(() => {
-                                setShowNotifications(false);
-                              }, 100);
-                            }}
-                          >
-                            <div className="notification-icon">
-                              <i className={`fas fa-${notification.icon}`}></i>
-                            </div>
+                        {loadingNotifications ? (
+                          <div className="notification-item">
                             <div className="notification-content">
-                              <p className="notification-title">
-                                {notification.title}
-                              </p>
-                              <p className="notification-text">
-                                {notification.text}
-                              </p>
-                              <span className="notification-time">
-                                {notification.time}
-                              </span>
+                              <p>Đang tải thông báo...</p>
                             </div>
-                          </Link>
-                        ))}
+                          </div>
+                        ) : notifications.length > 0 ? (
+                          notifications.map((notification) => (
+                            <Link
+                              key={notification.id}
+                              to={isSchoolNurse() 
+                                ? "/nurse-dashboard?tab=notifications" 
+                                : "/parent-dashboard?tab=notifications"}
+                              className={`notification-item ${
+                                !notification.read ? "unread" : ""
+                              }`}
+                              onClick={() => {
+                                // Đánh dấu thông báo đã đọc
+                                handleNotificationClick(notification.id);
+                                // Đảm bảo đóng dropdown sau khi chuyển hướng
+                                setTimeout(() => {
+                                  setShowNotifications(false);
+                                }, 100);
+                              }}
+                            >
+                              <div className="notification-icon">
+                                <i
+                                  className={`fas fa-${notification.icon}`}
+                                ></i>
+                              </div>
+                              <div className="notification-content">
+                                <p className="notification-title">
+                                  {notification.title}
+                                </p>{" "}
+                                <p className="notification-text">
+                                  {notification.text}
+                                </p>
+                                <span className="notification-time">
+                                  {notification.time}
+                                </span>
+                              </div>
+                            </Link>
+                          ))
+                        ) : (
+                          <div className="notification-item">
+                            <div className="notification-content">
+                              <p>Không có thông báo nào</p>
+                            </div>
+                          </div>
+                        )}
                       </div>
                       <div className="notifications-footer">
                         <Link
-                          to="/parent-dashboard?tab=notifications"
+                          to={isSchoolNurse() 
+                              ? "/nurse-dashboard?tab=notifications" 
+                              : "/parent-dashboard?tab=notifications"}
                           className="view-all-link"
                           onClick={() => {
                             // Đảm bảo đóng dropdown sau khi chuyển hướng
@@ -311,15 +449,19 @@ const Navbar = () => {
                   <div className="dropdown-menu">
                     <div className="user-info">
                       <div className="user-name">
-                        {user.firstName} {user.lastName}
+                        {user.lastName} {user.firstName}
                       </div>
                       <div className="user-email">{user.email}</div>
                     </div>
-                    <div className="dropdown-divider"></div>
+                    <div className="dropdown-divider"></div>{" "}
                     <Link
                       to={
                         isParent()
                           ? "/parent-dashboard?tab=profile"
+                          : user?.roleName === "MANAGER"
+                          ? "/manager-dashboard?tab=profile"
+                          : user?.roleName === "SCHOOLNURSE"
+                          ? "/nurse-dashboard?tab=profile"
                           : "/admin/dashboard?tab=profile"
                       }
                       className="dropdown-item"

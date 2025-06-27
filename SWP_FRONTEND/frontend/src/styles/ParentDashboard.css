@@ -40,6 +40,7 @@
   padding: 16px 20px; /* Reduced padding */
   overflow-y: auto;
   background: #f8f9fa;
+  max-width: 100%;
 }
 
 /* Enhanced content styling with better margins and border radius */
@@ -48,7 +49,10 @@
   border-radius: 12px; /* Reduced border-radius */
   padding: 16px; /* Reduced padding */
   margin: 8px; /* Reduced margin */
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06); /* Softer shadow */
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  width: calc(100% - 16px);
+  max-width: 100%;
+  overflow: visible;
   border: 1px solid #e8e8e8;
   transition: all 0.2s ease;
 }

@@ -2,7 +2,7 @@ package group6.Swp391.Se1861.SchoolMedicalManagementSystem.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.AuthResponse;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.JwtService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl.JwtService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

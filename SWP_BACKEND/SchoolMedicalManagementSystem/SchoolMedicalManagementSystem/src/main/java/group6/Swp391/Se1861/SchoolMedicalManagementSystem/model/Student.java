@@ -3,6 +3,7 @@ package group6.Swp391.Se1861.SchoolMedicalManagementSystem.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import net.minidev.json.annotate.JsonIgnore;
 
 import java.time.LocalDate;
 import java.util.Set;
@@ -44,15 +45,40 @@ public class Student {
     @Column(name = "citizenship", nullable = false)
     private String citizenship;
 
-    @Column(name = "bloodType", nullable = false)
-    private String bloodType;
-
     @Column(name = "isDisabled", nullable = false)
     private boolean isDisabled;
 
-    @ManyToMany(mappedBy = "students") // mappedBy trỏ về tên trường students trong User
-    private Set<User> parents;
+    @ManyToOne
+    @JoinColumn(name = "motherId", nullable = true)
+    @JsonIgnore
+    private User mother;
+
+    @ManyToOne
+    @JoinColumn(name = "fatherId", nullable = true)
+    @JsonIgnore
+    private User father;
 
     @OneToMany(mappedBy = "student", cascade = CascadeType.ALL)
     private Set<MedicationRequest> medicationRequests;
+
+    @OneToMany(mappedBy = "student", cascade = CascadeType.ALL)
+    private Set<HealthProfile> healthProfiles;
+
+    public String getFullName() {
+        return firstName + " " + lastName;
+    }
+
+    /**
+     * Gets the primary parent contact for the student.
+     * Returns mother if available, otherwise returns father.
+     * May return null if no parent is assigned.
+     */
+    public User getParent() {
+        // Return mother as the primary contact if available
+        if (mother != null) {
+            return mother;
+        }
+        // Otherwise return father
+        return father;
+    }
 }

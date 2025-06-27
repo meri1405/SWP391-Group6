@@ -1,0 +1,68 @@
+/* Prescription Image Upload Styles */
+.prescription-image-upload .ant-upload-list-picture-card .ant-upload-list-item {
+  width: 104px;
+  height: 104px;
+}
+
+.prescription-image-upload .ant-upload-select-picture-card {
+  width: 104px;
+  height: 104px;
+  border: 1px dashed #d9d9d9;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color 0.3s;
+}
+
+.prescription-image-upload .ant-upload-select-picture-card:hover {
+  border-color: #1890ff;
+}
+
+.prescription-image-upload .ant-upload-list-picture-card .ant-upload-list-item-info::before {
+  left: 0;
+  top: 0;
+}
+
+/* Prescription Images Display in Detail Modal */
+.prescription-images-section {
+  border: 1px solid #f0f0f0;
+  border-radius: 6px;
+  padding: 12px;
+  background-color: #fafafa;
+}
+
+.prescription-images-section h4 {
+  margin-bottom: 8px;
+  color: #1890ff;
+}
+
+.prescription-images-section img {
+  transition: transform 0.2s;
+}
+
+.prescription-images-section img:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+/* Form validation styles */
+.ant-form-item-has-error .prescription-image-upload {
+  border-color: #ff4d4f;
+}
+
+.ant-form-item-explain-error {
+  color: #ff4d4f;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .prescription-images-section img {
+    width: 80px;
+    height: 80px;
+  }
+  
+  .prescription-image-upload .ant-upload-list-picture-card .ant-upload-list-item,
+  .prescription-image-upload .ant-upload-select-picture-card {
+    width: 80px;
+    height: 80px;
+  }
+}

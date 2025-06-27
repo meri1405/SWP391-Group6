@@ -1,0 +1,457 @@
+/* Vaccination Form Modal */
+.vaccination-form-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.vaccination-form-modal {
+  background: white;
+  border-radius: 12px;
+  max-width: 800px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+}
+
+.vaccination-form-modal-header {
+  padding: 20px;
+  border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fafafa;
+}
+
+.vaccination-form-modal-header h2 {
+  margin: 0;
+  color: #333;
+  font-size: 1.5rem;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #666;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 35px;
+  height: 35px;
+  transition: all 0.2s ease;
+}
+
+.close-btn:hover {
+  background: #f5f5f5;
+  color: #333;
+}
+
+.vaccination-form-modal-body {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* Loading and Error States */
+.loading-state, .error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.loading-state i {
+  font-size: 2rem;
+  color: #1890ff;
+  margin-bottom: 15px;
+}
+
+.error-state i {
+  font-size: 2rem;
+  color: #ff4d4f;
+  margin-bottom: 15px;
+}
+
+/* Form Details */
+.form-details {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #1890ff;
+}
+
+.student-info h3 {
+  margin: 0 0 12px 0;
+  color: #333;
+  font-size: 1.3rem;
+}
+
+.student-details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.student-details p {
+  margin: 0;
+  color: #666;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.student-details p i {
+  color: #1890ff;
+  width: 16px;
+  font-size: 0.85rem;
+}
+
+.status-badge {
+  padding: 6px 12px;
+  border-radius: 20px;
+  color: white;
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-align: center;
+  min-width: 100px;
+}
+
+/* Form Content */
+.form-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.info-section {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 20px;
+  border: 1px solid #f0f0f0;
+}
+
+.info-section h4 {
+  margin: 0 0 16px 0;
+  color: #333;
+  font-size: 1.1rem;
+  border-bottom: 2px solid #e6f7ff;
+  padding-bottom: 8px;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.info-item.full-width {
+  grid-column: 1 / -1;
+}
+
+.info-item label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.info-item span {
+  font-size: 1rem;
+  color: #333;
+  padding: 8px 0;
+}
+
+.care-instructions, .additional-info, .parent-notes {
+  background: #f8f9fa;
+  padding: 12px;
+  border-radius: 6px;
+  border-left: 3px solid #52c41a;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: #333;
+}
+
+/* Form Actions */
+.form-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  padding: 20px;
+  border-top: 1px solid #f0f0f0;
+  background: #fafafa;
+  border-radius: 0 0 8px 8px;
+}
+
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  min-width: 150px;
+  justify-content: center;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+.btn-success {
+  background: #52c41a;
+  color: white;
+}
+
+.btn-success:hover {
+  background: #73d13d;
+}
+
+.btn-danger {
+  background: #ff4d4f;
+  color: white;
+}
+
+.btn-danger:hover {
+  background: #ff7875;
+}
+
+.btn-secondary {
+  background: #f5f5f5;
+  color: #666;
+  border: 1px solid #d9d9d9;
+}
+
+.btn-secondary:hover {
+  background: #e6e6e6;
+  color: #333;
+}
+
+/* Confirmation Dialog */
+.confirm-dialog-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1001;
+}
+
+.confirm-dialog {
+  background: white;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.confirm-dialog-header {
+  padding: 20px;
+  border-bottom: 1px solid #f0f0f0;
+  background: #fafafa;
+  border-radius: 8px 8px 0 0;
+}
+
+.confirm-dialog-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 1.2rem;
+}
+
+.confirm-dialog-body {
+  padding: 20px;
+}
+
+.confirm-dialog-body p {
+  margin: 0 0 20px 0;
+  color: #666;
+  line-height: 1.5;
+}
+
+.notes-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.notes-section label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.notes-section textarea {
+  padding: 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 80px;
+  transition: border-color 0.2s ease;
+}
+
+.notes-section textarea:focus {
+  outline: none;
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1);
+}
+
+.notes-section textarea::placeholder {
+  color: #bfbfbf;
+}
+
+.confirm-dialog-actions {
+  padding: 20px;
+  border-top: 1px solid #f0f0f0;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .vaccination-form-modal-overlay {
+    padding: 10px;
+  }
+
+  .vaccination-form-modal {
+    max-height: 95vh;
+  }
+
+  .vaccination-form-modal-header,
+  .vaccination-form-modal-body {
+    padding: 15px;
+  }
+
+  .form-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .btn {
+    width: 100%;
+  }
+
+  .confirm-dialog {
+    width: 95%;
+    margin: 10px;
+  }
+
+  .confirm-dialog-actions {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 480px) {
+  .vaccination-form-modal-header h2 {
+    font-size: 1.2rem;
+  }
+
+  .student-info h3 {
+    font-size: 1.1rem;
+  }
+
+  .info-section {
+    padding: 15px;
+  }
+}
+
+/* Animation */
+.vaccination-form-modal-overlay {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.vaccination-form-modal {
+  animation: slideIn 0.3s ease-out;
+}
+
+.confirm-dialog {
+  animation: popIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

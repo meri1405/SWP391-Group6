@@ -5,6 +5,7 @@ import lombok.*;
 
 import java.time.LocalDate;
 
+
 @Entity
 @Getter
 @Setter
@@ -28,10 +29,13 @@ public class ItemRequest {
     private String itemType;
 
     @Column(name = "dosage", nullable = false)
-    private int dosage;
+    private double dosage;
 
     @Column(name = "frequency", nullable = false)
     private int frequency;
+
+    @Column(name = "note", nullable = true)
+    private String note;
 
     @Column(name = "startDate", nullable = false)
     private LocalDate startDate;
@@ -39,10 +43,10 @@ public class ItemRequest {
     @Column(name = "endDate", nullable = false)
     private LocalDate endDate;
 
-    @Column(name = "note", nullable = false)
-    private String note;
-
     @ManyToOne
-    @JoinColumn(name = "requestID", referencedColumnName = "id")
+    @JoinColumn(name = "medicationRequestId", nullable = false)
     private MedicationRequest medicationRequest;
+
+    @OneToMany(mappedBy = "itemRequest", cascade = CascadeType.ALL)
+    private java.util.List<MedicationSchedule> medicationSchedules;
 }

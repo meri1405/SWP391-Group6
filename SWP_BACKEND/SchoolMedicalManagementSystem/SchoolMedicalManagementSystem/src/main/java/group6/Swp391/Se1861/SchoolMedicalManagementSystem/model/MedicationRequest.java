@@ -19,16 +19,25 @@ public class MedicationRequest {
     private Long id;
 
     @Column(name = "requestDate", nullable = false)
-    private LocalDate requestDate;
+    private LocalDate requestDate = LocalDate.now();
 
     @Column(name = "note", nullable = false)
     private String note;
+
+    @Column(name = "nurseNote")
+    private String nurseNote;
 
     @Column(name = "status", nullable = false)
     private String status;
 
     @Column(name = "isConfirm", nullable = false)
     private boolean isConfirm;
+
+    // Add prescription images field - stored as base64 strings
+    @ElementCollection
+    @CollectionTable(name = "medication_request_images", joinColumns = @JoinColumn(name = "medication_request_id"))
+    @Column(name = "image_data", columnDefinition = "LONGTEXT")
+    private List<String> prescriptionImages;
 
     @OneToMany(mappedBy = "medicationRequest", cascade = CascadeType.ALL)
     private List<ItemRequest> itemRequests;
@@ -45,3 +54,5 @@ public class MedicationRequest {
     @JoinColumn(name = "parentID", referencedColumnName = "userID")
     private User parent;
 }
+
+

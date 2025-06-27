@@ -1,0 +1,141 @@
+/* Approved Health Profile Styles */
+.approved-health-card {
+  margin-bottom: 16px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.approved-health-card .ant-card-head-title {
+  color: #52c41a;
+  font-weight: 600;
+}
+
+.approved-health-card .ant-descriptions-item-label {
+  background-color: #f6ffed;
+  font-weight: 600;
+}
+
+.approved-health-card .ant-list-item {
+  border-bottom: 1px solid #f0f0f0;
+  padding: 16px 0;
+}
+
+.approved-health-card .ant-list-item:hover {
+  background-color: #fafafa;
+  border-radius: 4px;
+  margin: 0 8px;
+  padding: 16px 8px;
+}
+
+.approved-health-card .ant-tag {
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.approved-health-card .ant-empty {
+  margin: 40px 0;
+}
+
+.approved-health-card .ant-empty-description {
+  color: #8c8c8c;
+  font-style: italic;
+}
+
+/* Tab styling for approved profiles */
+.approved-health-card .ant-tabs-tab {
+  font-weight: 500;
+  border-radius: 8px 8px 0 0;
+}
+
+.approved-health-card .ant-tabs-tab-active {
+  background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%);
+  color: white !important;
+}
+
+.approved-health-card .ant-tabs-content-holder {
+  padding: 16px;
+  background-color: #fafafa;
+  border-radius: 0 0 8px 8px;
+}
+
+/* Success theme colors */
+.approved-profile-success {
+  border-left: 4px solid #52c41a;
+  background: linear-gradient(135deg, #f6ffed 0%, #ffffff 100%);
+}
+
+.approved-profile-title {
+  color: #52c41a;
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.approved-profile-subtitle {
+  color: #73d13d;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+/* Health data cards */
+.health-data-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.health-metric-card {
+  padding: 16px;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #d9f7be;
+  transition: all 0.3s ease;
+}
+
+.health-metric-card:hover {
+  border-color: #52c41a;
+  box-shadow: 0 4px 12px rgba(82, 196, 26, 0.15);
+}
+
+.health-metric-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #52c41a;
+  margin-bottom: 4px;
+}
+
+.health-metric-label {
+  font-size: 14px;
+  color: #8c8c8c;
+  margin-bottom: 0;
+}
+
+.health-status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  background-color: #f6ffed;
+  border: 1px solid #b7eb8f;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #52c41a;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .health-data-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .approved-health-card {
+    margin-bottom: 12px;
+  }
+  
+  .approved-health-card .ant-descriptions {
+    font-size: 14px;
+  }
+}

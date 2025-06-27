@@ -1,33 +1,35 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import '../styles/Home.css';
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { useSystemSettings } from "../contexts/SystemSettingsContext";
+import "../styles/Home.css";
 
 const Home = () => {
   const [blogs, setBlogs] = useState([]);
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { settings } = useSystemSettings();
 
   useEffect(() => {
     // Fetch blogs data
-    fetch('/content/blogs.json')
-      .then(response => response.json())
-      .then(data => {
+    fetch("/content/blogs.json")
+      .then((response) => response.json())
+      .then((data) => {
         setBlogs(data.blogs.slice(0, 3)); // Get first 3 blogs
         setLoading(false);
       })
-      .catch(error => {
-        console.error('Error fetching blogs:', error);
+      .catch((error) => {
+        console.error("Error fetching blogs:", error);
         setLoading(false);
       });
 
     // Fetch documents data
-    fetch('/content/documents.json')
-      .then(response => response.json())
-      .then(data => {
+    fetch("/content/documents.json")
+      .then((response) => response.json())
+      .then((data) => {
         setDocuments(data.documents.slice(0, 3)); // Get first 3 documents
       })
-      .catch(error => {
-        console.error('Error fetching documents:', error);
+      .catch((error) => {
+        console.error("Error fetching documents:", error);
       });
   }, []);
   return (
@@ -35,7 +37,7 @@ const Home = () => {
       {/* Hero Section */}
       <section className="hero">
         <div className="hero-content">
-          <h1>Hệ Thống Quản Lý Y Tế Học Đường</h1>
+          <h1>{settings.systemName}</h1>
           <p>Nâng cao sức khỏe, phát triển toàn diện cho học sinh</p>
         </div>
       </section>
@@ -59,7 +61,9 @@ const Home = () => {
             <div className="info-card">
               <i className="fas fa-first-aid"></i>
               <h3>Sơ Cứu</h3>
-              <p>Trang thiết bị y tế và nhân viên y tế được đào tạo chuyên nghiệp</p>
+              <p>
+                Trang thiết bị y tế và nhân viên y tế được đào tạo chuyên nghiệp
+              </p>
             </div>
           </div>
         </div>
@@ -74,7 +78,7 @@ const Home = () => {
             <p className="loading-text">Đang tải tài liệu...</p>
           ) : (
             <div className="documents-grid">
-              {documents.map(doc => (
+              {documents.map((doc) => (
                 <div key={doc.id} className="document-card">
                   <div className="document-icon">
                     <i className="fas fa-file-medical"></i>
@@ -107,10 +111,13 @@ const Home = () => {
             <p className="loading-text">Đang tải bài viết...</p>
           ) : (
             <div className="blog-grid">
-              {blogs.map(post => (
+              {blogs.map((post) => (
                 <div key={post.id} className="blog-card">
                   <div className="blog-image">
-                    <img src={post.image || '/images/default-blog.jpg'} alt={post.title} />
+                    <img
+                      src={post.image || "/images/default-blog.jpg"}
+                      alt={post.title}
+                    />
                   </div>
                   <div className="blog-content">
                     <h3>{post.title}</h3>
@@ -136,4 +143,4 @@ const Home = () => {
   );
 };
 
-export default Home; 
+export default Home;

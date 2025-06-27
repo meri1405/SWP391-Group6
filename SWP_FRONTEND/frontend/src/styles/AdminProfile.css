@@ -1,0 +1,236 @@
+/* Admin Profile Styles - Theme riêng cho Admin */
+.admin-profile-container {
+  padding: 24px;
+  background: #f8fafc;
+  min-height: 100vh;
+}
+
+.admin-profile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.15);
+}
+
+.admin-profile-header h2 {
+  margin: 0 0 8px 0;
+  color: white;
+  font-size: 28px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.admin-profile-header p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 16px;
+}
+
+.admin-profile-main-card {
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+  border: 2px solid #e0e7ff;
+}
+
+.admin-profile-main-card .ant-card-head {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-bottom: none;
+  padding: 20px 24px;
+}
+
+.admin-profile-main-card .ant-card-head-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: white;
+}
+
+.admin-form-section {
+  background: #f1f5f9;
+  padding: 24px;
+  border-radius: 8px;
+  border: 2px solid #e0e7ff;
+  margin-bottom: 24px;
+}
+
+.admin-form-section h4 {
+  margin: 0 0 20px 0;
+  color: #374151;
+  font-size: 18px;
+  font-weight: 600;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #667eea;
+}
+
+.admin-form-group {
+  margin-bottom: 16px;
+}
+
+.admin-form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.admin-form-group input,
+.admin-form-group select {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e0e7ff;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.admin-form-group input:focus,
+.admin-form-group select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.admin-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.admin-info-section {
+  background: #f8fafc;
+  padding: 24px;
+  border-radius: 8px;
+  border: 2px solid #e0e7ff;
+  margin-bottom: 24px;
+}
+
+.admin-info-section h4 {
+  margin: 0 0 20px 0;
+  color: #374151;
+  font-size: 18px;
+  font-weight: 600;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #667eea;
+}
+
+.admin-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.admin-info-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  background: white;
+  border-radius: 8px;
+  border: 2px solid #e0e7ff;
+  transition: all 0.3s ease;
+}
+
+.admin-info-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.15);
+  border-color: #667eea;
+}
+
+.admin-info-item .info-icon {
+  color: #667eea;
+  font-size: 18px;
+  margin-top: 2px;
+}
+
+.admin-info-item div {
+  flex: 1;
+}
+
+.admin-info-item label {
+  display: block;
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.admin-info-item span {
+  font-size: 14px;
+  color: #374151;
+  font-weight: 500;
+}
+
+/* Buttons cho Admin */
+.admin-btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 8px;
+  padding: 12px 24px;
+  font-weight: 600;
+  color: white;
+  transition: all 0.3s ease;
+}
+
+.admin-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+}
+
+.admin-form-actions-enhanced {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  padding-top: 24px;
+  border-top: 2px solid #e0e7ff;
+}
+
+/* Avatar cho Admin */
+.admin-profile-avatar-large {
+  margin-bottom: 16px;
+  border: 4px solid #e0e7ff;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+.admin-avatar-section {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+/* Form validation */
+.admin-form-group input.error {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.admin-error-text {
+  color: #ef4444;
+  font-size: 12px;
+  margin-top: 4px;
+  display: block;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .admin-form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-profile-header {
+    padding: 16px;
+  }
+
+  .admin-profile-header h2 {
+    font-size: 24px;
+  }
+}
