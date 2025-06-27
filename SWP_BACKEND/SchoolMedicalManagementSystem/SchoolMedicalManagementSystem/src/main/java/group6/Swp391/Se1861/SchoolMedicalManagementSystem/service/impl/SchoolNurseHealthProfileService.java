@@ -213,7 +213,8 @@ public class SchoolNurseHealthProfileService implements ISchoolNurseHealthProfil
         }
 
         // Update profile status and nurse information
-        healthProfile.setStatus(ProfileStatus.REJECTED);        healthProfile.setNurse(nurse);
+        healthProfile.setStatus(ProfileStatus.REJECTED);
+        healthProfile.setNurse(nurse);
 
         // Set nurse note separately for rejection reason
         healthProfile.setNurseNote(nurseNote != null && !nurseNote.trim().isEmpty() ? nurseNote.trim() : null);
@@ -294,7 +295,7 @@ public class SchoolNurseHealthProfileService implements ISchoolNurseHealthProfil
 
             // Add nurse full name to additional fields
             additionalFields.put("schoolNurseFullName", 
-                healthProfile.getNurse().getFirstName() + " " + healthProfile.getNurse().getLastName());
+                healthProfile.getNurse().getLastName() + " " + healthProfile.getNurse().getFirstName());
         }
 
         // Set additional fields if any were added

@@ -229,9 +229,9 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
         List<User> schoolNurses = userRepository.findByRole_RoleName("SCHOOLNURSE");
         if (!schoolNurses.isEmpty()) {
             String title = "Hồ sơ sức khỏe mới đã được tạo";
-            String message = "Phụ huynh " + parent.getFirstName() + " " + parent.getLastName() + 
+            String message = "Phụ huynh " + parent.getFullName() +
                     " đã tạo hồ sơ sức khỏe mới cho học sinh " + 
-                    student.getFirstName() + " " + student.getLastName() + 
+                    student.getFullName() + " "  +
                     ". Vui lòng xem xét và phê duyệt.";
 
             for (User nurse : schoolNurses) {
@@ -384,28 +384,38 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
         // Validate parent is related to student
         if (!isParentRelatedToStudent(parent, healthProfile.getStudent())) {
             throw new ForbiddenAccessException("Parent is not associated with this student");
-        }        // Check if profile can be updated
+        }
+
+        // Check if profile can be updated
         // Allow updating profiles with PENDING, APPROVED, and REJECTED status
         if (healthProfile.getStatus() != ProfileStatus.PENDING && 
             healthProfile.getStatus() != ProfileStatus.APPROVED && 
             healthProfile.getStatus() != ProfileStatus.REJECTED) {
             throw new BadRequestException("Profile status does not allow updates");
-        }// Update basic profile information
+        }
+
+        // Update basic profile information
         healthProfile.setWeight(healthProfileDTO.getWeight());
         healthProfile.setHeight(healthProfileDTO.getHeight());
         healthProfile.setBloodType(healthProfileDTO.getBloodType());
         healthProfile.setNote(healthProfileDTO.getNote());
-        healthProfile.setUpdatedAt(LocalDate.now());        // If the profile was APPROVED or REJECTED, change it back to PENDING when updated
+        healthProfile.setUpdatedAt(LocalDate.now());
+
+        User nurse = null;
+        // If the profile was APPROVED or REJECTED, change it back to PENDING when updated
         if (healthProfile.getStatus() == ProfileStatus.APPROVED || 
             healthProfile.getStatus() == ProfileStatus.REJECTED) {
             healthProfile.setStatus(ProfileStatus.PENDING);
             // Clear nurse note since it will need re-review
+            nurse = healthProfile.getNurse();
             healthProfile.setNurseNote(null);
             healthProfile.setNurse(null);
         }
 
         // Save updated profile
-        HealthProfile updatedProfile = healthProfileRepository.save(healthProfile);        // Update allergies if provided
+        HealthProfile updatedProfile = healthProfileRepository.save(healthProfile);
+
+        // Update allergies if provided
         if (healthProfileDTO.getAllergies() != null) {
             Set<Allergies> existingAllergies = healthProfile.getAllergies() != null ? 
                 new HashSet<>(healthProfile.getAllergies()) : new HashSet<>();
@@ -792,6 +802,23 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
             updatedProfile = healthProfileRepository.save(updatedProfile);
         }
 
+        Student student = updatedProfile.getStudent();
+
+        if (nurse != null) {
+            String title = "Hồ sơ sức khỏe đã được cập nhật";
+            String message = "Phụ huynh " + parent.getFullName() +
+                    " đã cập nhật hồ sơ sức khỏe cho học sinh " +
+                    student.getFullName() + " " +
+                    ". Vui lòng xem xét và phê duyệt.";
+
+            notificationService.createHealthProfileUpdateNotification(
+                    updatedProfile,
+                    nurse,
+                    "HEALTH_PROFILE_UPDATED",
+                    title,
+                    message
+            );
+        }
         return convertToDetailedDTO(updatedProfile);
     }
 
@@ -848,8 +875,11 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
         dto.setNurseNote(healthProfile.getNurseNote());
         dto.setStudentId(healthProfile.getStudent().getStudentID());
 
+
+
         if (healthProfile.getNurse() != null) {
             dto.setNurseId(healthProfile.getNurse().getId());
+
         }
 
         if (healthProfile.getParent() != null) {
@@ -878,8 +908,18 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
         dto.setNurseNote(healthProfile.getNurseNote());
         dto.setStudentId(healthProfile.getStudent().getStudentID());
 
+        Map<String, Object> additionalFields = new HashMap<>();
         if (healthProfile.getNurse() != null) {
             dto.setNurseId(healthProfile.getNurse().getId());
+            // Add nurse full name to additional fields
+            additionalFields.put("schoolNurseFullName",
+                    healthProfile.getNurse().getLastName() + " " + healthProfile.getNurse().getFirstName());
+
+        }
+
+        // Set additional fields if any were added
+        if (!additionalFields.isEmpty()) {
+            dto.setAdditionalFields(additionalFields);
         }
 
         if (healthProfile.getParent() != null) {
