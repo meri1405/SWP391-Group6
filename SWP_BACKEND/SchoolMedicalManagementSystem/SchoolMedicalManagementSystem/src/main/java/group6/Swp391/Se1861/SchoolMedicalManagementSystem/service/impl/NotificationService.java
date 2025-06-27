@@ -71,6 +71,55 @@ public class NotificationService implements INotificationService {
         return notificationDTO;
     }
 
+
+    /**
+     *  NOTIFICATION FOR UPDATE HEALTH PROFILE
+     * */
+
+    @Override
+    public NotificationDTO createHealthProfileUpdateNotification(
+            HealthProfile healthProfile,
+            User recipient,
+            String notificationType,
+            String title,
+            String message) {
+
+        // Check if recipient exists
+        if (recipient == null) {
+            System.out.println("Warning: Cannot send notification - recipient is null for health profile ID: " + healthProfile.getId());
+            return null;
+        }
+
+        // Create and save notification entity
+        Notification notification = new Notification();
+        notification.setTitle(title);
+        notification.setMessage(message);
+        notification.setNotificationType(notificationType);
+        notification.setRecipient(recipient);
+        // Set health profile in notification (assuming there's a field for it)
+        // If there's no field for health profile in Notification, you may need to add it
+
+        Notification savedNotification = notificationRepository.save(notification);
+
+        // Convert to DTO
+        NotificationDTO notificationDTO = convertToDTO(savedNotification);
+
+        try {
+            // Send real-time notification via WebSocket
+            if (recipient.getUsername() != null) {
+                messagingTemplate.convertAndSendToUser(
+                        recipient.getUsername(),
+                        "/topic/notifications",
+                        notificationDTO
+                );
+            }
+        } catch (Exception e) {
+            // Log the error but don't fail the entire transaction
+            System.err.println("Error sending WebSocket notification: " + e.getMessage());
+        }
+
+        return notificationDTO;
+    }
     /**
      * Create a new notification for medication schedule status update
      */

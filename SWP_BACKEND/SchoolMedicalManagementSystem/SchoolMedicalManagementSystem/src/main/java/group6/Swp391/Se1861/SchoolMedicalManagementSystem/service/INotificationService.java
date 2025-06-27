@@ -16,6 +16,18 @@ public interface INotificationService {
             String title,
             String message);
 
+
+    /**
+     * NOTIFICATION FOR UPDATE HEALTH PROFILE
+     * */
+
+    NotificationDTO createHealthProfileUpdateNotification(
+            HealthProfile healthProfile,
+            User recipient,
+            String notificationType,
+            String title,
+            String message);
+
     /**
      * Create a new notification for medical events
      */
