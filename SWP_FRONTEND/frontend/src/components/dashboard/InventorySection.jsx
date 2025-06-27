@@ -48,6 +48,7 @@ const InventorySection = () => {
     const [selectedRequest, setSelectedRequest] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('all');
+    const [statusFilter, setStatusFilter] = useState('all'); // Add status filter
     const [messageApi, contextHolder] = message.useMessage();
     const [restockRequests, setRestockRequests] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -455,6 +456,7 @@ const InventorySection = () => {
                             </Button>
                         </>
                     )}
+                    {/* ĐÃ BỎ nút Hoàn thành & Nhập kho */}
                 </Space>
             ),
         },
@@ -620,10 +622,17 @@ const InventorySection = () => {
     }, [messageApi]);
 
     // Fetch restock requests for manager review
-    const fetchRestockRequests = useCallback(async () => {
+    const fetchRestockRequests = useCallback(async (status = 'all') => {
         try {
             setLoading(true);
-            const requests = await restockRequestApi.getPendingRequests();
+            let requests;
+            
+            if (status === 'all') {
+                requests = await restockRequestApi.getAllRequests();
+            } else {
+                requests = await restockRequestApi.getRequestsByStatus(status);
+            }
+            
             console.log('Fetched restock requests:', requests);
             if (requests.length > 0) {
                 console.log('Sample request with items:', requests[0]);
@@ -646,20 +655,29 @@ const InventorySection = () => {
 
     useEffect(() => {
         if (activeTab === 'requests') {
-            fetchRestockRequests();
+            fetchRestockRequests(statusFilter);
         }
-    }, [activeTab, fetchRestockRequests]);
+    }, [activeTab, statusFilter, fetchRestockRequests]);
 
     // Handle request approval
     const handleApproveRequest = async (requestId, approvedItems) => {
         try {
+            // Transform the approvedItems array into a map of item ID to approval data
+            const itemApprovals = {};
+            approvedItems.forEach(item => {
+                itemApprovals[item.itemId] = {
+                    quantity: item.approvedQuantity,
+                    unit: item.unit || 'unit'  // Use the item's unit or default to 'unit'
+                };
+            });
+            
             const approvalData = {
                 reviewerId: 1, // This should come from auth context
                 reviewNotes: 'Approved by manager',
-                itemApprovals: approvedItems
+                itemApprovals: itemApprovals
             };
             
-            await restockRequestApi.approveRequestWithQuantities(requestId, approvalData);
+            await restockRequestApi.approveRequest(requestId, approvalData);
             messageApi.success('Đã duyệt yêu cầu bổ sung');
             fetchRestockRequests();
             setShowApprovalModal(false);
@@ -744,20 +762,21 @@ const InventorySection = () => {
                             key="requests"
                         />
                     </Tabs>
-                    <Space>
-                        <Button
-                            type="primary"
-                            icon={<PlusOutlined />}
-                            onClick={() => {
-                                setEditingRecord(null);
-                                form.resetFields();
-                                setShowAddModal(true);
-                            }}
-                            disabled={activeTab === 'requests'}
-                        >
-                            Thêm mới
-                        </Button>
-                    </Space>
+                    {activeTab !== 'requests' && (
+                        <Space>
+                            <Button
+                                type="primary"
+                                icon={<PlusOutlined />}
+                                onClick={() => {
+                                    setEditingRecord(null);
+                                    form.resetFields();
+                                    setShowAddModal(true);
+                                }}
+                            >
+                                Thêm mới
+                            </Button>
+                        </Space>
+                    )}
                 </div>
 
                 <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
@@ -773,28 +792,39 @@ const InventorySection = () => {
                     <Col xs={24} sm={12} md={8}>
                         <Select
                             style={{ width: '100%' }}
-                            value={categoryFilter}
-                            onChange={setCategoryFilter}
-                            disabled={activeTab === 'requests'}
+                            value={activeTab === 'requests' ? statusFilter : categoryFilter}
+                            onChange={activeTab === 'requests' ? setStatusFilter : setCategoryFilter}
                         >
-                            <Option value="all">Tất cả loại</Option>
-                            {activeTab === 'medicines' ? (
+                            {activeTab === 'requests' ? (
                                 <>
-                                    <Option value="painkiller">Giảm đau</Option>
-                                    <Option value="antibiotic">Kháng sinh</Option>
-                                    <Option value="vitamin">Vitamin</Option>
-                                    <Option value="supplement">Thực phẩm bổ sung</Option>
+                                    <Option value="all">Tất cả trạng thái</Option>
+                                    <Option value="PENDING">Chờ duyệt</Option>
+                                    <Option value="APPROVED">Đã duyệt</Option>
+                                    <Option value="REJECTED">Từ chối</Option>
+                                    {/* <Option value="COMPLETED">Hoàn thành</Option> */}
                                 </>
-                            ) : activeTab === 'supplies' ? (
+                            ) : (
                                 <>
-                                    <Option value="bandage">Băng y tế</Option>
-                                    <Option value="gloves">Găng tay</Option>
-                                    <Option value="equipment">Thiết bị</Option>
-                                    <Option value="antiseptic">Sát trung</Option>
-                                    <Option value="medical_device">Thiết bị y tế</Option>
+                                    <Option value="all">Tất cả loại</Option>
+                                    {activeTab === 'medicines' ? (
+                                        <>
+                                            <Option value="painkiller">Giảm đau</Option>
+                                            <Option value="antibiotic">Kháng sinh</Option>
+                                            <Option value="vitamin">Vitamin</Option>
+                                            <Option value="supplement">Thực phẩm bổ sung</Option>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Option value="bandage">Băng y tế</Option>
+                                            <Option value="gloves">Găng tay</Option>
+                                            <Option value="equipment">Thiết bị</Option>
+                                            <Option value="antiseptic">Sát trung</Option>
+                                            <Option value="medical_device">Thiết bị y tế</Option>
+                                            <Option value="other">Khác</Option>
+                                        </>
+                                    )}
                                 </>
-                            ) : null}
-                            <Option value="other">Khác</Option>
+                            )}
                         </Select>
                     </Col>
                 </Row>
@@ -866,15 +896,10 @@ const InventorySection = () => {
 
                     <Form.Item
                         name="displayQuantity"
-                        label="Số lượng"
-                        rules={[{ required: true, message: 'Vui lòng nhập số lượng' }]}
+                        label="Số lượng hiển thị"
+                        rules={[{ required: true, message: 'Vui lòng nhập số lượng hiển thị' }]}
                     >
-                        <InputNumber 
-                            min={0} 
-                            style={{ width: '100%' }} 
-                            disabled={editingRecord ? true : false}
-                            placeholder={editingRecord ? "Không thể sửa số lượng" : "Nhập số lượng"}
-                        />
+                        <InputNumber min={0} style={{ width: '100%' }} />
                     </Form.Item>
 
                     <Form.Item
@@ -947,17 +972,9 @@ const InventorySection = () => {
 
                     <Form.Item
                         name="location"
-                        label="Vị trí"
-                        rules={[{ required: true, message: 'Vui lòng chọn vị trí' }]}
+                        label="Vị trí kho"
                     >
-                        <Select placeholder="Chọn vị trí">
-                            <Option value="Kệ A1">Kệ A1</Option>
-                            <Option value="Kệ A2">Kệ A2</Option>
-                            <Option value="Kệ A3">Kệ A3</Option>
-                            <Option value="Kệ B1">Kệ B1</Option>
-                            <Option value="Kệ B2">Kệ B2</Option>
-                            <Option value="Kệ B3">Kệ B3</Option>
-                        </Select>
+                        <Input placeholder="Nhập vị trí kho (mặc định: Kho chính)" />
                     </Form.Item>
 
                     <Form.Item
@@ -1043,32 +1060,57 @@ const InventorySection = () => {
                                         title: 'Loại',
                                         dataIndex: 'category',
                                         key: 'category',
+                                        render: (category) => getCategoryTag(category),
                                     },
                                     {
                                         title: 'Tồn kho hiện tại',
-                                        dataIndex: 'currentStock',
                                         key: 'currentStock',
-                                        render: (stock, record) => {
-                                            const unit = record.displayUnit || record.unit || 'unit';
-                                            return `${stock || 0} ${unit}`;
+                                        render: (_, record) => {
+                                            const displayQty = record.currentDisplayQuantity || 0;
+                                            const displayUnit = record.currentDisplayUnit || 'unit';
+                                            const stockBasein = record.currentStockInBaseUnit;
+                                            const baseUnit = record.baseUnit || 'unit';
+                                            return (
+                                                <>
+                                                    {displayQty} {displayUnit} 
+                                                    <br />
+                                                    <span style={{ color: 'gray', fontSize: '0.9em' }}>
+                                                        ({stockBasein || 0} {baseUnit})
+                                                    </span>
+                                                </>
+                                            );
                                         },
                                     },
                                     {
                                         title: 'Số lượng yêu cầu',
-                                        dataIndex: 'requestedQuantity',
                                         key: 'requestedQuantity',
-                                        render: (qty, record) => {
-                                            const unit = record.displayUnit || record.unit || 'unit';
-                                            return `${qty || 0} ${unit}`;
+                                        render: (_, record) => {
+                                            const requestedQty = record.requestedQuantityInBaseUnit || 0;
+                                            const baseUnit = record.baseUnit || 'unit';
+                                            return `${requestedQty} ${baseUnit}`;
                                         },
                                     },
                                     {
                                         title: 'Số lượng được duyệt',
-                                        dataIndex: 'approvedQuantity',
                                         key: 'approvedQuantity',
-                                        render: (qty, record) => {
-                                            const unit = record.displayUnit || record.unit || 'unit';
-                                            return qty ? `${qty} ${unit}` : 'Chưa duyệt';
+                                        render: (_, record) => {
+                                            // Get request status from parent (selectedRequest)
+                                            const requestStatus = selectedRequest?.status;
+                                            
+                                            if (requestStatus === 'REJECTED') {
+                                                return <Tag color="red">Từ chối</Tag>;
+                                            } else if (requestStatus === 'APPROVED' || requestStatus === 'COMPLETED') {
+                                                if (record.approvedQuantityInBaseUnit && record.baseUnit) {
+                                                    return `${record.approvedQuantityInBaseUnit} ${record.baseUnit}`;
+                                                } else {
+                                                    // Approved but no specific quantity set, show requested quantity
+                                                    const requestedQty = record.requestedQuantityInBaseUnit || 0;
+                                                    const baseUnit = record.baseUnit || 'unit';
+                                                    return `${requestedQty} ${baseUnit}`;
+                                                }
+                                            } else {
+                                                return <Tag color="blue">Chưa duyệt</Tag>;
+                                            }
                                         },
                                     },
                                     {
@@ -1106,7 +1148,8 @@ const InventorySection = () => {
                         onFinish={(values) => {
                             const approvedItems = selectedRequest.restockItems.map(item => ({
                                 itemId: item.id,
-                                approvedQuantity: values[`qty_${item.id}`] || 0
+                                approvedQuantity: values[`qty_${item.id}`] || 0,
+                                unit: item.baseUnit || 'unit'
                             }));
                             handleApproveRequest(selectedRequest.id, approvedItems);
                         }}
@@ -1128,19 +1171,19 @@ const InventorySection = () => {
                                     <strong>{item.medicalSupplyName}</strong>
                                     <br />
                                     <Typography.Text type="secondary">
-                                        Tồn kho: {item.currentStock} {item.unit}
+                                        Tồn kho: {item.currentDisplayQuantity || 0} {item.currentDisplayUnit || 'unit'}
                                     </Typography.Text>
                                 </Col>
                                 <Col span={8}>
                                     <Typography.Text>
-                                        Yêu cầu: {item.requestedQuantity} {item.unit}
+                                        Yêu cầu: {item.requestedQuantityInBaseUnit || 0} {item.baseUnit || 'unit'}
                                     </Typography.Text>
                                 </Col>
                                 <Col span={8}>
                                     <Form.Item
                                         name={`qty_${item.id}`}
                                         label="Số lượng duyệt"
-                                        initialValue={item.requestedQuantity}
+                                        initialValue={item.requestedQuantityInBaseUnit}
                                         rules={[
                                             { required: true, message: 'Vui lòng nhập số lượng' },
                                             { type: 'number', min: 0, message: 'Số lượng phải lớn hơn 0' }
@@ -1148,9 +1191,9 @@ const InventorySection = () => {
                                     >
                                         <InputNumber
                                             min={0}
-                                            max={item.requestedQuantity * 2}
+                                            max={(item.requestedQuantityInBaseUnit || 0) * 2}
                                             style={{ width: '100%' }}
-                                            addonAfter={item.unit}
+                                            addonAfter={item.baseUnit || 'unit'}
                                         />
                                     </Form.Item>
                                 </Col>

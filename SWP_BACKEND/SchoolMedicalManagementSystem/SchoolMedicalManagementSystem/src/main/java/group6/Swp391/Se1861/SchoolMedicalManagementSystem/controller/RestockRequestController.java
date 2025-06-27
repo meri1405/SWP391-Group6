@@ -26,7 +26,7 @@ public class RestockRequestController {
     
     // School Nurse endpoints
     @GetMapping
-    @PreAuthorize("hasRole('SCHOOLNURSE')")
+    @PreAuthorize("hasRole('SCHOOLNURSE') or hasRole('MANAGER')")
     public ResponseEntity<List<RestockRequestDTO>> getAllRestockRequests() {
         try {
             List<RestockRequestDTO> requests = restockRequestService.getAllRestockRequests();
@@ -217,49 +217,10 @@ public class RestockRequestController {
         try {
             Long reviewerId = ((Number) approvalData.get("reviewerId")).longValue();
             String reviewNotes = (String) approvalData.getOrDefault("reviewNotes", "");
-            
-            RestockRequestDTO approvedRequest = restockRequestService.approveRequest(id, reviewerId, reviewNotes);
-            return ResponseEntity.ok(approvedRequest);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().build();
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
-    
-    @PostMapping("/{id}/approve-with-quantities")
-    @PreAuthorize("hasRole('MANAGER')")
-    public ResponseEntity<RestockRequestDTO> approveRequestWithQuantities(
-            @PathVariable Long id,
-            @RequestBody Map<String, Object> approvalData) {
-        try {
-            Long reviewerId = ((Number) approvalData.get("reviewerId")).longValue();
-            String reviewNotes = (String) approvalData.getOrDefault("reviewNotes", "");
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> itemApprovals = (List<Map<String, Object>>) approvalData.get("itemApprovals");
-            
-            RestockRequestDTO approvedRequest = restockRequestService.approveRequestWithQuantities(
-                    id, reviewerId, reviewNotes, itemApprovals);
-            return ResponseEntity.ok(approvedRequest);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().build();
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
-    
-    @PostMapping("/{id}/approve-with-display-quantities")
-    @PreAuthorize("hasRole('MANAGER')")
-    public ResponseEntity<RestockRequestDTO> approveRequestWithDisplayQuantities(
-            @PathVariable Long id,
-            @RequestBody Map<String, Object> approvalData) {
-        try {
-            Long reviewerId = ((Number) approvalData.get("reviewerId")).longValue();
-            String reviewNotes = (String) approvalData.getOrDefault("reviewNotes", "");
             @SuppressWarnings("unchecked")
             Map<Long, Map<String, Object>> itemApprovals = (Map<Long, Map<String, Object>>) approvalData.get("itemApprovals");
             
-            RestockRequestDTO approvedRequest = restockRequestService.approveRequestWithDisplayQuantities(
+            RestockRequestDTO approvedRequest = restockRequestService.approveRequest(
                     id, reviewerId, reviewNotes, itemApprovals);
             return ResponseEntity.ok(approvedRequest);
         } catch (RuntimeException e) {

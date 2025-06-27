@@ -151,82 +151,8 @@ public class RestockRequestService implements IRestockRequestService {
     }
     
     @Override
-    public RestockRequestDTO approveRequest(Long id, Long reviewerId, String reviewNotes) {
-        RestockRequest request = restockRequestRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu bổ sung với ID: " + id));
-        
-        if (request.getStatus() != RestockRequest.RestockStatus.PENDING) {
-            throw new RuntimeException("Chỉ có thể duyệt yêu cầu đang chờ xử lý");
-        }
-        
-        request.setStatus(RestockRequest.RestockStatus.APPROVED);
-        request.setReviewedBy(reviewerId);
-        request.setReviewNotes(reviewNotes);
-        request.setReviewDate(LocalDateTime.now());
-        
-        // Auto-approve all items with requested quantities if not specified
-        if (request.getRestockItems() != null) {
-            for (RestockItem item : request.getRestockItems()) {
-                if (item.getApprovedQuantityInBaseUnit() == null) {
-                    item.setApprovedQuantityInBaseUnit(item.getRequestedQuantityInBaseUnit());
-                    item.setApprovedDisplayQuantity(item.getRequestedDisplayQuantity());
-                    item.setApprovedDisplayUnit(item.getRequestedDisplayUnit());
-                }
-            }
-        }
-        
-        RestockRequest savedRequest = restockRequestRepository.save(request);
-        log.info("Approved restock request ID: {} by user ID: {}", id, reviewerId);
-        return convertToDTO(savedRequest);
-    }
-    
-    @Override
-    public RestockRequestDTO approveRequestWithQuantities(Long id, Long reviewerId, String reviewNotes, 
-                                                         List<Map<String, Object>> itemApprovals) {
-        RestockRequest request = restockRequestRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu bổ sung với ID: " + id));
-        
-        if (request.getStatus() != RestockRequest.RestockStatus.PENDING) {
-            throw new RuntimeException("Chỉ có thể duyệt yêu cầu đang chờ xử lý");
-        }
-        
-        request.setStatus(RestockRequest.RestockStatus.APPROVED);
-        request.setReviewedBy(reviewerId);
-        request.setReviewNotes(reviewNotes);
-        request.setReviewDate(LocalDateTime.now());
-        
-        // Process item approvals
-        if (itemApprovals != null && request.getRestockItems() != null) {
-            Map<Long, Map<String, Object>> approvalMap = itemApprovals.stream()
-                    .collect(Collectors.toMap(
-                            item -> ((Number) item.get("itemId")).longValue(),
-                            item -> item
-                    ));
-            
-            for (RestockItem item : request.getRestockItems()) {
-                Map<String, Object> approval = approvalMap.get(item.getId());
-                if (approval != null) {
-                    BigDecimal approvedQuantity = new BigDecimal(approval.get("approvedQuantity").toString());
-                    item.setApprovedQuantityInBaseUnit(approvedQuantity);
-                    
-                    // Convert back to display unit
-                    MedicalSupply supply = item.getMedicalSupply();
-                    BigDecimal approvedDisplayQuantity = unitConversionService.convertFromBaseUnit(
-                            approvedQuantity, supply.getBaseUnit(), item.getRequestedDisplayUnit());
-                    item.setApprovedDisplayQuantity(approvedDisplayQuantity);
-                    item.setApprovedDisplayUnit(item.getRequestedDisplayUnit());
-                }
-            }
-        }
-        
-        RestockRequest savedRequest = restockRequestRepository.save(request);
-        log.info("Approved restock request ID: {} with custom quantities by user ID: {}", id, reviewerId);
-        return convertToDTO(savedRequest);
-    }
-    
-    @Override
-    public RestockRequestDTO approveRequestWithDisplayQuantities(Long id, Long reviewerId, String reviewNotes, 
-                                                                Map<Long, Map<String, Object>> itemApprovals) {
+    public RestockRequestDTO approveRequest(Long id, Long reviewerId, String reviewNotes, 
+                                           Map<Long, Map<String, Object>> itemApprovals) {
         RestockRequest request = restockRequestRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu bổ sung với ID: " + id));
         
@@ -244,9 +170,10 @@ public class RestockRequestService implements IRestockRequestService {
             for (RestockItem item : request.getRestockItems()) {
                 Map<String, Object> approval = itemApprovals.get(item.getId());
                 if (approval != null) {
+                    // Get approved display quantity and unit
                     BigDecimal approvedDisplayQuantity = new BigDecimal(approval.get("quantity").toString());
                     String approvedDisplayUnit = approval.get("unit").toString();
-                    
+
                     item.setApprovedDisplayQuantity(approvedDisplayQuantity);
                     item.setApprovedDisplayUnit(approvedDisplayUnit);
                     
@@ -255,12 +182,33 @@ public class RestockRequestService implements IRestockRequestService {
                     BigDecimal approvedInBaseUnit = unitConversionService.convertToBaseUnit(
                             approvedDisplayQuantity, approvedDisplayUnit, supply.getBaseUnit());
                     item.setApprovedQuantityInBaseUnit(approvedInBaseUnit);
+                    
+                    log.info("Approved item: {}. Display: {} {}, Base: {} {}", 
+                            item.getMedicalSupply().getName(), 
+                            approvedDisplayQuantity, approvedDisplayUnit,
+                            approvedInBaseUnit, supply.getBaseUnit());
+                } else {
+                    // If no specific approval, automatically approve the requested amount
+                    item.setApprovedDisplayQuantity(item.getRequestedDisplayQuantity());
+                    item.setApprovedDisplayUnit(item.getRequestedDisplayUnit());
+                    item.setApprovedQuantityInBaseUnit(item.getRequestedQuantityInBaseUnit());
+                }
+            }
+        } else {
+            // Auto-approve all items with requested quantities if no approvals specified
+            if (request.getRestockItems() != null) {
+                for (RestockItem item : request.getRestockItems()) {
+                    item.setApprovedDisplayQuantity(item.getRequestedDisplayQuantity());
+                    item.setApprovedDisplayUnit(item.getRequestedDisplayUnit());
+                    item.setApprovedQuantityInBaseUnit(item.getRequestedQuantityInBaseUnit());
                 }
             }
         }
         
         RestockRequest savedRequest = restockRequestRepository.save(request);
-        log.info("Approved restock request ID: {} with display quantities by user ID: {}", id, reviewerId);
+        log.info("Approved restock request ID: {} by user ID: {}", id, reviewerId);
+        // Update medical supply quantities immediately after approval
+        processApprovedRequest(id);
         return convertToDTO(savedRequest);
     }
     
@@ -318,16 +266,51 @@ public class RestockRequestService implements IRestockRequestService {
                 if (item.getApprovedQuantityInBaseUnit() != null && 
                     item.getApprovedQuantityInBaseUnit().compareTo(BigDecimal.ZERO) > 0) {
                     
-                    medicalSupplyService.addToQuantityInBaseUnit(
-                            item.getMedicalSupply().getId(),
-                            item.getApprovedQuantityInBaseUnit()
-                    );
+                    MedicalSupply supply = item.getMedicalSupply();
                     
-                    log.info("Added {} {} to supply ID: {} from restock request ID: {}", 
-                            item.getApprovedQuantityInBaseUnit(),
-                            item.getMedicalSupply().getBaseUnit(),
-                            item.getMedicalSupply().getId(),
-                            requestId);
+                    // 1. Update base unit quantity
+                    BigDecimal currentBaseQuantity = supply.getQuantityInBaseUnit();
+                    BigDecimal newBaseQuantity = currentBaseQuantity.add(item.getApprovedQuantityInBaseUnit());
+                    supply.setQuantityInBaseUnit(newBaseQuantity);
+                    
+                    // 2. Update display quantity
+                    if (item.getApprovedDisplayQuantity() != null && item.getApprovedDisplayUnit() != null &&
+                        item.getApprovedDisplayUnit().equals(supply.getDisplayUnit())) {
+                        // If the approved display unit matches the supply's display unit, directly add
+                        BigDecimal currentDisplayQuantity = supply.getDisplayQuantity();
+                        BigDecimal newDisplayQuantity = currentDisplayQuantity.add(item.getApprovedDisplayQuantity());
+                        supply.setDisplayQuantity(newDisplayQuantity);
+                        
+                        log.info("Added {} {} to display quantity for supply ID: {}", 
+                                item.getApprovedDisplayQuantity(),
+                                supply.getDisplayUnit(),
+                                supply.getId());
+                    } else {
+                        // If units don't match, convert the base unit change to display unit
+                        BigDecimal displayQtyChange = unitConversionService.convertFromBaseUnit(
+                                item.getApprovedQuantityInBaseUnit(), 
+                                supply.getBaseUnit(), 
+                                supply.getDisplayUnit());
+                        
+                        BigDecimal currentDisplayQuantity = supply.getDisplayQuantity();
+                        BigDecimal newDisplayQuantity = currentDisplayQuantity.add(displayQtyChange);
+                        supply.setDisplayQuantity(newDisplayQuantity);
+                        
+                        log.info("Converted and added {} {} (from {} {}) to display quantity for supply ID: {}", 
+                                displayQtyChange,
+                                supply.getDisplayUnit(),
+                                item.getApprovedQuantityInBaseUnit(),
+                                supply.getBaseUnit(),
+                                supply.getId());
+                    }
+                    
+                    // 3. Save the updated supply
+                    medicalSupplyRepository.save(supply);
+                    
+                    log.info("Updated inventory levels for {}: Base quantity: {} {}, Display quantity: {} {}", 
+                            supply.getName(), 
+                            newBaseQuantity, supply.getBaseUnit(),
+                            supply.getDisplayQuantity(), supply.getDisplayUnit());
                 }
             }
         }
