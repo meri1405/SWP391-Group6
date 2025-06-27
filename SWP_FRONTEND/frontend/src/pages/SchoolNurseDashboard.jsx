@@ -120,7 +120,7 @@ const SchoolNurseDashboard = () => {
     {
       key: "events",
       icon: <AlertOutlined />,
-      label: "Ghi nhận sự kiện y tế",
+      label: "Xử lý sơ cứu",
     },
     {
       key: "inventory",
