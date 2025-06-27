@@ -2,12 +2,14 @@ package group6.Swp391.Se1861.SchoolMedicalManagementSystem.controller;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.MedicalSupplyDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IMedicalSupplyService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -36,11 +38,14 @@ public class MedicalSupplyController {
     
     @PostMapping
     @PreAuthorize("hasRole('MANAGER')")
-    public ResponseEntity<MedicalSupplyDTO> createMedicalSupply(@RequestBody MedicalSupplyDTO medicalSupplyDTO) {
+    public ResponseEntity<MedicalSupplyDTO> createMedicalSupply(@Valid @RequestBody MedicalSupplyDTO medicalSupplyDTO) {
         try {
+            System.out.println("Received MedicalSupplyDTO: " + medicalSupplyDTO);
             MedicalSupplyDTO createdSupply = medicalSupplyService.createMedicalSupply(medicalSupplyDTO);
             return ResponseEntity.status(HttpStatus.CREATED).body(createdSupply);
         } catch (Exception e) {
+            System.err.println("Error creating medical supply: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.badRequest().build();
         }
     }
@@ -127,7 +132,7 @@ public class MedicalSupplyController {
             if (quantity == null || quantity <= 0) {
                 return ResponseEntity.badRequest().build();
             }
-            medicalSupplyService.subtractStock(id, quantity);
+            medicalSupplyService.subtractFromQuantityInBaseUnit(id, BigDecimal.valueOf(quantity));
             return ResponseEntity.ok().build();
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().build();

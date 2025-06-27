@@ -304,8 +304,10 @@ const MedicalSupplyInventory = () => {
     const isExpiringSoon =
       !isExpired && expirationDate.isBefore(threeMonthsLater, "day");
 
-    // Calculate stock status
-    const isLowStock = supply.quantity <= supply.minStockLevel;
+    // Calculate stock status using new field structure with fallback
+    const quantityInBaseUnit = supply.quantityInBaseUnit || supply.quantity || 0;
+    const minStockLevelInBaseUnit = supply.minStockLevelInBaseUnit || supply.minStockLevel || 0;
+    const isLowStock = quantityInBaseUnit <= minStockLevelInBaseUnit;
 
     return {
       isExpired,
@@ -387,18 +389,32 @@ const MedicalSupplyInventory = () => {
     },
     {
       title: "Số lượng",
-      dataIndex: "quantity",
-      key: "quantity",
-      render: (quantity, record) => (
-        <Space>
-          {quantity} {record.unit}
-          {record.isLowStock && (
-            <Tooltip title={`Dưới mức tối thiểu (${record.minStockLevel})`}>
-              <WarningOutlined style={{ color: "orange" }} />
-            </Tooltip>
-          )}
-        </Space>
-      ),
+      dataIndex: "displayQuantity",
+      key: "displayQuantity",
+      render: (displayQuantity, record) => {
+        const quantity = displayQuantity || record.quantity || 0;
+        const unit = record.displayUnit || record.unit || 'unit';
+        const baseQuantity = record.quantityInBaseUnit || 0;
+        const baseUnit = record.baseUnit || unit;
+        
+        return (
+          <Space direction="vertical" size="small">
+            <div>
+              {quantity} {unit}
+              {record.isLowStock && (
+                <Tooltip title={`Dưới mức tối thiểu (${record.minStockLevelInBaseUnit || record.minStockLevel})`}>
+                  <WarningOutlined style={{ color: "orange", marginLeft: 4 }} />
+                </Tooltip>
+              )}
+            </div>
+            {baseUnit !== unit && (
+              <div style={{ fontSize: '12px', color: '#666' }}>
+                ({baseQuantity} {baseUnit})
+              </div>
+            )}
+          </Space>
+        );
+      },
     },
     {
       title: "Hạn sử dụng",
@@ -472,11 +488,15 @@ const MedicalSupplyInventory = () => {
             <strong>Loại:</strong> {getCategoryTag(supply.category)}
           </p>
           <p>
-            <strong>Số lượng:</strong> {supply.quantity} {supply.unit}
+            <strong>Số lượng hiển thị:</strong> {supply.displayQuantity || supply.quantity || 0} {supply.displayUnit || supply.unit || 'unit'}
           </p>
+          {(supply.baseUnit && supply.baseUnit !== (supply.displayUnit || supply.unit)) && (
+            <p>
+              <strong>Số lượng cơ sở:</strong> {supply.quantityInBaseUnit || 0} {supply.baseUnit}
+            </p>
+          )}
           <p>
-            <strong>Mức tồn kho tối thiểu:</strong> {supply.minStockLevel}{" "}
-            {supply.unit}
+            <strong>Mức tồn kho tối thiểu:</strong> {supply.minStockLevelInBaseUnit || supply.minStockLevel || 0} {supply.baseUnit || supply.displayUnit || supply.unit || 'unit'}
           </p>
           <p>
             <strong>Hạn sử dụng:</strong>{" "}

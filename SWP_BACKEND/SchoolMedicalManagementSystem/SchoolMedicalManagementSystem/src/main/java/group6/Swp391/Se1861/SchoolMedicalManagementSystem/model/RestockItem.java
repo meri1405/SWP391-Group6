@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+
 @Entity
 @Table(name = "restock_items")
 @Data
@@ -24,11 +26,25 @@ public class RestockItem {
     @JoinColumn(name = "medical_supply_id", nullable = false)
     private MedicalSupply medicalSupply;
     
-    @Column(nullable = false)
-    private Integer requestedQuantity;
+    // Display quantities (what user sees)
+    @Column(nullable = false, precision = 15, scale = 6)
+    private BigDecimal requestedDisplayQuantity;
     
-    @Column
-    private Integer approvedQuantity;
+    @Column(nullable = false, length = 50)
+    private String requestedDisplayUnit;
+    
+    @Column(precision = 15, scale = 6)
+    private BigDecimal approvedDisplayQuantity;
+    
+    @Column(length = 50)
+    private String approvedDisplayUnit;
+    
+    // Base unit quantities (for internal calculations)
+    @Column(nullable = false, precision = 15, scale = 6)
+    private BigDecimal requestedQuantityInBaseUnit;
+    
+    @Column(precision = 15, scale = 6)
+    private BigDecimal approvedQuantityInBaseUnit;
     
     @Column(columnDefinition = "TEXT")
     private String notes;
