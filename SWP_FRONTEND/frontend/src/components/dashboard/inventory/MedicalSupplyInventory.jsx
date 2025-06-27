@@ -354,19 +354,22 @@ const MedicalSupplyInventory = () => {
 
   // Generate category tag
   const getCategoryTag = (category) => {
-    const categoryConfig = {
-      medicine: { color: "blue", text: "Thuốc" },
-      bandage: { color: "cyan", text: "Băng gạc" },
-      equipment: { color: "purple", text: "Thiết bị" },
-      consumable: { color: "green", text: "Vật tư tiêu hao" },
-      other: { color: "default", text: "Khác" },
+    const config = {
+      painkiller: { color: 'blue', text: 'Giảm đau' },
+      antibiotic: { color: 'purple', text: 'Kháng sinh' },
+      vitamin: { color: 'orange', text: 'Vitamin' },
+      supplement: { color: 'cyan', text: 'Thực phẩm bổ sung' },
+      bandage: { color: 'cyan', text: 'Băng y tế' },
+      gloves: { color: 'green', text: 'Găng tay' },
+      equipment: { color: 'geekblue', text: 'Thiết bị' },
+      antiseptic: { color: 'red', text: 'Sát trung' },
+      medical_device: { color: 'magenta', text: 'Thiết bị y tế' },
+      other: { color: 'default', text: 'Khác' }
     };
-
-    const config = categoryConfig[category] || {
-      color: "default",
-      text: category,
-    };
-    return <Tag color={config.color}>{config.text}</Tag>;
+    const categoryLower = category?.toLowerCase() || 'other';
+    const categoryConfig = config[categoryLower] || config.other;
+        
+    return <Tag color={categoryConfig.color}>{categoryConfig.text}</Tag>;
   };
 
   // Table columns

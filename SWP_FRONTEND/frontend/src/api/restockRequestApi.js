@@ -58,9 +58,9 @@ export const restockRequestApi = {
   },
 
   // Get my restock requests
-  getMyRequests: async () => {
+  getMyRequests: async (userId) => {
     try {
-      const response = await axios.get(`${BASE_URL}/my-requests`);
+      const response = await axios.get(`${BASE_URL}/my-requests?userId=${userId}`);
       return response.data;
     } catch (error) {
       console.error("Error fetching my restock requests:", error);
@@ -127,7 +127,7 @@ export const restockRequestApi = {
   // Get all requests (for managers)
   getAllRequestsForManager: async () => {
     try {
-      const response = await axios.get(`${BASE_URL}/all`);
+      const response = await axios.get(`${BASE_URL}/manager/all`);
       return response.data;
     } catch (error) {
       console.error("Error fetching all restock requests for manager:", error);
@@ -135,10 +135,10 @@ export const restockRequestApi = {
     }
   },
 
-  // Approve request with quantities (for managers)
-  approveRequestWithQuantities: async (requestId, approvalData) => {
+  // Approve request with quantities (consolidated method)
+  approveRequest: async (requestId, approvalData) => {
     try {
-      const response = await axios.put(`${BASE_URL}/${requestId}/approve`, approvalData);
+      const response = await axios.post(`${BASE_URL}/${requestId}/approve`, approvalData);
       return response.data;
     } catch (error) {
       console.error(`Error approving restock request ${requestId}:`, error);
@@ -149,7 +149,7 @@ export const restockRequestApi = {
   // Reject request (for managers)
   rejectRequest: async (requestId, rejectionData) => {
     try {
-      const response = await axios.put(`${BASE_URL}/${requestId}/reject`, rejectionData);
+      const response = await axios.post(`${BASE_URL}/${requestId}/reject`, rejectionData);
       return response.data;
     } catch (error) {
       console.error(`Error rejecting restock request ${requestId}:`, error);
@@ -160,7 +160,7 @@ export const restockRequestApi = {
   // Complete request (for managers)
   completeRequest: async (requestId) => {
     try {
-      const response = await axios.put(`${BASE_URL}/${requestId}/complete`);
+      const response = await axios.post(`${BASE_URL}/${requestId}/complete`);
       return response.data;
     } catch (error) {
       console.error(`Error completing restock request ${requestId}:`, error);

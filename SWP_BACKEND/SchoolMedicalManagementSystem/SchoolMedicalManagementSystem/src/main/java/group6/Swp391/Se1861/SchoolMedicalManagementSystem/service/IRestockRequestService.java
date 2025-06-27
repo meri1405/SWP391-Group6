@@ -3,6 +3,7 @@ package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.RestockRequestDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.RestockItemDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.RestockRequest;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.RestockItem;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -17,6 +18,8 @@ public interface IRestockRequestService {
     
     RestockRequestDTO createRestockRequest(RestockRequestDTO restockRequestDTO);
     
+    RestockRequestDTO createRestockRequestWithDisplayUnits(RestockRequestDTO restockRequestDTO);
+    
     RestockRequestDTO updateRestockRequest(Long id, RestockRequestDTO restockRequestDTO);
     
     void deleteRestockRequest(Long id);
@@ -27,11 +30,13 @@ public interface IRestockRequestService {
     
     List<RestockRequestDTO> getPendingRequests();
     
-    RestockRequestDTO approveRequest(Long id, Long reviewerId, String reviewNotes);
+    RestockRequestDTO approveRequest(Long id, Long reviewerId, String reviewNotes, Map<Long, Map<String, Object>> itemApprovals);
     
     RestockRequestDTO rejectRequest(Long id, Long reviewerId, String reviewNotes);
     
     RestockRequestDTO completeRequest(Long id);
+    
+    void processApprovedRequest(Long requestId);
     
     RestockRequestDTO addItemToRequest(Long requestId, RestockItemDTO restockItemDTO);
     
@@ -45,18 +50,7 @@ public interface IRestockRequestService {
     
     RestockRequestDTO convertToDTO(RestockRequest restockRequest);
     
-    RestockRequest convertToEntity(RestockRequestDTO restockRequestDTO);
-
-    RestockRequestDTO approveRequestWithQuantities(Long id, Long reviewerId, String reviewNotes, 
-                                                   List<Map<String, Object>> itemApprovals);
-    
-    // New methods for unit conversion support
-    RestockRequestDTO createRestockRequestWithDisplayUnits(RestockRequestDTO restockRequestDTO);
-    
-    RestockRequestDTO approveRequestWithDisplayQuantities(Long id, Long reviewerId, String reviewNotes, 
-                                                          Map<Long, Map<String, Object>> itemApprovals);
-    
-    void processApprovedRequest(Long requestId);
+    RestockRequest convertToEntity(RestockRequestDTO dto);
     
     List<RestockRequestDTO> getRequestsRequiringAttention();
 }
