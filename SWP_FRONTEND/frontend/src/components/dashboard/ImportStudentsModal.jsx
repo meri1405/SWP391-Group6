@@ -78,7 +78,23 @@ const ImportStudentsModal = ({ visible, onCancel, onSuccess }) => {
       const file = fileList[0];
       const response = await importStudentsFromExcel(file);
       
-      message.success(`Import thành công! Đã tạo ${response.studentsCreated || 0} học sinh và ${response.parentsCreated || 0} phụ huynh`);
+      // Extract counts from response
+      const studentsCount = response.students?.length || 0;
+      
+      // Try to extract parent count from the message or fallback to simple calculation
+      let parentsCount = 0;
+      if (response.message) {
+        const match = response.message.match(/(\d+) học sinh, (\d+) phụ huynh/);
+        if (match && match[2]) {
+          parentsCount = parseInt(match[2], 10);
+        } else {
+          parentsCount = (response.father ? 1 : 0) + (response.mother ? 1 : 0);
+        }
+      } else {
+        parentsCount = (response.father ? 1 : 0) + (response.mother ? 1 : 0);
+      }
+      
+      message.success(`Import thành công! Đã tạo ${studentsCount} học sinh và ${parentsCount} phụ huynh`);
       setFileList([]);
       onSuccess && onSuccess(response);
       onCancel();

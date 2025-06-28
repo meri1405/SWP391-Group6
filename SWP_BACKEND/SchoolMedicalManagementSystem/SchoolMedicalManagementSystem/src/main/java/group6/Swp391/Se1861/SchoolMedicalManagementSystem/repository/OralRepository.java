@@ -21,6 +21,6 @@ public interface OralRepository extends JpaRepository<Oral, Long> {
     @Query("SELECT o FROM Oral o WHERE o.healthProfile.id = :healthProfileId AND o.dateOfExamination BETWEEN :startDate AND :endDate")
     List<Oral> findByHealthProfileAndDateRange(Long healthProfileId, LocalDate startDate, LocalDate endDate);
 
-    @Query("SELECT o FROM Oral o WHERE o.healthProfile.student.id = :studentId ORDER BY o.dateOfExamination DESC")
+    @Query("SELECT o FROM Oral o WHERE o.healthProfile.student.studentID = :studentId ORDER BY o.dateOfExamination DESC")
     List<Oral> findByStudentIdOrderByDateDesc(Long studentId);
 }

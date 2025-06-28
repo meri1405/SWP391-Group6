@@ -8,7 +8,6 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.HealthCheckCategory;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.ResultStatus;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IHealthCheckResultService;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IStudentService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

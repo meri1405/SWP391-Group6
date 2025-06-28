@@ -4,7 +4,6 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.HealthProfileDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.ProfileStatus;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.ISchoolNurseHealthProfileService;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl.SchoolNurseHealthProfileService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;

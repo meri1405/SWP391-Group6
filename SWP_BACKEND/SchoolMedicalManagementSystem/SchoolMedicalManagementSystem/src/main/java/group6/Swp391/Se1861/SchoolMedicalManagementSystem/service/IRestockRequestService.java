@@ -3,9 +3,6 @@ package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.RestockRequestDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.RestockItemDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.RestockRequest;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.RestockItem;
-
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;

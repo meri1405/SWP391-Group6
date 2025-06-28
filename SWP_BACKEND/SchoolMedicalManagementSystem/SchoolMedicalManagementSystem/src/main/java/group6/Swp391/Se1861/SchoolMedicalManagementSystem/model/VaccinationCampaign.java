@@ -3,7 +3,6 @@ package group6.Swp391.Se1861.SchoolMedicalManagementSystem.model;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 

@@ -36,6 +36,8 @@ public class ManagerStudentController {
     /**
      * Tạo học sinh cùng với phụ huynh trong cùng một form
      * Manager có thể tạo cả học sinh và phụ huynh
+     * Chỉ một phụ huynh được phép truy cập hệ thống (enabled = true)
+     * Nếu cả hai phụ huynh đều được đánh dấu enabled = true, hệ thống sẽ tự động chọn cha
      * 
      * @param request DTO chứa thông tin học sinh và phụ huynh
      * @return Response chứa thông tin học sinh và phụ huynh đã được tạo

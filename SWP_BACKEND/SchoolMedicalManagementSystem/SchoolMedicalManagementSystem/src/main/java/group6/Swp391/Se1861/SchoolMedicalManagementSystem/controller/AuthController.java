@@ -2,7 +2,6 @@ package group6.Swp391.Se1861.SchoolMedicalManagementSystem.controller;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.*;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IFirebaseOtpService;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl.FirebaseOtpService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IAuthService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;

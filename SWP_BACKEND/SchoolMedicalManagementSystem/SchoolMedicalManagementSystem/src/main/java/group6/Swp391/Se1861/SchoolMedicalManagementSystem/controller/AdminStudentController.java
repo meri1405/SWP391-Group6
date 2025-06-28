@@ -2,8 +2,6 @@ package group6.Swp391.Se1861.SchoolMedicalManagementSystem.controller;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.ParentDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.StudentDTO;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.StudentWithParentsCreationDTO;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.StudentWithParentsCreationResponseDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IParentService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IStudentService;
 import org.springframework.beans.factory.annotation.Autowired;

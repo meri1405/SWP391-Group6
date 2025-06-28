@@ -70,6 +70,8 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [studentDob, setStudentDob] = useState(null);
+  const [fatherEnabled, setFatherEnabled] = useState(true);
+  const [motherEnabled, setMotherEnabled] = useState(false);
 
   // Custom validator cho thông tin phụ huynh
   const validateParentInfo = (parentType) => {
@@ -96,6 +98,22 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
       },
     };
   };
+
+  // Handle toggle parent access - only one parent can have access
+  const handleFatherAccessChange = (checked) => {
+    setFatherEnabled(checked);
+    if (checked) {
+      setMotherEnabled(false);
+    }
+  };
+
+  const handleMotherAccessChange = (checked) => {
+    setMotherEnabled(checked);
+    if (checked) {
+      setFatherEnabled(false);
+    }
+  };
+  
   const handleSubmit = async (values) => {
     setLoading(true);
     try {
@@ -122,7 +140,7 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
             className: values.student_className,
             birthPlace: values.student_birthPlace,
             address: values.student_address,
-            citizenship: values.student_citizenship || "Việt Nam",
+            citizenship: "Việt Nam",
             isDisabled: false,
           },
         ],
@@ -148,7 +166,7 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
           jobTitle: values.father_jobTitle,
           address: values.father_address || values.student_address,
           dob: values.father_dob.format("YYYY-MM-DD"),
-          enabled: true,
+          enabled: fatherEnabled,
         };
       }
 
@@ -173,7 +191,7 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
           jobTitle: values.mother_jobTitle,
           address: values.mother_address || values.student_address,
           dob: values.mother_dob.format("YYYY-MM-DD"),
-          enabled: true,
+          enabled: motherEnabled,
         };
       }
 
@@ -195,6 +213,8 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
   const handleCancel = () => {
     form.resetFields();
     setStudentDob(null);
+    setFatherEnabled(true);
+    setMotherEnabled(false);
     onCancel();
   };
 
@@ -362,23 +382,14 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
             </Col>
             <Col span={12}>
               <Form.Item
-                name="student_citizenship"
-                label="Quốc tịch"
-                initialValue="Việt Nam"
-                rules={[{ required: true, message: "Vui lòng nhập quốc tịch" }]}
+                name="student_address"
+                label="Địa chỉ"
+                rules={[{ required: true, message: "Vui lòng nhập địa chỉ" }]}
               >
-                <Input placeholder="Nhập quốc tịch" />
+                <Input.TextArea rows={2} placeholder="Nhập địa chỉ" />
               </Form.Item>
             </Col>
           </Row>
-
-          <Form.Item
-            name="student_address"
-            label="Địa chỉ"
-            rules={[{ required: true, message: "Vui lòng nhập địa chỉ" }]}
-          >
-            <Input.TextArea rows={2} placeholder="Nhập địa chỉ" />
-          </Form.Item>
         </Card>
         {/* Thông tin cha */}{" "}
         <Card
@@ -462,6 +473,23 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
           >
             <Input.TextArea rows={2} placeholder="Nhập địa chỉ" />
           </Form.Item>
+          
+          <Form.Item
+            name="father_enabled"
+            label="Cho phép truy cập hệ thống"
+            valuePropName="checked"
+            initialValue={true}
+          >
+            <Switch 
+              checked={fatherEnabled} 
+              onChange={handleFatherAccessChange}
+            />
+          </Form.Item>
+          {fatherEnabled && motherEnabled && (
+            <Text type="warning">
+              Chỉ một phụ huynh được phép truy cập hệ thống.
+            </Text>
+          )}
         </Card>
         {/* Thông tin mẹ */}{" "}
         <Card
@@ -544,9 +572,33 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
           >
             <Input.TextArea rows={2} placeholder="Nhập địa chỉ" />
           </Form.Item>
+          
+          <Form.Item
+            name="mother_enabled"
+            label="Cho phép truy cập hệ thống"
+            valuePropName="checked"
+            initialValue={false}
+          >
+            <Switch 
+              checked={motherEnabled} 
+              onChange={handleMotherAccessChange}
+            />
+          </Form.Item>
+          {fatherEnabled && motherEnabled && (
+            <Text type="warning">
+              Chỉ một phụ huynh được phép truy cập hệ thống.
+            </Text>
+          )}
         </Card>
+        
+        <div style={{ marginTop: 16, padding: 16, backgroundColor: "#f5f5f5", borderRadius: 4 }}>
+          <Text type="secondary">
+            <strong>Lưu ý:</strong> Chỉ một phụ huynh được phép truy cập hệ thống. Nếu cả hai phụ huynh được chọn, hệ thống sẽ tự động chọn cha.
+          </Text>
+        </div>
+        
         {/* Buttons */}
-        <Form.Item style={{ textAlign: "right", marginBottom: 0 }}>
+        <Form.Item style={{ textAlign: "right", marginBottom: 0, marginTop: 16 }}>
           <Space>
             <Button onClick={handleCancel}>Hủy</Button>
             <Button type="primary" htmlType="submit" loading={loading}>
