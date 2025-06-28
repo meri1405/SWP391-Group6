@@ -173,7 +173,7 @@ public class VaccinationCampaignService implements IVaccinationCampaignService {
         campaign = campaignRepository.save(campaign);
 
         // Notify the creator
-        String approverName = manager.getFirstName() + " " + manager.getLastName();
+        String approverName = manager.getFullName();
         notificationService.createCampaignApprovalNotification(
                 campaign.getCreatedBy(),
                 campaign.getName(),
@@ -446,7 +446,7 @@ public class VaccinationCampaignService implements IVaccinationCampaignService {
         for (VaccinationForm form : forms) {
             if (form.getSentDate() == null) {
                 // Send notification to parent
-                String studentName = form.getStudent().getLastName() + " " + form.getStudent().getFirstName();
+                String studentName = form.getStudent().getFullName();
                 String vaccineName = form.getVaccineName() + " (Mũi " + form.getDoseNumber() + ")";
                 notificationService.createVaccinationConsentFormNotification(
                         form.getParent(),
@@ -649,12 +649,12 @@ public class VaccinationCampaignService implements IVaccinationCampaignService {
         
         if (campaign.getCreatedBy() != null) {
             dto.setCreatedById(campaign.getCreatedBy().getId());
-            dto.setCreatedByName(campaign.getCreatedBy().getFirstName() + " " + campaign.getCreatedBy().getLastName());
+            dto.setCreatedByName(campaign.getCreatedBy().getFullName());
         }
         
         if (campaign.getApprovedBy() != null) {
             dto.setApprovedById(campaign.getApprovedBy().getId());
-            dto.setApprovedByName(campaign.getApprovedBy().getFirstName() + " " + campaign.getApprovedBy().getLastName());
+            dto.setApprovedByName(campaign.getApprovedBy().getFullName());
         }
         
         return dto;
@@ -684,21 +684,21 @@ public class VaccinationCampaignService implements IVaccinationCampaignService {
         
         if (form.getStudent() != null) {
             dto.setStudentId(form.getStudent().getStudentID());
-            dto.setStudentFullName(form.getStudent().getFirstName() + " " + form.getStudent().getLastName());
+            dto.setStudentFullName(form.getStudent().getFullName());
             dto.setStudentCode(form.getStudent().getStudentID().toString());
             dto.setStudentClassName(form.getStudent().getClassName());
         }
         
         if (form.getParent() != null) {
             dto.setParentId(form.getParent().getId());
-            dto.setParentFullName(form.getParent().getFirstName() + " " + form.getParent().getLastName());
+            dto.setParentFullName(form.getParent().getFullName());
             dto.setParentEmail(form.getParent().getEmail());
             dto.setParentPhone(form.getParent().getPhone());
         }
         
         if (form.getCreatedBy() != null) {
             dto.setCreatedById(form.getCreatedBy().getId());
-            dto.setCreatedByName(form.getCreatedBy().getFirstName() + " " + form.getCreatedBy().getLastName());
+            dto.setCreatedByName(form.getCreatedBy().getFullName());
         }
         
         return dto;
@@ -728,7 +728,7 @@ public class VaccinationCampaignService implements IVaccinationCampaignService {
         
         if (record.getStudent() != null) {
             dto.setStudentId(record.getStudent().getStudentID());
-            dto.setStudentFullName(record.getStudent().getFirstName() + " " + record.getStudent().getLastName());
+            dto.setStudentFullName(record.getStudent().getFullName());
             dto.setStudentCode(record.getStudent().getStudentID().toString());
         }
         
@@ -744,12 +744,12 @@ public class VaccinationCampaignService implements IVaccinationCampaignService {
         
         if (record.getRecordedBy() != null) {
             dto.setRecordedById(record.getRecordedBy().getId());
-            dto.setRecordedByName(record.getRecordedBy().getFirstName() + " " + record.getRecordedBy().getLastName());
+            dto.setRecordedByName(record.getRecordedBy().getFullName());
         }
         
         if (record.getUpdatedBy() != null) {
             dto.setUpdatedById(record.getUpdatedBy().getId());
-            dto.setUpdatedByName(record.getUpdatedBy().getFirstName() + " " + record.getUpdatedBy().getLastName());
+            dto.setUpdatedByName(record.getUpdatedBy().getFullName());
         }
         
         if (record.getVaccinationForm() != null) {
