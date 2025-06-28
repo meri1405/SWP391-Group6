@@ -107,8 +107,17 @@ const MedicalEventManagement = () => {
       const response = await getMedicalEvents();
       console.log("Events API Response:", response);
       const eventsData = Array.isArray(response) ? response : [];
-      setEvents(eventsData);
-      calculateStatistics(eventsData);
+      
+      // Sort events by creation date - newest first
+      const sortedEvents = [...eventsData].sort((a, b) => {
+        // Primary sort by creation date (newest first)
+        const dateA = new Date(a.createdAt || a.occurrenceTime);
+        const dateB = new Date(b.createdAt || b.occurrenceTime);
+        return dateB - dateA;
+      });
+      
+      setEvents(sortedEvents);
+      calculateStatistics(sortedEvents);
     } catch (error) {
       console.error("Error loading medical events:", error);
       message.error("Không thể tải danh sách sự kiện y tế");
@@ -231,6 +240,7 @@ const MedicalEventManagement = () => {
       });
     }
 
+    // Make sure filtered events maintain the same sort order as the original list (newest first)
     setFilteredEvents(filtered);
   };
 
@@ -269,10 +279,47 @@ const MedicalEventManagement = () => {
     }
   };
 
-  const handleSubmit = async () => {
+  const onSubmitForm = async (values) => {
     try {
-      const values = await form.validateFields();
       setLoading(true);
+      
+      // values is already provided by form.onFinish
+      
+      // Check that all required fields have values
+      const requiredFields = [
+        'occurrenceTime', 'studentId', 'eventType', 'severityLevel', 'location'
+      ];
+      
+      const missingFields = requiredFields.filter(field => !values[field]);
+      
+      if (missingFields.length > 0) {
+        // Create a friendly message about missing fields
+        const fieldLabels = {
+          'occurrenceTime': 'Thời gian xảy ra',
+          'studentId': 'Học sinh',
+          'eventType': 'Loại sự kiện',
+          'severityLevel': 'Mức độ nghiêm trọng',
+          'location': 'Địa điểm xảy ra'
+        };
+        
+        const missingFieldLabels = missingFields.map(field => fieldLabels[field]);
+        message.error(`Vui lòng điền đầy đủ thông tin: ${missingFieldLabels.join(', ')}`);
+        setLoading(false);
+        return;
+      }
+      
+      // Validate medical supplies if any are provided
+      if (values.suppliesUsed && values.suppliesUsed.length > 0) {
+        const invalidSupplies = values.suppliesUsed.filter(
+          supply => !supply.medicalSupplyId || !supply.quantityUsed
+        );
+        
+        if (invalidSupplies.length > 0) {
+          message.error('Vui lòng chọn vật tư và nhập số lượng cho tất cả vật tư y tế');
+          setLoading(false);
+          return;
+        }
+      }
 
       // Format suppliesUsed data according to backend DTO
       const suppliesUsed = values.suppliesUsed || [];
@@ -299,13 +346,45 @@ const MedicalEventManagement = () => {
       const response = await createMedicalEvent(eventData);
       console.log("Create event response:", response);
 
+      // Show success message
       message.success("Đã thêm sự kiện mới thành công");
+      
+      // Add the new event to the top of the list
+      if (response) {
+        const newEvent = response;
+        setEvents(prevEvents => [newEvent, ...prevEvents]);
+        // Recalculate statistics
+        calculateStatistics([newEvent, ...events]);
+      } else {
+        // If no response or incomplete response, refresh the full list
+        loadEvents();
+      }
+      
       setModalVisible(false);
       form.resetFields();
-      loadEvents();
     } catch (error) {
       console.error("Error saving event:", error);
-      message.error("Có lỗi xảy ra khi lưu sự kiện");
+      
+      // Show more helpful error messages for validation failures
+      if (error.errorFields) {
+        // This is a form validation error
+        const fieldLabels = {
+          'occurrenceTime': 'Thời gian xảy ra',
+          'studentId': 'Học sinh',
+          'eventType': 'Loại sự kiện',
+          'severityLevel': 'Mức độ nghiêm trọng',
+          'location': 'Địa điểm xảy ra'
+        };
+        
+        const firstError = error.errorFields[0];
+        const fieldName = firstError.name[0];
+        const fieldLabel = fieldLabels[fieldName] || fieldName;
+        
+        message.error(`Vui lòng điền đúng thông tin: ${fieldLabel}`);
+      } else {
+        // This is another type of error
+        message.error("Có lỗi xảy ra khi lưu sự kiện");
+      }
     } finally {
       setLoading(false);
     }
@@ -603,9 +682,10 @@ const MedicalEventManagement = () => {
       <Modal
         title="Thêm sự kiện y tế mới"
         open={modalVisible}
-        onOk={handleSubmit}
+        onOk={() => form.submit()}
         onCancel={() => {
           setModalVisible(false);
+          form.resetFields();
         }}
         width={800}
         confirmLoading={loading}
@@ -613,19 +693,54 @@ const MedicalEventManagement = () => {
         forceRender
         className="event-modal"
       >
-        <Form form={form} layout="vertical" preserve={false}>
+        <Form form={form} layout="vertical" preserve={false} onFinish={onSubmitForm}>
           <Row gutter={[16, 16]}>
             <Col xs={24} sm={12}>
               <Form.Item
                 name="occurrenceTime"
                 label="Thời gian xảy ra"
-                rules={[{ required: true, message: "Vui lòng chọn thời gian" }]}
+                rules={[
+                  { required: true, message: "Vui lòng chọn thời gian" },
+                  {
+                    validator: (_, value) => {
+                      if (!value) return Promise.resolve();
+                      if (value && value > dayjs()) {
+                        return Promise.reject(
+                          new Error("Thời gian không được ở tương lai")
+                        );
+                      }
+                      return Promise.resolve();
+                    },
+                  },
+                ]}
               >
                 <DatePicker
                   showTime
                   format="DD/MM/YYYY HH:mm"
                   style={{ width: "100%" }}
                   placeholder="Chọn thời gian"
+                  disabledDate={(current) => current && current > dayjs().endOf('day')}
+                  disabledTime={() => ({
+                    disabledHours: () => {
+                      const hours = [];
+                      if (dayjs().format('DD/MM/YYYY') === dayjs().format('DD/MM/YYYY')) {
+                        for (let i = dayjs().hour() + 1; i < 24; i++) {
+                          hours.push(i);
+                        }
+                      }
+                      return hours;
+                    },
+                    disabledMinutes: (hour) => {
+                      const minutes = [];
+                      if (dayjs().format('DD/MM/YYYY') === dayjs().format('DD/MM/YYYY') && 
+                          hour === dayjs().hour()) {
+                        for (let i = dayjs().minute() + 1; i < 60; i++) {
+                          minutes.push(i);
+                        }
+                      }
+                      return minutes;
+                    }
+                  })}
                 />
               </Form.Item>
             </Col>
@@ -762,9 +877,7 @@ const MedicalEventManagement = () => {
                                     >
                                       <span>
                                         {supply.name} - Còn:{" "}
-                                        {supply.quantityInDisplayUnit ||
-                                          supply.availableQuantity ||
-                                          0}{" "}
+                                        {supply.displayQuantity || 0 }{" "}
                                         {supply.displayUnit}
                                       </span>
                                       {expiryStatus && (

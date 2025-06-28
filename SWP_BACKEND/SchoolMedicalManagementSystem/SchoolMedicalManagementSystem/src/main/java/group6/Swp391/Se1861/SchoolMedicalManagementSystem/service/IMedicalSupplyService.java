@@ -19,8 +19,6 @@ public interface IMedicalSupplyService {
     
     MedicalSupplyDTO updateMedicalSupply(Long id, MedicalSupplyDTO medicalSupplyDTO);
     
-    void deleteMedicalSupply(Long id);
-    
     void enableMedicalSupply(Long id);
     
     void disableMedicalSupply(Long id);

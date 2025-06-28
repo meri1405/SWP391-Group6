@@ -77,9 +77,9 @@ public class MedicalEventService implements IMedicalEventService {
                 String supplyName = referencedSupply.getName();
                 List<MedicalSupply> suppliesOrderedByExpiration = medicalSupplyRepository.findByNameAndEnabledOrderByExpirationDateAsc(supplyName);
 
-                // Check if there are enough total supplies available (using new field structure)
+                // Check if there are enough total supplies available in display units
                 BigDecimal totalAvailable = suppliesOrderedByExpiration.stream()
-                        .map(MedicalSupply::getQuantityInBaseUnit)
+                        .map(MedicalSupply::getDisplayQuantity)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
                         
                 if (totalAvailable.compareTo(BigDecimal.valueOf(supplyUsage.getQuantityUsed())) < 0) {
@@ -94,10 +94,26 @@ public class MedicalEventService implements IMedicalEventService {
                 for (MedicalSupply supply : suppliesOrderedByExpiration) {
                     if (remainingToUse.compareTo(BigDecimal.ZERO) <= 0) break;
 
-                    BigDecimal quantityToUseFromThisSupply = remainingToUse.min(supply.getQuantityInBaseUnit());
-
-                    // Update this supply's quantity using the service method
-                    medicalSupplyService.subtractFromQuantityInBaseUnit(supply.getId(), quantityToUseFromThisSupply);
+                    BigDecimal quantityToUseFromThisSupply = remainingToUse.min(supply.getDisplayQuantity());
+                    
+                    // First update the displayQuantity
+                    BigDecimal newDisplayQuantity = supply.getDisplayQuantity().subtract(quantityToUseFromThisSupply);
+                    supply.setDisplayQuantity(newDisplayQuantity);
+                    
+                    // Calculate the equivalent base quantity to subtract
+                    // We need the ratio of base units per display unit to do the conversion
+                    BigDecimal baseUnitToSubtract;
+                    if (supply.getDisplayQuantity().add(quantityToUseFromThisSupply).compareTo(BigDecimal.ZERO) > 0) {
+                        BigDecimal baseUnitsPerDisplayUnit = supply.getQuantityInBaseUnit().divide(
+                            supply.getDisplayQuantity().add(quantityToUseFromThisSupply), 8, BigDecimal.ROUND_HALF_UP);
+                        baseUnitToSubtract = quantityToUseFromThisSupply.multiply(baseUnitsPerDisplayUnit);
+                    } else {
+                        // If we're using all remaining quantity, just subtract all remaining base units
+                        baseUnitToSubtract = supply.getQuantityInBaseUnit();
+                    }
+                    
+                    // Update the base quantity
+                    medicalSupplyService.subtractFromQuantityInBaseUnit(supply.getId(), baseUnitToSubtract);
 
                     // If this is the first or only supply used, reference it in the event
                     if (usedSupply == null) {
@@ -110,7 +126,7 @@ public class MedicalEventService implements IMedicalEventService {
                     MedicalEventSupply eventSupply = new MedicalEventSupply();
                     eventSupply.setMedicalEvent(savedEvent);
                     eventSupply.setMedicalSupply(supply);
-                    eventSupply.setQuantityUsed(quantityToUseFromThisSupply.intValue()); // Convert back to int for the event record
+                    eventSupply.setQuantityUsed(quantityToUseFromThisSupply.intValue()); // Store the display quantity used
                     medicalEventSupplyRepository.save(eventSupply);
                 }
             }

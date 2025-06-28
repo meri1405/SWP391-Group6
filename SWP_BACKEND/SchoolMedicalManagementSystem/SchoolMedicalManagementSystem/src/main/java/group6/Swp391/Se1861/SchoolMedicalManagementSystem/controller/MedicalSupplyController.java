@@ -64,12 +64,25 @@ public class MedicalSupplyController {
             return ResponseEntity.badRequest().build();
         }
     }
-    
-    @DeleteMapping("/{id}")
+
+    @PutMapping("/{id}/enable")
     @PreAuthorize("hasRole('MANAGER')")
-    public ResponseEntity<Void> deleteMedicalSupply(@PathVariable Long id) {
+    public ResponseEntity<Void> enableMedicalSupply(@PathVariable Long id) {
         try {
-            medicalSupplyService.deleteMedicalSupply(id);
+            medicalSupplyService.enableMedicalSupply(id);
+            return ResponseEntity.noContent().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @PutMapping("/{id}/disable")
+    @PreAuthorize("hasRole('MANAGER')")
+    public ResponseEntity<Void> disableMedicalSupply(@PathVariable Long id) {
+        try {
+            medicalSupplyService.disableMedicalSupply(id);
             return ResponseEntity.noContent().build();
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
