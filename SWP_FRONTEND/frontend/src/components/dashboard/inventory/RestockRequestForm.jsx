@@ -115,18 +115,30 @@ const RestockRequestForm = ({
         })),
       };
 
-      console.log("Submitting restock request:", requestData);
+      console.log("[RestockRequestForm] Submitting restock request:", requestData);
 
-      await restockRequestApi.createRequest(requestData);
+      const createdRequest = await restockRequestApi.createRequest(requestData);
+      console.log("[RestockRequestForm] Request created successfully:", createdRequest);
+      
+      // Force notification to subscribers
+      console.log("[RestockRequestForm] Manually triggering notification to subscribers");
+      restockRequestApi.notifySubscribers();
+      
       messageApi.success("Tạo yêu cầu nhập kho thành công!");
 
       // Reset form and close modal
       form.resetFields();
       setRequestItems([]);
-      onSuccess?.();
+      
+      // Call onSuccess with the created request
+      if (onSuccess) {
+        console.log("[RestockRequestForm] Calling onSuccess callback");
+        onSuccess(createdRequest);
+      }
+      
       onCancel();
     } catch (error) {
-      console.error("Error creating restock request:", error);
+      console.error("[RestockRequestForm] Error creating restock request:", error);
       messageApi.error(
         error.response?.data?.message ||
           "Có lỗi xảy ra khi tạo yêu cầu. Vui lòng thử lại."

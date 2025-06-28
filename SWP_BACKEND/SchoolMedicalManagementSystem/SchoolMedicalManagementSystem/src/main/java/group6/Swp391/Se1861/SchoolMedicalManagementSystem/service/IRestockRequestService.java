@@ -34,8 +34,6 @@ public interface IRestockRequestService {
     
     RestockRequestDTO rejectRequest(Long id, Long reviewerId, String reviewNotes);
     
-    RestockRequestDTO completeRequest(Long id);
-    
     void processApprovedRequest(Long requestId);
     
     RestockRequestDTO addItemToRequest(Long requestId, RestockItemDTO restockItemDTO);

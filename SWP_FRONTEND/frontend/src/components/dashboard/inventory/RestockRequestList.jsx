@@ -238,6 +238,11 @@ const RestockRequestList = () => {
       render: (status) => getStatusTag(status),
     },
     {
+      title: "Phản hồi",
+      dataIndex: "reviewNotes",
+      key: "reviewNotes",
+    },
+    {
       title: "Thao tác",
       key: "action",
       render: (_, record) => (

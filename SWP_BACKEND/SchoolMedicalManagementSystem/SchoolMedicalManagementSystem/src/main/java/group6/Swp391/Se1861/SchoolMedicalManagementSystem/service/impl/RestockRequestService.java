@@ -164,7 +164,7 @@ public class RestockRequestService implements IRestockRequestService {
         request.setReviewedBy(reviewerId);
         request.setReviewNotes(reviewNotes);
         request.setReviewDate(LocalDateTime.now());
-        
+        request.setCompletedDate(LocalDateTime.now());
         // Process item approvals with display quantities
         if (itemApprovals != null && request.getRestockItems() != null) {
             for (RestockItem item : request.getRestockItems()) {
@@ -225,29 +225,9 @@ public class RestockRequestService implements IRestockRequestService {
         request.setReviewedBy(reviewerId);
         request.setReviewNotes(reviewNotes);
         request.setReviewDate(LocalDateTime.now());
-        
+        request.setCompletedDate(LocalDateTime.now());
         RestockRequest savedRequest = restockRequestRepository.save(request);
         log.info("Rejected restock request ID: {} by user ID: {}", id, reviewerId);
-        return convertToDTO(savedRequest);
-    }
-    
-    @Override
-    public RestockRequestDTO completeRequest(Long id) {
-        RestockRequest request = restockRequestRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu bổ sung với ID: " + id));
-        
-        if (request.getStatus() != RestockRequest.RestockStatus.APPROVED) {
-            throw new RuntimeException("Chỉ có thể hoàn thành yêu cầu đã được duyệt");
-        }
-        
-        // Process approved items - update inventory
-        processApprovedRequest(id);
-        
-        request.setStatus(RestockRequest.RestockStatus.COMPLETED);
-        request.setCompletedDate(LocalDateTime.now());
-        
-        RestockRequest savedRequest = restockRequestRepository.save(request);
-        log.info("Completed restock request ID: {}", id);
         return convertToDTO(savedRequest);
     }
     

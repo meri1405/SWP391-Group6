@@ -2,7 +2,49 @@ import axios from "axios";
 
 const BASE_URL = "/api/restock-requests";
 
+// Create a simple pub/sub mechanism for restock request updates
+const subscribers = [];
+
+// Debug function to log subscriber count
+const logSubscriberCount = () => {
+  console.log(`[RestockRequestApi] Current subscriber count: ${subscribers.length}`);
+};
+
 export const restockRequestApi = {
+  // Subscribe to restock request updates
+  subscribeToUpdates: (callback) => {
+    if (typeof callback !== 'function') {
+      console.error('[RestockRequestApi] Attempted to subscribe with a non-function callback');
+      return () => {}; // Return empty unsubscribe function
+    }
+    
+    console.log('[RestockRequestApi] New subscriber added');
+    subscribers.push(callback);
+    logSubscriberCount();
+    
+    // Return unsubscribe function
+    return () => {
+      const index = subscribers.indexOf(callback);
+      if (index > -1) {
+        subscribers.splice(index, 1);
+        console.log('[RestockRequestApi] Subscriber removed');
+        logSubscriberCount();
+      }
+    };
+  },
+  
+  // Notify all subscribers
+  notifySubscribers: () => {
+    console.log(`[RestockRequestApi] Notifying ${subscribers.length} subscribers`);
+    subscribers.forEach(callback => {
+      try {
+        callback();
+      } catch (error) {
+        console.error('[RestockRequestApi] Error in subscriber callback:', error);
+      }
+    });
+  },
+
   // Get all restock requests
   getAllRequests: async () => {
     try {
@@ -28,10 +70,14 @@ export const restockRequestApi = {
   // Create restock request
   createRequest: async (requestData) => {
     try {
+      console.log('[RestockRequestApi] Creating new restock request');
       const response = await axios.post(BASE_URL, requestData);
+      console.log('[RestockRequestApi] Request created successfully, notifying subscribers');
+      // Notify subscribers about the new request
+      restockRequestApi.notifySubscribers();
       return response.data;
     } catch (error) {
-      console.error("Error creating restock request:", error);
+      console.error("[RestockRequestApi] Error creating restock request:", error);
       throw error;
     }
   },
@@ -40,6 +86,8 @@ export const restockRequestApi = {
   updateRequest: async (id, requestData) => {
     try {
       const response = await axios.put(`${BASE_URL}/${id}`, requestData);
+      // Notify subscribers about the update
+      restockRequestApi.notifySubscribers();
       return response.data;
     } catch (error) {
       console.error(`Error updating restock request with id ${id}:`, error);
@@ -51,6 +99,8 @@ export const restockRequestApi = {
   deleteRequest: async (id) => {
     try {
       await axios.delete(`${BASE_URL}/${id}`);
+      // Notify subscribers about the deletion
+      restockRequestApi.notifySubscribers();
     } catch (error) {
       console.error(`Error deleting restock request with id ${id}:`, error);
       throw error;
@@ -83,6 +133,8 @@ export const restockRequestApi = {
   addItemToRequest: async (requestId, itemData) => {
     try {
       const response = await axios.post(`${BASE_URL}/${requestId}/items`, itemData);
+      // Notify subscribers about the update
+      restockRequestApi.notifySubscribers();
       return response.data;
     } catch (error) {
       console.error(`Error adding item to restock request ${requestId}:`, error);
@@ -94,6 +146,8 @@ export const restockRequestApi = {
   removeItemFromRequest: async (requestId, itemId) => {
     try {
       const response = await axios.delete(`${BASE_URL}/${requestId}/items/${itemId}`);
+      // Notify subscribers about the update
+      restockRequestApi.notifySubscribers();
       return response.data;
     } catch (error) {
       console.error(`Error removing item ${itemId} from restock request ${requestId}:`, error);
@@ -105,6 +159,8 @@ export const restockRequestApi = {
   updateRequestItem: async (requestId, itemId, itemData) => {
     try {
       const response = await axios.put(`${BASE_URL}/${requestId}/items/${itemId}`, itemData);
+      // Notify subscribers about the update
+      restockRequestApi.notifySubscribers();
       return response.data;
     } catch (error) {
       console.error(`Error updating item ${itemId} in restock request ${requestId}:`, error);
@@ -138,10 +194,14 @@ export const restockRequestApi = {
   // Approve request with quantities (consolidated method)
   approveRequest: async (requestId, approvalData) => {
     try {
+      console.log(`[RestockRequestApi] Approving restock request ${requestId}`);
       const response = await axios.post(`${BASE_URL}/${requestId}/approve`, approvalData);
+      console.log('[RestockRequestApi] Request approved successfully, notifying subscribers');
+      // Notify subscribers about the approval
+      restockRequestApi.notifySubscribers();
       return response.data;
     } catch (error) {
-      console.error(`Error approving restock request ${requestId}:`, error);
+      console.error(`[RestockRequestApi] Error approving restock request ${requestId}:`, error);
       throw error;
     }
   },
@@ -149,10 +209,14 @@ export const restockRequestApi = {
   // Reject request (for managers)
   rejectRequest: async (requestId, rejectionData) => {
     try {
+      console.log(`[RestockRequestApi] Rejecting restock request ${requestId}`);
       const response = await axios.post(`${BASE_URL}/${requestId}/reject`, rejectionData);
+      console.log('[RestockRequestApi] Request rejected successfully, notifying subscribers');
+      // Notify subscribers about the rejection
+      restockRequestApi.notifySubscribers();
       return response.data;
     } catch (error) {
-      console.error(`Error rejecting restock request ${requestId}:`, error);
+      console.error(`[RestockRequestApi] Error rejecting restock request ${requestId}:`, error);
       throw error;
     }
   },
@@ -161,6 +225,8 @@ export const restockRequestApi = {
   completeRequest: async (requestId) => {
     try {
       const response = await axios.post(`${BASE_URL}/${requestId}/complete`);
+      // Notify subscribers about the completion
+      restockRequestApi.notifySubscribers();
       return response.data;
     } catch (error) {
       console.error(`Error completing restock request ${requestId}:`, error);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     Card,
     Table,
@@ -25,11 +25,13 @@ import {
     WarningOutlined,
     CheckOutlined,
     CloseOutlined,
-    EyeOutlined
+    EyeOutlined,
+    ReloadOutlined
 } from '@ant-design/icons';
 import { restockRequestApi } from '../../api/restockRequestApi';
 import { medicalSupplyApi } from '../../api/medicalSupplyApi';
 import { unitConversionApi } from '../../api/unitConversionApi';
+import webSocketService from '../../services/webSocketService';
 import dayjs from 'dayjs';
 
 const { Option } = Select;
@@ -56,6 +58,46 @@ const InventorySection = () => {
     const [availableUnits, setAvailableUnits] = useState([]);
     const [convertibleBaseUnits, setConvertibleBaseUnits] = useState([]);
     const [selectedDisplayUnit, setSelectedDisplayUnit] = useState('');
+
+    // Add a ref to track if the component is mounted
+    const isMounted = useRef(true);
+
+    // Helper function to get current user ID from JWT token
+    const getCurrentUserId = () => {
+        // Default to manager ID 2 if we can't get the actual ID
+        let currentUserId = 2; 
+        
+        const token = localStorage.getItem('token');
+        if (token) {
+            try {
+                // Try to extract user ID from token payload
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                
+                const payload = JSON.parse(jsonPayload);
+                if (payload.userId) {
+                    // Ensure we're returning a numeric value
+                    currentUserId = Number(payload.userId);
+                } else if (payload.sub) {
+                    // If 'sub' is a number, use it directly; otherwise, default to manager ID
+                    if (!isNaN(Number(payload.sub))) {
+                        currentUserId = Number(payload.sub);
+                    } else {
+                        console.warn("Token contains non-numeric user ID:", payload.sub);
+                        // Keep the default manager ID (2)
+                    }
+                }
+            } catch (err) {
+                console.error('Error parsing token:', err);
+            }
+        }
+        
+        console.log('Resolved user ID:', currentUserId);
+        return currentUserId;
+    };
 
     const getStatusTag = (record) => {
         const quantityInBaseUnit = record.quantityInBaseUnit || 0;
@@ -387,8 +429,7 @@ const InventorySection = () => {
                 const config = {
                     PENDING: { color: 'blue', text: 'Chờ duyệt' },
                     APPROVED: { color: 'green', text: 'Đã duyệt' },
-                    REJECTED: { color: 'red', text: 'Từ chối' },
-                    COMPLETED: { color: 'purple', text: 'Hoàn thành' }
+                    REJECTED: { color: 'red', text: 'Từ chối' }
                 };
                 return <Tag color={config[status]?.color}>{config[status]?.text || status}</Tag>;
             },
@@ -430,8 +471,33 @@ const InventorySection = () => {
                                 onClick={() => {
                                     Modal.confirm({
                                         title: 'Xác nhận từ chối',
-                                        content: 'Bạn có chắc chắn muốn từ chối yêu cầu này?',
-                                        onOk: () => handleRejectRequest(record.id, 'Từ chối bởi quản lý')
+                                        content: (
+                                            <div>
+                                                <p>Bạn có chắc chắn muốn từ chối yêu cầu này?</p>
+                                                <Form.Item
+                                                    label="Lý do từ chối"
+                                                    name="rejectionReason"
+                                                    rules={[{ required: true, message: 'Vui lòng nhập lý do từ chối' }]}
+                                                >
+                                                    <TextArea 
+                                                        id="rejectionReason"
+                                                        rows={3} 
+                                                        placeholder="Nhập lý do từ chối..."
+                                                        onChange={(e) => {
+                                                            Modal.confirm.rejectionReason = e.target.value;
+                                                        }}
+                                                    />
+                                                </Form.Item>
+                                            </div>
+                                        ),
+                                        onOk: () => {
+                                            const reason = document.getElementById('rejectionReason').value;
+                                            if (!reason || reason.trim() === '') {
+                                                messageApi.error('Vui lòng nhập lý do từ chối');
+                                                return Promise.reject('Lý do từ chối không được để trống');
+                                            }
+                                            handleRejectRequest(record.id, reason);
+                                        }
                                     });
                                 }}
                             >
@@ -731,7 +797,10 @@ const InventorySection = () => {
 
     // Fetch restock requests for manager review
     const fetchRestockRequests = useCallback(async (status = 'all') => {
+        if (!isMounted.current) return;
+        
         try {
+            console.log('[InventorySection] Fetching restock requests with status:', status);
             setLoading(true);
             let requests;
             
@@ -741,17 +810,23 @@ const InventorySection = () => {
                 requests = await restockRequestApi.getRequestsByStatus(status);
             }
             
-            console.log('Fetched restock requests:', requests);
+            console.log('[InventorySection] Fetched restock requests:', requests.length);
             if (requests.length > 0) {
-                console.log('Sample request with items:', requests[0]);
-                console.log('RestockItems in first request:', requests[0].restockItems);
+                console.log('[InventorySection] Sample request with items:', requests[0]);
             }
-            setRestockRequests(requests);
+            
+            if (isMounted.current) {
+                setRestockRequests(requests);
+            }
         } catch (error) {
-            console.error('Error fetching restock requests:', error);
-            messageApi.error('Không thể tải danh sách yêu cầu bổ sung');
+            console.error('[InventorySection] Error fetching restock requests:', error);
+            if (isMounted.current) {
+                messageApi.error('Không thể tải danh sách yêu cầu bổ sung');
+            }
         } finally {
-            setLoading(false);
+            if (isMounted.current) {
+                setLoading(false);
+            }
         }
     }, [messageApi]);
 
@@ -764,11 +839,26 @@ const InventorySection = () => {
     useEffect(() => {
         if (activeTab === 'requests') {
             fetchRestockRequests(statusFilter);
+            
+            console.log('[InventorySection] Setting up WebSocket listener for restock requests');
+            // Use WebSocketService for real-time updates
+            const unsubscribe = webSocketService.addRestockRequestListener(() => {
+                console.log('[InventorySection] Received restock request update from WebSocketService');
+                if (isMounted.current) {
+                    fetchRestockRequests(statusFilter);
+                }
+            });
+            
+            // Clean up subscription when component unmounts or tab changes
+            return () => {
+                console.log('[InventorySection] Cleaning up WebSocket listener');
+                unsubscribe();
+            };
         }
     }, [activeTab, statusFilter, fetchRestockRequests]);
 
     // Handle request approval
-    const handleApproveRequest = async (requestId, approvedItems) => {
+    const handleApproveRequest = async (requestId, approvedItems, reviewNotes) => {
         try {
             // Transform the approvedItems array into a map of item ID to approval data
             const itemApprovals = {};
@@ -779,9 +869,13 @@ const InventorySection = () => {
                 };
             });
             
+            // Get current user ID from helper function
+            const currentUserId = getCurrentUserId();
+            console.log('Using reviewer ID:', currentUserId);
+            
             const approvalData = {
-                reviewerId: 1, // This should come from auth context
-                reviewNotes: 'Approved by manager',
+                reviewerId: currentUserId, // Use the actual logged in user ID
+                reviewNotes: reviewNotes || 'Duyệt bởi quản lý trường', // Use provided notes or default
                 itemApprovals: itemApprovals
             };
             
@@ -798,8 +892,17 @@ const InventorySection = () => {
     // Handle request rejection
     const handleRejectRequest = async (requestId, reason) => {
         try {
+            if (!reason || reason.trim() === '') {
+                messageApi.error('Vui lòng nhập lý do từ chối');
+                return;
+            }
+            
+            // Get current user ID from helper function
+            const currentUserId = getCurrentUserId();
+            console.log('Using reviewer ID for rejection:', currentUserId);
+            
             const rejectionData = {
-                reviewerId: 1, // This should come from auth context
+                reviewerId: currentUserId, // Use the actual logged in user ID
                 reviewNotes: reason
             };
             
@@ -814,10 +917,16 @@ const InventorySection = () => {
 
     const getTableData = () => {
         if (activeTab === 'requests') {
-            return restockRequests;
+            // Sort restock requests by requestDate (newest first)
+            return [...restockRequests].sort((a, b) => {
+                const dateA = new Date(a.requestDate || 0);
+                const dateB = new Date(b.requestDate || 0);
+                return dateB - dateA; // descending order (newest first)
+            });
         }
         
-        return activeTab === 'medicines'
+        // For medicines and supplies, apply filtering and maintain sorting
+        const filteredData = activeTab === 'medicines'
             ? medicines.filter(medicine => {
                 const matchesSearch = medicine.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                     medicine.supplier?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -830,6 +939,13 @@ const InventorySection = () => {
                 const matchesCategory = categoryFilter === 'all' || supply.category === categoryFilter;
                 return matchesSearch && matchesCategory;
             });
+            
+        // Sort the filtered data by last modified date (newest first)
+        return [...filteredData].sort((a, b) => {
+            const dateA = new Date(a.updatedAt || a.createdAt || 0);
+            const dateB = new Date(b.updatedAt || b.createdAt || 0);
+            return dateB - dateA; // descending order (newest first)
+        });
     };
 
     const getTableColumns = () => {
@@ -838,6 +954,19 @@ const InventorySection = () => {
         }
         return activeTab === 'medicines' ? medicineColumns : supplyColumns;
     };
+
+    // Add a manual refresh function for testing
+    const handleManualRefresh = () => {
+        console.log('[InventorySection] Manual refresh triggered');
+        fetchRestockRequests(statusFilter);
+    };
+
+    // Set isMounted to false when component unmounts
+    useEffect(() => {
+        return () => {
+            isMounted.current = false;
+        };
+    }, []);
 
     return (
         <div className="inventory-section">
@@ -870,7 +999,7 @@ const InventorySection = () => {
                             key="requests"
                         />
                     </Tabs>
-                    {activeTab !== 'requests' && (
+                    {activeTab !== 'requests' ? (
                         <Space>
                             <Button
                                 type="primary"
@@ -882,6 +1011,16 @@ const InventorySection = () => {
                                 }}
                             >
                                 Thêm mới
+                            </Button>
+                        </Space>
+                    ) : (
+                        <Space>
+                            <Button
+                                icon={<ReloadOutlined />}
+                                onClick={handleManualRefresh}
+                                loading={loading}
+                            >
+                                Làm mới
                             </Button>
                         </Space>
                     )}
@@ -909,7 +1048,6 @@ const InventorySection = () => {
                                     <Option value="PENDING">Chờ duyệt</Option>
                                     <Option value="APPROVED">Đã duyệt</Option>
                                     <Option value="REJECTED">Từ chối</Option>
-                                    {/* <Option value="COMPLETED">Hoàn thành</Option> */}
                                 </>
                             ) : (
                                 <>
@@ -1179,8 +1317,6 @@ const InventorySection = () => {
                 </Form>
             </Modal>
 
-
-
             {/* Request Detail Modal */}
             <Modal
                 title="Chi tiết yêu cầu bổ sung"
@@ -1217,6 +1353,9 @@ const InventorySection = () => {
                             </Descriptions.Item>
                             <Descriptions.Item label="Lý do" span={3}>
                                 {selectedRequest.reason || 'Không có lý do'}
+                            </Descriptions.Item>
+                            <Descriptions.Item label="Phản hồi" span={3}>
+                                {selectedRequest.reviewNotes || 'Không có phản hồi'}
                             </Descriptions.Item>
                         </Descriptions>
 
@@ -1277,7 +1416,7 @@ const InventorySection = () => {
                                             
                                             if (requestStatus === 'REJECTED') {
                                                 return <Tag color="red">Từ chối</Tag>;
-                                            } else if (requestStatus === 'APPROVED' || requestStatus === 'COMPLETED') {
+                                            } else if (requestStatus === 'APPROVED') {
                                                 if (record.approvedQuantityInBaseUnit && record.baseUnit) {
                                                     return `${record.approvedQuantityInBaseUnit} ${record.baseUnit}`;
                                                 } else {
@@ -1329,7 +1468,7 @@ const InventorySection = () => {
                                 approvedQuantity: values[`qty_${item.id}`] || 0,
                                 unit: item.baseUnit || 'unit'
                             }));
-                            handleApproveRequest(selectedRequest.id, approvedItems);
+                            handleApproveRequest(selectedRequest.id, approvedItems, values.reviewNotes);
                         }}
                     >
                         <Typography.Title level={5}>
@@ -1377,6 +1516,13 @@ const InventorySection = () => {
                                 </Col>
                             </Row>
                         ))}
+                        
+                        <Form.Item
+                            name="reviewNotes"
+                            label="Ghi chú duyệt"
+                        >
+                            <TextArea rows={3} placeholder="Nhập ghi chú duyệt" />
+                        </Form.Item>
                         
                         <Form.Item>
                             <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
