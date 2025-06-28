@@ -1,7 +1,6 @@
 package group6.Swp391.Se1861.SchoolMedicalManagementSystem.controller;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.ParentDTO;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.ParentCreationDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IParentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;

@@ -11,8 +11,6 @@ import {
 } from 'antd';
 import { 
   PlusOutlined, 
-  EditOutlined, 
-  DeleteOutlined, 
   DownloadOutlined,
   UploadOutlined,
   CheckCircleOutlined,
@@ -34,6 +32,8 @@ const StudentsSection = () => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(Date.now());
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
 
   // Fetch students data
   const fetchStudents = async () => {
@@ -42,7 +42,13 @@ const StudentsSection = () => {
       const data = await getAllStudents();
       console.log('Fetched students data:', data); // Debug log
       console.log('First student structure:', data[0]); // Debug first student
-      setStudents(data);
+      
+      // Sort students by ID in descending order (newest first)
+      const sortedData = [...data].sort((a, b) => {
+        return b.id - a.id; // Descending order - highest IDs (newest) first
+      });
+      
+      setStudents(sortedData);
       setLastUpdate(Date.now()); // Update timestamp to trigger re-render
     } catch (error) {
       message.error('Không thể tải danh sách học sinh: ' + error.message);
@@ -99,6 +105,15 @@ const StudentsSection = () => {
   };
 
   const columns = [
+    {
+      title: 'STT',
+      key: 'index',
+      width: 60,
+      render: (_, __, index) => {
+        // Calculate the ordinal number based on current page
+        return ((currentPage - 1) * pageSize) + index + 1;
+      },
+    },
     { 
       title: 'Họ và tên', 
       key: 'fullName',
@@ -227,7 +242,11 @@ const StudentsSection = () => {
           dataSource={students}
           rowKey="id"
           loading={loading}
-          pagination={{ pageSize: 10 }}
+          pagination={{ 
+            pageSize: pageSize,
+            onChange: (page) => setCurrentPage(page),
+            current: currentPage
+          }}
           style={{ borderRadius: 8, overflow: 'hidden' }}        />
       </Card>
 

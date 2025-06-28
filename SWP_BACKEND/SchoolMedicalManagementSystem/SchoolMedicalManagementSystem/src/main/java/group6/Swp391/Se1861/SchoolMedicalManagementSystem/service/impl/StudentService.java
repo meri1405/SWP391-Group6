@@ -160,6 +160,9 @@ public class StudentService implements IStudentService {
         validateParentData(request.getFather());
         validateParentData(request.getMother());
         
+        // Validate only one parent can have system access
+        validateSingleParentAccess(request);
+        
         // Get PARENT role
         Role parentRole = roleRepository.findByRoleName("PARENT")
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy role PARENT"));
@@ -213,6 +216,23 @@ public class StudentService implements IStudentService {
         response.setMessage(String.format("Tạo thành công %d học sinh và %s", studentCount, parentInfo));
         
         return response;
+    }
+    
+    /**
+     * Validate that only one parent can have system access (enabled = true)
+     */
+    private void validateSingleParentAccess(StudentWithParentsCreationDTO request) {
+        // If both parents exist and both are enabled, prioritize father
+        if (request.getFather() != null && request.getMother() != null) {
+            Boolean fatherEnabled = request.getFather().getEnabled();
+            Boolean motherEnabled = request.getMother().getEnabled();
+            
+            // If both are true, disable mother
+            if (Boolean.TRUE.equals(fatherEnabled) && Boolean.TRUE.equals(motherEnabled)) {
+                request.getMother().setEnabled(false);
+                System.out.println("Warning: Both parents were enabled. Automatically disabled mother's access.");
+            }
+        }
     }
     
     /**
@@ -458,9 +478,8 @@ public class StudentService implements IStudentService {
             throw new IllegalArgumentException("Địa chỉ học sinh là bắt buộc");
         }
         
-        if (studentDto.getCitizenship() == null || studentDto.getCitizenship().trim().isEmpty()) {
-            throw new IllegalArgumentException("Quốc tịch là bắt buộc");
-        }
+        // Always set citizenship to "Việt Nam" regardless of input
+        studentDto.setCitizenship("Việt Nam");
         
         // Validate gender
         if (!studentDto.getGender().equals("M") && !studentDto.getGender().equals("F")) {

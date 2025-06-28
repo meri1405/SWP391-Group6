@@ -7,7 +7,6 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.HealthProfile;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.StudentRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.HealthProfileRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IStudentService;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl.StudentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

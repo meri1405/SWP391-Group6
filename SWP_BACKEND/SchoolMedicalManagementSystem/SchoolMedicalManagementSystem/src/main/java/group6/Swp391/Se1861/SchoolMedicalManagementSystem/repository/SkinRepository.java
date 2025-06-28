@@ -23,6 +23,6 @@ public interface SkinRepository extends JpaRepository<Skin, Long> {
     @Query("SELECT s FROM Skin s WHERE s.healthProfile.id = :healthProfileId AND s.dateOfExamination BETWEEN :startDate AND :endDate")
     List<Skin> findByHealthProfileAndDateRange(Long healthProfileId, LocalDate startDate, LocalDate endDate);
 
-    @Query("SELECT s FROM Skin s WHERE s.healthProfile.student.id = :studentId ORDER BY s.dateOfExamination DESC")
+    @Query("SELECT s FROM Skin s WHERE s.healthProfile.student.studentID = :studentId ORDER BY s.dateOfExamination DESC")
     List<Skin> findByStudentIdOrderByDateDesc(Long studentId);
 }

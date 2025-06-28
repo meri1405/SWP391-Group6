@@ -31,16 +31,16 @@ public class ExcelService implements IExcelService {
     private static final int COL_STUDENT_CLASS = 4;
     private static final int COL_STUDENT_BIRTH_PLACE = 5;    
     private static final int COL_STUDENT_ADDRESS = 6;
-    private static final int COL_STUDENT_CITIZENSHIP = 7;
     
     // Excel column indices for father data
-    private static final int COL_FATHER_FIRST_NAME = 8;
-    private static final int COL_FATHER_LAST_NAME = 9;
-    private static final int COL_FATHER_PHONE = 10;
-    private static final int COL_FATHER_GENDER = 11;
-    private static final int COL_FATHER_JOB_TITLE = 12;
-    private static final int COL_FATHER_ADDRESS = 13;
-    private static final int COL_FATHER_DOB = 14;
+    private static final int COL_FATHER_FIRST_NAME = 7;
+    private static final int COL_FATHER_LAST_NAME = 8;
+    private static final int COL_FATHER_PHONE = 9;
+    private static final int COL_FATHER_GENDER = 10;
+    private static final int COL_FATHER_JOB_TITLE = 11;
+    private static final int COL_FATHER_ADDRESS = 12;
+    private static final int COL_FATHER_DOB = 13;
+    private static final int COL_FATHER_ENABLED = 14;
     
     // Excel column indices for mother data
     private static final int COL_MOTHER_FIRST_NAME = 15;
@@ -50,6 +50,8 @@ public class ExcelService implements IExcelService {
     private static final int COL_MOTHER_JOB_TITLE = 19;
     private static final int COL_MOTHER_ADDRESS = 20;
     private static final int COL_MOTHER_DOB = 21;
+    private static final int COL_MOTHER_ENABLED = 22;
+
       @Override
     public StudentWithParentsCreationResponseDTO importStudentsFromExcel(MultipartFile file) {
         validateExcelFile(file);
@@ -94,6 +96,31 @@ public class ExcelService implements IExcelService {
                     // Must have at least one parent
                     if (father == null && mother == null) {
                         throw new IllegalArgumentException("Phải có ít nhất một phụ huynh (cha hoặc mẹ)");
+                    }
+                    
+                    // Validate enable logic for parents
+                    String fatherEnableStr = getStringValue(row, COL_FATHER_ENABLED, null);
+                    String motherEnableStr = getStringValue(row, COL_MOTHER_ENABLED, null);
+                    if (father != null && mother != null) {
+                        boolean fatherEnableVal = fatherEnableStr != null && fatherEnableStr.trim().equalsIgnoreCase("có");
+                        boolean motherEnableVal = motherEnableStr != null && motherEnableStr.trim().equalsIgnoreCase("có");
+                        if (fatherEnableVal == motherEnableVal) {
+                            throw new IllegalArgumentException("Chỉ được phép chọn một phụ huynh truy cập hệ thống (Có) ở dòng " + (rowIndex + 1));
+                        }
+                        father.setEnabled(fatherEnableVal);
+                        mother.setEnabled(motherEnableVal);
+                    } else if (father != null) {
+                        boolean fatherEnableVal = fatherEnableStr != null && fatherEnableStr.trim().equalsIgnoreCase("có");
+                        if (!fatherEnableVal) {
+                            throw new IllegalArgumentException("Phụ huynh duy nhất (cha) phải được cho phép truy cập hệ thống (Có) ở dòng " + (rowIndex + 1));
+                        }
+                        father.setEnabled(true);
+                    } else if (mother != null) {
+                        boolean motherEnableVal = motherEnableStr != null && motherEnableStr.trim().equalsIgnoreCase("có");
+                        if (!motherEnableVal) {
+                            throw new IllegalArgumentException("Phụ huynh duy nhất (mẹ) phải được cho phép truy cập hệ thống (Có) ở dòng " + (rowIndex + 1));
+                        }
+                        mother.setEnabled(true);
                     }
                     
                     // Store mapping for later processing
@@ -240,7 +267,6 @@ public class ExcelService implements IExcelService {
             createHeaderCell(headerRow, COL_STUDENT_CLASS, "Lớp *");
             createHeaderCell(headerRow, COL_STUDENT_BIRTH_PLACE, "Nơi sinh *");
             createHeaderCell(headerRow, COL_STUDENT_ADDRESS, "Địa chỉ học sinh *");
-            createHeaderCell(headerRow, COL_STUDENT_CITIZENSHIP, "Quốc tịch *");
             
             createHeaderCell(headerRow, COL_FATHER_FIRST_NAME, "Tên cha");
             createHeaderCell(headerRow, COL_FATHER_LAST_NAME, "Họ cha");
@@ -249,6 +275,7 @@ public class ExcelService implements IExcelService {
             createHeaderCell(headerRow, COL_FATHER_JOB_TITLE, "Nghề nghiệp cha");
             createHeaderCell(headerRow, COL_FATHER_ADDRESS, "Địa chỉ cha");
             createHeaderCell(headerRow, COL_FATHER_DOB, "Ngày sinh cha (dd/MM/yyyy)");
+            createHeaderCell(headerRow, COL_FATHER_ENABLED, "Cho phép truy cập hệ thống (có/không) *");
             
             createHeaderCell(headerRow, COL_MOTHER_FIRST_NAME, "Tên mẹ");
             createHeaderCell(headerRow, COL_MOTHER_LAST_NAME, "Họ mẹ");
@@ -257,6 +284,7 @@ public class ExcelService implements IExcelService {
             createHeaderCell(headerRow, COL_MOTHER_JOB_TITLE, "Nghề nghiệp mẹ");
             createHeaderCell(headerRow, COL_MOTHER_ADDRESS, "Địa chỉ mẹ");
             createHeaderCell(headerRow, COL_MOTHER_DOB, "Ngày sinh mẹ (dd/MM/yyyy)");
+            createHeaderCell(headerRow, COL_MOTHER_ENABLED, "Cho phép truy cập hệ thống (có/không) *");
               // Create sample data rows - Multiple students with same parents
             Row sampleRow1 = sheet.createRow(1);
             sampleRow1.createCell(COL_STUDENT_FIRST_NAME).setCellValue("An");
@@ -266,7 +294,6 @@ public class ExcelService implements IExcelService {
             sampleRow1.createCell(COL_STUDENT_CLASS).setCellValue("5A");
             sampleRow1.createCell(COL_STUDENT_BIRTH_PLACE).setCellValue("Hà Nội");
             sampleRow1.createCell(COL_STUDENT_ADDRESS).setCellValue("123 Đường ABC, Hà Nội");
-            sampleRow1.createCell(COL_STUDENT_CITIZENSHIP).setCellValue("Việt Nam");
             
             sampleRow1.createCell(COL_FATHER_FIRST_NAME).setCellValue("Bình");
             sampleRow1.createCell(COL_FATHER_LAST_NAME).setCellValue("Nguyễn Văn");
@@ -275,6 +302,7 @@ public class ExcelService implements IExcelService {
             sampleRow1.createCell(COL_FATHER_JOB_TITLE).setCellValue("Kỹ sư");
             sampleRow1.createCell(COL_FATHER_ADDRESS).setCellValue("123 Đường ABC, Hà Nội");
             sampleRow1.createCell(COL_FATHER_DOB).setCellValue("20/03/1985");
+            sampleRow1.createCell(COL_FATHER_ENABLED).setCellValue("Có");
             
             sampleRow1.createCell(COL_MOTHER_FIRST_NAME).setCellValue("Cẩm");
             sampleRow1.createCell(COL_MOTHER_LAST_NAME).setCellValue("Trần Thị");
@@ -283,6 +311,7 @@ public class ExcelService implements IExcelService {
             sampleRow1.createCell(COL_MOTHER_JOB_TITLE).setCellValue("Giáo viên");
             sampleRow1.createCell(COL_MOTHER_ADDRESS).setCellValue("123 Đường ABC, Hà Nội");
             sampleRow1.createCell(COL_MOTHER_DOB).setCellValue("10/08/1987");
+            sampleRow1.createCell(COL_MOTHER_ENABLED).setCellValue("Không");
             
             // Second student with SAME parents (same phone numbers)
             Row sampleRow2 = sheet.createRow(2);
@@ -293,7 +322,6 @@ public class ExcelService implements IExcelService {
             sampleRow2.createCell(COL_STUDENT_CLASS).setCellValue("Mầm non");
             sampleRow2.createCell(COL_STUDENT_BIRTH_PLACE).setCellValue("Hà Nội");
             sampleRow2.createCell(COL_STUDENT_ADDRESS).setCellValue("123 Đường ABC, Hà Nội");
-            sampleRow2.createCell(COL_STUDENT_CITIZENSHIP).setCellValue("Việt Nam");
             
             // SAME FATHER (same phone) - system will reuse
             sampleRow2.createCell(COL_FATHER_FIRST_NAME).setCellValue("Bình");
@@ -303,6 +331,7 @@ public class ExcelService implements IExcelService {
             sampleRow2.createCell(COL_FATHER_JOB_TITLE).setCellValue("Kỹ sư");
             sampleRow2.createCell(COL_FATHER_ADDRESS).setCellValue("123 Đường ABC, Hà Nội");
             sampleRow2.createCell(COL_FATHER_DOB).setCellValue("20/03/1985");
+            sampleRow2.createCell(COL_FATHER_ENABLED).setCellValue("Có");
             
             // SAME MOTHER (same phone) - system will reuse
             sampleRow2.createCell(COL_MOTHER_FIRST_NAME).setCellValue("Cẩm");
@@ -312,16 +341,17 @@ public class ExcelService implements IExcelService {
             sampleRow2.createCell(COL_MOTHER_JOB_TITLE).setCellValue("Giáo viên");
             sampleRow2.createCell(COL_MOTHER_ADDRESS).setCellValue("123 Đường ABC, Hà Nội");
             sampleRow2.createCell(COL_MOTHER_DOB).setCellValue("10/08/1987");
+            sampleRow2.createCell(COL_MOTHER_ENABLED).setCellValue("Không");
             
             // Third student with DIFFERENT parents
-            Row sampleRow3 = sheet.createRow(3);            sampleRow3.createCell(COL_STUDENT_FIRST_NAME).setCellValue("Mai");
+            Row sampleRow3 = sheet.createRow(3);
+            sampleRow3.createCell(COL_STUDENT_FIRST_NAME).setCellValue("Mai");
             sampleRow3.createCell(COL_STUDENT_LAST_NAME).setCellValue("Lê Thị");
             sampleRow3.createCell(COL_STUDENT_DOB).setCellValue("20/02/2016");
             sampleRow3.createCell(COL_STUDENT_GENDER).setCellValue("F");
             sampleRow3.createCell(COL_STUDENT_CLASS).setCellValue("3A");
             sampleRow3.createCell(COL_STUDENT_BIRTH_PLACE).setCellValue("TP.HCM");
             sampleRow3.createCell(COL_STUDENT_ADDRESS).setCellValue("456 Đường XYZ, TP.HCM");
-            sampleRow3.createCell(COL_STUDENT_CITIZENSHIP).setCellValue("Việt Nam");
             
             // Only mother for this student (different family)
             // Leave father cells empty
@@ -332,6 +362,7 @@ public class ExcelService implements IExcelService {
             sampleRow3.createCell(COL_MOTHER_JOB_TITLE).setCellValue("Bác sĩ");
             sampleRow3.createCell(COL_MOTHER_ADDRESS).setCellValue("456 Đường XYZ, TP.HCM");
             sampleRow3.createCell(COL_MOTHER_DOB).setCellValue("15/01/1990");
+            sampleRow3.createCell(COL_MOTHER_ENABLED).setCellValue("Có");
             
             // Auto-size columns
             for (int i = 0; i <= COL_MOTHER_DOB; i++) {
@@ -404,9 +435,9 @@ public class ExcelService implements IExcelService {
         student.setClassName(getRequiredStringValue(row, COL_STUDENT_CLASS, "Lớp"));
         student.setBirthPlace(getRequiredStringValue(row, COL_STUDENT_BIRTH_PLACE, "Nơi sinh"));
         student.setAddress(getRequiredStringValue(row, COL_STUDENT_ADDRESS, "Địa chỉ học sinh"));
-        student.setCitizenship(getRequiredStringValue(row, COL_STUDENT_CITIZENSHIP, "Quốc tịch"));        
-        // Default to true (disabled) since this field is not in Excel
-        student.setIsDisabled(true);
+        student.setIsDisabled(false);
+        // Set citizenship to "Việt Nam" automatically
+        student.setCitizenship("Việt Nam");
         
         // Validate gender
         if (!student.getGender().equals("M") && !student.getGender().equals("F")) {
@@ -442,7 +473,8 @@ public class ExcelService implements IExcelService {
         father.setJobTitle(getStringValue(row, COL_FATHER_JOB_TITLE));
         father.setAddress(getStringValue(row, COL_FATHER_ADDRESS));
         father.setDob(getDateValue(row, COL_FATHER_DOB));
-        father.setEnabled(true);
+        // Enable will be set later in importStudentsFromExcel for validation
+        father.setEnabled(null);
         
         return father;
     }
@@ -470,7 +502,8 @@ public class ExcelService implements IExcelService {
         mother.setJobTitle(getStringValue(row, COL_MOTHER_JOB_TITLE));
         mother.setAddress(getStringValue(row, COL_MOTHER_ADDRESS));
         mother.setDob(getDateValue(row, COL_MOTHER_DOB));
-        mother.setEnabled(true);
+        // Enable will be set later in importStudentsFromExcel for validation
+        mother.setEnabled(null);
         
         return mother;
     }

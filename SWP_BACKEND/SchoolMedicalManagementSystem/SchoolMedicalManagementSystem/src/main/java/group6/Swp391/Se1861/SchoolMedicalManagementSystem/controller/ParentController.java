@@ -2,7 +2,6 @@ package group6.Swp391.Se1861.SchoolMedicalManagementSystem.controller;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.Student;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.HealthProfile;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.MedicationSchedule;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.MedicationStatus;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.UserRepository;
@@ -10,7 +9,6 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.StudentRepo
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.HealthProfileRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.MedicationScheduleRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IMedicationScheduleService;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl.MedicationScheduleService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;

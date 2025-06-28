@@ -5,7 +5,6 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.RestockItemDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.RestockRequest;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.RestockItem;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.MedicalSupply;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.RestockRequestRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.RestockItemRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.MedicalSupplyRepository;
@@ -430,12 +429,12 @@ public class RestockRequestService implements IRestockRequestService {
         // Set user names
         if (restockRequest.getRequestedBy() != null) {
             userRepository.findById(restockRequest.getRequestedBy())
-                    .ifPresent(user -> dto.setRequestedByName(user.getFirstName() + " " + user.getLastName()));
+                    .ifPresent(user -> dto.setRequestedByName(user.getFullName()));
         }
         
         if (restockRequest.getReviewedBy() != null) {
             userRepository.findById(restockRequest.getReviewedBy())
-                    .ifPresent(user -> dto.setReviewedByName(user.getFirstName() + " " + user.getLastName()));
+                    .ifPresent(user -> dto.setReviewedByName(user.getFullName()));
         }
         
         // Convert restock items

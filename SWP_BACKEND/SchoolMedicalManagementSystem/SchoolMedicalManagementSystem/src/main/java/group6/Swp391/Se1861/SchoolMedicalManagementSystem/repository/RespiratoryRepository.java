@@ -23,6 +23,6 @@ public interface RespiratoryRepository extends JpaRepository<Respiratory, Long> 
     @Query("SELECT r FROM Respiratory r WHERE r.healthProfile.id = :healthProfileId AND r.dateOfExamination BETWEEN :startDate AND :endDate")
     List<Respiratory> findByHealthProfileAndDateRange(Long healthProfileId, LocalDate startDate, LocalDate endDate);
 
-    @Query("SELECT r FROM Respiratory r WHERE r.healthProfile.student.id = :studentId ORDER BY r.dateOfExamination DESC")
+    @Query("SELECT r FROM Respiratory r WHERE r.healthProfile.student.studentID = :studentId ORDER BY r.dateOfExamination DESC")
     List<Respiratory> findByStudentIdOrderByDateDesc(Long studentId);
 }
