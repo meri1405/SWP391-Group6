@@ -365,8 +365,8 @@ public class NotificationService implements INotificationService {
 
         for (User manager : managers) {
             Notification notification = new Notification();
-            notification.setTitle("Health Check Campaign Pending Approval");
-            notification.setMessage("A new health check campaign '" + campaign.getName() + "' requires your approval.");
+            notification.setTitle("CHIẾN DỊCH KHÁM SỨC KHỎE ĐANG CHỜ PHÊ DUYỆT");
+            notification.setMessage("Một chiến dịch kiểm tra sức khỏe mới '" + campaign.getName() + "' đang chờ phê duyệt.");
             notification.setNotificationType("CAMPAIGN_PENDING_APPROVAL");
             notification.setRecipient(manager);
 
@@ -386,8 +386,8 @@ public class NotificationService implements INotificationService {
         User nurse = campaign.getCreatedBy();
 
         Notification notification = new Notification();
-        notification.setTitle("Health Check Campaign Approved");
-        notification.setMessage("Your health check campaign '" + campaign.getName() + "' has been approved.");
+        notification.setTitle("CHIẾN DỊCH KHÁM SỨC KHỎE ĐƯỢC CHẤP NHẬN");
+        notification.setMessage("Chiến dịch kiểm tra sức khỏe của bạn '" + campaign.getName() + "' đã được chấp nhận.");
         notification.setNotificationType("CAMPAIGN_APPROVED");
         notification.setRecipient(nurse);
 
@@ -406,9 +406,9 @@ public class NotificationService implements INotificationService {
         User nurse = campaign.getCreatedBy();
 
         Notification notification = new Notification();
-        notification.setTitle("Health Check Campaign Needs Revision");
-        notification.setMessage("Your health check campaign '" + campaign.getName() +
-                "' requires revisions. Notes: " + notes);
+        notification.setTitle("CHIẾN DỊCH KHÁM SỨC KHỎE CẦN ĐƯỢC THAY ĐỔI");
+        notification.setMessage("Chiến dịch kiểm tra sức khỏe của bạn '" + campaign.getName() +
+                "' được yêu cầu thay đổi. Ghi chú: " + notes);
         notification.setNotificationType("CAMPAIGN_REJECTED");
         notification.setRecipient(nurse);
 
@@ -430,9 +430,9 @@ public class NotificationService implements INotificationService {
         }
 
         Notification notification = new Notification();
-        notification.setTitle("Health Check Campaign Scheduled");
-        notification.setMessage("The health check campaign '" + campaign.getName() +
-                "' has been scheduled with " + campaign.getTargetCount() + " target students.");
+        notification.setTitle("CHIẾN DỊCH KHÁM SỨC KHỎE ĐÃ ĐƯỢC LÊN LỊCH");
+        notification.setMessage("Chiến dịch kiểm tra sức khỏe '" + campaign.getName() +
+                "' đã được lên lịch với số lượng học sinh là " + campaign.getTargetCount() + " .");
         notification.setNotificationType("CAMPAIGN_SCHEDULED");
         notification.setRecipient(approver);
 
@@ -454,8 +454,8 @@ public class NotificationService implements INotificationService {
         }
 
         Notification notification = new Notification();
-        notification.setTitle("Health Check Campaign Completed");
-        notification.setMessage("The health check campaign '" + campaign.getName() + "' has been completed.");
+        notification.setTitle("CHIẾN DỊCH KHÁM SỨC KHỎE ĐÃ HOÀN THÀNH");
+        notification.setMessage("Chiến dịch kiểm tra sức khỏe '" + campaign.getName() + "' đã được hoàn thành.");
         notification.setNotificationType("CAMPAIGN_COMPLETED");
         notification.setRecipient(approver);
 
@@ -476,9 +476,9 @@ public class NotificationService implements INotificationService {
         HealthCheckCampaign campaign = form.getCampaign();
 
         Notification notification = new Notification();
-        notification.setTitle("Health Check Notification");
-        notification.setMessage("Your child " + student.getFullName() + " is scheduled for a health check: '" +
-                campaign.getName() + "'. Please confirm or decline.");
+        notification.setTitle("THÔNG BÁO KHÁM SỨC KHỎE");
+        notification.setMessage("Học sinh " + student.getFullName() + " có lịch kiểm tra sức khỏe: '" +
+                campaign.getName() + "'. Vui lòng xác nhận đồng ý hoặc từ chối.");
         notification.setNotificationType("HEALTH_CHECK_NOTIFICATION");
         notification.setRecipient(parent);
 
@@ -498,8 +498,8 @@ public class NotificationService implements INotificationService {
         Student student = form.getStudent();
 
         Notification notification = new Notification();
-        notification.setTitle("Health Check Confirmation");
-        notification.setMessage("Parent has confirmed health check for student: " + student.getFullName());
+        notification.setTitle("XÁC NHẬN ĐỒNG Ý KHÁM SỨC KHỎE");
+        notification.setMessage("Phụ huynh đã xác nhận kiểm tra sức khỏe cho học sinh: " + student.getFullName());
         notification.setNotificationType("HEALTH_CHECK_CONFIRMED");
         notification.setRecipient(nurse);
 
@@ -521,9 +521,9 @@ public class NotificationService implements INotificationService {
         }
 
         Notification notification = new Notification();
-        notification.setTitle("Health Check Result - Attention Required");
-        notification.setMessage("Your child " + result.getStudent().getFullName() +
-                " requires attention for their " + result.getCategory().toString().toLowerCase() + " health check.");
+        notification.setTitle("KẾT QUẢ KHÁM SỨC KHỎE");
+        notification.setMessage("Học sinh " + result.getStudent().getFullName() +
+                " có một số vấn đề về " + result.getCategory().toString().toLowerCase() + " trong kết quả khám sức khỏe.");
         notification.setNotificationType("ABNORMAL_HEALTH_RESULT");
         notification.setRecipient(parent);
 
@@ -545,9 +545,9 @@ public class NotificationService implements INotificationService {
         }
 
         Notification notification = new Notification();
-        notification.setTitle("Abnormal Health Check Result");
-        notification.setMessage("Student " + result.getStudent().getFullName() +
-                " has an abnormal " + result.getCategory().toString().toLowerCase() + " health check result.");
+        notification.setTitle("KẾT QUẢ KHÁM SỨC KHỎE");
+        notification.setMessage("Học sinh " + result.getStudent().getFullName() +
+                " có một số bất thường " + result.getCategory().toString().toLowerCase() + " trong kết quả kiểm tra sức khỏe.");
         notification.setNotificationType("MANAGER_ABNORMAL_RESULT");
         notification.setRecipient(manager);
 
@@ -569,13 +569,13 @@ public class NotificationService implements INotificationService {
         }
 
         String location = result.getIsOnline() != null && result.getIsOnline() ?
-                "Online meeting (link has been sent)" : result.getConsultationLocation();
+                "Cuộc họp trực tuyến (liên kết đã được gửi) " : result.getConsultationLocation();
 
         Notification notification = new Notification();
-        notification.setTitle("Health Consultation Scheduled");
-        notification.setMessage("A consultation has been scheduled for " + result.getStudent().getFullName() +
-                " on " + result.getConsultationDate() + " at " + result.getConsultationTime() +
-                ". Location: " + location);
+        notification.setTitle("LỊCH TƯ VẤN SỨC KHỎE");
+        notification.setMessage("Một cuộc tư vấn đã được lên lịch cho " + result.getStudent().getFullName() +
+                " vào " + result.getConsultationDate() + " lúc " + result.getConsultationTime() +
+                ". Địa điểm: " + location);
         notification.setNotificationType("CONSULTATION_SCHEDULED");
         notification.setRecipient(parent);
 
@@ -599,11 +599,11 @@ public class NotificationService implements INotificationService {
         }
 
         Notification notification = new Notification();
-        notification.setTitle("Health Check Appointment Scheduled");
-        notification.setMessage("An appointment has been scheduled for " + student.getFullName() +
-                " on " + form.getAppointmentTime().toLocalDate() +
-                " at " + form.getAppointmentTime().toLocalTime() +
-                ". Location: " + form.getAppointmentLocation());
+        notification.setTitle("ĐÃ LÊN LỊCH HẸN KHÁM SỨC KHỎE");
+        notification.setMessage("Một cuộc hẹn khám sức khỏe đã được lên lịch cho " + student.getFullName() +
+                " vào " + form.getAppointmentTime().toLocalDate() +
+                " lúc " + form.getAppointmentTime().toLocalTime() +
+                ". Địa điểm: " + form.getAppointmentLocation());
         notification.setNotificationType("APPOINTMENT_SCHEDULED");
         notification.setRecipient(parent);
 
@@ -673,8 +673,8 @@ public class NotificationService implements INotificationService {
             String studentName,
             String vaccineName) {
         
-        String title = "Vaccination Consent Confirmed";
-        String message = "Parent has confirmed vaccination for " + studentName + " - " + vaccineName;
+        String title = "XÁC NHẬN ĐỒNG Ý TIÊM CHỦNG";
+        String message = "Phụ huynh đã xác nhận tiêm chủng cho " + studentName + " - " + vaccineName;
         String notificationType = "VACCINATION_CONSENT_CONFIRMED";
         
         return createGeneralNotification(recipient, title, message, notificationType);
@@ -691,10 +691,10 @@ public class NotificationService implements INotificationService {
             String vaccineName,
             String reason) {
         
-        String title = "Vaccination Consent Declined";
-        String message = "Parent has declined vaccination for " + studentName + " - " + vaccineName;
+        String title = "TỪ CHỐI TIÊM CHỦNG";
+        String message = "Cha mẹ đã từ chối tiêm vắc-xin cho " + studentName + " - " + vaccineName;
         if (reason != null && !reason.trim().isEmpty()) {
-            message += ". Reason: " + reason;
+            message += ". Lý do: " + reason;
         }
         String notificationType = "VACCINATION_CONSENT_DECLINED";
         
@@ -710,8 +710,8 @@ public class NotificationService implements INotificationService {
             User recipient,
             String studentName) {
         
-        String title = "Vaccination Form Expired";
-        String message = "Vaccination consent form for " + studentName + " has expired without response";
+        String title = "PHIẾU TIÊM CHỦNG HẾT HẠN";
+        String message = "Mẫu đơn đồng ý tiêm chủng cho " + studentName + " đã quá thời hạn xác nhận";
         String notificationType = "VACCINATION_CONSENT_EXPIRED";
         return createGeneralNotification(recipient, title, message, notificationType);
     }
@@ -726,8 +726,8 @@ public class NotificationService implements INotificationService {
             String campaignName,
             String approverName) {
         
-        String title = "Campaign Approved";
-        String message = "Your vaccination campaign '" + campaignName + "' has been approved by " + approverName;
+        String title = "CHIẾN DỊCH ĐÃ ĐƯỢC CHẤP NHẬN";
+        String message = "Chiến dịch tiêm chủng của bạn '" + campaignName + "' đã được chấp nhận bởi " + approverName;
         String notificationType = "CAMPAIGN_APPROVAL";
         
         return createGeneralNotification(recipient, title, message, notificationType);
@@ -743,8 +743,8 @@ public class NotificationService implements INotificationService {
             String campaignName,
             String reason) {
         
-        String title = "Campaign Rejected";
-        String message = "Your vaccination campaign '" + campaignName + "' has been rejected. Reason: " + reason;
+        String title = "CHIẾN DỊCH ĐÃ BỊ TỪ CHỐI";
+        String message = "Chiến dịch tiêm chủng của bạn '" + campaignName + "' đã bị từ chối. Lý do: " + reason;
         String notificationType = "CAMPAIGN_REJECTION";
         
         return createGeneralNotification(recipient, title, message, notificationType);
@@ -760,8 +760,8 @@ public class NotificationService implements INotificationService {
             String campaignName,
             String creatorName) {
         
-        String title = "New Campaign Pending Approval";
-        String message = "A new vaccination campaign '" + campaignName + "' created by " + creatorName + " is pending your approval.";
+        String title = "CHIẾN DỊCH CHỜ PHÊ DUYỆT";
+        String message = "Một chiến dịch tiêm chủng mới '" + campaignName + "' được tạo bởi  " + creatorName + " đang chờ duyệt.";
         String notificationType = "CAMPAIGN_APPROVAL_REQUEST";
         
         return createGeneralNotification(recipient, title, message, notificationType);
