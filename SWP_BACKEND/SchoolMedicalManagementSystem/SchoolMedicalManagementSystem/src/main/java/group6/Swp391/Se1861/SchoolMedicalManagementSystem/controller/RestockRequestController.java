@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RestController
 @RequestMapping("/api/restock-requests")
@@ -23,6 +25,7 @@ import java.util.Map;
 public class RestockRequestController {
     
     private final IRestockRequestService restockRequestService;
+    private static final Logger log = LoggerFactory.getLogger(RestockRequestController.class);
     
     // School Nurse endpoints
     @GetMapping
@@ -215,7 +218,25 @@ public class RestockRequestController {
             @PathVariable Long id,
             @RequestBody Map<String, Object> approvalData) {
         try {
-            Long reviewerId = ((Number) approvalData.get("reviewerId")).longValue();
+            Long reviewerId;
+            // Handle both numeric and string reviewerId
+            Object reviewerIdObj = approvalData.get("reviewerId");
+            if (reviewerIdObj instanceof Number) {
+                reviewerId = ((Number) reviewerIdObj).longValue();
+            } else if (reviewerIdObj instanceof String) {
+                try {
+                    reviewerId = Long.parseLong((String) reviewerIdObj);
+                } catch (NumberFormatException e) {
+                    // If the string is not a number, use default manager ID
+                    reviewerId = 2L; // Default manager ID
+                    log.warn("Non-numeric reviewerId received: {}. Using default manager ID: {}", reviewerIdObj, reviewerId);
+                }
+            } else {
+                // Default to manager ID if reviewerId is missing or invalid
+                reviewerId = 2L; 
+                log.warn("Missing or invalid reviewerId. Using default manager ID: {}", reviewerId);
+            }
+            
             String reviewNotes = (String) approvalData.getOrDefault("reviewNotes", "");
             @SuppressWarnings("unchecked")
             Map<Long, Map<String, Object>> itemApprovals = (Map<Long, Map<String, Object>>) approvalData.get("itemApprovals");
@@ -224,8 +245,10 @@ public class RestockRequestController {
                     id, reviewerId, reviewNotes, itemApprovals);
             return ResponseEntity.ok(approvedRequest);
         } catch (RuntimeException e) {
+            log.error("Error approving request: {}", e.getMessage());
             return ResponseEntity.badRequest().build();
         } catch (Exception e) {
+            log.error("Unexpected error approving request: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
@@ -236,27 +259,34 @@ public class RestockRequestController {
             @PathVariable Long id,
             @RequestBody Map<String, Object> rejectionData) {
         try {
-            Long reviewerId = ((Number) rejectionData.get("reviewerId")).longValue();
+            Long reviewerId;
+            // Handle both numeric and string reviewerId
+            Object reviewerIdObj = rejectionData.get("reviewerId");
+            if (reviewerIdObj instanceof Number) {
+                reviewerId = ((Number) reviewerIdObj).longValue();
+            } else if (reviewerIdObj instanceof String) {
+                try {
+                    reviewerId = Long.parseLong((String) reviewerIdObj);
+                } catch (NumberFormatException e) {
+                    // If the string is not a number, use default manager ID
+                    reviewerId = 2L; // Default manager ID
+                    log.warn("Non-numeric reviewerId received for rejection: {}. Using default manager ID: {}", reviewerIdObj, reviewerId);
+                }
+            } else {
+                // Default to manager ID if reviewerId is missing or invalid
+                reviewerId = 2L; 
+                log.warn("Missing or invalid reviewerId for rejection. Using default manager ID: {}", reviewerId);
+            }
+            
             String reviewNotes = (String) rejectionData.getOrDefault("reviewNotes", "");
             
             RestockRequestDTO rejectedRequest = restockRequestService.rejectRequest(id, reviewerId, reviewNotes);
             return ResponseEntity.ok(rejectedRequest);
         } catch (RuntimeException e) {
+            log.error("Error rejecting request: {}", e.getMessage());
             return ResponseEntity.badRequest().build();
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
-    
-    @PostMapping("/{id}/complete")
-    @PreAuthorize("hasRole('MANAGER')")
-    public ResponseEntity<RestockRequestDTO> completeRequest(@PathVariable Long id) {
-        try {
-            RestockRequestDTO completedRequest = restockRequestService.completeRequest(id);
-            return ResponseEntity.ok(completedRequest);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().build();
-        } catch (Exception e) {
+            log.error("Unexpected error rejecting request: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
