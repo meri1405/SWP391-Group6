@@ -104,15 +104,6 @@ public class MedicalSupplyService implements IMedicalSupplyService {
     }
     
     @Override
-    public void deleteMedicalSupply(Long id) {
-        if (!medicalSupplyRepository.existsById(id)) {
-            throw new RuntimeException("Không tìm thấy vật tư y tế với ID: " + id);
-        }
-        medicalSupplyRepository.deleteById(id);
-        log.info("Deleted medical supply with ID: {}", id);
-    }
-    
-    @Override
     public void enableMedicalSupply(Long id) {
         MedicalSupply supply = medicalSupplyRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy vật tư y tế với ID: " + id));

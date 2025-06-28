@@ -21,7 +21,6 @@ import {
 import {
     PlusOutlined,
     EditOutlined,
-    DeleteOutlined,
     SearchOutlined,
     WarningOutlined,
     CheckOutlined,
@@ -64,7 +63,7 @@ const InventorySection = () => {
         const isEnabled = record.enabled !== false; // Default to true if not specified
         
         if (!isEnabled) {
-            return <Tag color="gray" icon={<CloseOutlined />}>Ngừng sử dụng</Tag>;
+            return <Tag style={{ backgroundColor: '#d9d9d9', color: '#595959' }} icon={<CloseOutlined />}>Ngừng sử dụng</Tag>;
         }
         
         if (quantityInBaseUnit <= minStockLevelInBaseUnit) {
@@ -227,14 +226,6 @@ const InventorySection = () => {
                     >
                         Sửa
                     </Button>
-                    <Button
-                        danger
-                        icon={<DeleteOutlined />}
-                        size="small"
-                        onClick={() => handleDelete(record)}
-                    >
-                        Xóa
-                    </Button>
                     {record.enabled ? (
                         <Button
                             type="default"
@@ -320,14 +311,6 @@ const InventorySection = () => {
                         onClick={() => handleEdit(record)}
                     >
                         Sửa
-                    </Button>
-                    <Button
-                        danger
-                        icon={<DeleteOutlined />}
-                        size="small"
-                        onClick={() => handleDelete(record)}
-                    >
-                        Xóa
                     </Button>
                     {record.enabled ? (
                         <Button
@@ -456,7 +439,6 @@ const InventorySection = () => {
                             </Button>
                         </>
                     )}
-                    {/* ĐÃ BỎ nút Hoàn thành & Nhập kho */}
                 </Space>
             ),
         },
@@ -468,37 +450,115 @@ const InventorySection = () => {
             
             console.log('Form values received:', values);
             
+            // Validate numeric fields
+            const displayQuantity = values.displayQuantity;
+            const minStockLevelInBaseUnit = values.minStockLevelInBaseUnit;
+            
+            // Check for valid numbers before proceeding
+            if (displayQuantity && !/^[0-9]+(\.[0-9]+)?$/.test(displayQuantity)) {
+                messageApi.error('Số lượng hiển thị phải là số');
+                setLoading(false);
+                return;
+            }
+            
+            if (minStockLevelInBaseUnit && !/^[0-9]+(\.[0-9]+)?$/.test(minStockLevelInBaseUnit)) {
+                messageApi.error('Số lượng tối thiểu phải là số');
+                setLoading(false);
+                return;
+            }
+
             // Map form values to API format using new DTO structure
             const supplyData = {
-                name: values.name,
-                category: values.category,
-                displayQuantity: Number(values.displayQuantity) || 0,
-                displayUnit: values.displayUnit,
-                baseUnit: values.baseUnit,
+                name: values?.name,
+                category: values?.category,
+                displayQuantity: Number(displayQuantity) || 0,
+                displayUnit: values?.displayUnit,
+                baseUnit: values?.baseUnit,
                 // Calculate quantityInBaseUnit (for now, same as displayQuantity until we have conversion)
-                quantityInBaseUnit: Number(values.displayQuantity) || 0,
-                supplier: values.supplier,
-                minStockLevelInBaseUnit: Number(values.minStockLevelInBaseUnit) || 0,
-                expirationDate: values.expirationDate || null, // Only for medicines
-                location: values.location || 'Kho chính',
-                description: values.description || `${values.category} - ${values.name}`,
+                quantityInBaseUnit: Number(displayQuantity) || 0,
+                supplier: values?.supplier,
+                minStockLevelInBaseUnit: Number(values?.minStockLevelInBaseUnit) || 0,
+                expirationDate: values?.expirationDate || null, // Only for medicines
+                location: values?.location,
+                description: values?.description || `${values?.category} - ${values?.name}`,
                 enabled: true
             };
 
             console.log('Supply data JSON:', JSON.stringify(supplyData, null, 2));
 
+            let newOrUpdatedSupply;
+            
             if (editingRecord) {
                 // Update existing supply
-                await medicalSupplyApi.updateSupply(editingRecord.id, supplyData);
+                newOrUpdatedSupply = await medicalSupplyApi.updateSupply(editingRecord.id, supplyData);
                 messageApi.success('Cập nhật thành công');
+                
+                // Immediately update the item in the local state to avoid needing refresh
+                if (newOrUpdatedSupply) {
+                    const updatedSupply = { ...newOrUpdatedSupply, updatedAt: new Date().toISOString() };
+                    
+                    // Update in medicines list if it exists there
+                    setMedicines(prevMedicines => {
+                        const index = prevMedicines.findIndex(item => item.id === updatedSupply.id);
+                        if (index >= 0) {
+                            const newMedicines = [...prevMedicines];
+                            newMedicines[index] = updatedSupply;
+                            // Move updated item to the top
+                            newMedicines.splice(0, 0, newMedicines.splice(index, 1)[0]);
+                            return newMedicines;
+                        }
+                        return prevMedicines;
+                    });
+                    
+                    // Update in supplies list if it exists there
+                    setSupplies(prevSupplies => {
+                        const index = prevSupplies.findIndex(item => item.id === updatedSupply.id);
+                        if (index >= 0) {
+                            const newSupplies = [...prevSupplies];
+                            newSupplies[index] = updatedSupply;
+                            // Move updated item to the top
+                            newSupplies.splice(0, 0, newSupplies.splice(index, 1)[0]);
+                            return newSupplies;
+                        }
+                        return prevSupplies;
+                    });
+                }
             } else {
                 // Create new supply
-                await medicalSupplyApi.createSupply(supplyData);
+                newOrUpdatedSupply = await medicalSupplyApi.createSupply(supplyData);
                 messageApi.success('Thêm mới thành công');
+                
+                // Immediately add the new item to the local state
+                if (newOrUpdatedSupply) {
+                    const createdSupply = { 
+                        ...newOrUpdatedSupply, 
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString()
+                    };
+                    
+                    // Add to the appropriate list based on category
+                    const medicineCategories = ['painkiller', 'antibiotic', 'vitamin', 'supplement'];
+                    const category = createdSupply.category?.toLowerCase() || '';
+                    const isMedicine = medicineCategories.includes(category) || 
+                                       createdSupply.name?.toLowerCase().includes('thuốc') ||
+                                       createdSupply.name?.toLowerCase().includes('viên') ||
+                                       createdSupply.name?.toLowerCase().includes('mg') ||
+                                       createdSupply.description?.toLowerCase().includes('thuốc');
+                    
+                    if (isMedicine) {
+                        setMedicines(prevMedicines => [createdSupply, ...prevMedicines]);
+                    } else {
+                        setSupplies(prevSupplies => [createdSupply, ...prevSupplies]);
+                    }
+                }
             }
 
-            // Refresh the data
-            await fetchMedicalSupplies();
+            // Also fetch from server to ensure everything is in sync
+            // We'll do this in the background to ensure the UI is responsive
+            fetchMedicalSupplies().catch(error => {
+                console.error('Error refreshing data after update:', error);
+            });
+            
             setShowAddModal(false);
             setEditingRecord(null);
             setSelectedDisplayUnit('');
@@ -519,37 +579,45 @@ const InventorySection = () => {
         setShowAddModal(true);
     };
 
-    const handleDelete = (record) => {
-        Modal.confirm({
-            title: 'Xác nhận xóa',
-            content: 'Bạn có chắc chắn muốn xóa bản ghi này?',
-            okText: 'Xóa',
-            okType: 'danger',
-            cancelText: 'Hủy',
-            onOk: async () => {
-                try {
-                    setLoading(true);
-                    await medicalSupplyApi.deleteSupply(record.id);
-                    messageApi.success('Xóa thành công');
-                    // Refresh the data
-                    await fetchMedicalSupplies();
-                } catch (error) {
-                    console.error('Error deleting supply:', error);
-                    messageApi.error('Có lỗi xảy ra khi xóa');
-                } finally {
-                    setLoading(false);
-                }
-            }
-        });
-    };
-
     // Handle supply enable/disable
     const handleEnableSupply = async (record) => {
         try {
             setLoading(true);
             await medicalSupplyApi.enableSupply(record.id);
             messageApi.success('Đã kích hoạt vật tư y tế');
-            await fetchMedicalSupplies();
+            
+            // Immediately update the UI with the enabled item
+            const updatedRecord = { ...record, enabled: true, updatedAt: new Date().toISOString() };
+            
+            // Update in medicines or supplies list based on where it exists
+            setMedicines(prevMedicines => {
+                const index = prevMedicines.findIndex(item => item.id === record.id);
+                if (index >= 0) {
+                    const newMedicines = [...prevMedicines];
+                    newMedicines[index] = updatedRecord;
+                    // Move to top of the list
+                    newMedicines.splice(0, 0, newMedicines.splice(index, 1)[0]);
+                    return newMedicines;
+                }
+                return prevMedicines;
+            });
+            
+            setSupplies(prevSupplies => {
+                const index = prevSupplies.findIndex(item => item.id === record.id);
+                if (index >= 0) {
+                    const newSupplies = [...prevSupplies];
+                    newSupplies[index] = updatedRecord;
+                    // Move to top of the list
+                    newSupplies.splice(0, 0, newSupplies.splice(index, 1)[0]);
+                    return newSupplies;
+                }
+                return prevSupplies;
+            });
+            
+            // Fetch in background to ensure data is in sync
+            fetchMedicalSupplies().catch(error => {
+                console.error('Error refreshing data after enabling:', error);
+            });
         } catch (error) {
             console.error('Error enabling supply:', error);
             messageApi.error('Có lỗi xảy ra khi kích hoạt vật tư');
@@ -570,7 +638,39 @@ const InventorySection = () => {
                     setLoading(true);
                     await medicalSupplyApi.disableSupply(record.id);
                     messageApi.success('Đã vô hiệu hóa vật tư y tế');
-                    await fetchMedicalSupplies();
+                    
+                    // Immediately update the UI with the disabled item
+                    const updatedRecord = { ...record, enabled: false, updatedAt: new Date().toISOString() };
+                    
+                    // Update in medicines or supplies list based on where it exists
+                    setMedicines(prevMedicines => {
+                        const index = prevMedicines.findIndex(item => item.id === record.id);
+                        if (index >= 0) {
+                            const newMedicines = [...prevMedicines];
+                            newMedicines[index] = updatedRecord;
+                            // Move to top of the list
+                            newMedicines.splice(0, 0, newMedicines.splice(index, 1)[0]);
+                            return newMedicines;
+                        }
+                        return prevMedicines;
+                    });
+                    
+                    setSupplies(prevSupplies => {
+                        const index = prevSupplies.findIndex(item => item.id === record.id);
+                        if (index >= 0) {
+                            const newSupplies = [...prevSupplies];
+                            newSupplies[index] = updatedRecord;
+                            // Move to top of the list
+                            newSupplies.splice(0, 0, newSupplies.splice(index, 1)[0]);
+                            return newSupplies;
+                        }
+                        return prevSupplies;
+                    });
+                    
+                    // Fetch in background to ensure data is in sync
+                    fetchMedicalSupplies().catch(error => {
+                        console.error('Error refreshing data after disabling:', error);
+                    });
                 } catch (error) {
                     console.error('Error disabling supply:', error);
                     messageApi.error('Có lỗi xảy ra khi vô hiệu hóa vật tư');
@@ -588,9 +688,17 @@ const InventorySection = () => {
             const allSupplies = await medicalSupplyApi.getAllSupplies();
             console.log('Fetched medical supplies:', allSupplies);
             
+            // Sort by last modified date (updatedAt or createdAt), most recent first
+            // This ensures that newly added or updated items appear at the top of the list
+            const sortedSupplies = [...allSupplies].sort((a, b) => {
+                const dateA = new Date(a.updatedAt || a.createdAt || 0);
+                const dateB = new Date(b.updatedAt || b.createdAt || 0);
+                return dateB - dateA;  // descending order (newest first)
+            });
+            
             // Separate medicines and supplies based on category
             const medicineCategories = ['painkiller', 'antibiotic', 'vitamin', 'supplement'];
-            const medicineItems = allSupplies.filter(item => {
+            const medicineItems = sortedSupplies.filter(item => {
                 const category = item.category?.toLowerCase() || '';
                 return medicineCategories.includes(category) || 
                        item.name?.toLowerCase().includes('thuốc') ||
@@ -599,7 +707,7 @@ const InventorySection = () => {
                        item.description?.toLowerCase().includes('thuốc');
             });
             
-            const supplyItems = allSupplies.filter(item => {
+            const supplyItems = sortedSupplies.filter(item => {
                 const category = item.category?.toLowerCase() || '';
                 return !medicineCategories.includes(category) &&
                        !item.name?.toLowerCase().includes('thuốc') &&
@@ -608,8 +716,8 @@ const InventorySection = () => {
                        !item.description?.toLowerCase().includes('thuốc');
             });
             
-            console.log('Medicines:', medicineItems);
-            console.log('Supplies:', supplyItems);
+            console.log('Medicines (sorted by last modified):', medicineItems);
+            console.log('Supplies (sorted by last modified):', supplyItems);
             
             setMedicines(medicineItems);
             setSupplies(supplyItems);
@@ -840,6 +948,9 @@ const InventorySection = () => {
                             ? 'Không có yêu cầu bổ sung nào' 
                             : 'Không có dữ liệu'
                     }}
+                    // Data is already sorted by last modified date (newest first)
+                    // This key helps re-render the table when data changes
+                    key={`${activeTab}-table-${medicines.length + supplies.length}`}
                 />
             </Card>
 
@@ -897,9 +1008,25 @@ const InventorySection = () => {
                     <Form.Item
                         name="displayQuantity"
                         label="Số lượng hiển thị"
-                        rules={[{ required: true, message: 'Vui lòng nhập số lượng hiển thị' }]}
+                        rules={[
+                            { required: true, message: 'Vui lòng nhập số lượng hiển thị' },
+                            { 
+                                pattern: /^[0-9]+(\.[0-9]+)?$/, 
+                                message: 'Vui lòng nhập số, không nhập chữ hoặc ký tự đặc biệt' 
+                            }
+                        ]}
+                        validateTrigger={['onChange', 'onBlur']}
                     >
-                        <InputNumber min={0} style={{ width: '100%' }} />
+                        <Input 
+                            type="text" 
+                            style={{ width: '100%' }}
+                            onChange={(e) => {
+                                const value = e.target.value;
+                                if (value && !/^[0-9]*(\.[0-9]*)?$/.test(value)) {
+                                    messageApi.error('Vui lòng chỉ nhập số');
+                                }
+                            }}
+                        />
                     </Form.Item>
 
                     <Form.Item
@@ -948,9 +1075,24 @@ const InventorySection = () => {
                         <Form.Item
                             name="expirationDate"
                             label="Hạn sử dụng"
-                            rules={[{ required: true, message: 'Vui lòng nhập hạn sử dụng' }]}
+                            rules={[
+                                { required: true, message: 'Vui lòng nhập hạn sử dụng' },
+                                { 
+                                    validator: (_, value) => {
+                                        if (!value) return Promise.resolve();
+                                        const today = new Date();
+                                        today.setHours(0, 0, 0, 0);
+                                        const selectedDate = new Date(value);
+                                        
+                                        if (selectedDate < today) {
+                                            return Promise.reject('Hạn sử dụng không thể là ngày trong quá khứ');
+                                        }
+                                        return Promise.resolve();
+                                    }
+                                }
+                            ]}
                         >
-                            <Input type="date" />
+                            <Input type="date" min={new Date().toISOString().split('T')[0]} />
                         </Form.Item>
                     )}
 
@@ -965,16 +1107,52 @@ const InventorySection = () => {
                     <Form.Item
                         name="minStockLevelInBaseUnit"
                         label="Số lượng tối thiểu (đơn vị cơ sở)"
-                        rules={[{ required: true, message: 'Vui lòng nhập số lượng tối thiểu theo đơn vị cơ sở' }]}
+                        rules={[
+                            { required: true, message: 'Vui lòng nhập số lượng tối thiểu theo đơn vị cơ sở' },
+                            { 
+                                pattern: /^[0-9]+(\.[0-9]+)?$/, 
+                                message: 'Vui lòng nhập số, không nhập chữ hoặc ký tự đặc biệt' 
+                            }
+                        ]}
+                        validateTrigger={['onChange', 'onBlur']}
                     >
-                        <InputNumber min={0} style={{ width: '100%' }} />
+                        <Input 
+                            type="text" 
+                            style={{ width: '100%' }}
+                            onChange={(e) => {
+                                const value = e.target.value;
+                                if (value && !/^[0-9]*(\.[0-9]*)?$/.test(value)) {
+                                    messageApi.error('Vui lòng chỉ nhập số');
+                                }
+                            }}
+                        />
                     </Form.Item>
 
                     <Form.Item
                         name="location"
-                        label="Vị trí kho"
+                        label="Vị trí"
                     >
-                        <Input placeholder="Nhập vị trí kho (mặc định: Kho chính)" />
+                        <Select
+                            placeholder="Chọn vị trí"
+                            allowClear
+                        >
+                            <Option value="Kệ A1">Kệ A1</Option>
+                            <Option value="Kệ A2">Kệ A2</Option>
+                            <Option value="Kệ A3">Kệ A3</Option>
+                            <Option value="Kệ B1">Kệ B1</Option>
+                            <Option value="Kệ B2">Kệ B2</Option>
+                            <Option value="Kệ B3">Kệ B3</Option>
+                            <Option value="Kệ C1">Kệ C1</Option>
+                            <Option value="Kệ C2">Kệ C2</Option>
+                            <Option value="Kệ C3">Kệ C3</Option>
+                            <Option value="Kệ D1">Kệ D1</Option>
+                            <Option value="Kệ D2">Kệ D2</Option>
+                            <Option value="Kệ D3">Kệ D3</Option>
+                            <Option value="Kệ E1">Kệ E1</Option>
+                            <Option value="Kệ E2">Kệ E2</Option>
+                            <Option value="Kệ E3">Kệ E3</Option>
+                            <Option value="Kệ F1">Kệ F1</Option>
+                        </Select>
                     </Form.Item>
 
                     <Form.Item
