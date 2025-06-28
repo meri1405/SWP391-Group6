@@ -33,6 +33,8 @@ public interface IVaccinationCampaignService {
     // Student eligibility and form generation
     EligibleStudentsResponse getEligibleStudents(Long campaignId);
     
+    int getEligibleStudentsCountByRule(Long ruleId);
+    
     List<VaccinationFormDTO> generateVaccinationForms(Long campaignId, User nurse);
     
     List<VaccinationFormDTO> sendFormsToParents(Long campaignId, User nurse);

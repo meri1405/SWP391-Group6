@@ -28,6 +28,7 @@ const VaccinationCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
   const [vaccinationRules, setVaccinationRules] = useState([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [calculatingCount, setCalculatingCount] = useState(false);
   const isEditing = !!campaign;
 
   useEffect(() => {
@@ -41,6 +42,11 @@ const VaccinationCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
           : null,
         location: "Tại Trường", // Always override with fixed location
       });
+
+      // Recalculate estimated vaccine count for edited campaign
+      if (campaign.vaccinationRuleId) {
+        calculateEstimatedVaccineCount(campaign.vaccinationRuleId);
+      }
     }
   }, [campaign, form, isEditing]);
 
@@ -101,6 +107,42 @@ const VaccinationCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
           selectedRule.doesNumber
         }.\n${selectedRule.description || ""}`,
       });
+
+      // Tính toán số lượng vaccine dự kiến
+      calculateEstimatedVaccineCount(ruleId);
+    }
+  };
+
+  const calculateEstimatedVaccineCount = async (ruleId) => {
+    if (!ruleId) return;
+
+    setCalculatingCount(true);
+    try {
+      const response =
+        await vaccinationCampaignApi.getEligibleStudentsCountByRule(ruleId);
+      const eligibleCount = response.eligibleCount || 0;
+
+      form.setFieldsValue({
+        estimatedVaccineCount: eligibleCount,
+      });
+
+      if (eligibleCount > 0) {
+        message.success(
+          `Tìm thấy ${eligibleCount} học sinh thỏa mãn điều kiện tiêm chủng`
+        );
+      } else {
+        message.info(
+          "Không có học sinh nào thỏa mãn điều kiện tiêm chủng hiện tại"
+        );
+      }
+    } catch (error) {
+      console.error("Error calculating estimated vaccine count:", error);
+      message.error("Không thể tính toán số lượng vaccine dự kiến");
+      form.setFieldsValue({
+        estimatedVaccineCount: 0,
+      });
+    } finally {
+      setCalculatingCount(false);
     }
   };
 
@@ -211,13 +253,30 @@ const VaccinationCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
               name="estimatedVaccineCount"
               label="Số lượng vắc xin (dự kiến)"
               rules={[
-                { required: true, message: "Vui lòng nhập số lượng vắc xin" },
+                {
+                  required: true,
+                  message:
+                    "Vui lòng chọn quy tắc tiêm chủng để tính toán số lượng vaccine",
+                },
+                {
+                  type: "number",
+                  min: 0,
+                  message: "Số lượng vaccine phải lớn hơn hoặc bằng 0",
+                },
               ]}
+              extra={
+                calculatingCount
+                  ? "Đang tính toán..."
+                  : "Số lượng được tính tự động dựa trên quy tắc tiêm chủng"
+              }
             >
               <InputNumber
-                min={1}
+                min={0}
                 style={{ width: "100%" }}
-                placeholder="Nhập số lượng vắc xin cần thiết"
+                placeholder="Chọn quy tắc tiêm chủng để tính toán tự động"
+                readOnly
+                disabled={calculatingCount}
+                suffix={calculatingCount ? <Spin size="small" /> : null}
               />
             </Form.Item>
           </Col>

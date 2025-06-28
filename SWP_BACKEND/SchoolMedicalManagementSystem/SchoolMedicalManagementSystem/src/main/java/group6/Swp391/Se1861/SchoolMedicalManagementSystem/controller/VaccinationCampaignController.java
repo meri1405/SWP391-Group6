@@ -14,6 +14,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api/nurse/vaccination-campaigns")
@@ -105,6 +107,25 @@ public class VaccinationCampaignController {
         } catch (IllegalArgumentException e) {
             String errorMessage = e.getMessage();
             MessageResponse errorResponse = new MessageResponse(errorMessage);
+            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    /**
+     * Get count of eligible students for a vaccination rule
+     */
+    @GetMapping("/rules/{ruleId}/eligible-count")
+    public ResponseEntity<Map<String, Object>> getEligibleStudentsCountByRule(@PathVariable Long ruleId) {
+        try {
+            int eligibleCount = campaignService.getEligibleStudentsCountByRule(ruleId);
+            Map<String, Object> response = new HashMap<>();
+            response.put("eligibleCount", eligibleCount);
+            response.put("message", "Found " + eligibleCount + " eligible students for this vaccination rule");
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("eligibleCount", 0);
+            errorResponse.put("message", e.getMessage());
             return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
         }
     }

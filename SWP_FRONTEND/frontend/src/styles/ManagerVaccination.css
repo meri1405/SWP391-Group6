@@ -1,455 +1,139 @@
 .manager-vaccination-management {
-  padding: 20px;
+  padding: 24px;
   background: #f5f5f5;
-  min-height: calc(100vh - 200px);
+  min-height: 100vh;
 }
 
+/* Statistics Cards Hover Effects */
 .manager-vaccination-management .ant-card {
+  transition: all 0.3s ease;
+  border: 1px solid #f0f0f0;
+}
+
+.manager-vaccination-management .ant-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* Table Styling */
+.manager-vaccination-management .ant-table {
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e8e8e8;
-}
-
-.manager-vaccination-management .ant-card-head {
-  background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
-  border-bottom: none;
-  border-radius: 8px 8px 0 0;
-}
-
-.manager-vaccination-management .ant-card-head-title {
-  color: white;
-  font-weight: 600;
-  font-size: 16px;
-}
-
-.manager-vaccination-management .ant-statistic-title {
-  font-size: 14px;
-  color: #666;
-  margin-bottom: 8px;
-}
-
-.manager-vaccination-management .ant-statistic-content {
-  font-size: 24px;
-  font-weight: 600;
+  overflow: hidden;
 }
 
 .manager-vaccination-management .ant-table-thead > tr > th {
   background: #fafafa;
-  border-bottom: 2px solid #e8e8e8;
   font-weight: 600;
-  color: #333;
+  color: #262626;
+  border-bottom: 2px solid #f0f0f0;
 }
 
 .manager-vaccination-management .ant-table-tbody > tr:hover > td {
-  background: #f0f8ff;
+  background: #f5f5f5;
 }
 
-.manager-vaccination-management .ant-btn-primary {
-  background: #ff6b35;
-  border-color: #ff6b35;
-  border-radius: 6px;
+.manager-vaccination-management .ant-table-tbody > tr > td {
+  border-bottom: 1px solid #f5f5f5;
+  padding: 12px 16px;
+}
+
+/* Tabs Styling */
+.manager-vaccination-management .ant-tabs .ant-tabs-tab {
+  color: #666;
   font-weight: 500;
 }
 
-.manager-vaccination-management .ant-btn-primary:hover {
-  background: #e55a2b;
-  border-color: #e55a2b;
-}
-
-.manager-vaccination-management .ant-btn-danger {
-  border-radius: 6px;
-  font-weight: 500;
-}
-
-.manager-vaccination-management .ant-tabs-tab {
-  font-weight: 500;
-  padding: 8px 16px;
-}
-
-.manager-vaccination-management .ant-tabs-tab-active {
-  color: #ff6b35 !important;
-}
-
-.manager-vaccination-management .ant-tabs-ink-bar {
-  background: #ff6b35;
-}
-
-.manager-vaccination-management .ant-badge-status-dot {
-  width: 8px;
-  height: 8px;
-}
-
-.manager-vaccination-management .ant-descriptions-bordered .ant-descriptions-item-label {
-  background: #fafafa;
+.manager-vaccination-management .ant-tabs .ant-tabs-tab-active {
+  color: #1890ff;
   font-weight: 600;
-  color: #333;
+}
+
+.manager-vaccination-management .ant-tabs .ant-tabs-ink-bar {
+  background: #1890ff;
+  height: 3px;
+}
+
+/* Button Styling */
+.manager-vaccination-management .ant-btn {
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.manager-vaccination-management .ant-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Badge Styling */
+.manager-vaccination-management .ant-badge {
+  font-weight: 500;
 }
 
 /* Modal Styling */
 .manager-vaccination-management .ant-modal {
   border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-}
-
-.manager-vaccination-management .ant-modal-content {
-  border-radius: 12px;
-  overflow: hidden;
-  padding: 0;
 }
 
 .manager-vaccination-management .ant-modal-header {
-  background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
   border-radius: 12px 12px 0 0;
-  border-bottom: none;
-  padding: 20px 24px;
-  margin: 0;
+  border-bottom: 1px solid #f0f0f0;
 }
 
-.manager-vaccination-management .ant-modal-title {
-  color: white;
+.manager-vaccination-management
+  .ant-descriptions-bordered
+  .ant-descriptions-item-label {
   font-weight: 600;
-  font-size: 18px;
-  margin: 0;
-}
-
-.manager-vaccination-management .ant-modal-close {
-  color: white;
-  top: 16px;
-  right: 16px;
-  width: 32px;
-  height: 32px;
-  line-height: 32px;
-  border-radius: 50%;
-  transition: all 0.3s ease;
-}
-
-.manager-vaccination-management .ant-modal-close:hover {
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
-}
-
-.manager-vaccination-management .ant-modal-close .ant-modal-close-x {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-  font-size: 16px;
-}
-
-.manager-vaccination-management .ant-modal-body {
-  padding: 24px;
-  max-height: 70vh;
-  overflow-y: auto;
-}
-
-.manager-vaccination-management .ant-modal-footer {
-  border-top: 1px solid #f0f0f0;
-  padding: 16px 24px;
   background: #fafafa;
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
+  width: 140px;
 }
 
-.manager-vaccination-management .ant-modal-footer .ant-btn {
-  border-radius: 6px;
-  font-weight: 500;
-  height: 36px;
-  padding: 0 16px;
+.manager-vaccination-management
+  .ant-descriptions-bordered
+  .ant-descriptions-item-content {
+  background: #fff;
 }
 
-/* Detail Modal Specific */
-.manager-vaccination-management .ant-descriptions {
-  background: white;
-  border-radius: 8px;
-  border: 1px solid #e9ecef;
+/* Pagination Styling */
+.manager-vaccination-management .ant-pagination {
+  margin-top: 24px;
+  text-align: right;
 }
 
-.manager-vaccination-management .ant-descriptions-bordered .ant-descriptions-item-label {
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  font-weight: 600;
-  color: #495057;
-  border-right: 1px solid #dee2e6;
-  padding: 18px 20px;
-  width: 160px;
-  vertical-align: top;
-  font-size: 14px;
-  min-height: 52px;
-  display: flex;
-  align-items: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.manager-vaccination-management .ant-descriptions-bordered .ant-descriptions-item-content {
-  padding: 18px 20px;
-  background: white;
-  color: #212529;
-  line-height: 1.5;
-  min-height: 52px;
-  display: flex;
-  align-items: center;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.manager-vaccination-management .ant-descriptions-bordered .ant-descriptions-row {
-  border-bottom: 1px solid #e9ecef;
-  transition: background-color 0.2s ease;
-  min-height: 52px;
-}
-
-.manager-vaccination-management .ant-descriptions-bordered .ant-descriptions-row:hover {
-  background-color: #f8f9fa;
-}
-
-.manager-vaccination-management .ant-descriptions-bordered .ant-descriptions-row:last-child {
-  border-bottom: none;
-}
-
-/* Enhanced content styling for modal */
-.manager-vaccination-management .ant-descriptions .ant-tag {
-  margin: 0;
-  font-weight: 500;
-}
-
-.manager-vaccination-management .ant-descriptions .ant-typography {
-  margin: 0;
-}
-
-/* Special styling for span=2 items (description and instructions) */
-.manager-vaccination-management .ant-descriptions-item[colspan="2"] .ant-descriptions-item-label {
-  width: 160px !important;
-  padding: 18px 20px;
-  font-size: 14px;
-  font-weight: 600;
-  background: linear-gradient(135deg, #fff2e6 0%, #ffe7ba 100%);
-  color: #8b5a2b;
-  white-space: nowrap !important;
-}
-
-.manager-vaccination-management .ant-descriptions-item[colspan="2"] .ant-descriptions-item-content {
-  padding: 16px 20px;
-  font-size: 14px;
-  line-height: 1.5;
-  max-height: 120px;
-  overflow-y: auto;
-}
-
-/* Ensure consistent width for modal description fields */
-.manager-vaccination-management .vaccination-detail-modal .ant-descriptions-item[colspan="2"] {
-  width: 100% !important;
-}
-
-.manager-vaccination-management .vaccination-detail-modal .ant-descriptions-item[colspan="2"] .ant-descriptions-item-label {
-  width: 160px !important;
-  min-width: 160px !important;
-  max-width: 160px !important;
-  flex: 0 0 160px !important;
-  white-space: nowrap !important;
-}
-
-.manager-vaccination-management .vaccination-detail-modal .ant-descriptions-item[colspan="2"] .ant-descriptions-item-content {
-  flex: 1 !important;
-  width: calc(100% - 160px) !important;
-}
-
-/* Status badge styling in modal */
-.manager-vaccination-management .ant-descriptions .ant-badge {
-  font-weight: 500;
-  font-size: 14px;
-}
-
-.manager-vaccination-management .ant-descriptions .ant-badge-status-text {
-  font-size: 14px;
-  margin-left: 8px;
-}
-
-/* Form styling in Modal */
-.manager-vaccination-management .ant-form-item-label > label {
-  font-weight: 600;
-  color: #495057;
-  font-size: 14px;
-}
-
-.manager-vaccination-management .ant-input,
-.manager-vaccination-management .ant-input:focus,
-.manager-vaccination-management .ant-input-focused {
-  border-color: #ff6b35;
-  box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.1);
+.manager-vaccination-management .ant-pagination .ant-pagination-item {
   border-radius: 6px;
 }
 
-.manager-vaccination-management .ant-form-item-explain-error {
-  color: #dc3545;
-  font-size: 13px;
+.manager-vaccination-management .ant-pagination .ant-pagination-item-active {
+  background: #1890ff;
+  border-color: #1890ff;
 }
 
-/* Reject Modal Specific */
-.manager-vaccination-management .ant-modal.reject-modal .ant-modal-header {
-  background: linear-gradient(135deg, #ff4d4f 0%, #cf1322 100%);
+.manager-vaccination-management .ant-pagination .ant-pagination-item-active a {
+  color: #fff;
 }
 
-.manager-vaccination-management .ant-modal.reject-modal .ant-modal-footer {
-  background: #fff2f0;
-  border-top: 1px solid #ffccc7;
-}
-
-.manager-vaccination-management .ant-modal.reject-modal .ant-btn-dangerous {
-  background: #ff4d4f;
-  border-color: #ff4d4f;
-}
-
-.manager-vaccination-management .ant-modal.reject-modal .ant-btn-dangerous:hover {
-  background: #ff7875;
-  border-color: #ff7875;
-}
-
-.manager-vaccination-management .ant-form-item-label > label {
-  font-weight: 600;
-  color: #333;
-}
-
-.manager-vaccination-management .ant-input,
-.manager-vaccination-management .ant-input:focus,
-.manager-vaccination-management .ant-input-focused {
-  border-color: #ff6b35;
-  box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.2);
-}
-
-.manager-vaccination-management .ant-pagination-item-active {
-  background: #ff6b35;
-  border-color: #ff6b35;
-}
-
-.manager-vaccination-management .ant-pagination-item-active a {
-  color: white;
-}
-
-.manager-vaccination-management .ant-pagination-item:hover {
-  border-color: #ff6b35;
-}
-
-.manager-vaccination-management .ant-pagination-item:hover a {
-  color: #ff6b35;
-}
-
-.manager-vaccination-management .ant-tag {
-  border-radius: 4px;
-  font-weight: 500;
-}
-
-/* Custom status badges */
-.manager-vaccination-management .ant-badge-status-processing {
-  color: #1890ff;
-}
-
-.manager-vaccination-management .ant-badge-status-success {
-  color: #52c41a;
-}
-
-.manager-vaccination-management .ant-badge-status-error {
-  color: #ff4d4f;
-}
-
-.manager-vaccination-management .ant-badge-status-warning {
-  color: #fa8c16;
-}
-
-.manager-vaccination-management .ant-badge-status-default {
-  color: #722ed1;
-}
-
-/* Responsive design */
+/* Responsive Design */
 @media (max-width: 768px) {
   .manager-vaccination-management {
-    padding: 10px;
-  }
-  
-  .manager-vaccination-management .ant-table-thead > tr > th,
-  .manager-vaccination-management .ant-table-tbody > tr > td {
-    padding: 8px 4px;
-    font-size: 12px;
-  }
-  
-  .manager-vaccination-management .ant-btn {
-    padding: 0 8px;
-    font-size: 12px;
-  }
-
-  /* Mobile Modal Adjustments */
-  .manager-vaccination-management .ant-modal {
-    margin: 10px;
-    max-width: calc(100vw - 20px);
-  }
-
-  .manager-vaccination-management .ant-modal-body {
     padding: 16px;
-    max-height: 60vh;
   }
 
-  .manager-vaccination-management .ant-descriptions-bordered .ant-descriptions-item-label {
-    width: 120px !important;
-    padding: 14px 16px;
-    font-size: 13px;
-    min-height: 44px;
+  .manager-vaccination-management .ant-statistic-title {
+    font-size: 12px;
   }
 
-  .manager-vaccination-management .ant-descriptions-bordered .ant-descriptions-item-content {
-    padding: 14px 16px;
-    font-size: 13px;
-    min-height: 44px;
-  }
-
-  .manager-vaccination-management .ant-descriptions-item[colspan="2"] .ant-descriptions-item-label {
-    width: 120px !important;
-    padding: 14px 16px;
-    font-size: 13px;
-  }
-
-  .manager-vaccination-management .ant-descriptions-item[colspan="2"] .ant-descriptions-item-content {
-    padding: 12px 16px;
-    font-size: 13px;
-    max-height: 100px;
+  .manager-vaccination-management .ant-statistic-content-value {
+    font-size: 24px !important;
   }
 }
 
-/* Loading state */
-.manager-vaccination-management .ant-spin-container {
-  min-height: 200px;
-}
-
-/* Empty state */
-.manager-vaccination-management .ant-empty {
-  padding: 40px 0;
-}
-
-.manager-vaccination-management .ant-empty-description {
-  color: #999;
-  font-style: italic;
-}
-
-/* Animation for modal appearance */
-.manager-vaccination-management .ant-modal {
-  animation: modalFadeIn 0.3s ease-out;
-}
-
-@keyframes modalFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
+@media (max-width: 576px) {
+  .manager-vaccination-management .ant-statistic-content-value {
+    font-size: 20px !important;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 
-/* Success/Error message styling */
-.manager-vaccination-management .ant-message-notice-content {
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  .manager-vaccination-management .ant-card-body {
+    padding: 16px !important;
+  }
 }
