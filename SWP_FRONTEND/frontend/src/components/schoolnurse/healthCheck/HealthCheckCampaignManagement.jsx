@@ -9,6 +9,7 @@ const HealthCheckCampaignManagement = () => {
   const [selectedCampaignId, setSelectedCampaignId] = useState(null);
   const [campaignToEdit, setCampaignToEdit] = useState(null);
   const [showFormModal, setShowFormModal] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const handleViewDetails = (campaignId) => {
     setSelectedCampaignId(campaignId);
@@ -49,6 +50,7 @@ const HealthCheckCampaignManagement = () => {
         <HealthCheckCampaignList
           onCreateNew={handleCreateNew}
           onViewDetails={handleViewDetails}
+          refreshTrigger={refreshTrigger}
         />
       )}
 

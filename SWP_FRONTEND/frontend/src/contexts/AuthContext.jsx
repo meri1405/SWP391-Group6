@@ -175,6 +175,10 @@ export const AuthProvider = ({ children }) => {
     return user?.roleName === "SCHOOLNURSE";
   };
 
+  const isManager = () => {
+    return user?.roleName === "MANAGER";
+  };
+
   const isStaff = () => {
     const staffRoles = ["ADMIN", "MANAGER", "SCHOOLNURSE"];
     return user && staffRoles.includes(user.roleName);
@@ -327,6 +331,7 @@ export const AuthProvider = ({ children }) => {
     refreshSession,
     isParent,
     isSchoolNurse,
+    isManager,
     isStaff,
     getToken,
     loading,
