@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../../../contexts/AuthContext";
 import { parentApi } from "../../../api/parentApi";
 import { nurseApi } from "../../../api/nurseApi";
+import managerApi from "../../../api/managerApi";
 import webSocketService from "../../../services/webSocketService";
 import { VaccinationFormModal } from "../vaccinations";
 import "../../../styles/Notifications.css";
@@ -17,7 +18,7 @@ const Notifications = ({ role = "parent" }) => {
   const { getToken } = useAuth();
 
   // Use appropriate API based on role
-  const api = role === "schoolnurse" ? nurseApi : parentApi;
+  const api = role === "schoolnurse" ? nurseApi : role === "manager" ? managerApi : parentApi;
 
   // Helper functions for notification processing
   const getNotificationType = (notification) => {
@@ -63,6 +64,20 @@ const Notifications = ({ role = "parent" }) => {
       return "vaccination";
     }
 
+    // Check for health check keywords
+    if (
+      titleLower.includes("health check") ||
+      messageLower.includes("health check") ||
+      titleLower.includes("khám sức khỏe") ||
+      messageLower.includes("khám sức khỏe") ||
+      titleLower.includes("đợt khám") ||
+      messageLower.includes("đợt khám") ||
+      titleLower.includes("health examination") ||
+      messageLower.includes("health examination")
+    ) {
+      return "health";
+    }
+
     return "general";
   };
 
@@ -70,12 +85,20 @@ const Notifications = ({ role = "parent" }) => {
     // Determine priority based on notification content
     if (
       notification.title?.includes("từ chối") ||
-      notification.title?.includes("thất bại")
+      notification.title?.includes("thất bại") ||
+      notification.title?.includes("rejected") ||
+      notification.title?.includes("failed")
     ) {
       return "high";
     } else if (
       notification.title?.includes("duyệt") ||
-      notification.title?.includes("cập nhật")
+      notification.title?.includes("cập nhật") ||
+      notification.title?.includes("approved") ||
+      notification.title?.includes("updated") ||
+      notification.title?.includes("scheduled") ||
+      notification.title?.includes("completed") ||
+      notification.title?.includes("lên lịch") ||
+      notification.title?.includes("hoàn thành")
     ) {
       return "medium";
     }
@@ -124,7 +147,21 @@ const Notifications = ({ role = "parent" }) => {
     let translatedMessage = message
       .replace(/Your vaccination campaign/gi, "Chiến dịch tiêm chủng của bạn")
       .replace(/has been approved by/gi, "đã được phê duyệt bởi")
-      .replace(/Campaign Approved/gi, "Chiến dịch được phê duyệt");
+      .replace(/Campaign Approved/gi, "Chiến dịch được phê duyệt")
+      .replace(/Your health check campaign/gi, "Đợt khám sức khỏe của bạn")
+      .replace(/health check campaign/gi, "đợt khám sức khỏe")
+      .replace(/Health Check Campaign/gi, "Đợt khám sức khỏe")
+      .replace(/has been rejected/gi, "đã bị từ chối")
+      .replace(/has been approved/gi, "đã được phê duyệt")
+      .replace(/has been scheduled/gi, "đã được lên lịch")
+      .replace(/has been completed/gi, "đã hoàn thành")
+      .replace(/has been cancelled/gi, "đã bị hủy")
+      .replace(/Your medication request/gi, "Yêu cầu thuốc của bạn")
+      .replace(/medication request/gi, "yêu cầu thuốc")
+      .replace(/Medication Request/gi, "Yêu cầu thuốc")
+      .replace(/has been processed/gi, "đã được xử lý")
+      .replace(/needs attention/gi, "cần được chú ý")
+      .replace(/requires review/gi, "cần được xem xét");
 
     return translatedMessage.replace(isoDateRegex, (match) => {
       try {
@@ -169,6 +206,20 @@ const Notifications = ({ role = "parent" }) => {
         let translatedTitle = notification.title;
         if (translatedTitle === "Campaign Approved") {
           translatedTitle = "Chiến dịch được phê duyệt";
+        } else if (translatedTitle === "Campaign Rejected") {
+          translatedTitle = "Chiến dịch bị từ chối";
+        } else if (translatedTitle === "Campaign Scheduled") {
+          translatedTitle = "Chiến dịch đã lên lịch";
+        } else if (translatedTitle === "Campaign Completed") {
+          translatedTitle = "Chiến dịch hoàn thành";
+        } else if (translatedTitle === "Health Check Approved") {
+          translatedTitle = "Đợt khám sức khỏe được phê duyệt";
+        } else if (translatedTitle === "Health Check Rejected") {
+          translatedTitle = "Đợt khám sức khỏe bị từ chối";
+        } else if (translatedTitle === "Medication Request Approved") {
+          translatedTitle = "Yêu cầu thuốc được phê duyệt";
+        } else if (translatedTitle === "Medication Request Rejected") {
+          translatedTitle = "Yêu cầu thuốc bị từ chối";
         }
 
         return {
@@ -209,6 +260,20 @@ const Notifications = ({ role = "parent" }) => {
         let translatedTitle = newNotification.title;
         if (translatedTitle === "Campaign Approved") {
           translatedTitle = "Chiến dịch được phê duyệt";
+        } else if (translatedTitle === "Campaign Rejected") {
+          translatedTitle = "Chiến dịch bị từ chối";
+        } else if (translatedTitle === "Campaign Scheduled") {
+          translatedTitle = "Chiến dịch đã lên lịch";
+        } else if (translatedTitle === "Campaign Completed") {
+          translatedTitle = "Chiến dịch hoàn thành";
+        } else if (translatedTitle === "Health Check Approved") {
+          translatedTitle = "Đợt khám sức khỏe được phê duyệt";
+        } else if (translatedTitle === "Health Check Rejected") {
+          translatedTitle = "Đợt khám sức khỏe bị từ chối";
+        } else if (translatedTitle === "Medication Request Approved") {
+          translatedTitle = "Yêu cầu thuốc được phê duyệt";
+        } else if (translatedTitle === "Medication Request Rejected") {
+          translatedTitle = "Yêu cầu thuốc bị từ chối";
         }
 
         // Transform the new notification
@@ -392,6 +457,12 @@ const Notifications = ({ role = "parent" }) => {
           >
             Tiêm chủng
           </button>
+          <button
+            className={filter === "health" ? "active" : ""}
+            onClick={() => setFilter("health")}
+          >
+            Khám sức khỏe
+          </button>
         </div>
       </div>
       {loading && (
@@ -450,8 +521,14 @@ const Notifications = ({ role = "parent" }) => {
                       <span
                         className={`status-badge ${notification.medicationRequest.status?.toLowerCase()}`}
                       >
-                        {notification.medicationRequest.status ||
-                          "Không xác định"}
+                        {(() => {
+                          switch(notification.medicationRequest.status) {
+                            case 'PENDING': return 'Chờ duyệt';
+                            case 'APPROVED': return 'Đã duyệt';
+                            case 'REJECTED': return 'Từ chối';
+                            default: return notification.medicationRequest.status || "Không xác định";
+                          }
+                        })()}
                       </span>
                     </div>
                   </div>

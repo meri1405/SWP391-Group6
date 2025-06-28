@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { parentApi } from "../api/parentApi";
 import { nurseApi } from "../api/nurseApi";
+import managerApi from "../api/managerApi";
 import webSocketService from "../services/webSocketService";
 import { useSystemSettings } from "../contexts/SystemSettingsContext";
 import "../styles/Navbar.css";
@@ -15,7 +16,7 @@ const Navbar = () => {
   const [notifications, setNotifications] = useState([]);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
   const navigate = useNavigate();
-  const { user, logout, isParent, isStaff, isSchoolNurse, getToken } = useAuth();
+  const { user, logout, isParent, isStaff, isSchoolNurse, isManager, getToken } = useAuth();
   const { settings } = useSystemSettings();
   const location = useLocation();
 
@@ -29,8 +30,15 @@ const Navbar = () => {
     try {
       setLoadingNotifications(true);
       
-      // Chọn API phù hợp với role
-      const api = isSchoolNurse() ? nurseApi : parentApi;
+      // Choose appropriate API based on role
+      let api;
+      if (isSchoolNurse()) {
+        api = nurseApi;
+      } else if (isManager()) {
+        api = managerApi;
+      } else {
+        api = parentApi;
+      }
       
       // Load only 5 most recent notifications to show in dropdown
       const allData = await api.getAllNotifications(token, 5);
@@ -57,7 +65,7 @@ const Navbar = () => {
     } finally {
       setLoadingNotifications(false);
     }
-  }, [getToken, isSchoolNurse]);
+  }, [getToken, isSchoolNurse, isManager]);
 
   const setupWebSocketConnection = useCallback(async () => {
     const token = getToken();
@@ -130,12 +138,13 @@ const Navbar = () => {
   // Remove the old useEffect that calculated unread count
   // This is now handled by the notification loading
 
-  // Load notifications for users who can see them (parent and schoolnurse)
+  // Load notifications for users who can see them (parent, schoolnurse, and manager)
   useEffect(() => {
     // Check if user can see notifications
     const canSeeNotifications = 
       (isParent() && user.loginMethod !== "username") || // Parent who logged in via phone
-      (isSchoolNurse()); // SchoolNurse role
+      isSchoolNurse() || // SchoolNurse role
+      isManager(); // Manager role
     
     if (user && canSeeNotifications) {
       loadNotifications();
@@ -148,7 +157,7 @@ const Navbar = () => {
         webSocketService.removeMessageHandler("navbar-notifications");
       }
     };
-  }, [isParent, isSchoolNurse, user, loadNotifications, setupWebSocketConnection]);
+  }, [isParent, isSchoolNurse, isManager, user, loadNotifications, setupWebSocketConnection]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -221,7 +230,15 @@ const Navbar = () => {
     if (!showNotifications && notifications.length > 0) {
       // Mark unread notifications as read when opening dropdown
       try {
-        const api = isSchoolNurse() ? nurseApi : parentApi;
+        let api;
+        if (isSchoolNurse()) {
+          api = nurseApi;
+        } else if (isManager()) {
+          api = managerApi;
+        } else {
+          api = parentApi;
+        }
+        
         const unreadNotifications = notifications.filter((n) => !n.read);
         for (const notification of unreadNotifications) {
           await api.markNotificationAsRead(notification.id, getToken());
@@ -243,7 +260,15 @@ const Navbar = () => {
   const handleNotificationClick = async (id) => {
     try {
       // Mark the specific notification as read
-      const api = isSchoolNurse() ? nurseApi : parentApi;
+      let api;
+      if (isSchoolNurse()) {
+        api = nurseApi;
+      } else if (isManager()) {
+        api = managerApi;
+      } else {
+        api = parentApi;
+      }
+      
       await api.markNotificationAsRead(id, getToken());
 
       // Update local notification state
@@ -330,7 +355,7 @@ const Navbar = () => {
               </button>
 
               {/* Show notification bell for appropriate users */}
-              {((isParent() && user.loginMethod !== "username") || isSchoolNurse()) && (
+              {((isParent() && user.loginMethod !== "username") || isSchoolNurse() || isManager()) && (
                 <div className="nav-notifications" ref={notificationRef}>
                   <button
                     className="notification-btn"
@@ -367,9 +392,13 @@ const Navbar = () => {
                           notifications.map((notification) => (
                             <Link
                               key={notification.id}
-                              to={isSchoolNurse() 
-                                ? "/nurse-dashboard?tab=notifications" 
-                                : "/parent-dashboard?tab=notifications"}
+                              to={
+                                isSchoolNurse() 
+                                  ? "/nurse-dashboard?tab=notifications" 
+                                  : isManager()
+                                  ? "/manager-dashboard?tab=notifications"
+                                  : "/parent-dashboard?tab=notifications"
+                              }
                               className={`notification-item ${
                                 !notification.read ? "unread" : ""
                               }`}

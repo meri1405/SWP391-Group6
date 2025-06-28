@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Layout,
   Menu,
@@ -29,6 +30,7 @@ import ManagerOverview from "../components/dashboard/ManagerOverview";
 import MedicalEventsSection from "../components/dashboard/MedicalEventsSection";
 import InventorySection from "../components/dashboard/InventorySection";
 import NotificationsSection from "../components/dashboard/NotificationsSection";
+import { Notifications } from "../components/dashboard/notifications";
 import BlogSection from "../components/dashboard/BlogSection";
 import StudentsSection from "../components/dashboard/StudentsSection";
 import "../styles/AdminDashboard.css";
@@ -40,12 +42,44 @@ const ManagerDashboard = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [activeSection, setActiveSection] = useState("overview");
   const [messageApi, contextHolder] = message.useMessage();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // Handle URL parameter changes
+  useEffect(() => {
+    const tabParam = searchParams.get("tab");
+    if (tabParam) {
+      const validTabs = [
+        "overview",
+        "notifications", 
+        "students",
+        "consultations",
+        "health-checks",
+        "vaccinations",
+        "events",
+        "inventory",
+        "notifications-management",
+        "blog"
+      ];
+      if (validTabs.includes(tabParam)) {
+        setActiveSection(tabParam);
+      }
+    } else {
+      // If no tab parameter, default to overview
+      setActiveSection("overview");
+    }
+  }, [searchParams]);
 
   const menuItems = [
     {
       key: "overview",
       icon: <DashboardOutlined />,
       label: "Tổng quan",
+    },
+    {
+      key: "notifications",
+      icon: <BellOutlined />,
+      label: "Thông báo",
     },
     {
       key: "students",
@@ -78,9 +112,9 @@ const ManagerDashboard = () => {
       label: "Quản lý kho",
     },
     {
-      key: "notifications",
+      key: "notifications-management",
       icon: <BellOutlined />,
-      label: "Thông báo",
+      label: "Quản lý thông báo",
     },
     {
       key: "blog",
@@ -91,6 +125,11 @@ const ManagerDashboard = () => {
 
   const handleMenuClick = ({ key }) => {
     setActiveSection(key);
+    if (key === "overview") {
+      navigate("/manager-dashboard");
+    } else {
+      navigate(`/manager-dashboard?tab=${key}`);
+    }
   };
 
   const handleLogout = () => {
@@ -102,6 +141,8 @@ const ManagerDashboard = () => {
     switch (activeSection) {
       case "overview":
         return <ManagerOverview />;
+      case "notifications":
+        return <Notifications role="manager" />;
       case "students":
         return <StudentsSection />;
       case "consultations":
@@ -114,7 +155,7 @@ const ManagerDashboard = () => {
         return <MedicalEventsSection />;
       case "inventory":
         return <InventorySection />;
-      case "notifications":
+      case "notifications-management":
         return <NotificationsSection />;
       case "blog":
         return <BlogSection />;
