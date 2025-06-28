@@ -47,7 +47,7 @@ public class HealthCheckCampaign {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    private CampaignStatus status = CampaignStatus.DRAFT;
+    private CampaignStatus status = CampaignStatus.PENDING;
 
     @Column(name = "createdAt", nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now();

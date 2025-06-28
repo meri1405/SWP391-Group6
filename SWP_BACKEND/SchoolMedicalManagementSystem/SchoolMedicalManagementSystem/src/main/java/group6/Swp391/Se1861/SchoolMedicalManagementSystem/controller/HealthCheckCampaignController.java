@@ -14,8 +14,11 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/health-check/campaigns")
@@ -187,5 +190,31 @@ public class HealthCheckCampaignController {
     @PreAuthorize("hasAnyRole('SCHOOLNURSE', 'MANAGER')")
     public ResponseEntity<?> getAvailableCategories() {
         return ResponseEntity.ok(HealthCheckCategory.values());
+    }
+
+    @GetMapping("/calculate-target-count")
+    @PreAuthorize("hasRole('SCHOOLNURSE')")
+    public ResponseEntity<?> calculateTargetCount(@RequestParam(required = false) Integer minAge,
+                                                 @RequestParam(required = false) Integer maxAge,
+                                                 @RequestParam(required = false) List<String> targetClasses) {
+        try {
+            // Convert list to set for service method
+            Set<String> classSet = targetClasses != null ? new HashSet<>(targetClasses) : new HashSet<>();
+            
+            int targetCount = campaignService.calculateTargetCount(minAge, maxAge, classSet);
+            
+            // Return a simple response with the count
+            return ResponseEntity.ok(Map.of(
+                "targetCount", targetCount,
+                "minAge", minAge,
+                "maxAge", maxAge,
+                "targetClasses", classSet
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "error", "Error calculating target count: " + e.getMessage(),
+                "targetCount", 0
+            ));
+        }
     }
 }

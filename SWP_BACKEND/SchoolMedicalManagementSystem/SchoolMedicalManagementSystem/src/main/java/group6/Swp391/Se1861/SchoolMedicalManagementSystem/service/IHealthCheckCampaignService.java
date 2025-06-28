@@ -43,4 +43,9 @@ public interface IHealthCheckCampaignService {
     List<HealthCheckCampaign> getCompletedCampaigns();
 
     List<HealthCheckCampaign> getActiveCampaignsByClass(String className);
+
+    /**
+     * Calculate target count based on criteria without creating a campaign
+     */
+    int calculateTargetCount(Integer minAge, Integer maxAge, Set<String> targetClasses);
 }

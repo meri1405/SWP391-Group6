@@ -7,6 +7,7 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.HealthChec
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.HealthCheckCampaignRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IHealthCheckCampaignService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.INotificationService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IStudentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +25,7 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
 
     private final HealthCheckCampaignRepository campaignRepository;
     private final INotificationService notificationService;
+    private final IStudentService studentService;
 
     @Transactional
     public HealthCheckCampaign createCampaign(String name, String description, LocalDate startDate,
@@ -38,12 +40,21 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
         campaign.setLocation(location);
         campaign.setCategories(categories);
         campaign.setCreatedBy(nurse);
-        campaign.setStatus(CampaignStatus.DRAFT);
+        campaign.setStatus(CampaignStatus.PENDING);
         campaign.setMinAge(minAge);
         campaign.setMaxAge(maxAge);
         campaign.setTargetClasses(targetClasses != null ? targetClasses : new HashSet<>());
         campaign.setCreatedAt(LocalDateTime.now());
         campaign.setUpdatedAt(LocalDateTime.now());
+
+        // Automatically calculate target count when creating campaign
+        if (minAge != null && maxAge != null) {
+            int targetCount = calculateTargetCountInternal(minAge, maxAge, targetClasses);
+            campaign.setTargetCount(targetCount);
+        }
+
+        // Notify managers about a new campaign pending approval
+        notificationService.notifyManagersAboutCampaignApproval(campaign);
 
         return campaignRepository.save(campaign);
     }
@@ -60,9 +71,9 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
 
         HealthCheckCampaign campaign = optionalCampaign.get();
 
-        // Only allow updates if the campaign is in DRAFT status
-        if (campaign.getStatus() != CampaignStatus.DRAFT) {
-            throw new RuntimeException("Cannot update campaign that is not in DRAFT status");
+        // Only allow updates if the campaign is in PENDING status
+        if (campaign.getStatus() != CampaignStatus.PENDING) {
+            throw new RuntimeException("Cannot update campaign that is not in PENDING status");
         }
 
         campaign.setName(name);
@@ -76,6 +87,12 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
         campaign.setTargetClasses(targetClasses != null ? targetClasses : new HashSet<>());
         campaign.setUpdatedAt(LocalDateTime.now());
 
+        // Recalculate target count when updating campaign
+        if (minAge != null && maxAge != null) {
+            int targetCount = calculateTargetCountInternal(minAge, maxAge, targetClasses);
+            campaign.setTargetCount(targetCount);
+        }
+
         return campaignRepository.save(campaign);
     }
 
@@ -88,15 +105,11 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
 
         HealthCheckCampaign campaign = optionalCampaign.get();
 
-        // Only allow submission if the campaign is in DRAFT status
-        if (campaign.getStatus() != CampaignStatus.DRAFT) {
-            throw new RuntimeException("Cannot submit campaign that is not in DRAFT status");
-        }
-
-        campaign.setStatus(CampaignStatus.PENDING);
+        // Campaign is already in PENDING status when created, so this method is no longer needed
+        // But we keep it for backward compatibility
         campaign.setUpdatedAt(LocalDateTime.now());
 
-        // Notify managers about a new campaign pending approval
+        // Notify managers about a campaign pending approval
         notificationService.notifyManagersAboutCampaignApproval(campaign);
 
         return campaignRepository.save(campaign);
@@ -141,7 +154,7 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
             throw new RuntimeException("Cannot reject campaign that is not in PENDING status");
         }
 
-        campaign.setStatus(CampaignStatus.DRAFT);  // Set back to DRAFT for revision
+        campaign.setStatus(CampaignStatus.CANCELED);  // Set to CANCELED instead of DRAFT
         campaign.setNotes(notes);
         campaign.setUpdatedAt(LocalDateTime.now());
 
@@ -165,7 +178,8 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
             throw new RuntimeException("Cannot schedule campaign that is not in APPROVED status");
         }
 
-        campaign.setStatus(CampaignStatus.SCHEDULED);
+        // Instead of changing to SCHEDULED status, we keep it as APPROVED
+        // and just set the target count for manual override if needed
         campaign.setTargetCount(targetCount);
         campaign.setUpdatedAt(LocalDateTime.now());
 
@@ -184,9 +198,9 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
 
         HealthCheckCampaign campaign = optionalCampaign.get();
 
-        // Only allow starting if the campaign is in SCHEDULED status
-        if (campaign.getStatus() != CampaignStatus.SCHEDULED) {
-            throw new RuntimeException("Cannot start campaign that is not in SCHEDULED status");
+        // Only allow starting if the campaign is in APPROVED status
+        if (campaign.getStatus() != CampaignStatus.APPROVED) {
+            throw new RuntimeException("Cannot start campaign that is not in APPROVED status");
         }
 
         campaign.setStatus(CampaignStatus.IN_PROGRESS);
@@ -262,5 +276,28 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
 
     public List<HealthCheckCampaign> getActiveCampaignsByClass(String className) {
         return campaignRepository.findActiveByClass(className);
+    }
+
+    /**
+     * Calculate target count based on age range and target classes
+     */
+    private int calculateTargetCountInternal(Integer minAge, Integer maxAge, Set<String> targetClasses) {
+        try {
+            List<group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.StudentDTO> eligibleStudents = 
+                studentService.getEligibleStudentsForClasses(targetClasses, minAge, maxAge);
+            return eligibleStudents.size();
+        } catch (Exception e) {
+            // If there's an error calculating, return 0 and log the error
+            System.err.println("Error calculating target count: " + e.getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * Public method to calculate target count for API endpoint
+     */
+    @Override
+    public int calculateTargetCount(Integer minAge, Integer maxAge, Set<String> targetClasses) {
+        return calculateTargetCountInternal(minAge, maxAge, targetClasses);
     }
 }
