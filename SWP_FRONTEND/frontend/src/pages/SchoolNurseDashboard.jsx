@@ -8,6 +8,8 @@ import {
   message,
   Upload,
   Progress,
+  Badge,
+  notification,
 } from "antd";
 import { useAuth } from "../contexts/AuthContext";
 import {
@@ -41,8 +43,9 @@ import NurseMedicationSchedules from "../components/dashboard/NurseMedicationSch
 import { VaccinationRuleManagement } from "../components/dashboard/vaccinations";
 import { MedicalSupplyInventory } from "../components/dashboard/inventory";
 import { Notifications } from "../components/dashboard/notifications";
-// Import nurseApi
-import { nurseApi } from "../api/nurseApi";
+// Import webSocketService
+import { restockRequestApi } from "../api/restockRequestApi";
+import webSocketService from "../services/webSocketService";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -80,12 +83,114 @@ const { Header, Sider, Content } = Layout;
 
 const SchoolNurseDashboard = () => {
   const navigate = useNavigate();
-  const { user, isAuthenticated, isSchoolNurse, setUserInfo, getToken } =
+  const { user, isAuthenticated, isSchoolNurse, setUserInfo } =
     useAuth();
   const [activeSection, setActiveSection] = useState("dashboard");
   const [userInfo, setUserInfoState] = useState(null);
   const [collapsed, setCollapsed] = useState(false);
   const [searchParams] = useSearchParams();
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [api, notificationContextHolder] = notification.useNotification();
+
+  // Function to update notification count from API
+  const updateNotificationCount = useCallback(() => {
+    if (!user) return;
+    
+    // Fetch unread notification count from the API
+    fetch(`/api/notifications/unread-count?userId=${user.id}`, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("token")}`
+      }
+    })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Failed to fetch notification count');
+        }
+        return response.json();
+      })
+      .then(data => {
+        setNotificationCount(data.count || 0);
+      })
+      .catch(error => {
+        console.error("Failed to fetch notification count:", error);
+        // Default to 0 on error
+        setNotificationCount(0);
+      });
+  }, [user]);
+  
+  // Subscribe to restock request notifications
+  useEffect(() => {
+    // Initial notification count
+    updateNotificationCount();
+    
+    // Connect to WebSocket if necessary
+    const connectWebSocket = async () => {
+      const token = localStorage.getItem("token");
+      if (token) {
+        console.log("[SchoolNurseDashboard] Checking WebSocket connection...");
+        try {
+          if (!webSocketService.isConnected()) {
+            console.log("[SchoolNurseDashboard] Connecting to WebSocket...");
+            await webSocketService.connect(token);
+            console.log("[SchoolNurseDashboard] WebSocket connected successfully");
+          } else {
+            console.log("[SchoolNurseDashboard] WebSocket already connected");
+          }
+        } catch (error) {
+          console.error("[SchoolNurseDashboard] Failed to connect to WebSocket:", error);
+        }
+      }
+    };
+    
+    // Connect to WebSocket
+    connectWebSocket();
+    
+    // Subscribe to restock request updates
+    console.log("[SchoolNurseDashboard] Subscribing to restock request updates");
+    const unsubscribe = restockRequestApi.subscribeToUpdates(() => {
+      // Update notification count
+      console.log("[SchoolNurseDashboard] Received restock request update");
+      updateNotificationCount();
+    });
+    
+    // Subscribe to WebSocket notifications if available
+    if (user && webSocketService) {
+      console.log("[SchoolNurseDashboard] Adding WebSocket message handler");
+      webSocketService.addMessageHandler('nurseNotifications', (notification) => {
+        console.log("[SchoolNurseDashboard] Received WebSocket notification:", notification);
+        
+        if (notification.notificationType === 'RESTOCK_REQUEST_APPROVED' || 
+            notification.notificationType === 'RESTOCK_REQUEST_REJECTED') {
+          
+          // Determine message based on notification type
+          const title = notification.notificationType === 'RESTOCK_REQUEST_APPROVED' ? 
+            'Yêu cầu nhập kho được duyệt' : 
+            'Yêu cầu nhập kho bị từ chối';
+            
+          api.info({
+            message: notification.title || title,
+            description: notification.message || 'Kiểm tra thông tin chi tiết trong mục thông báo',
+            placement: 'topRight',
+            onClick: () => {
+              setActiveSection('notifications');
+              navigate('/school-nurse-dashboard?tab=notifications');
+            },
+          });
+          
+          // Update notification count
+          updateNotificationCount();
+        }
+      });
+    }
+    
+    // Cleanup subscriptions on unmount
+    return () => {
+      unsubscribe && unsubscribe();
+      if (webSocketService) {
+        webSocketService.removeMessageHandler('nurseNotifications');
+      }
+    };
+  }, [api, navigate, updateNotificationCount, user]);
 
   // Sample data for the dashboard
   const [stats] = useState({
@@ -104,7 +209,9 @@ const SchoolNurseDashboard = () => {
     },
     {
       key: "notifications",
-      icon: <BellOutlined />,
+      icon: <Badge count={notificationCount} offset={[10, 0]}>
+              <BellOutlined />
+            </Badge>,
       label: "Thông báo",
     },
     {
@@ -515,7 +622,7 @@ const SchoolNurseDashboard = () => {
       if (!dateString) return "Chưa cập nhật";
       try {
         return new Date(dateString).toLocaleDateString("vi-VN");
-      } catch (error) {
+      } catch {
         return "Chưa cập nhật";
       }
     }, []);
@@ -1419,6 +1526,7 @@ const SchoolNurseDashboard = () => {
 
   return (
     <Layout className="school-nurse-dashboard">
+      {notificationContextHolder}
       <Sider
         width={240}
         collapsed={collapsed}

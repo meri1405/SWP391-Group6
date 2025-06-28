@@ -71,16 +71,11 @@ class WebSocketService {
         // Store token for potential reconnection
         this.currentToken = token;
 
-        // Temporarily disable WebSocket connection due to authentication issues
-        // The backend WebSocket endpoint (/ws) is not configured with authentication interceptor
-        // This causes 401 Unauthorized errors when trying to connect with Bearer tokens
-        // Real-time notifications are disabled until backend WebSocket auth is properly configured
-        console.log(
-          "WebSocket connection temporarily disabled due to authentication issues"
-        );
+        // WebSocket connection is now enabled
+        console.log("Attempting to establish WebSocket connection");
         
-        // Set WebSocket disabled flag
-        this.webSocketDisabled = true;
+        // Set WebSocket disabled flag to false
+        this.webSocketDisabled = false;
         
         if (!this.webSocketDisabled) {
           // Create SockJS connection with token in URL

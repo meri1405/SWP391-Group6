@@ -21,4 +21,5 @@ public class NotificationDTO {
     private Long medicalEventId;
     private Boolean confirm;
     private Long vaccinationFormId;
+    private Long restockRequestId;
 }

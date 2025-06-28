@@ -103,18 +103,44 @@ const InventorySection = () => {
         const quantityInBaseUnit = record.quantityInBaseUnit || 0;
         const minStockLevelInBaseUnit = record.minStockLevelInBaseUnit || 0;
         const isEnabled = record.enabled !== false; // Default to true if not specified
+        const expirationDate = record.expirationDate ? dayjs(record.expirationDate) : null;
+        const today = dayjs();
+        const isNearExpiry = expirationDate && expirationDate.diff(today, 'day') <= 30;
+        const isLowStock = quantityInBaseUnit <= minStockLevelInBaseUnit;
+        const isVeryLowStock = quantityInBaseUnit <= minStockLevelInBaseUnit * 0.5;
         
         if (!isEnabled) {
             return <Tag style={{ backgroundColor: '#d9d9d9', color: '#595959' }} icon={<CloseOutlined />}>Ngừng sử dụng</Tag>;
         }
+
+        // Create tags array to show multiple statuses if needed
+        const tags = [];
         
-        if (quantityInBaseUnit <= minStockLevelInBaseUnit) {
-            return <Tag color="red" icon={<WarningOutlined />}>Sắp hết</Tag>;
-        } else if (quantityInBaseUnit <= minStockLevelInBaseUnit * 1.5) {
-            return <Tag color="orange">Tồn kho thấp</Tag>;
-        } else {
+        // Add stock status tag - prioritize this
+        if (isVeryLowStock) {
+            tags.push(<Tag color="red" icon={<WarningOutlined />} key="stock">Sắp hết</Tag>);
+        } else if (isLowStock) {
+            tags.push(<Tag color="orange" key="stock">Tồn kho thấp</Tag>);
+        }
+
+        // Add expiration tag if near expiry
+        if (isNearExpiry) {
+            const daysUntilExpiry = expirationDate.diff(today, 'day');
+            const expiryColor = daysUntilExpiry <= 7 ? 'red' : 'orange';
+            tags.push(
+                <Tag color={expiryColor} key="expiry" style={{ marginLeft: 4 }}>
+                    {daysUntilExpiry < 0 ? 'Đã hết hạn' : `Còn ${daysUntilExpiry} ngày`}
+                </Tag>
+            );
+        }
+
+        // If no warning tags, show normal status
+        if (tags.length === 0) {
             return <Tag color="green">Còn hàng</Tag>;
         }
+
+        // Return all applicable tags
+        return <>{tags}</>;
     };
 
     const getCategoryTag = (category) => {
@@ -207,6 +233,13 @@ const InventorySection = () => {
 
     const medicineColumns = [
         {
+            title: 'STT',
+            key: 'index',
+            width: 70,
+            render: (_, __, index) => index + 1,
+            align: 'center',
+        },
+        {
             title: 'Tên thuốc',
             dataIndex: 'name',
             key: 'name',
@@ -243,7 +276,28 @@ const InventorySection = () => {
             title: 'Hạn sử dụng',
             dataIndex: 'expirationDate',
             key: 'expirationDate',
-            render: (date) => date ? dayjs(date).format('DD/MM/YYYY') : 'Không có',
+            render: (date, record) => {
+                if (!date) return 'Không có';
+                
+                const expirationDate = dayjs(date);
+                const today = dayjs();
+                const daysUntilExpiry = expirationDate.diff(today, 'day');
+                const isNearExpiry = daysUntilExpiry <= 30;
+                const isLowStock = (record.quantityInBaseUnit || 0) <= (record.minStockLevelInBaseUnit || 0);
+                
+                let style = {};
+                if (isNearExpiry && isLowStock) {
+                    style = {
+                        color: daysUntilExpiry <= 7 ? '#ff4d4f' : '#faad14',
+                        fontWeight: 'bold',
+                        backgroundColor: daysUntilExpiry <= 7 ? '#fff1f0' : '#fff7e6',
+                        padding: '2px 8px',
+                        borderRadius: '4px'
+                    };
+                }
+                
+                return <span style={style}>{expirationDate.format('DD/MM/YYYY')}</span>;
+            },
         },
         {
             title: 'Nhà cung cấp',
@@ -258,46 +312,58 @@ const InventorySection = () => {
         {
             title: 'Thao tác',
             key: 'action',
-            render: (_, record) => (
-                <Space size="middle">
-                    <Button
-                        type="primary"
-                        icon={<EditOutlined />}
-                        size="small"
-                        onClick={() => handleEdit(record)}
-                    >
-                        Sửa
-                    </Button>
-                    {record.enabled ? (
+            render: (_, record) => {
+                // Check if item is expired
+                const isExpired = record.expirationDate && dayjs(record.expirationDate).isBefore(dayjs(), 'day');
+                
+                return (
+                    <Space size="middle">
                         <Button
-                            type="default"
+                            type="primary"
+                            icon={<EditOutlined />}
                             size="small"
-                            onClick={() => handleDisableSupply(record)}
-                            style={{ color: '#f5222d', borderColor: '#f5222d' }}
+                            onClick={() => handleEdit(record)}
                         >
-                            Vô hiệu
+                            Sửa
                         </Button>
-                    ) : (
-                        <Button
-                            type="default"
-                            size="small"
-                            onClick={() => handleEnableSupply(record)}
-                            style={{ color: '#52c41a', borderColor: '#52c41a' }}
-                        >
-                            Kích hoạt
-                        </Button>
-                    )}
-                    {(record.quantityInBaseUnit <= record.minStockLevelInBaseUnit) && (
-                        <Tag color="warning" style={{ marginLeft: 8 }}>
-                            Cần bổ sung
-                        </Tag>
-                    )}
-                </Space>
-            ),
+                        {record.enabled ? (
+                            <Button
+                                type="default"
+                                size="small"
+                                onClick={() => handleDisableSupply(record)}
+                                style={{ color: '#f5222d', borderColor: '#f5222d' }}
+                            >
+                                Vô hiệu
+                            </Button>
+                        ) : (
+                            <Button
+                                type="default"
+                                size="small"
+                                onClick={() => handleEnableSupply(record)}
+                                style={{ color: '#52c41a', borderColor: '#52c41a' }}
+                            >
+                                Kích hoạt
+                            </Button>
+                        )}
+                        {!isExpired && (record.quantityInBaseUnit <= record.minStockLevelInBaseUnit) && (
+                            <Tag color="warning" style={{ marginLeft: 8 }}>
+                                Cần bổ sung
+                            </Tag>
+                        )}
+                    </Space>
+                );
+            },
         },
     ];
 
     const supplyColumns = [
+        {
+            title: 'STT',
+            key: 'index',
+            width: 70,
+            render: (_, __, index) => index + 1,
+            align: 'center',
+        },
         {
             title: 'Tên vật tư',
             dataIndex: 'name',
@@ -344,52 +410,58 @@ const InventorySection = () => {
         {
             title: 'Thao tác',
             key: 'action',
-            render: (_, record) => (
-                <Space size="middle">
-                    <Button
-                        type="primary"
-                        icon={<EditOutlined />}
-                        size="small"
-                        onClick={() => handleEdit(record)}
-                    >
-                        Sửa
-                    </Button>
-                    {record.enabled ? (
+            render: (_, record) => {
+                // Check if item is expired
+                const isExpired = record.expirationDate && dayjs(record.expirationDate).isBefore(dayjs(), 'day');
+                
+                return (
+                    <Space size="middle">
                         <Button
-                            type="default"
+                            type="primary"
+                            icon={<EditOutlined />}
                             size="small"
-                            onClick={() => handleDisableSupply(record)}
-                            style={{ color: '#f5222d', borderColor: '#f5222d' }}
+                            onClick={() => handleEdit(record)}
                         >
-                            Vô hiệu
+                            Sửa
                         </Button>
-                    ) : (
-                        <Button
-                            type="default"
-                            size="small"
-                            onClick={() => handleEnableSupply(record)}
-                            style={{ color: '#52c41a', borderColor: '#52c41a' }}
-                        >
-                            Kích hoạt
-                        </Button>
-                    )}
-                    {(record.quantityInBaseUnit <= record.minStockLevelInBaseUnit) && (
-                        <Tag color="warning" style={{ marginLeft: 8 }}>
-                            Cần bổ sung
-                        </Tag>
-                    )}
-                </Space>
-            ),
+                        {record.enabled ? (
+                            <Button
+                                type="default"
+                                size="small"
+                                onClick={() => handleDisableSupply(record)}
+                                style={{ color: '#f5222d', borderColor: '#f5222d' }}
+                            >
+                                Vô hiệu
+                            </Button>
+                        ) : (
+                            <Button
+                                type="default"
+                                size="small"
+                                onClick={() => handleEnableSupply(record)}
+                                style={{ color: '#52c41a', borderColor: '#52c41a' }}
+                            >
+                                Kích hoạt
+                            </Button>
+                        )}
+                        {!isExpired && (record.quantityInBaseUnit <= record.minStockLevelInBaseUnit) && (
+                            <Tag color="warning" style={{ marginLeft: 8 }}>
+                                Cần bổ sung
+                            </Tag>
+                        )}
+                    </Space>
+                );
+            },
         },
     ];
 
     // Restock request columns for manager review
     const requestColumns = [
         {
-            title: 'ID',
-            dataIndex: 'id',
-            key: 'id',
+            title: 'STT',
+            key: 'index',
             width: 80,
+            render: (_, __, index) => index + 1,
+            align: 'center',
         },
         {
             title: 'Người yêu cầu',
@@ -648,6 +720,16 @@ const InventorySection = () => {
     // Handle supply enable/disable
     const handleEnableSupply = async (record) => {
         try {
+            // Check if the item has expiration date and is expired
+            if (record.expirationDate) {
+                const expirationDate = dayjs(record.expirationDate);
+                const today = dayjs();
+                if (expirationDate.isBefore(today, 'day')) {
+                    messageApi.error('Không thể kích hoạt vật tư đã hết hạn sử dụng');
+                    return;
+                }
+            }
+
             setLoading(true);
             await medicalSupplyApi.enableSupply(record.id);
             messageApi.success('Đã kích hoạt vật tư y tế');
@@ -747,6 +829,36 @@ const InventorySection = () => {
         });
     };
 
+    // Handle auto-disable expired supplies
+    const handleAutoDisableExpiredSupplies = async (supplies) => {
+        const today = dayjs();
+        const expiredSupplies = supplies.filter(item => {
+            const expirationDate = dayjs(item.expirationDate);
+            return expirationDate.isBefore(today, 'day') && item.enabled !== false;
+        });
+
+        if (expiredSupplies.length > 0) {
+            console.log(`Found ${expiredSupplies.length} expired supplies to disable`);
+            for (const supply of expiredSupplies) {
+                try {
+                    await medicalSupplyApi.disableSupply(supply.id);
+                    console.log(`Auto-disabled expired supply: ${supply.name}`);
+                    
+                    // Update local state
+                    setMedicines(prev => prev.map(item => 
+                        item.id === supply.id ? { ...item, enabled: false } : item
+                    ));
+                    setSupplies(prev => prev.map(item => 
+                        item.id === supply.id ? { ...item, enabled: false } : item
+                    ));
+                } catch (error) {
+                    console.error(`Error auto-disabling expired supply ${supply.id}:`, error);
+                }
+            }
+            messageApi.warning(`${expiredSupplies.length} vật tư đã hết hạn sử dụng và đã bị tự động vô hiệu hóa`);
+        }
+    };
+
     // Fetch medical supplies from database
     const fetchMedicalSupplies = useCallback(async () => {
         try {
@@ -754,8 +866,10 @@ const InventorySection = () => {
             const allSupplies = await medicalSupplyApi.getAllSupplies();
             console.log('Fetched medical supplies:', allSupplies);
             
+            // Auto-disable expired supplies
+            await handleAutoDisableExpiredSupplies(allSupplies);
+            
             // Sort by last modified date (updatedAt or createdAt), most recent first
-            // This ensures that newly added or updated items appear at the top of the list
             const sortedSupplies = [...allSupplies].sort((a, b) => {
                 const dateA = new Date(a.updatedAt || a.createdAt || 0);
                 const dateB = new Date(b.updatedAt || b.createdAt || 0);

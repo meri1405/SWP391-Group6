@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Layout,
@@ -9,8 +9,8 @@ import {
   Statistic,
   Avatar,
   Typography,
-  Button,
-  message,
+  Badge,
+  notification,
 } from "antd";
 import {
   UserOutlined,
@@ -19,7 +19,6 @@ import {
   BellOutlined,
   FileTextOutlined,
   TeamOutlined,
-  LogoutOutlined,
   DashboardOutlined,
 } from "@ant-design/icons";
 import ConsultationsSection from "../components/dashboard/ConsultationsSection";
@@ -34,16 +33,123 @@ import { Notifications } from "../components/dashboard/notifications";
 import BlogSection from "../components/dashboard/BlogSection";
 import StudentsSection from "../components/dashboard/StudentsSection";
 import "../styles/AdminDashboard.css";
+import { useAuth } from "../contexts/AuthContext";
+import { restockRequestApi } from "../api/restockRequestApi";
+import webSocketService from "../services/webSocketService";
 
 const { Header, Sider, Content } = Layout;
-const { Title } = Typography;
 
 const ManagerDashboard = () => {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed] = useState(false);
   const [activeSection, setActiveSection] = useState("overview");
-  const [messageApi, contextHolder] = message.useMessage();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [api, notificationContextHolder] = notification.useNotification();
+  const { user } = useAuth();
+
+  // Function to update notification count
+  const updateNotificationCount = useCallback(() => {
+    if (!user) return;
+    
+    // Fetch unread notification count from the API
+    fetch(`/api/notifications/unread-count?userId=${user.id}`, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("token")}`
+      }
+    })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Failed to fetch notification count');
+        }
+        return response.json();
+      })
+      .then(data => {
+        setNotificationCount(data.count || 0);
+      })
+      .catch(error => {
+        console.error("Failed to fetch notification count:", error);
+        // Default to 0 on error
+        setNotificationCount(0);
+      });
+  }, [user]);
+
+  // Subscribe to restock request notifications
+  useEffect(() => {
+    // Initial notification count
+    updateNotificationCount();
+    
+    // Connect to WebSocket if necessary
+    const connectWebSocket = async () => {
+      const token = localStorage.getItem("token");
+      if (token) {
+        console.log("[ManagerDashboard] Checking WebSocket connection...");
+        try {
+          if (!webSocketService.isConnected()) {
+            console.log("[ManagerDashboard] Connecting to WebSocket...");
+            await webSocketService.connect(token);
+            console.log("[ManagerDashboard] WebSocket connected successfully");
+          } else {
+            console.log("[ManagerDashboard] WebSocket already connected");
+          }
+        } catch (error) {
+          console.error("[ManagerDashboard] Failed to connect to WebSocket:", error);
+        }
+      }
+    };
+    
+    // Connect to WebSocket
+    connectWebSocket();
+    
+    // Subscribe to restock request updates
+    console.log("[ManagerDashboard] Subscribing to restock request updates");
+    const unsubscribe = restockRequestApi.subscribeToUpdates(() => {
+      // When a restock request is updated, show notification and update count
+      // console.log("[ManagerDashboard] Received restock request update notification");
+      // api.info({
+      //   message: 'Yêu cầu nhập kho mới',
+      //   description: 'Có yêu cầu nhập kho mới cần xử lý.',
+      //   placement: 'topRight',
+      //   onClick: () => {
+      //     setActiveSection('notifications');
+      //     navigate('/manager-dashboard?tab=notifications');
+      //   },
+      // });
+      
+      // Update notification count
+      updateNotificationCount();
+    });
+    
+    // Subscribe to WebSocket notifications if available
+    if (user && webSocketService) {
+      console.log("[ManagerDashboard] Adding WebSocket message handler");
+      webSocketService.addMessageHandler('managerNotifications', (notification) => {
+        console.log("[ManagerDashboard] Received WebSocket notification:", notification);
+        if (notification.notificationType === 'RESTOCK_REQUEST_NEW') {
+          api.info({
+            message: notification.title || 'Thông báo mới',
+            description: notification.message || 'Bạn có thông báo mới',
+            placement: 'topRight',
+            onClick: () => {
+              setActiveSection('notifications');
+              navigate('/manager-dashboard?tab=notifications');
+            },
+          });
+          
+          // Update notification count
+          updateNotificationCount();
+        }
+      });
+    }
+    
+    // Cleanup subscriptions on unmount
+    return () => {
+      unsubscribe && unsubscribe();
+      if (webSocketService) {
+        webSocketService.removeMessageHandler('managerNotifications');
+      }
+    };
+  }, [api, navigate, updateNotificationCount, user]);
 
   // Handle URL parameter changes
   useEffect(() => {
@@ -78,7 +184,9 @@ const ManagerDashboard = () => {
     },
     {
       key: "notifications",
-      icon: <BellOutlined />,
+      icon: <Badge count={notificationCount} offset={[10, 0]}>
+              <BellOutlined />
+            </Badge>,
       label: "Thông báo",
     },
     {
@@ -132,11 +240,6 @@ const ManagerDashboard = () => {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("user");
-    window.location.href = "/login";
-  };
-
   const renderContent = () => {
     switch (activeSection) {
       case "overview":
@@ -177,7 +280,7 @@ const ManagerDashboard = () => {
         zIndex: 1,
       }}
     >
-      {contextHolder}
+      {notificationContextHolder}
       <Sider
         width={240}
         collapsed={collapsed}
