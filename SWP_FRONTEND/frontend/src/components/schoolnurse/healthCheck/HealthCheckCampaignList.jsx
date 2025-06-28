@@ -14,7 +14,7 @@ import { healthCheckApi } from '../../../api/healthCheckApi';
 const { Option } = Select;
 const { RangePicker } = DatePicker;
 
-const HealthCheckCampaignList = ({ onCreateNew, onViewDetails }) => {
+const HealthCheckCampaignList = ({ onCreateNew, onViewDetails, refreshTrigger }) => {
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(false);
   const [filterStatus, setFilterStatus] = useState('ALL');
@@ -24,7 +24,7 @@ const HealthCheckCampaignList = ({ onCreateNew, onViewDetails }) => {
 
   useEffect(() => {
     fetchCampaigns();
-  }, [filterStatus, dateRange]);
+  }, [filterStatus, dateRange, refreshTrigger]);
 
   const fetchCampaigns = async () => {
     setLoading(true);

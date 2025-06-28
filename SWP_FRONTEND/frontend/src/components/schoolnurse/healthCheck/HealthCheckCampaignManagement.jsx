@@ -9,6 +9,7 @@ const HealthCheckCampaignManagement = () => {
   const [selectedCampaignId, setSelectedCampaignId] = useState(null);
   const [campaignToEdit, setCampaignToEdit] = useState(null);
   const [showFormModal, setShowFormModal] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const handleViewDetails = (campaignId) => {
     setSelectedCampaignId(campaignId);
@@ -33,6 +34,8 @@ const HealthCheckCampaignManagement = () => {
 
   const handleFormSuccess = (result) => {
     setShowFormModal(false);
+    // Trigger refresh of the campaign list
+    setRefreshTrigger(prev => prev + 1);
     if (activeView === 'detail') {
       // If we were editing from detail view, stay on detail but refresh the data
       setSelectedCampaignId(result.id);
@@ -49,6 +52,7 @@ const HealthCheckCampaignManagement = () => {
         <HealthCheckCampaignList 
           onCreateNew={handleCreateNew} 
           onViewDetails={handleViewDetails}
+          refreshTrigger={refreshTrigger}
         />
       )}
 
