@@ -250,6 +250,24 @@ public class VaccinationCampaignService implements IVaccinationCampaignService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public int getEligibleStudentsCountByRule(Long ruleId) {
+        VaccinationRule rule = ruleRepository.findById(ruleId)
+                .orElseThrow(() -> new IllegalArgumentException("Vaccination rule not found with ID: " + ruleId));
+
+        List<Student> allStudents = studentRepository.findAllWithParents();
+        int eligibleCount = 0;
+
+        for (Student student : allStudents) {
+            if (isStudentEligible(student, rule)) {
+                eligibleCount++;
+            }
+        }
+
+        return eligibleCount;
+    }
+
+    @Override
     @Transactional
     public List<VaccinationFormDTO> generateVaccinationForms(Long campaignId, User nurse) {
         VaccinationCampaign campaign = campaignRepository.findById(campaignId)
