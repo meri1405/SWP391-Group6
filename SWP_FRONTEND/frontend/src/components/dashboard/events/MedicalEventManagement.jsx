@@ -609,7 +609,7 @@ const MedicalEventManagement = () => {
         }}
         width={800}
         confirmLoading={loading}
-        destroyOnClose
+        destroyOnHidden
         forceRender
         className="event-modal"
       >

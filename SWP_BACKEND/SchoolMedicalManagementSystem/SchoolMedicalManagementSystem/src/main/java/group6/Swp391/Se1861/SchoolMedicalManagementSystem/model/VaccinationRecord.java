@@ -74,6 +74,13 @@ public class VaccinationRecord {
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
 
+    @Column(name = "pre_vaccination_status", length = 50)
+    @Enumerated(EnumType.STRING)
+    private PreVaccinationStatus preVaccinationStatus;
+
+    @Column(name = "pre_vaccination_notes", columnDefinition = "TEXT")
+    private String preVaccinationNotes;
+
     // Relationships
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "student_id", nullable = false)
@@ -127,6 +134,22 @@ public class VaccinationRecord {
         private final String description;
 
         SeverityLevel(String description) {
+            this.description = description;
+        }
+
+        public String getDescription() {
+            return description;
+        }
+    }
+
+    public enum PreVaccinationStatus {
+        NORMAL("Bình thường"),
+        ABNORMAL("Bất thường"),
+        POSTPONED("Hoãn tiêm");
+
+        private final String description;
+
+        PreVaccinationStatus(String description) {
             this.description = description;
         }
 

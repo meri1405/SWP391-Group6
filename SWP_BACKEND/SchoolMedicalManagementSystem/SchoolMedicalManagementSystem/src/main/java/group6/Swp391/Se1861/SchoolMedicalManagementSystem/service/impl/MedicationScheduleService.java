@@ -9,8 +9,11 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.*;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.MedicationStatus;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.MedicationScheduleRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IMedicationScheduleService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.INotificationService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DateTimeException;
 import java.time.LocalDate;
@@ -20,11 +23,22 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Service
 @RequiredArgsConstructor
 public class MedicationScheduleService implements IMedicationScheduleService {
 
-    private final MedicationScheduleRepository medicationScheduleRepository;    /**
+    private final MedicationScheduleRepository medicationScheduleRepository;
+    private final INotificationService notificationService;
+    
+    @Value("${medication.schedule.overdue-threshold-minutes:30}")
+    private int overdueThresholdMinutes;
+
+    private static final Logger log = LoggerFactory.getLogger(MedicationScheduleService.class);
+
+    /**
      * Generate medication schedules for an item request
      * @param itemRequest The medication item request
      * @param startDate The start date for medication
@@ -381,5 +395,120 @@ public class MedicationScheduleService implements IMedicationScheduleService {
     public MedicationSchedule getMedicationScheduleById(Long scheduleId) {
         return medicationScheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> new ResourceNotFoundException("Medication schedule not found with id: " + scheduleId));
+    }
+
+    /**
+     * Auto-mark medication schedules as SKIPPED if they are overdue based on configured threshold
+     * This method is called by the scheduled task to automatically mark missed medication times
+     * @return number of schedules marked as skipped
+     */
+    @Override
+    @Transactional
+    public int autoMarkOverdueSchedulesAsSkipped() {
+        LocalDate currentDate = LocalDate.now();
+        LocalTime currentTime = LocalTime.now();
+        LocalTime overdueTime = currentTime.minusMinutes(overdueThresholdMinutes);
+        
+        log.info("Starting auto-update check at {} - Current time: {}, Overdue threshold: {} minutes", 
+                currentDate, currentTime, overdueThresholdMinutes);
+        log.info("Looking for PENDING schedules before: {} on {} or earlier dates", overdueTime, currentDate);
+        
+        try {
+            // Find all overdue PENDING schedules
+            List<MedicationSchedule> overdueSchedules = medicationScheduleRepository.findOverdueSchedules(
+                MedicationStatus.PENDING, 
+                currentDate, 
+                overdueTime
+            );
+            
+            log.info("Found {} overdue medication schedules", overdueSchedules.size());
+            
+            if (overdueSchedules.isEmpty()) {
+                log.debug("No overdue medication schedules found");
+                return 0;
+            }
+            
+            int skippedCount = 0;
+            
+            for (MedicationSchedule schedule : overdueSchedules) {
+                try {
+                    log.debug("Processing overdue schedule ID: {} - Student: {} {} - Medication: {} - Scheduled: {} {}",
+                            schedule.getId(),
+                            schedule.getItemRequest().getMedicationRequest().getStudent().getLastName(),
+                            schedule.getItemRequest().getMedicationRequest().getStudent().getFirstName(),
+                            schedule.getItemRequest().getItemName(),
+                            schedule.getScheduledDate(),
+                            schedule.getScheduledTime());
+                    
+                    // Update status to SKIPPED
+                    schedule.setStatus(MedicationStatus.SKIPPED);
+                    schedule.setAdministeredTime(currentTime);
+                    schedule.setNurseNote("Tự động đánh dấu bỏ lỡ - Quá " + overdueThresholdMinutes + " phút so với giờ dự định");
+                    
+                    medicationScheduleRepository.save(schedule);
+                    skippedCount++;
+                    
+                    log.info("Marked schedule ID {} as SKIPPED for student {} - medication: {}",
+                            schedule.getId(),
+                            schedule.getItemRequest().getMedicationRequest().getStudent().getFirstName() + " " +
+                            schedule.getItemRequest().getMedicationRequest().getStudent().getLastName(),
+                            schedule.getItemRequest().getItemName());
+                    
+                    // Send notification to nurse who approved the medication request
+                    User responsibleNurse = schedule.getItemRequest().getMedicationRequest().getNurse();
+                    if (responsibleNurse != null) {
+                        sendMissedMedicationNotificationToNurse(schedule, responsibleNurse);
+                        log.debug("Sent notification to nurse: {} {}", 
+                                responsibleNurse.getFirstName(), responsibleNurse.getLastName());
+                    } else {
+                        log.warn("No responsible nurse found for medication request ID: {}", 
+                                schedule.getItemRequest().getMedicationRequest().getId());
+                    }
+                    
+                } catch (Exception e) {
+                    log.error("Error auto-marking schedule ID {} as skipped: {}", schedule.getId(), e.getMessage(), e);
+                    // Continue processing other schedules
+                }
+            }
+            
+            log.info("Auto-update completed successfully. Marked {} schedules as SKIPPED", skippedCount);
+            return skippedCount;
+            
+        } catch (Exception e) {
+            log.error("Error during auto-update of overdue medication schedules: {}", e.getMessage(), e);
+            throw e; // Re-throw to allow calling method to handle
+        }
+    }
+    
+    /**
+     * Send notification to nurse about missed medication
+     * @param schedule The missed medication schedule
+     * @param nurse The responsible nurse
+     */
+    private void sendMissedMedicationNotificationToNurse(MedicationSchedule schedule, User nurse) {
+        try {
+            Student student = schedule.getItemRequest().getMedicationRequest().getStudent();
+            String medicationName = schedule.getItemRequest().getItemName();
+            String scheduledTime = schedule.getScheduledTime().toString();
+            
+            String title = "Lịch uống thuốc bị bỏ lỡ";
+            String message = String.format(
+                "Học sinh %s %s đã bỏ lỡ lịch uống thuốc '%s' lúc %s. Hệ thống đã tự động đánh dấu là bỏ lỡ.",
+                student.getLastName(),
+                student.getFirstName(),
+                medicationName,
+                scheduledTime
+            );
+            
+            notificationService.createGeneralNotification(
+                nurse,
+                title,
+                message,
+                "MEDICATION_MISSED_AUTO"
+            );
+            
+        } catch (Exception e) {
+            System.err.println("Error sending missed medication notification: " + e.getMessage());
+        }
     }
 }
