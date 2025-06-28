@@ -164,7 +164,6 @@ const ManagerHealthCheckManagement = () => {
     const statusMap = {
       PENDING: { color: 'processing', text: 'Chờ duyệt' },
       APPROVED: { color: 'success', text: 'Đã duyệt' },
-      SCHEDULED: { color: 'processing', text: 'Đã lên lịch' },
       IN_PROGRESS: { color: 'warning', text: 'Đang tiến hành' },
       COMPLETED: { color: 'default', text: 'Hoàn thành' },
       CANCELED: { color: 'error', text: 'Đã hủy' },

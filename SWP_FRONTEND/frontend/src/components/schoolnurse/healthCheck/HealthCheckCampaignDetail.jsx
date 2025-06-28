@@ -94,14 +94,6 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
     try {
       let response;
       switch (action) {
-        case 'submit':
-          response = await healthCheckApi.submitCampaignForApproval(campaignId);
-          message.success('Đã gửi đợt khám để phê duyệt');
-          break;
-        case 'schedule':
-          response = await healthCheckApi.scheduleCampaign(campaignId, 50); // Default to 50 students
-          message.success('Đã lên lịch đợt khám');
-          break;
         case 'start':
           response = await healthCheckApi.startCampaign(campaignId);
           message.success('Đã bắt đầu đợt khám');
@@ -133,10 +125,10 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
   };
 
   const handleEdit = () => {
-    if (campaign && ['DRAFT', 'PENDING'].includes(campaign.status)) {
+    if (campaign && campaign.status === 'PENDING') {
       onEdit(campaign);
     } else {
-      message.warning('Chỉ có thể chỉnh sửa đợt khám ở trạng thái CHƯA DUYỆT hoặc BẢN NHÁP');
+      message.warning('Chỉ có thể chỉnh sửa đợt khám ở trạng thái CHƯA DUYỆT');
     }
   };
 
@@ -146,39 +138,7 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
     const buttons = [];
     
     switch (campaign.status) {
-      case 'DRAFT':
-        buttons.push(
-          <Button 
-            key="submit" 
-            type="primary" 
-            icon={<SendOutlined />} 
-            onClick={() => showConfirmModal(
-              'submit', 
-              'Xác nhận gửi phê duyệt', 
-              'Bạn có chắc chắn muốn gửi đợt khám này để phê duyệt?'
-            )}
-          >
-            Gửi phê duyệt
-          </Button>
-        );
-        break;
       case 'APPROVED':
-        buttons.push(
-          <Button 
-            key="schedule" 
-            type="primary" 
-            icon={<UsergroupAddOutlined />} 
-            onClick={() => showConfirmModal(
-              'schedule', 
-              'Xác nhận lên lịch', 
-              'Bạn có chắc chắn muốn lên lịch cho đợt khám này?'
-            )}
-          >
-            Lên lịch
-          </Button>
-        );
-        break;
-      case 'SCHEDULED':
         buttons.push(
           <Button 
             key="start" 
@@ -215,7 +175,7 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
     }
     
     // Add cancel button for certain statuses
-    if (['DRAFT', 'PENDING', 'APPROVED', 'SCHEDULED'].includes(campaign.status)) {
+    if (['PENDING', 'APPROVED'].includes(campaign.status)) {
       buttons.push(
         <Button 
           key="cancel" 
@@ -237,14 +197,10 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
 
   const getStatusTag = (status) => {
     switch(status) {
-      case 'DRAFT':
-        return <Tag color="default">Bản nháp</Tag>;
       case 'PENDING':
         return <Tag color="orange">Chưa duyệt</Tag>;
       case 'APPROVED':
         return <Tag color="green">Đã duyệt</Tag>;
-      case 'SCHEDULED':
-        return <Tag color="blue">Đã lên lịch</Tag>;
       case 'IN_PROGRESS':
         return <Tag color="processing">Đang diễn ra</Tag>;
       case 'COMPLETED':
@@ -344,7 +300,7 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
         }
         extra={
           <Space>
-            {campaign && ['DRAFT', 'PENDING'].includes(campaign.status) && (
+            {campaign && campaign.status === 'PENDING' && (
               <Button 
                 icon={<EditOutlined />} 
                 onClick={handleEdit}
@@ -414,7 +370,7 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
                 </Card>
               </Col>
 
-              {campaign.status !== 'DRAFT' && campaign.status !== 'PENDING' && (
+              {campaign.status !== 'PENDING' && (
                 <Col span={24}>
                   <Card title="Thống kê" bordered={false}>
                     <Row gutter={16}>

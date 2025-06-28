@@ -83,8 +83,8 @@ const HealthCheckCampaignList = ({ onCreateNew, onViewDetails, refreshTrigger })
   };
 
   const handleEdit = (campaign) => {
-    if (!['DRAFT', 'PENDING'].includes(campaign.status)) {
-      message.warning('Chỉ có thể chỉnh sửa đợt khám ở trạng thái CHƯA DUYỆT hoặc BẢN NHÁP');
+    if (campaign.status !== 'PENDING') {
+      message.warning('Chỉ có thể chỉnh sửa đợt khám ở trạng thái CHƯA DUYỆT');
       return;
     }
     onCreateNew(campaign); // Pass campaign data to edit
@@ -96,14 +96,10 @@ const HealthCheckCampaignList = ({ onCreateNew, onViewDetails, refreshTrigger })
 
   const getStatusTag = (status) => {
     switch(status) {
-      case 'DRAFT':
-        return <Tag color="default">Bản nháp</Tag>;
       case 'PENDING':
         return <Tag color="orange">Chưa duyệt</Tag>;
       case 'APPROVED':
         return <Tag color="green">Đã duyệt</Tag>;
-      case 'SCHEDULED':
-        return <Tag color="blue">Đã lên lịch</Tag>;
       case 'IN_PROGRESS':
         return <Tag color="processing">Đang diễn ra</Tag>;
       case 'COMPLETED':
@@ -212,10 +208,8 @@ const HealthCheckCampaignList = ({ onCreateNew, onViewDetails, refreshTrigger })
               onChange={value => setFilterStatus(value)}
             >
               <Option value="ALL">Tất cả trạng thái</Option>
-              <Option value="DRAFT">Bản nháp</Option>
               <Option value="PENDING">Chưa duyệt</Option>
               <Option value="APPROVED">Đã duyệt</Option>
-              <Option value="SCHEDULED">Đã lên lịch</Option>
               <Option value="IN_PROGRESS">Đang diễn ra</Option>
               <Option value="COMPLETED">Đã hoàn thành</Option>
               <Option value="CANCELED">Đã hủy</Option>
