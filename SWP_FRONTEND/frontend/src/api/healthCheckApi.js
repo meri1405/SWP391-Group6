@@ -426,5 +426,27 @@ export const healthCheckApi = {
       console.error(`Error fetching active campaigns for class ${className}:`, error);
       throw error;
     }
+  },
+
+  // Calculate target count for campaign
+  calculateTargetCount: async (minAge, maxAge, targetClasses) => {
+    try {
+      const params = new URLSearchParams();
+      if (minAge !== null && minAge !== undefined) {
+        params.append('minAge', minAge);
+      }
+      if (maxAge !== null && maxAge !== undefined) {
+        params.append('maxAge', maxAge);
+      }
+      if (targetClasses && targetClasses.length > 0) {
+        targetClasses.forEach(cls => params.append('targetClasses', cls));
+      }
+      
+      const response = await healthCheckApiClient.get(`/health-check/campaigns/calculate-target-count?${params.toString()}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error calculating target count:', error);
+      throw error;
+    }
   }
 };

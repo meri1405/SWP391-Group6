@@ -29,6 +29,8 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
   const [availableCategories, setAvailableCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [targetCount, setTargetCount] = useState(0);
+  const [calculatingTargetCount, setCalculatingTargetCount] = useState(false);
   const isEditing = !!campaign;
 
   useEffect(() => {
@@ -43,8 +45,45 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
         targetClasses: campaign.targetClasses || []
       };
       form.setFieldsValue(formData);
+      // Set initial target count if editing
+      if (campaign.targetCount) {
+        setTargetCount(campaign.targetCount);
+      }
     }
   }, [campaign, form, isEditing]);
+
+  // Calculate target count when relevant fields change
+  const calculateTargetCount = async (minAge, maxAge, targetClasses) => {
+    if (minAge && maxAge && minAge <= maxAge) {
+      setCalculatingTargetCount(true);
+      try {
+        const result = await healthCheckApi.calculateTargetCount(minAge, maxAge, targetClasses || []);
+        setTargetCount(result.targetCount || 0);
+      } catch (error) {
+        console.error('Error calculating target count:', error);
+        setTargetCount(0);
+      } finally {
+        setCalculatingTargetCount(false);
+      }
+    } else {
+      setTargetCount(0);
+    }
+  };
+
+  // Watch for changes in form fields that affect target count
+  const onValuesChange = (changedValues, allValues) => {
+    const { minAge, maxAge, targetClasses } = allValues;
+    
+    // Only recalculate if the relevant fields have changed
+    if ('minAge' in changedValues || 'maxAge' in changedValues || 'targetClasses' in changedValues) {
+      // Add a small delay to avoid too many API calls
+      const timeoutId = setTimeout(() => {
+        calculateTargetCount(minAge, maxAge, targetClasses);
+      }, 500);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  };
 
   const fetchCategories = async () => {
     setLoading(true);
@@ -115,6 +154,7 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
         form={form}
         layout="vertical"
         onFinish={handleSubmit}
+        onValuesChange={onValuesChange}
         initialValues={{
           minAge: 6,
           maxAge: 12,
@@ -252,6 +292,34 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
                 ))}
               </Select>
             </Form.Item>
+          </Col>
+        </Row>
+
+        {/* Target Count Display */}
+        <Row gutter={16}>
+          <Col span={24}>
+            <Alert
+              message={
+                <div>
+                  <strong>Số lượng học sinh dự kiến:</strong> {' '}
+                  {calculatingTargetCount ? (
+                    <Spin size="small" />
+                  ) : (
+                    <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#1890ff' }}>
+                      {targetCount} học sinh
+                    </span>
+                  )}
+                </div>
+              }
+              description={
+                targetCount > 0 
+                  ? `Dựa trên tiêu chí độ tuổi và lớp đã chọn, hệ thống tính toán có ${targetCount} học sinh phù hợp cho đợt khám này.`
+                  : 'Vui lòng nhập đầy đủ thông tin độ tuổi và lớp mục tiêu để tính toán số lượng học sinh.'
+              }
+              type={targetCount > 0 ? "info" : "warning"}
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
           </Col>
         </Row>
 
