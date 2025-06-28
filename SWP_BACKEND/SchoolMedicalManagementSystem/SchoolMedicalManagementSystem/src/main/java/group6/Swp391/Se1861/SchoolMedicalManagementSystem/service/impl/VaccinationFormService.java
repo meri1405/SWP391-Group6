@@ -65,7 +65,7 @@ public class VaccinationFormService implements IVaccinationFormService {
         form = formRepository.save(form);
 
         // Notify nurse about confirmation
-        String studentName = form.getStudent().getFirstName() + " " + form.getStudent().getLastName();
+        String studentName = form.getStudent().getFullName();
         notificationService.createVaccinationFormConfirmationNotification(
                 form.getCreatedBy(),
                 studentName,
