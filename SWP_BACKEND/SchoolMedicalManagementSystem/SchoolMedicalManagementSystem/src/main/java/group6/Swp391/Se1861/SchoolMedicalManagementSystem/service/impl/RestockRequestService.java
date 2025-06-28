@@ -10,6 +10,7 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.RestockItem
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.MedicalSupplyRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.UserRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IMedicalSupplyService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.INotificationService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IRestockRequestService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IUnitConversionService;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +37,7 @@ public class RestockRequestService implements IRestockRequestService {
     private final UserRepository userRepository;
     private final IMedicalSupplyService medicalSupplyService;
     private final IUnitConversionService unitConversionService;
+    private final INotificationService notificationService;
     
     @Override
     @Transactional(readOnly = true)
@@ -85,6 +87,16 @@ public class RestockRequestService implements IRestockRequestService {
         
         RestockRequest savedRequest = restockRequestRepository.save(restockRequest);
         log.info("Created restock request with ID: {}", savedRequest.getId());
+        
+        // Notify managers about the new restock request
+        try {
+            log.info("About to send notification to managers for restock request ID: {} from user ID: {}", 
+                    savedRequest.getId(), savedRequest.getRequestedBy());
+            notificationService.notifyManagersAboutRestockRequest(savedRequest);
+            log.info("Notification sent to managers about restock request ID: {}", savedRequest.getId());
+        } catch (Exception e) {
+            log.error("Error sending notification to managers: {}", e.getMessage(), e);
+        }
         
         return convertToDTO(savedRequest);
     }
@@ -206,8 +218,18 @@ public class RestockRequestService implements IRestockRequestService {
         
         RestockRequest savedRequest = restockRequestRepository.save(request);
         log.info("Approved restock request ID: {} by user ID: {}", id, reviewerId);
+        
         // Update medical supply quantities immediately after approval
         processApprovedRequest(id);
+        
+        // Notify the nurse who created the request
+        try {
+            notificationService.notifyNurseAboutRestockRequestApproval(savedRequest);
+            log.info("Notification sent to nurse about approved restock request ID: {}", id);
+        } catch (Exception e) {
+            log.error("Error sending approval notification to nurse: {}", e.getMessage());
+        }
+        
         return convertToDTO(savedRequest);
     }
     
@@ -227,6 +249,15 @@ public class RestockRequestService implements IRestockRequestService {
         request.setCompletedDate(LocalDateTime.now());
         RestockRequest savedRequest = restockRequestRepository.save(request);
         log.info("Rejected restock request ID: {} by user ID: {}", id, reviewerId);
+        
+        // Notify the nurse who created the request
+        try {
+            notificationService.notifyNurseAboutRestockRequestRejection(savedRequest, reviewNotes);
+            log.info("Notification sent to nurse about rejected restock request ID: {}", id);
+        } catch (Exception e) {
+            log.error("Error sending rejection notification to nurse: {}", e.getMessage());
+        }
+        
         return convertToDTO(savedRequest);
     }
     

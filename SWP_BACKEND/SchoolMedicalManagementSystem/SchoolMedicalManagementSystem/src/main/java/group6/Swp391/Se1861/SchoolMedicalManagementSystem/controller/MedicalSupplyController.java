@@ -66,7 +66,7 @@ public class MedicalSupplyController {
     }
 
     @PutMapping("/{id}/enable")
-    @PreAuthorize("hasRole('MANAGER')")
+    @PreAuthorize("hasRole('MANAGER') or hasRole('SCHOOLNURSE')")
     public ResponseEntity<Void> enableMedicalSupply(@PathVariable Long id) {
         try {
             medicalSupplyService.enableMedicalSupply(id);
@@ -79,7 +79,7 @@ public class MedicalSupplyController {
     }
 
     @PutMapping("/{id}/disable")
-    @PreAuthorize("hasRole('MANAGER')")
+    @PreAuthorize("hasRole('MANAGER') or hasRole('SCHOOLNURSE')")
     public ResponseEntity<Void> disableMedicalSupply(@PathVariable Long id) {
         try {
             medicalSupplyService.disableMedicalSupply(id);

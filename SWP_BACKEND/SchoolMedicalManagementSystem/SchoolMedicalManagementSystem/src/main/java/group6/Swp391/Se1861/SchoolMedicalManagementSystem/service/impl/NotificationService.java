@@ -641,8 +641,11 @@ public class NotificationService implements INotificationService {
         dto.setCreatedAt(notification.getCreatedAt());
         dto.setRead(notification.isRead());
         dto.setNotificationType(notification.getNotificationType());
-        dto.setRecipientId(notification.getRecipient().getId());
         dto.setConfirm(notification.getConfirm());
+
+        if (notification.getRecipient() != null) {
+            dto.setRecipientId(notification.getRecipient().getId());
+        }
 
         if (notification.getMedicationRequest() != null) {
             dto.setMedicationRequestId(notification.getMedicationRequest().getId());
@@ -655,9 +658,13 @@ public class NotificationService implements INotificationService {
         if (notification.getMedicalEvent() != null) {
             dto.setMedicalEventId(notification.getMedicalEvent().getId());
         }
-
+        
         if (notification.getVaccinationForm() != null) {
             dto.setVaccinationFormId(notification.getVaccinationForm().getId());
+        }
+        
+        if (notification.getRestockRequest() != null) {
+            dto.setRestockRequestId(notification.getRestockRequest().getId());
         }
 
         return dto;
@@ -819,6 +826,7 @@ public class NotificationService implements INotificationService {
     @Transactional
     @Override
     public NotificationDTO createGeneralNotification(User recipient, String title, String message, String notificationType) {
+        // Create and save notification entity
         Notification notification = new Notification();
         notification.setTitle(title);
         notification.setMessage(message);
@@ -827,21 +835,195 @@ public class NotificationService implements INotificationService {
 
         Notification savedNotification = notificationRepository.save(notification);
 
+        // Convert to DTO
         NotificationDTO notificationDTO = convertToDTO(savedNotification);
 
+        // Send real-time notification via WebSocket
         try {
             if (recipient.getUsername() != null) {
                 messagingTemplate.convertAndSendToUser(
                         recipient.getUsername(),
-                        "/topic/notifications",
+                        "/queue/notifications",
                         notificationDTO
                 );
             }
         } catch (Exception e) {
+            // Log the error but don't fail the entire transaction
             System.err.println("Error sending WebSocket notification: " + e.getMessage());
         }
 
         return notificationDTO;
+    }
+    
+    /**
+     * RESTOCK REQUEST NOTIFICATIONS
+     */
+    
+    @Transactional
+    @Override
+    public void notifyManagersAboutRestockRequest(RestockRequest restockRequest) {
+        // Find all managers - try with both "ROLE_MANAGER" and "MANAGER" role names
+        List<User> managers = userRepository.findByRole_RoleName("ROLE_MANAGER");
+        
+        // If no managers found with ROLE_MANAGER, try with MANAGER
+        if (managers.isEmpty()) {
+            System.out.println("NotificationService: No managers found with ROLE_MANAGER, trying with MANAGER");
+            managers = userRepository.findByRole_RoleName("MANAGER");
+        }
+        
+        System.out.println("NotificationService: Found " + managers.size() + " managers to notify about restock request ID: " + restockRequest.getId());
+        
+        if (managers.isEmpty()) {
+            System.out.println("Warning: No managers found to notify about restock request ID: " + restockRequest.getId());
+            return;
+        }
+        
+        String title = "Yêu cầu nhập kho mới";
+        String message = "Có yêu cầu nhập kho mới từ y tá " + 
+                (restockRequest.getRequestedBy() != null ? 
+                userRepository.findById(restockRequest.getRequestedBy()).map(User::getFullName).orElse("") : "");
+                
+        if (restockRequest.getPriority() != null && restockRequest.getPriority().equals("HIGH") || 
+            restockRequest.getPriority() != null && restockRequest.getPriority().equals("URGENT")) {
+            message += " (Ưu tiên: " + (restockRequest.getPriority().equals("HIGH") ? "Cao" : "Khẩn cấp") + ")";
+        }
+        
+        System.out.println("NotificationService: Preparing notification with title: '" + title + "', message: '" + message + "'");
+        
+        // Notify each manager
+        for (User manager : managers) {
+            System.out.println("NotificationService: Creating notification for manager ID: " + manager.getId() + ", username: " + manager.getUsername());
+            
+            Notification notification = new Notification();
+            notification.setTitle(title);
+            notification.setMessage(message);
+            notification.setNotificationType("RESTOCK_REQUEST_NEW");
+            notification.setRecipient(manager);
+            notification.setRestockRequest(restockRequest);
+            
+            Notification savedNotification = notificationRepository.save(notification);
+            NotificationDTO notificationDTO = convertToDTO(savedNotification);
+            
+            System.out.println("NotificationService: Saved notification ID: " + savedNotification.getId() + " for manager ID: " + manager.getId());
+            
+            // Send real-time notification via WebSocket
+            try {
+                if (manager.getUsername() != null) {
+                    System.out.println("NotificationService: Sending WebSocket message to user: " + manager.getUsername());
+                    messagingTemplate.convertAndSendToUser(
+                            manager.getUsername(),
+                            "/queue/notifications",
+                            notificationDTO
+                    );
+                    System.out.println("NotificationService: WebSocket message sent successfully to: " + manager.getUsername());
+                } else {
+                    System.out.println("NotificationService: Cannot send WebSocket message - username is null for manager ID: " + manager.getId());
+                }
+            } catch (Exception e) {
+                System.err.println("Error sending WebSocket notification to manager: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
+    }
+    
+    @Transactional
+    @Override
+    public void notifyNurseAboutRestockRequestApproval(RestockRequest restockRequest) {
+        // Find the nurse who created the request
+        if (restockRequest.getRequestedBy() == null) {
+            System.out.println("Warning: Cannot send notification - requestedBy is null for restock request ID: " + restockRequest.getId());
+            return;
+        }
+        
+        User nurse = userRepository.findById(restockRequest.getRequestedBy())
+                .orElse(null);
+        
+        if (nurse == null) {
+            System.out.println("Warning: Cannot find nurse with ID: " + restockRequest.getRequestedBy());
+            return;
+        }
+        
+        // Create notification
+        String title = "Yêu cầu nhập kho đã được duyệt";
+        String message = "Yêu cầu nhập kho của bạn đã được duyệt và đã bổ sung vào kho.";
+        
+        if (restockRequest.getReviewNotes() != null && !restockRequest.getReviewNotes().trim().isEmpty()) {
+            message += " Ghi chú: " + restockRequest.getReviewNotes();
+        }
+        
+        Notification notification = new Notification();
+        notification.setTitle(title);
+        notification.setMessage(message);
+        notification.setNotificationType("RESTOCK_REQUEST_APPROVED");
+        notification.setRecipient(nurse);
+        notification.setRestockRequest(restockRequest);
+        
+        Notification savedNotification = notificationRepository.save(notification);
+        NotificationDTO notificationDTO = convertToDTO(savedNotification);
+        
+        // Send real-time notification via WebSocket
+        try {
+            if (nurse.getUsername() != null) {
+                messagingTemplate.convertAndSendToUser(
+                        nurse.getUsername(),
+                        "/queue/notifications",
+                        notificationDTO
+                );
+            }
+        } catch (Exception e) {
+            System.err.println("Error sending WebSocket notification to nurse: " + e.getMessage());
+        }
+    }
+    
+    @Transactional
+    @Override
+    public void notifyNurseAboutRestockRequestRejection(RestockRequest restockRequest, String notes) {
+        // Find the nurse who created the request
+        if (restockRequest.getRequestedBy() == null) {
+            System.out.println("Warning: Cannot send notification - requestedBy is null for restock request ID: " + restockRequest.getId());
+            return;
+        }
+        
+        User nurse = userRepository.findById(restockRequest.getRequestedBy())
+                .orElse(null);
+        
+        if (nurse == null) {
+            System.out.println("Warning: Cannot find nurse with ID: " + restockRequest.getRequestedBy());
+            return;
+        }
+        
+        // Create notification
+        String title = "Yêu cầu nhập kho bị từ chối";
+        String message = "Yêu cầu nhập kho của bạn đã bị từ chối.";
+        
+        if (notes != null && !notes.trim().isEmpty()) {
+            message += " Lý do: " + notes;
+        } else if (restockRequest.getReviewNotes() != null && !restockRequest.getReviewNotes().trim().isEmpty()) {
+            message += " Lý do: " + restockRequest.getReviewNotes();
+        }
+        
+        Notification notification = new Notification();
+        notification.setTitle(title);
+        notification.setMessage(message);
+        notification.setNotificationType("RESTOCK_REQUEST_REJECTED");
+        notification.setRecipient(nurse);
+        notification.setRestockRequest(restockRequest);
+        
+        Notification savedNotification = notificationRepository.save(notification);
+        NotificationDTO notificationDTO = convertToDTO(savedNotification);
+        
+        // Send real-time notification via WebSocket
+        try {
+            if (nurse.getUsername() != null) {
+                messagingTemplate.convertAndSendToUser(
+                        nurse.getUsername(),
+                        "/queue/notifications",
+                        notificationDTO
+                );
+            }
+        } catch (Exception e) {
+            System.err.println("Error sending WebSocket notification to nurse: " + e.getMessage());
+        }
     }
 }
 

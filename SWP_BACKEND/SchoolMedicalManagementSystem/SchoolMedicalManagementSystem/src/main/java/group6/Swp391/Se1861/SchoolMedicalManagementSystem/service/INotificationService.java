@@ -217,4 +217,23 @@ public interface INotificationService {
      * Notify parent about appointment scheduling
      */
     void notifyParentAboutAppointment(HealthCheckForm form);
+    
+    /**
+     * RESTOCK REQUEST NOTIFICATIONS
+     */
+    
+    /**
+     * Notify managers about a new restock request
+     */
+    void notifyManagersAboutRestockRequest(RestockRequest restockRequest);
+    
+    /**
+     * Notify nurse about restock request approval
+     */
+    void notifyNurseAboutRestockRequestApproval(RestockRequest restockRequest);
+    
+    /**
+     * Notify nurse about restock request rejection
+     */
+    void notifyNurseAboutRestockRequestRejection(RestockRequest restockRequest, String notes);
 }

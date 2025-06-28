@@ -113,6 +113,8 @@ const MedicalSupplyInventory = () => {
       // First get all supplies
       try {
         data = await medicalSupplyApi.getAllSupplies();
+        // Filter out disabled supplies
+        data = data.filter(item => item.enabled !== false);
       } catch (error) {
         console.error("Error fetching supplies:", error);
         messageApi.error("Không thể tải dữ liệu vật tư y tế.");
@@ -289,8 +291,17 @@ const MedicalSupplyInventory = () => {
   const rowSelection = {
     selectedRowKeys: selectedSupplies.map((item) => item.id),
     onChange: (selectedRowKeys, selectedRows) => {
-      setSelectedSupplies(selectedRows);
+      // Only allow selecting enabled supplies
+      const enabledRows = selectedRows.filter(row => row.enabled !== false);
+      if (enabledRows.length !== selectedRows.length) {
+        messageApi.warning("Không thể chọn vật tư đã bị vô hiệu hóa");
+      }
+      setSelectedSupplies(enabledRows);
     },
+    getCheckboxProps: (record) => ({
+      disabled: record.enabled === false,
+      name: record.name,
+    }),
   };
 
   // Calculate supply status based on expiration date and stock level
