@@ -39,6 +39,28 @@ const RestockRequestList = () => {
   });
   const [messageApi, contextHolder] = message.useMessage();
 
+  // Category translation function
+  const getCategoryTag = (category) => {
+    const config = {
+      painkiller: { color: 'blue', text: 'Giảm đau' },
+      antibiotic: { color: 'purple', text: 'Kháng sinh' },
+      vitamin: { color: 'orange', text: 'Vitamin' },
+      supplement: { color: 'cyan', text: 'Thực phẩm bổ sung' },
+      bandage: { color: 'cyan', text: 'Băng y tế' },
+      gloves: { color: 'green', text: 'Găng tay' },
+      equipment: { color: 'geekblue', text: 'Thiết bị' },
+      antiseptic: { color: 'red', text: 'Sát trung' },
+      medical_device: { color: 'magenta', text: 'Thiết bị y tế' },
+      other: { color: 'default', text: 'Khác' }
+    };
+    
+    // Safe access with fallback
+    const categoryLower = category?.toLowerCase() || 'other';
+    const categoryConfig = config[categoryLower] || config.other;
+    
+    return <Tag color={categoryConfig.color}>{categoryConfig.text}</Tag>;
+  };
+
   // Status options for filter
   const statusOptions = [
     { value: "all", label: "Tất cả trạng thái" },
@@ -245,12 +267,13 @@ const RestockRequestList = () => {
         title: "Loại",
         dataIndex: "category",
         key: "category",
+        render: (category) => getCategoryTag(category),
       },
       {
         title: "Số lượng yêu cầu",
-        dataIndex: "requestedQuantity",
-        key: "requestedQuantity",
-        render: (quantity, item) => `${quantity} ${item.unit || ""}`,
+        dataIndex: "requestedQuantityInBaseUnit",
+        key: "requestedQuantityInBaseUnit",
+        render: (quantity, item) => `${quantity} ${item.baseUnit || ""}`,
       },
       {
         title: "Ghi chú",

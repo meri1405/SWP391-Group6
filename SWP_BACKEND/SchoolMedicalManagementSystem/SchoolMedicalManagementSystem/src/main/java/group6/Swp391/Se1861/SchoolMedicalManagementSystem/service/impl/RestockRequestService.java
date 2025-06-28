@@ -5,16 +5,20 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.RestockItemDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.RestockRequest;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.RestockItem;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.MedicalSupply;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.RestockRequestRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.RestockItemRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.MedicalSupplyRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.UserRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IMedicalSupplyService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IRestockRequestService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IUnitConversionService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -24,6 +28,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Transactional
+@Slf4j
 public class RestockRequestService implements IRestockRequestService {
     
     private final RestockRequestRepository restockRequestRepository;
@@ -31,8 +36,10 @@ public class RestockRequestService implements IRestockRequestService {
     private final MedicalSupplyRepository medicalSupplyRepository;
     private final UserRepository userRepository;
     private final IMedicalSupplyService medicalSupplyService;
+    private final IUnitConversionService unitConversionService;
     
     @Override
+    @Transactional(readOnly = true)
     public List<RestockRequestDTO> getAllRestockRequests() {
         return restockRequestRepository.findAllWithItems()
                 .stream()
@@ -41,6 +48,7 @@ public class RestockRequestService implements IRestockRequestService {
     }
     
     @Override
+    @Transactional(readOnly = true)
     public Optional<RestockRequestDTO> getRestockRequestById(Long id) {
         return restockRequestRepository.findById(id)
                 .map(this::convertToDTO);
@@ -48,50 +56,78 @@ public class RestockRequestService implements IRestockRequestService {
     
     @Override
     public RestockRequestDTO createRestockRequest(RestockRequestDTO restockRequestDTO) {
-        System.out.println("Service: Creating restock request with items count: " + 
-            (restockRequestDTO.getRestockItems() != null ? restockRequestDTO.getRestockItems().size() : 0));
+        log.info("Creating restock request with {} items", 
+                restockRequestDTO.getRestockItems() != null ? restockRequestDTO.getRestockItems().size() : 0);
         
         RestockRequest restockRequest = convertToEntity(restockRequestDTO);
-        System.out.println("Service: Converted to entity with items count: " + 
-            (restockRequest.getRestockItems() != null ? restockRequest.getRestockItems().size() : 0));
+        
+        // Process restock items and convert display units to base units
+        if (restockRequest.getRestockItems() != null) {
+            for (RestockItem item : restockRequest.getRestockItems()) {
+                MedicalSupply supply = item.getMedicalSupply();
+                
+                // Convert requested display quantity to base unit
+                BigDecimal requestedInBaseUnit = unitConversionService.convertToBaseUnit(
+                        item.getRequestedDisplayQuantity(),
+                        item.getRequestedDisplayUnit(),
+                        supply.getBaseUnit()
+                );
+                item.setRequestedQuantityInBaseUnit(requestedInBaseUnit);
+                
+                // Set the restock request reference
+                item.setRestockRequest(restockRequest);
+                
+                log.debug("Converted requested quantity for supply {}: {} {} = {} {}", 
+                        supply.getName(), 
+                        item.getRequestedDisplayQuantity(), item.getRequestedDisplayUnit(),
+                        requestedInBaseUnit, supply.getBaseUnit());
+            }
+        }
         
         RestockRequest savedRequest = restockRequestRepository.save(restockRequest);
-        System.out.println("Service: Saved request with ID: " + savedRequest.getId());
-        System.out.println("Service: Saved request items count: " + 
-            (savedRequest.getRestockItems() != null ? savedRequest.getRestockItems().size() : 0));
+        log.info("Created restock request with ID: {}", savedRequest.getId());
         
-        RestockRequestDTO result = convertToDTO(savedRequest);
-        System.out.println("Service: Converting back to DTO with items count: " + 
-            (result.getRestockItems() != null ? result.getRestockItems().size() : 0));
-        
-        return result;
+        return convertToDTO(savedRequest);
+    }
+    
+    @Override
+    public RestockRequestDTO createRestockRequestWithDisplayUnits(RestockRequestDTO restockRequestDTO) {
+        // This method specifically handles requests where all units are already converted
+        return createRestockRequest(restockRequestDTO);
     }
     
     @Override
     public RestockRequestDTO updateRestockRequest(Long id, RestockRequestDTO restockRequestDTO) {
         RestockRequest existingRequest = restockRequestRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Restock request not found with id: " + id));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu bổ sung với ID: " + id));
+        
+        if (existingRequest.getStatus() != RestockRequest.RestockStatus.PENDING) {
+            throw new RuntimeException("Chỉ có thể cập nhật yêu cầu đang chờ xử lý");
+        }
         
         existingRequest.setPriority(restockRequestDTO.getPriority());
         existingRequest.setReason(restockRequestDTO.getReason());
         
         RestockRequest updatedRequest = restockRequestRepository.save(existingRequest);
+        log.info("Updated restock request ID: {}", id);
         return convertToDTO(updatedRequest);
     }
     
     @Override
     public void deleteRestockRequest(Long id) {
         RestockRequest request = restockRequestRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Restock request not found with id: " + id));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu bổ sung với ID: " + id));
         
         if (request.getStatus() != RestockRequest.RestockStatus.PENDING) {
-            throw new RuntimeException("Cannot delete request that is not in PENDING status");
+            throw new RuntimeException("Chỉ có thể xóa yêu cầu đang chờ xử lý");
         }
         
         restockRequestRepository.deleteById(id);
+        log.info("Deleted restock request ID: {}", id);
     }
     
     @Override
+    @Transactional(readOnly = true)
     public List<RestockRequestDTO> getRequestsByUser(Long userId) {
         return restockRequestRepository.findByRequestedByOrderByRequestDateDesc(userId)
                 .stream()
@@ -100,6 +136,7 @@ public class RestockRequestService implements IRestockRequestService {
     }
     
     @Override
+    @Transactional(readOnly = true)
     public List<RestockRequestDTO> getRequestsByStatus(RestockRequest.RestockStatus status) {
         return restockRequestRepository.findByStatusWithItemsOrderByRequestDateAsc(status)
                 .stream()
@@ -108,17 +145,19 @@ public class RestockRequestService implements IRestockRequestService {
     }
     
     @Override
+    @Transactional(readOnly = true)
     public List<RestockRequestDTO> getPendingRequests() {
         return getRequestsByStatus(RestockRequest.RestockStatus.PENDING);
     }
     
     @Override
-    public RestockRequestDTO approveRequest(Long id, Long reviewerId, String reviewNotes) {
+    public RestockRequestDTO approveRequest(Long id, Long reviewerId, String reviewNotes, 
+                                           Map<Long, Map<String, Object>> itemApprovals) {
         RestockRequest request = restockRequestRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Restock request not found with id: " + id));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu bổ sung với ID: " + id));
         
         if (request.getStatus() != RestockRequest.RestockStatus.PENDING) {
-            throw new RuntimeException("Only PENDING requests can be approved");
+            throw new RuntimeException("Chỉ có thể duyệt yêu cầu đang chờ xử lý");
         }
         
         request.setStatus(RestockRequest.RestockStatus.APPROVED);
@@ -126,182 +165,251 @@ public class RestockRequestService implements IRestockRequestService {
         request.setReviewNotes(reviewNotes);
         request.setReviewDate(LocalDateTime.now());
         
-        RestockRequest updatedRequest = restockRequestRepository.save(request);
-        return convertToDTO(updatedRequest);
-    }
-    
-    @Override
-    public RestockRequestDTO approveRequestWithQuantities(Long id, Long reviewerId, String reviewNotes, List<Map<String, Object>> itemApprovals) {
-        RestockRequest request = restockRequestRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Restock request not found with id: " + id));
-        
-        if (request.getStatus() != RestockRequest.RestockStatus.PENDING) {
-            throw new RuntimeException("Only PENDING requests can be approved");
-        }
+        // Process item approvals with display quantities
+        if (itemApprovals != null && request.getRestockItems() != null) {
+            for (RestockItem item : request.getRestockItems()) {
+                Map<String, Object> approval = itemApprovals.get(item.getId());
+                if (approval != null) {
+                    // Get approved display quantity and unit
+                    BigDecimal approvedDisplayQuantity = new BigDecimal(approval.get("quantity").toString());
+                    String approvedDisplayUnit = approval.get("unit").toString();
 
-        System.out.println("Approving restock request ID: " + id);
-        System.out.println("Number of item approvals: " + itemApprovals.size());
-        
-        // Update approved quantities for each item AND update inventory
-        for (Map<String, Object> approval : itemApprovals) {
-            Long itemId = Long.valueOf(approval.get("itemId").toString());
-            Integer approvedQuantity = Integer.valueOf(approval.get("approvedQuantity").toString());
-            
-            System.out.println("Processing item ID: " + itemId + " with approved quantity: " + approvedQuantity);
-            
-            RestockItem item = restockItemRepository.findById(itemId)
-                    .orElseThrow(() -> new RuntimeException("Restock item not found with id: " + itemId));
-            
-            if (!item.getRestockRequest().getId().equals(id)) {
-                throw new RuntimeException("Item does not belong to the specified request");
+                    item.setApprovedDisplayQuantity(approvedDisplayQuantity);
+                    item.setApprovedDisplayUnit(approvedDisplayUnit);
+                    
+                    // Convert to base unit
+                    MedicalSupply supply = item.getMedicalSupply();
+                    BigDecimal approvedInBaseUnit = unitConversionService.convertToBaseUnit(
+                            approvedDisplayQuantity, approvedDisplayUnit, supply.getBaseUnit());
+                    item.setApprovedQuantityInBaseUnit(approvedInBaseUnit);
+                    
+                    log.info("Approved item: {}. Display: {} {}, Base: {} {}", 
+                            item.getMedicalSupply().getName(), 
+                            approvedDisplayQuantity, approvedDisplayUnit,
+                            approvedInBaseUnit, supply.getBaseUnit());
+                } else {
+                    // If no specific approval, automatically approve the requested amount
+                    item.setApprovedDisplayQuantity(item.getRequestedDisplayQuantity());
+                    item.setApprovedDisplayUnit(item.getRequestedDisplayUnit());
+                    item.setApprovedQuantityInBaseUnit(item.getRequestedQuantityInBaseUnit());
+                }
             }
-            
-            // Update approved quantity for the restock item
-            item.setApprovedQuantity(approvedQuantity);
-            restockItemRepository.save(item);
-            
-            // UPDATE MEDICAL SUPPLY INVENTORY - This is the crucial part!
-            MedicalSupply medicalSupply = item.getMedicalSupply();
-            int currentQuantity = medicalSupply.getQuantity();
-            int newQuantity = currentQuantity + approvedQuantity;
-            
-            System.out.println("Updating medical supply ID: " + medicalSupply.getId());
-            System.out.println("Current quantity: " + currentQuantity + " -> New quantity: " + newQuantity);
-            
-            medicalSupply.setQuantity(newQuantity);
-            medicalSupplyRepository.save(medicalSupply);
-            
-            System.out.println("Successfully updated inventory for medical supply: " + medicalSupply.getName());
+        } else {
+            // Auto-approve all items with requested quantities if no approvals specified
+            if (request.getRestockItems() != null) {
+                for (RestockItem item : request.getRestockItems()) {
+                    item.setApprovedDisplayQuantity(item.getRequestedDisplayQuantity());
+                    item.setApprovedDisplayUnit(item.getRequestedDisplayUnit());
+                    item.setApprovedQuantityInBaseUnit(item.getRequestedQuantityInBaseUnit());
+                }
+            }
         }
         
-        request.setStatus(RestockRequest.RestockStatus.APPROVED);
-        request.setReviewedBy(reviewerId);
-        request.setReviewNotes(reviewNotes);
-        request.setReviewDate(LocalDateTime.now());
-        
-        RestockRequest updatedRequest = restockRequestRepository.save(request);
-        System.out.println("Restock request approved successfully with inventory updates");
-        
-        return convertToDTO(updatedRequest);
+        RestockRequest savedRequest = restockRequestRepository.save(request);
+        log.info("Approved restock request ID: {} by user ID: {}", id, reviewerId);
+        // Update medical supply quantities immediately after approval
+        processApprovedRequest(id);
+        return convertToDTO(savedRequest);
     }
     
     @Override
     public RestockRequestDTO rejectRequest(Long id, Long reviewerId, String reviewNotes) {
         RestockRequest request = restockRequestRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Restock request not found with id: " + id));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu bổ sung với ID: " + id));
         
         if (request.getStatus() != RestockRequest.RestockStatus.PENDING) {
-            throw new RuntimeException("Only PENDING requests can be rejected");
+            throw new RuntimeException("Chỉ có thể từ chối yêu cầu đang chờ xử lý");
         }
-        
-        System.out.println("Rejecting restock request ID: " + id);
-        System.out.println("Reason: " + reviewNotes);
-        System.out.println("Note: Inventory will NOT be updated for rejected requests");
         
         request.setStatus(RestockRequest.RestockStatus.REJECTED);
         request.setReviewedBy(reviewerId);
         request.setReviewNotes(reviewNotes);
         request.setReviewDate(LocalDateTime.now());
         
-        RestockRequest updatedRequest = restockRequestRepository.save(request);
-        System.out.println("Restock request rejected successfully - no inventory changes made");
-        
-        return convertToDTO(updatedRequest);
+        RestockRequest savedRequest = restockRequestRepository.save(request);
+        log.info("Rejected restock request ID: {} by user ID: {}", id, reviewerId);
+        return convertToDTO(savedRequest);
     }
     
     @Override
     public RestockRequestDTO completeRequest(Long id) {
         RestockRequest request = restockRequestRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Restock request not found with id: " + id));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu bổ sung với ID: " + id));
         
         if (request.getStatus() != RestockRequest.RestockStatus.APPROVED) {
-            throw new RuntimeException("Only APPROVED requests can be completed");
+            throw new RuntimeException("Chỉ có thể hoàn thành yêu cầu đã được duyệt");
         }
         
-        // Update inventory based on approved quantities
-        for (RestockItem item : request.getRestockItems()) {
-            if (item.getApprovedQuantity() != null && item.getApprovedQuantity() > 0) {
-                medicalSupplyService.addStock(item.getMedicalSupply().getId(), item.getApprovedQuantity());
-            }
-        }
+        // Process approved items - update inventory
+        processApprovedRequest(id);
         
         request.setStatus(RestockRequest.RestockStatus.COMPLETED);
         request.setCompletedDate(LocalDateTime.now());
         
-        RestockRequest updatedRequest = restockRequestRepository.save(request);
-        return convertToDTO(updatedRequest);
+        RestockRequest savedRequest = restockRequestRepository.save(request);
+        log.info("Completed restock request ID: {}", id);
+        return convertToDTO(savedRequest);
+    }
+    
+    @Override
+    public void processApprovedRequest(Long requestId) {
+        RestockRequest request = restockRequestRepository.findById(requestId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu bổ sung với ID: " + requestId));
+        
+        if (request.getStatus() != RestockRequest.RestockStatus.APPROVED) {
+            throw new RuntimeException("Chỉ có thể xử lý yêu cầu đã được duyệt");
+        }
+        
+        // Update medical supply quantities
+        if (request.getRestockItems() != null) {
+            for (RestockItem item : request.getRestockItems()) {
+                if (item.getApprovedQuantityInBaseUnit() != null && 
+                    item.getApprovedQuantityInBaseUnit().compareTo(BigDecimal.ZERO) > 0) {
+                    
+                    MedicalSupply supply = item.getMedicalSupply();
+                    
+                    // 1. Update base unit quantity
+                    BigDecimal currentBaseQuantity = supply.getQuantityInBaseUnit();
+                    BigDecimal newBaseQuantity = currentBaseQuantity.add(item.getApprovedQuantityInBaseUnit());
+                    supply.setQuantityInBaseUnit(newBaseQuantity);
+                    
+                    // 2. Update display quantity
+                    if (item.getApprovedDisplayQuantity() != null && item.getApprovedDisplayUnit() != null &&
+                        item.getApprovedDisplayUnit().equals(supply.getDisplayUnit())) {
+                        // If the approved display unit matches the supply's display unit, directly add
+                        BigDecimal currentDisplayQuantity = supply.getDisplayQuantity();
+                        BigDecimal newDisplayQuantity = currentDisplayQuantity.add(item.getApprovedDisplayQuantity());
+                        supply.setDisplayQuantity(newDisplayQuantity);
+                        
+                        log.info("Added {} {} to display quantity for supply ID: {}", 
+                                item.getApprovedDisplayQuantity(),
+                                supply.getDisplayUnit(),
+                                supply.getId());
+                    } else {
+                        // If units don't match, convert the base unit change to display unit
+                        BigDecimal displayQtyChange = unitConversionService.convertFromBaseUnit(
+                                item.getApprovedQuantityInBaseUnit(), 
+                                supply.getBaseUnit(), 
+                                supply.getDisplayUnit());
+                        
+                        BigDecimal currentDisplayQuantity = supply.getDisplayQuantity();
+                        BigDecimal newDisplayQuantity = currentDisplayQuantity.add(displayQtyChange);
+                        supply.setDisplayQuantity(newDisplayQuantity);
+                        
+                        log.info("Converted and added {} {} (from {} {}) to display quantity for supply ID: {}", 
+                                displayQtyChange,
+                                supply.getDisplayUnit(),
+                                item.getApprovedQuantityInBaseUnit(),
+                                supply.getBaseUnit(),
+                                supply.getId());
+                    }
+                    
+                    // 3. Save the updated supply
+                    medicalSupplyRepository.save(supply);
+                    
+                    log.info("Updated inventory levels for {}: Base quantity: {} {}, Display quantity: {} {}", 
+                            supply.getName(), 
+                            newBaseQuantity, supply.getBaseUnit(),
+                            supply.getDisplayQuantity(), supply.getDisplayUnit());
+                }
+            }
+        }
     }
     
     @Override
     public RestockRequestDTO addItemToRequest(Long requestId, RestockItemDTO restockItemDTO) {
         RestockRequest request = restockRequestRepository.findById(requestId)
-                .orElseThrow(() -> new RuntimeException("Restock request not found with id: " + requestId));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu bổ sung với ID: " + requestId));
         
         if (request.getStatus() != RestockRequest.RestockStatus.PENDING) {
-            throw new RuntimeException("Cannot add items to non-PENDING requests");
+            throw new RuntimeException("Chỉ có thể thêm vật tư vào yêu cầu đang chờ xử lý");
         }
         
-        MedicalSupply medicalSupply = medicalSupplyRepository.findById(restockItemDTO.getMedicalSupplyId())
-                .orElseThrow(() -> new RuntimeException("Medical supply not found with id: " + restockItemDTO.getMedicalSupplyId()));
+        MedicalSupply supply = medicalSupplyRepository.findById(restockItemDTO.getMedicalSupplyId())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy vật tư y tế với ID: " + restockItemDTO.getMedicalSupplyId()));
         
-        RestockItem restockItem = new RestockItem();
-        restockItem.setRestockRequest(request);
-        restockItem.setMedicalSupply(medicalSupply);
-        restockItem.setRequestedQuantity(restockItemDTO.getRequestedQuantity());
-        restockItem.setNotes(restockItemDTO.getNotes());
+        RestockItem newItem = new RestockItem();
+        newItem.setRestockRequest(request);
+        newItem.setMedicalSupply(supply);
+        newItem.setRequestedDisplayQuantity(restockItemDTO.getRequestedDisplayQuantity());
+        newItem.setRequestedDisplayUnit(restockItemDTO.getRequestedDisplayUnit());
+        newItem.setNotes(restockItemDTO.getNotes());
         
-        restockItemRepository.save(restockItem);
+        // Convert to base unit
+        BigDecimal requestedInBaseUnit = unitConversionService.convertToBaseUnit(
+                restockItemDTO.getRequestedDisplayQuantity(),
+                restockItemDTO.getRequestedDisplayUnit(),
+                supply.getBaseUnit()
+        );
+        newItem.setRequestedQuantityInBaseUnit(requestedInBaseUnit);
         
-        return convertToDTO(request);
+        restockItemRepository.save(newItem);
+        
+        RestockRequest updatedRequest = restockRequestRepository.findById(requestId).get();
+        log.info("Added item to restock request ID: {}", requestId);
+        return convertToDTO(updatedRequest);
     }
     
     @Override
     public RestockRequestDTO removeItemFromRequest(Long requestId, Long itemId) {
         RestockRequest request = restockRequestRepository.findById(requestId)
-                .orElseThrow(() -> new RuntimeException("Restock request not found with id: " + requestId));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu bổ sung với ID: " + requestId));
         
         if (request.getStatus() != RestockRequest.RestockStatus.PENDING) {
-            throw new RuntimeException("Cannot remove items from non-PENDING requests");
+            throw new RuntimeException("Chỉ có thể xóa vật tư khỏi yêu cầu đang chờ xử lý");
         }
         
         RestockItem item = restockItemRepository.findById(itemId)
-                .orElseThrow(() -> new RuntimeException("Restock item not found with id: " + itemId));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy vật tư trong yêu cầu với ID: " + itemId));
         
         if (!item.getRestockRequest().getId().equals(requestId)) {
-            throw new RuntimeException("Item does not belong to the specified request");
+            throw new RuntimeException("Vật tư không thuộc về yêu cầu này");
         }
         
-        restockItemRepository.delete(item);
+        restockItemRepository.deleteById(itemId);
         
-        return convertToDTO(request);
+        RestockRequest updatedRequest = restockRequestRepository.findById(requestId).get();
+        log.info("Removed item from restock request ID: {}", requestId);
+        return convertToDTO(updatedRequest);
     }
     
     @Override
     public RestockRequestDTO updateRequestItem(Long requestId, Long itemId, RestockItemDTO restockItemDTO) {
         RestockRequest request = restockRequestRepository.findById(requestId)
-                .orElseThrow(() -> new RuntimeException("Restock request not found with id: " + requestId));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu bổ sung với ID: " + requestId));
+        
+        if (request.getStatus() != RestockRequest.RestockStatus.PENDING) {
+            throw new RuntimeException("Chỉ có thể cập nhật vật tư trong yêu cầu đang chờ xử lý");
+        }
         
         RestockItem item = restockItemRepository.findById(itemId)
-                .orElseThrow(() -> new RuntimeException("Restock item not found with id: " + itemId));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy vật tư trong yêu cầu với ID: " + itemId));
         
         if (!item.getRestockRequest().getId().equals(requestId)) {
-            throw new RuntimeException("Item does not belong to the specified request");
+            throw new RuntimeException("Vật tư không thuộc về yêu cầu này");
         }
         
-        // Update based on request status
-        if (request.getStatus() == RestockRequest.RestockStatus.PENDING) {
-            item.setRequestedQuantity(restockItemDTO.getRequestedQuantity());
-            item.setNotes(restockItemDTO.getNotes());
-        } else if (request.getStatus() == RestockRequest.RestockStatus.APPROVED) {
-            item.setApprovedQuantity(restockItemDTO.getApprovedQuantity());
-        }
+        item.setRequestedDisplayQuantity(restockItemDTO.getRequestedDisplayQuantity());
+        item.setRequestedDisplayUnit(restockItemDTO.getRequestedDisplayUnit());
+        item.setNotes(restockItemDTO.getNotes());
+        
+        // Recalculate base unit quantity
+        BigDecimal requestedInBaseUnit = unitConversionService.convertToBaseUnit(
+                restockItemDTO.getRequestedDisplayQuantity(),
+                restockItemDTO.getRequestedDisplayUnit(),
+                item.getMedicalSupply().getBaseUnit()
+        );
+        item.setRequestedQuantityInBaseUnit(requestedInBaseUnit);
         
         restockItemRepository.save(item);
         
-        return convertToDTO(request);
+        RestockRequest updatedRequest = restockRequestRepository.findById(requestId).get();
+        log.info("Updated item in restock request ID: {}", requestId);
+        return convertToDTO(updatedRequest);
     }
     
     @Override
+    @Transactional(readOnly = true)
     public List<RestockRequestDTO> getHighPriorityRequests() {
         return restockRequestRepository.findByPriorityAndStatus("HIGH", RestockRequest.RestockStatus.PENDING)
                 .stream()
@@ -310,6 +418,17 @@ public class RestockRequestService implements IRestockRequestService {
     }
     
     @Override
+    @Transactional(readOnly = true)
+    public List<RestockRequestDTO> getRequestsRequiringAttention() {
+        List<RestockRequestDTO> requests = getPendingRequests();
+        return requests.stream()
+                .filter(request -> "HIGH".equals(request.getPriority()) || 
+                                 request.getRequestDate().isBefore(LocalDateTime.now().minusDays(2)))
+                .collect(Collectors.toList());
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
     public long getPendingRequestsCount() {
         return restockRequestRepository.countByStatus(RestockRequest.RestockStatus.PENDING);
     }
@@ -328,86 +447,104 @@ public class RestockRequestService implements IRestockRequestService {
         dto.setReviewDate(restockRequest.getReviewDate());
         dto.setCompletedDate(restockRequest.getCompletedDate());
         
-        // Get user names
+        // Set user names
         if (restockRequest.getRequestedBy() != null) {
             userRepository.findById(restockRequest.getRequestedBy())
-                    .ifPresent(user -> {
-                        String fullName = user.getLastName() + " " + user.getFirstName();
-                        dto.setRequestedByName(fullName);
-                        System.out.println("Set requestedByName to: " + fullName + " for user ID: " + restockRequest.getRequestedBy());
-                    });
+                    .ifPresent(user -> dto.setRequestedByName(user.getFirstName() + " " + user.getLastName()));
         }
         
         if (restockRequest.getReviewedBy() != null) {
             userRepository.findById(restockRequest.getReviewedBy())
-                    .ifPresent(user -> {
-                        String fullName = user.getLastName() + " " + user.getFirstName();
-                        dto.setReviewedByName(fullName);
-                    });
+                    .ifPresent(user -> dto.setReviewedByName(user.getFirstName() + " " + user.getLastName()));
         }
         
         // Convert restock items
         if (restockRequest.getRestockItems() != null) {
-            dto.setRestockItems(restockRequest.getRestockItems().stream()
+            List<RestockItemDTO> itemDTOs = restockRequest.getRestockItems().stream()
                     .map(this::convertItemToDTO)
-                    .collect(Collectors.toList()));
+                    .collect(Collectors.toList());
+            dto.setRestockItems(itemDTOs);
         }
         
-        return dto;
-    }
-    
-    private RestockItemDTO convertItemToDTO(RestockItem restockItem) {
-        RestockItemDTO dto = new RestockItemDTO();
-        dto.setId(restockItem.getId());
-        dto.setRestockRequestId(restockItem.getRestockRequest().getId());
-        dto.setMedicalSupplyId(restockItem.getMedicalSupply().getId());
-        dto.setMedicalSupplyName(restockItem.getMedicalSupply().getName());
-        dto.setCategory(restockItem.getMedicalSupply().getCategory());
-        dto.setUnit(restockItem.getMedicalSupply().getUnit());
-        dto.setCurrentStock(restockItem.getMedicalSupply().getQuantity());
-        dto.setMinStockLevel(restockItem.getMedicalSupply().getMinStockLevel());
-        dto.setRequestedQuantity(restockItem.getRequestedQuantity());
-        dto.setApprovedQuantity(restockItem.getApprovedQuantity());
-        dto.setNotes(restockItem.getNotes());
         return dto;
     }
     
     @Override
     public RestockRequest convertToEntity(RestockRequestDTO dto) {
-        RestockRequest restockRequest = new RestockRequest();
-        restockRequest.setId(dto.getId());
-        restockRequest.setRequestedBy(dto.getRequestedBy());
-        restockRequest.setReviewedBy(dto.getReviewedBy());
-        restockRequest.setStatus(dto.getStatus());
-        restockRequest.setPriority(dto.getPriority());
-        restockRequest.setReason(dto.getReason());
-        restockRequest.setReviewNotes(dto.getReviewNotes());
-        restockRequest.setRequestDate(dto.getRequestDate());
-        restockRequest.setReviewDate(dto.getReviewDate());
-        restockRequest.setCompletedDate(dto.getCompletedDate());
+        RestockRequest request = new RestockRequest();
+        request.setId(dto.getId());
+        request.setRequestedBy(dto.getRequestedBy());
+        request.setReviewedBy(dto.getReviewedBy());
+        request.setStatus(dto.getStatus() != null ? dto.getStatus() : RestockRequest.RestockStatus.PENDING);
+        request.setPriority(dto.getPriority() != null ? dto.getPriority() : "MEDIUM");
+        request.setReason(dto.getReason());
+        request.setReviewNotes(dto.getReviewNotes());
+        request.setRequestDate(dto.getRequestDate());
+        request.setReviewDate(dto.getReviewDate());
+        request.setCompletedDate(dto.getCompletedDate());
         
         // Convert restock items
         if (dto.getRestockItems() != null) {
-            List<RestockItem> restockItems = dto.getRestockItems().stream()
-                    .map(itemDto -> {
-                        RestockItem item = new RestockItem();
-                        item.setId(itemDto.getId());
-                        item.setRestockRequest(restockRequest);
-                        
-                        // Load the medical supply entity
-                        MedicalSupply medicalSupply = medicalSupplyRepository.findById(itemDto.getMedicalSupplyId())
-                                .orElseThrow(() -> new RuntimeException("Medical supply not found with id: " + itemDto.getMedicalSupplyId()));
-                        item.setMedicalSupply(medicalSupply);
-                        
-                        item.setRequestedQuantity(itemDto.getRequestedQuantity());
-                        item.setApprovedQuantity(itemDto.getApprovedQuantity());
-                        item.setNotes(itemDto.getNotes());
-                        return item;
-                    })
+            List<RestockItem> items = dto.getRestockItems().stream()
+                    .map(itemDTO -> convertItemToEntity(itemDTO, request))
                     .collect(Collectors.toList());
-            restockRequest.setRestockItems(restockItems);
+            request.setRestockItems(items);
         }
         
-        return restockRequest;
+        return request;
+    }
+    
+    private RestockItemDTO convertItemToDTO(RestockItem item) {
+        RestockItemDTO dto = new RestockItemDTO();
+        dto.setId(item.getId());
+        dto.setRestockRequestId(item.getRestockRequest().getId());
+        dto.setMedicalSupplyId(item.getMedicalSupply().getId());
+        dto.setMedicalSupplyName(item.getMedicalSupply().getName());
+        dto.setCategory(item.getMedicalSupply().getCategory());
+        
+        // Current stock information
+        dto.setCurrentStockInBaseUnit(item.getMedicalSupply().getQuantityInBaseUnit());
+        dto.setBaseUnit(item.getMedicalSupply().getBaseUnit());
+        dto.setCurrentDisplayQuantity(item.getMedicalSupply().getDisplayQuantity());
+        dto.setCurrentDisplayUnit(item.getMedicalSupply().getDisplayUnit());
+        dto.setMinStockLevelInBaseUnit(item.getMedicalSupply().getMinStockLevelInBaseUnit());
+        
+        // Requested quantities
+        dto.setRequestedDisplayQuantity(item.getRequestedDisplayQuantity());
+        dto.setRequestedDisplayUnit(item.getRequestedDisplayUnit());
+        dto.setRequestedQuantityInBaseUnit(item.getRequestedQuantityInBaseUnit());
+        
+        // Approved quantities
+        dto.setApprovedDisplayQuantity(item.getApprovedDisplayQuantity());
+        dto.setApprovedDisplayUnit(item.getApprovedDisplayUnit());
+        dto.setApprovedQuantityInBaseUnit(item.getApprovedQuantityInBaseUnit());
+        
+        dto.setNotes(item.getNotes());
+        
+        return dto;
+    }
+    
+    private RestockItem convertItemToEntity(RestockItemDTO dto, RestockRequest request) {
+        RestockItem item = new RestockItem();
+        item.setId(dto.getId());
+        item.setRestockRequest(request);
+        
+        // Load medical supply
+        if (dto.getMedicalSupplyId() != null) {
+            MedicalSupply supply = medicalSupplyRepository.findById(dto.getMedicalSupplyId())
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy vật tư y tế với ID: " + dto.getMedicalSupplyId()));
+            item.setMedicalSupply(supply);
+        }
+        
+        // Set quantities
+        item.setRequestedDisplayQuantity(dto.getRequestedDisplayQuantity());
+        item.setRequestedDisplayUnit(dto.getRequestedDisplayUnit());
+        item.setRequestedQuantityInBaseUnit(dto.getRequestedQuantityInBaseUnit());
+        item.setApprovedDisplayQuantity(dto.getApprovedDisplayQuantity());
+        item.setApprovedDisplayUnit(dto.getApprovedDisplayUnit());
+        item.setApprovedQuantityInBaseUnit(dto.getApprovedQuantityInBaseUnit());
+        item.setNotes(dto.getNotes());
+        
+        return item;
     }
 }

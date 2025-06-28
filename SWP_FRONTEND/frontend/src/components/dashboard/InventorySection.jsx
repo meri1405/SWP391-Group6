@@ -16,9 +16,7 @@ import {
     Tabs,
     Typography,
     Descriptions,
-    Divider,
-    List,
-    Checkbox
+    Divider
 } from 'antd';
 import {
     PlusOutlined,
@@ -32,6 +30,7 @@ import {
 } from '@ant-design/icons';
 import { restockRequestApi } from '../../api/restockRequestApi';
 import { medicalSupplyApi } from '../../api/medicalSupplyApi';
+import { unitConversionApi } from '../../api/unitConversionApi';
 import dayjs from 'dayjs';
 
 const { Option } = Select;
@@ -49,19 +48,28 @@ const InventorySection = () => {
     const [selectedRequest, setSelectedRequest] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('all');
+    const [statusFilter, setStatusFilter] = useState('all'); // Add status filter
     const [messageApi, contextHolder] = message.useMessage();
     const [restockRequests, setRestockRequests] = useState([]);
     const [loading, setLoading] = useState(false);
     const [medicines, setMedicines] = useState([]);
     const [supplies, setSupplies] = useState([]);
+    const [availableUnits, setAvailableUnits] = useState([]);
+    const [convertibleBaseUnits, setConvertibleBaseUnits] = useState([]);
+    const [selectedDisplayUnit, setSelectedDisplayUnit] = useState('');
 
     const getStatusTag = (record) => {
-        const quantity = record.quantity || 0;
-        const minStockLevel = record.minStockLevel || 0;
+        const quantityInBaseUnit = record.quantityInBaseUnit || 0;
+        const minStockLevelInBaseUnit = record.minStockLevelInBaseUnit || 0;
+        const isEnabled = record.enabled !== false; // Default to true if not specified
         
-        if (quantity <= minStockLevel) {
+        if (!isEnabled) {
+            return <Tag color="gray" icon={<CloseOutlined />}>Ngừng sử dụng</Tag>;
+        }
+        
+        if (quantityInBaseUnit <= minStockLevelInBaseUnit) {
             return <Tag color="red" icon={<WarningOutlined />}>Sắp hết</Tag>;
-        } else if (quantity <= minStockLevel * 1.5) {
+        } else if (quantityInBaseUnit <= minStockLevelInBaseUnit * 1.5) {
             return <Tag color="orange">Tồn kho thấp</Tag>;
         } else {
             return <Tag color="green">Còn hàng</Tag>;
@@ -89,6 +97,73 @@ const InventorySection = () => {
         return <Tag color={categoryConfig.color}>{categoryConfig.text}</Tag>;
     };
 
+    // Load available units from unit conversions
+    const loadAvailableUnits = useCallback(async () => {
+        try {
+            const response = await unitConversionApi.getAllUnits();
+            if (response && Array.isArray(response)) {
+                setAvailableUnits(response);
+            } else {
+                // Set default units if API fails or returns invalid data
+                setAvailableUnits([
+                    'mg', 'g', 'kg', 
+                    'ml', 'l', 
+                    'viên', 'hộp', 'lọ', 'chai', 'gói', 'tuýp',
+                    'cuộn', 'cái', 'chiếc', 'bộ', 'hũ',
+                    'unit', 'IU', 'mcg'
+                ]);
+            }
+        } catch (error) {
+            console.error('Error loading available units:', error);
+            // Set default units if API fails
+            setAvailableUnits([
+                'mg', 'g', 'kg', 
+                'ml', 'l', 
+                'viên', 'hộp', 'lọ', 'chai', 'gói', 'tuýp',
+                'cuộn', 'cái', 'chiếc', 'bộ', 'hũ',
+                'unit', 'IU', 'mcg'
+            ]);
+        }
+    }, []);
+
+    // Load convertible base units when display unit changes
+    const loadConvertibleBaseUnits = useCallback(async (displayUnit) => {
+        if (!displayUnit) {
+            setConvertibleBaseUnits([]);
+            return;
+        }
+        
+        try {
+            const convertibleUnits = await unitConversionApi.getConvertibleUnits(displayUnit);
+            setConvertibleBaseUnits(convertibleUnits || []);
+        } catch (error) {
+            console.error('Error loading convertible units:', error);
+            // Fallback to allow same unit
+            setConvertibleBaseUnits([displayUnit]);
+        }
+    }, []);
+
+    // Handle display unit change
+    const handleDisplayUnitChange = useCallback((value) => {
+        setSelectedDisplayUnit(value);
+        loadConvertibleBaseUnits(value);
+        
+        // Reset base unit if it's not convertible
+        const currentBaseUnit = form.getFieldValue('baseUnit');
+        if (currentBaseUnit && value) {
+            // Check if current base unit is still valid
+            unitConversionApi.getConvertibleUnits(value)
+                .then(convertibleUnits => {
+                    if (!convertibleUnits.includes(currentBaseUnit)) {
+                        form.setFieldsValue({ baseUnit: undefined });
+                    }
+                })
+                .catch(() => {
+                    form.setFieldsValue({ baseUnit: undefined });
+                });
+        }
+    }, [form, loadConvertibleBaseUnits]);
+
     const medicineColumns = [
         {
             title: 'Tên thuốc',
@@ -103,9 +178,25 @@ const InventorySection = () => {
         },
         {
             title: 'Số lượng',
-            dataIndex: 'quantity',
-            key: 'quantity',
-            render: (quantity, record) => `${quantity} ${record.unit}`,
+            dataIndex: 'displayQuantity',
+            key: 'displayQuantity',
+            render: (displayQuantity, record) => {
+                const quantity = displayQuantity || 0;
+                const unit = record.displayUnit || 'unit';
+                const baseQuantity = record.quantityInBaseUnit || 0;
+                const baseUnit = record.baseUnit || 'unit';
+                
+                return (
+                    <div>
+                        <div>{quantity} {unit}</div>
+                        {baseUnit !== unit && (
+                            <div style={{ fontSize: '12px', color: '#666' }}>
+                                ({baseQuantity} {baseUnit})
+                            </div>
+                        )}
+                    </div>
+                );
+            },
         },
         {
             title: 'Hạn sử dụng',
@@ -144,7 +235,26 @@ const InventorySection = () => {
                     >
                         Xóa
                     </Button>
-                    {(record.quantity <= record.minStockLevel) && (
+                    {record.enabled ? (
+                        <Button
+                            type="default"
+                            size="small"
+                            onClick={() => handleDisableSupply(record)}
+                            style={{ color: '#f5222d', borderColor: '#f5222d' }}
+                        >
+                            Vô hiệu
+                        </Button>
+                    ) : (
+                        <Button
+                            type="default"
+                            size="small"
+                            onClick={() => handleEnableSupply(record)}
+                            style={{ color: '#52c41a', borderColor: '#52c41a' }}
+                        >
+                            Kích hoạt
+                        </Button>
+                    )}
+                    {(record.quantityInBaseUnit <= record.minStockLevelInBaseUnit) && (
                         <Tag color="warning" style={{ marginLeft: 8 }}>
                             Cần bổ sung
                         </Tag>
@@ -168,9 +278,25 @@ const InventorySection = () => {
         },
         {
             title: 'Số lượng',
-            dataIndex: 'quantity',
-            key: 'quantity',
-            render: (quantity, record) => `${quantity} ${record.unit}`,
+            dataIndex: 'displayQuantity',
+            key: 'displayQuantity',
+            render: (displayQuantity, record) => {
+                const quantity = displayQuantity || 0;
+                const unit = record.displayUnit || 'unit';
+                const baseQuantity = record.quantityInBaseUnit || 0;
+                const baseUnit = record.baseUnit || 'unit';
+                
+                return (
+                    <div>
+                        <div>{quantity} {unit}</div>
+                        {baseUnit !== unit && (
+                            <div style={{ fontSize: '12px', color: '#666' }}>
+                                ({baseQuantity} {baseUnit})
+                            </div>
+                        )}
+                    </div>
+                );
+            },
         },
         {
             title: 'Nhà cung cấp',
@@ -203,7 +329,26 @@ const InventorySection = () => {
                     >
                         Xóa
                     </Button>
-                    {(record.quantity <= record.minStockLevel) && (
+                    {record.enabled ? (
+                        <Button
+                            type="default"
+                            size="small"
+                            onClick={() => handleDisableSupply(record)}
+                            style={{ color: '#f5222d', borderColor: '#f5222d' }}
+                        >
+                            Vô hiệu
+                        </Button>
+                    ) : (
+                        <Button
+                            type="default"
+                            size="small"
+                            onClick={() => handleEnableSupply(record)}
+                            style={{ color: '#52c41a', borderColor: '#52c41a' }}
+                        >
+                            Kích hoạt
+                        </Button>
+                    )}
+                    {(record.quantityInBaseUnit <= record.minStockLevelInBaseUnit) && (
                         <Tag color="warning" style={{ marginLeft: 8 }}>
                             Cần bổ sung
                         </Tag>
@@ -311,6 +456,7 @@ const InventorySection = () => {
                             </Button>
                         </>
                     )}
+                    {/* ĐÃ BỎ nút Hoàn thành & Nhập kho */}
                 </Space>
             ),
         },
@@ -320,18 +466,26 @@ const InventorySection = () => {
         try {
             setLoading(true);
             
-            // Map form values to API format
+            console.log('Form values received:', values);
+            
+            // Map form values to API format using new DTO structure
             const supplyData = {
                 name: values.name,
                 category: values.category,
-                quantity: values.quantity,
-                unit: values.unit,
+                displayQuantity: Number(values.displayQuantity) || 0,
+                displayUnit: values.displayUnit,
+                baseUnit: values.baseUnit,
+                // Calculate quantityInBaseUnit (for now, same as displayQuantity until we have conversion)
+                quantityInBaseUnit: Number(values.displayQuantity) || 0,
                 supplier: values.supplier,
-                minStockLevel: values.minStockLevel,
-                expiryDate: values.expirationDate, // Allow null for non-medicine items
-                location: 'Kho chính', // Default location
-                description: `${values.category} - ${values.name}`
+                minStockLevelInBaseUnit: Number(values.minStockLevelInBaseUnit) || 0,
+                expirationDate: values.expirationDate || null, // Only for medicines
+                location: values.location || 'Kho chính',
+                description: values.description || `${values.category} - ${values.name}`,
+                enabled: true
             };
+
+            console.log('Supply data JSON:', JSON.stringify(supplyData, null, 2));
 
             if (editingRecord) {
                 // Update existing supply
@@ -347,9 +501,12 @@ const InventorySection = () => {
             await fetchMedicalSupplies();
             setShowAddModal(false);
             setEditingRecord(null);
+            setSelectedDisplayUnit('');
+            setConvertibleBaseUnits([]);
             form.resetFields();
         } catch (error) {
             console.error('Error saving supply:', error);
+            console.error('Error details:', error.response?.data || error.message);
             messageApi.error(editingRecord ? 'Có lỗi xảy ra khi cập nhật' : 'Có lỗi xảy ra khi thêm mới');
         } finally {
             setLoading(false);
@@ -379,6 +536,44 @@ const InventorySection = () => {
                 } catch (error) {
                     console.error('Error deleting supply:', error);
                     messageApi.error('Có lỗi xảy ra khi xóa');
+                } finally {
+                    setLoading(false);
+                }
+            }
+        });
+    };
+
+    // Handle supply enable/disable
+    const handleEnableSupply = async (record) => {
+        try {
+            setLoading(true);
+            await medicalSupplyApi.enableSupply(record.id);
+            messageApi.success('Đã kích hoạt vật tư y tế');
+            await fetchMedicalSupplies();
+        } catch (error) {
+            console.error('Error enabling supply:', error);
+            messageApi.error('Có lỗi xảy ra khi kích hoạt vật tư');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDisableSupply = async (record) => {
+        Modal.confirm({
+            title: 'Xác nhận vô hiệu hóa',
+            content: 'Bạn có chắc chắn muốn vô hiệu hóa vật tư này? Vật tư sẽ không được hiển thị trong danh sách sử dụng.',
+            okText: 'Vô hiệu',
+            okType: 'danger',
+            cancelText: 'Hủy',
+            onOk: async () => {
+                try {
+                    setLoading(true);
+                    await medicalSupplyApi.disableSupply(record.id);
+                    messageApi.success('Đã vô hiệu hóa vật tư y tế');
+                    await fetchMedicalSupplies();
+                } catch (error) {
+                    console.error('Error disabling supply:', error);
+                    messageApi.error('Có lỗi xảy ra khi vô hiệu hóa vật tư');
                 } finally {
                     setLoading(false);
                 }
@@ -427,10 +622,17 @@ const InventorySection = () => {
     }, [messageApi]);
 
     // Fetch restock requests for manager review
-    const fetchRestockRequests = useCallback(async () => {
+    const fetchRestockRequests = useCallback(async (status = 'all') => {
         try {
             setLoading(true);
-            const requests = await restockRequestApi.getPendingRequests();
+            let requests;
+            
+            if (status === 'all') {
+                requests = await restockRequestApi.getAllRequests();
+            } else {
+                requests = await restockRequestApi.getRequestsByStatus(status);
+            }
+            
             console.log('Fetched restock requests:', requests);
             if (requests.length > 0) {
                 console.log('Sample request with items:', requests[0]);
@@ -446,26 +648,36 @@ const InventorySection = () => {
     }, [messageApi]);
 
     useEffect(() => {
-        // Load medical supplies on component mount
+        // Load medical supplies and available units on component mount
         fetchMedicalSupplies();
-    }, [fetchMedicalSupplies]);
+        loadAvailableUnits();
+    }, [fetchMedicalSupplies, loadAvailableUnits]);
 
     useEffect(() => {
         if (activeTab === 'requests') {
-            fetchRestockRequests();
+            fetchRestockRequests(statusFilter);
         }
-    }, [activeTab, fetchRestockRequests]);
+    }, [activeTab, statusFilter, fetchRestockRequests]);
 
     // Handle request approval
     const handleApproveRequest = async (requestId, approvedItems) => {
         try {
+            // Transform the approvedItems array into a map of item ID to approval data
+            const itemApprovals = {};
+            approvedItems.forEach(item => {
+                itemApprovals[item.itemId] = {
+                    quantity: item.approvedQuantity,
+                    unit: item.unit || 'unit'  // Use the item's unit or default to 'unit'
+                };
+            });
+            
             const approvalData = {
                 reviewerId: 1, // This should come from auth context
                 reviewNotes: 'Approved by manager',
-                itemApprovals: approvedItems
+                itemApprovals: itemApprovals
             };
             
-            await restockRequestApi.approveRequestWithQuantities(requestId, approvalData);
+            await restockRequestApi.approveRequest(requestId, approvalData);
             messageApi.success('Đã duyệt yêu cầu bổ sung');
             fetchRestockRequests();
             setShowApprovalModal(false);
@@ -550,20 +762,21 @@ const InventorySection = () => {
                             key="requests"
                         />
                     </Tabs>
-                    <Space>
-                        <Button
-                            type="primary"
-                            icon={<PlusOutlined />}
-                            onClick={() => {
-                                setEditingRecord(null);
-                                form.resetFields();
-                                setShowAddModal(true);
-                            }}
-                            disabled={activeTab === 'requests'}
-                        >
-                            Thêm mới
-                        </Button>
-                    </Space>
+                    {activeTab !== 'requests' && (
+                        <Space>
+                            <Button
+                                type="primary"
+                                icon={<PlusOutlined />}
+                                onClick={() => {
+                                    setEditingRecord(null);
+                                    form.resetFields();
+                                    setShowAddModal(true);
+                                }}
+                            >
+                                Thêm mới
+                            </Button>
+                        </Space>
+                    )}
                 </div>
 
                 <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
@@ -579,28 +792,39 @@ const InventorySection = () => {
                     <Col xs={24} sm={12} md={8}>
                         <Select
                             style={{ width: '100%' }}
-                            value={categoryFilter}
-                            onChange={setCategoryFilter}
-                            disabled={activeTab === 'requests'}
+                            value={activeTab === 'requests' ? statusFilter : categoryFilter}
+                            onChange={activeTab === 'requests' ? setStatusFilter : setCategoryFilter}
                         >
-                            <Option value="all">Tất cả loại</Option>
-                            {activeTab === 'medicines' ? (
+                            {activeTab === 'requests' ? (
                                 <>
-                                    <Option value="painkiller">Giảm đau</Option>
-                                    <Option value="antibiotic">Kháng sinh</Option>
-                                    <Option value="vitamin">Vitamin</Option>
-                                    <Option value="supplement">Thực phẩm bổ sung</Option>
+                                    <Option value="all">Tất cả trạng thái</Option>
+                                    <Option value="PENDING">Chờ duyệt</Option>
+                                    <Option value="APPROVED">Đã duyệt</Option>
+                                    <Option value="REJECTED">Từ chối</Option>
+                                    {/* <Option value="COMPLETED">Hoàn thành</Option> */}
                                 </>
-                            ) : activeTab === 'supplies' ? (
+                            ) : (
                                 <>
-                                    <Option value="bandage">Băng y tế</Option>
-                                    <Option value="gloves">Găng tay</Option>
-                                    <Option value="equipment">Thiết bị</Option>
-                                    <Option value="antiseptic">Sát trung</Option>
-                                    <Option value="medical_device">Thiết bị y tế</Option>
+                                    <Option value="all">Tất cả loại</Option>
+                                    {activeTab === 'medicines' ? (
+                                        <>
+                                            <Option value="painkiller">Giảm đau</Option>
+                                            <Option value="antibiotic">Kháng sinh</Option>
+                                            <Option value="vitamin">Vitamin</Option>
+                                            <Option value="supplement">Thực phẩm bổ sung</Option>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Option value="bandage">Băng y tế</Option>
+                                            <Option value="gloves">Găng tay</Option>
+                                            <Option value="equipment">Thiết bị</Option>
+                                            <Option value="antiseptic">Sát trung</Option>
+                                            <Option value="medical_device">Thiết bị y tế</Option>
+                                            <Option value="other">Khác</Option>
+                                        </>
+                                    )}
                                 </>
-                            ) : null}
-                            <Option value="other">Khác</Option>
+                            )}
                         </Select>
                     </Col>
                 </Row>
@@ -625,6 +849,8 @@ const InventorySection = () => {
                 onCancel={() => {
                     setShowAddModal(false);
                     setEditingRecord(null);
+                    setSelectedDisplayUnit('');
+                    setConvertibleBaseUnits([]);
                     form.resetFields();
                 }}
                 footer={null}
@@ -669,19 +895,53 @@ const InventorySection = () => {
                     </Form.Item>
 
                     <Form.Item
-                        name="quantity"
-                        label="Số lượng"
-                        rules={[{ required: true, message: 'Vui lòng nhập số lượng' }]}
+                        name="displayQuantity"
+                        label="Số lượng hiển thị"
+                        rules={[{ required: true, message: 'Vui lòng nhập số lượng hiển thị' }]}
                     >
                         <InputNumber min={0} style={{ width: '100%' }} />
                     </Form.Item>
 
                     <Form.Item
-                        name="unit"
-                        label="Đơn vị"
-                        rules={[{ required: true, message: 'Vui lòng nhập đơn vị' }]}
+                        name="displayUnit"
+                        label="Đơn vị hiển thị"
+                        rules={[{ required: true, message: 'Vui lòng chọn đơn vị hiển thị' }]}
                     >
-                        <Input placeholder="Nhập đơn vị (viên, hộp, cuộn,...)" />
+                        <Select 
+                            placeholder="Chọn đơn vị hiển thị"
+                            showSearch
+                            allowClear
+                            optionFilterProp="children"
+                            onChange={handleDisplayUnitChange}
+                        >
+                            {availableUnits.map(unit => (
+                                <Option key={unit} value={unit}>{unit}</Option>
+                            ))}
+                        </Select>
+                    </Form.Item>
+
+                    <Form.Item
+                        name="baseUnit"
+                        label="Đơn vị cơ sở"
+                        rules={[{ required: true, message: 'Vui lòng chọn đơn vị cơ sở' }]}
+                    >
+                        <Select 
+                            placeholder={selectedDisplayUnit 
+                                ? "Chọn đơn vị cơ sở có thể chuyển đổi" 
+                                : "Vui lòng chọn đơn vị hiển thị trước"
+                            }
+                            showSearch
+                            allowClear
+                            optionFilterProp="children"
+                            disabled={!selectedDisplayUnit}
+                        >
+                            {convertibleBaseUnits.map(unit => (
+                                <Option key={unit} value={unit}>
+                                    {unit}
+                                    {unit === selectedDisplayUnit && " (cùng đơn vị)"}
+                                </Option>
+                            ))}
+                        </Select>
                     </Form.Item>
 
                     {activeTab === 'medicines' && (
@@ -703,11 +963,25 @@ const InventorySection = () => {
                     </Form.Item>
 
                     <Form.Item
-                        name="minStockLevel"
-                        label="Số lượng tối thiểu"
-                        rules={[{ required: true, message: 'Vui lòng nhập số lượng tối thiểu' }]}
+                        name="minStockLevelInBaseUnit"
+                        label="Số lượng tối thiểu (đơn vị cơ sở)"
+                        rules={[{ required: true, message: 'Vui lòng nhập số lượng tối thiểu theo đơn vị cơ sở' }]}
                     >
                         <InputNumber min={0} style={{ width: '100%' }} />
+                    </Form.Item>
+
+                    <Form.Item
+                        name="location"
+                        label="Vị trí kho"
+                    >
+                        <Input placeholder="Nhập vị trí kho (mặc định: Kho chính)" />
+                    </Form.Item>
+
+                    <Form.Item
+                        name="description"
+                        label="Mô tả"
+                    >
+                        <TextArea rows={3} placeholder="Nhập mô tả chi tiết" />
                     </Form.Item>
 
                     <Form.Item>
@@ -786,24 +1060,58 @@ const InventorySection = () => {
                                         title: 'Loại',
                                         dataIndex: 'category',
                                         key: 'category',
+                                        render: (category) => getCategoryTag(category),
                                     },
                                     {
                                         title: 'Tồn kho hiện tại',
-                                        dataIndex: 'currentStock',
                                         key: 'currentStock',
-                                        render: (stock, record) => `${stock} ${record.unit}`,
+                                        render: (_, record) => {
+                                            const displayQty = record.currentDisplayQuantity || 0;
+                                            const displayUnit = record.currentDisplayUnit || 'unit';
+                                            const stockBasein = record.currentStockInBaseUnit;
+                                            const baseUnit = record.baseUnit || 'unit';
+                                            return (
+                                                <>
+                                                    {displayQty} {displayUnit} 
+                                                    <br />
+                                                    <span style={{ color: 'gray', fontSize: '0.9em' }}>
+                                                        ({stockBasein || 0} {baseUnit})
+                                                    </span>
+                                                </>
+                                            );
+                                        },
                                     },
                                     {
                                         title: 'Số lượng yêu cầu',
-                                        dataIndex: 'requestedQuantity',
                                         key: 'requestedQuantity',
-                                        render: (qty, record) => `${qty} ${record.unit}`,
+                                        render: (_, record) => {
+                                            const requestedQty = record.requestedQuantityInBaseUnit || 0;
+                                            const baseUnit = record.baseUnit || 'unit';
+                                            return `${requestedQty} ${baseUnit}`;
+                                        },
                                     },
                                     {
                                         title: 'Số lượng được duyệt',
-                                        dataIndex: 'approvedQuantity',
                                         key: 'approvedQuantity',
-                                        render: (qty, record) => qty ? `${qty} ${record.unit}` : 'Chưa duyệt',
+                                        render: (_, record) => {
+                                            // Get request status from parent (selectedRequest)
+                                            const requestStatus = selectedRequest?.status;
+                                            
+                                            if (requestStatus === 'REJECTED') {
+                                                return <Tag color="red">Từ chối</Tag>;
+                                            } else if (requestStatus === 'APPROVED' || requestStatus === 'COMPLETED') {
+                                                if (record.approvedQuantityInBaseUnit && record.baseUnit) {
+                                                    return `${record.approvedQuantityInBaseUnit} ${record.baseUnit}`;
+                                                } else {
+                                                    // Approved but no specific quantity set, show requested quantity
+                                                    const requestedQty = record.requestedQuantityInBaseUnit || 0;
+                                                    const baseUnit = record.baseUnit || 'unit';
+                                                    return `${requestedQty} ${baseUnit}`;
+                                                }
+                                            } else {
+                                                return <Tag color="blue">Chưa duyệt</Tag>;
+                                            }
+                                        },
                                     },
                                     {
                                         title: 'Ghi chú',
@@ -840,7 +1148,8 @@ const InventorySection = () => {
                         onFinish={(values) => {
                             const approvedItems = selectedRequest.restockItems.map(item => ({
                                 itemId: item.id,
-                                approvedQuantity: values[`qty_${item.id}`] || 0
+                                approvedQuantity: values[`qty_${item.id}`] || 0,
+                                unit: item.baseUnit || 'unit'
                             }));
                             handleApproveRequest(selectedRequest.id, approvedItems);
                         }}
@@ -862,19 +1171,19 @@ const InventorySection = () => {
                                     <strong>{item.medicalSupplyName}</strong>
                                     <br />
                                     <Typography.Text type="secondary">
-                                        Tồn kho: {item.currentStock} {item.unit}
+                                        Tồn kho: {item.currentDisplayQuantity || 0} {item.currentDisplayUnit || 'unit'}
                                     </Typography.Text>
                                 </Col>
                                 <Col span={8}>
                                     <Typography.Text>
-                                        Yêu cầu: {item.requestedQuantity} {item.unit}
+                                        Yêu cầu: {item.requestedQuantityInBaseUnit || 0} {item.baseUnit || 'unit'}
                                     </Typography.Text>
                                 </Col>
                                 <Col span={8}>
                                     <Form.Item
                                         name={`qty_${item.id}`}
                                         label="Số lượng duyệt"
-                                        initialValue={item.requestedQuantity}
+                                        initialValue={item.requestedQuantityInBaseUnit}
                                         rules={[
                                             { required: true, message: 'Vui lòng nhập số lượng' },
                                             { type: 'number', min: 0, message: 'Số lượng phải lớn hơn 0' }
@@ -882,9 +1191,9 @@ const InventorySection = () => {
                                     >
                                         <InputNumber
                                             min={0}
-                                            max={item.requestedQuantity * 2}
+                                            max={(item.requestedQuantityInBaseUnit || 0) * 2}
                                             style={{ width: '100%' }}
-                                            addonAfter={item.unit}
+                                            addonAfter={item.baseUnit || 'unit'}
                                         />
                                     </Form.Item>
                                 </Col>

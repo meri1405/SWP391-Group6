@@ -197,15 +197,18 @@ export const medicalSupplyApi = {
     }
   },
 
-  // Subtract stock
-  subtractStock: async (id, quantity) => {
+  // Subtract stock (with unit conversion support)
+  subtractStock: async (id, displayQuantity, displayUnit) => {
     try {
       const response = await fetch(
-        `${API_BASE_URL}/medical-supplies/${id}/subtract-stock`,
+        `${API_BASE_URL}/medical-supplies/${id}/subtract`,
         {
           method: "PUT",
           headers: getAuthHeaders(),
-          body: JSON.stringify({ quantity }),
+          body: JSON.stringify({ 
+            displayQuantity: displayQuantity,
+            displayUnit: displayUnit 
+          }),
         }
       );
 
@@ -217,6 +220,126 @@ export const medicalSupplyApi = {
       return data;
     } catch (error) {
       console.error(`Error subtracting stock for supply ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Add stock (with unit conversion support)
+  addStock: async (id, displayQuantity, displayUnit) => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/medical-supplies/${id}/add`,
+        {
+          method: "PUT",
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ 
+            displayQuantity: displayQuantity,
+            displayUnit: displayUnit 
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error(`Error adding stock for supply ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Update base unit quantity directly
+  updateBaseUnitQuantity: async (id, quantityInBaseUnit) => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/medical-supplies/${id}/quantity`,
+        {
+          method: "PUT",
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ quantityInBaseUnit }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error(`Error updating base unit quantity for supply ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Enable supply
+  enableSupply: async (id) => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/medical-supplies/${id}/enable`,
+        {
+          method: "PUT",
+          headers: getAuthHeaders(),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error(`Error enabling supply ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Disable supply
+  disableSupply: async (id) => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/medical-supplies/${id}/disable`,
+        {
+          method: "PUT",
+          headers: getAuthHeaders(),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error(`Error disabling supply ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Get inventory statistics
+  getInventoryStats: async () => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/medical-supplies/stats`,
+        {
+          method: "GET",
+          headers: getAuthHeaders(),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error("Error fetching inventory statistics:", error);
       throw error;
     }
   },

@@ -58,6 +58,7 @@ const RestockRequestForm = ({
     }
   }, [messageApi]);
 
+
   // Load all medical supplies when modal opens
   useEffect(() => {
     if (visible) {
@@ -68,12 +69,13 @@ const RestockRequestForm = ({
         const items = selectedSupplies.map((supply) => ({
           medicalSupplyId: supply.id,
           requestedQuantity: supply.isLowStock
-            ? Math.max(supply.minStockLevel - supply.quantity, 10)
-            : 10,
+            ? Math.max((supply.minStockLevelInBaseUnit || supply.minStockLevel || 0) - (supply.quantityInBaseUnit || supply.quantity || 0), 1)
+            : 1,
           name: supply.name,
-          currentQuantity: supply.quantity,
-          unit: supply.unit,
-          minStockLevel: supply.minStockLevel,
+          currentQuantity: supply.quantityInBaseUnit || supply.quantity || 0,
+          unit: supply.displayUnit || supply.unit || 'unit',
+          baseUnit: supply.baseUnit || supply.unit || 'unit',
+          minStockLevel: supply.minStockLevelInBaseUnit || supply.minStockLevel || 0,
           notes: "",
         }));
 
@@ -106,7 +108,9 @@ const RestockRequestForm = ({
         reason: values.reason,
         restockItems: requestItems.map((item) => ({
           medicalSupplyId: item.medicalSupplyId,
-          requestedQuantity: item.requestedQuantity,
+          requestedQuantityInBaseUnit: item.requestedQuantity,
+          requestedDisplayQuantity: item.requestedQuantity,
+          requestedDisplayUnit: item.baseUnit,
           notes: item.notes || "",
         })),
       };
@@ -168,9 +172,10 @@ const RestockRequestForm = ({
       medicalSupplyId: selectedSupply.id,
       requestedQuantity: newItemData.newItemQuantity,
       name: selectedSupply.name,
-      currentQuantity: selectedSupply.quantity,
-      unit: selectedSupply.unit,
-      minStockLevel: selectedSupply.minStockLevel,
+      currentQuantity: selectedSupply.quantityInBaseUnit || selectedSupply.quantity || 0,
+      unit: selectedSupply.displayUnit || selectedSupply.unit || 'unit',
+      baseUnit: selectedSupply.baseUnit || selectedSupply.unit || 'unit',
+      minStockLevel: selectedSupply.minStockLevelInBaseUnit || selectedSupply.minStockLevel || 0,
       notes: newItemData.newItemNotes || "",
     };
 
@@ -217,7 +222,7 @@ const RestockRequestForm = ({
       key: "currentQuantity",
       render: (_, record) => (
         <Space>
-          {record.currentQuantity} {record.unit}
+          {record.currentQuantity} {record.baseUnit}
           {record.currentQuantity < record.minStockLevel && (
             <WarningOutlined style={{ color: "orange" }} />
           )}
@@ -237,7 +242,7 @@ const RestockRequestForm = ({
             style={{ width: 80 }}
             size="small"
           />
-          <span>{record.unit}</span>
+          <span>{record.baseUnit || record.unit}</span>
         </Space>
       ),
     },
@@ -355,13 +360,13 @@ const RestockRequestForm = ({
                     <Option key={supply.id} value={supply.id}>
                       <Space>
                         {supply.name}
-                        {supply.quantity < supply.minStockLevel && (
+                        {(supply.quantityInBaseUnit || supply.quantity || 0) < (supply.minStockLevelInBaseUnit || supply.minStockLevel || 0) && (
                           <Tag color="orange" size="small">
                             Thiếu hàng
                           </Tag>
                         )}
                         <Text type="secondary">
-                          ({supply.quantity} {supply.unit})
+                          ({supply.quantityInBaseUnit || supply.quantity || 0} {supply.baseUnit || supply.unit || 'unit'})
                         </Text>
                       </Space>
                     </Option>

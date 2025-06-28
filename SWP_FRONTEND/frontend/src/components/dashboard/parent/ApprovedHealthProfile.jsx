@@ -21,7 +21,9 @@ const ApprovedHealthProfile = () => {
   } = useApprovedHealthProfile();
 
   console.log('Component rendered - selectedProfile:', selectedProfile);
-  console.log('approvedProfiles:', approvedProfiles);const renderBasicInfo = (profile) => {
+  console.log('approvedProfiles:', approvedProfiles);
+  
+  const renderBasicInfo = (profile) => {
     if (!profile) return null;
 
     console.log('Profile:', profile);
@@ -33,6 +35,9 @@ const ApprovedHealthProfile = () => {
         </Descriptions.Item>
         <Descriptions.Item label="Chiều cao" span={1}>
           {profile.height} cm
+        </Descriptions.Item>
+        <Descriptions.Item label="Nhóm máu" span={1}>
+          {(profile.bloodType || 'N/A')}
         </Descriptions.Item>
         <Descriptions.Item label="BMI" span={1}>
           {(profile.weight / Math.pow(profile.height / 100, 2)).toFixed(1)}
@@ -47,7 +52,7 @@ const ApprovedHealthProfile = () => {
           {dayjs(profile.updatedAt).format('DD/MM/YYYY')}
         </Descriptions.Item>
         <Descriptions.Item label="Y tá duyệt" span={1}>
-          {profile.schoolNurseFullName || 'N/A'}
+          {profile.additionalFields.schoolNurseFullName || 'N/A'}
         </Descriptions.Item>
         <Descriptions.Item label="Trạng thái" span={1}>
           <Tag color="success">Đã duyệt</Tag>

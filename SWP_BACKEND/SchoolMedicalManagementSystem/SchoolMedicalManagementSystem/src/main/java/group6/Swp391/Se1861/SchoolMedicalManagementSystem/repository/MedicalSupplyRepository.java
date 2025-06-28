@@ -12,29 +12,34 @@ import java.util.List;
 @Repository
 public interface MedicalSupplyRepository extends JpaRepository<MedicalSupply, Long> {
     
-    @Query("SELECT m FROM MedicalSupply m WHERE m.quantity <= m.minStockLevel")
+    @Query("SELECT m FROM MedicalSupply m WHERE m.quantityInBaseUnit <= m.minStockLevelInBaseUnit AND m.enabled = true")
     List<MedicalSupply> findLowStockItems();
     
-    @Query("SELECT m FROM MedicalSupply m WHERE m.expirationDate <= :date")
+    @Query("SELECT m FROM MedicalSupply m WHERE m.expirationDate <= :date AND m.enabled = true")
     List<MedicalSupply> findExpiringSoon(@Param("date") LocalDate date);
     
-    @Query("SELECT m FROM MedicalSupply m WHERE m.expirationDate < CURRENT_DATE")
+    @Query("SELECT m FROM MedicalSupply m WHERE m.expirationDate < CURRENT_DATE AND m.enabled = true")
     List<MedicalSupply> findExpiredItems();
     
-    List<MedicalSupply> findByCategory(String category);
+    List<MedicalSupply> findByCategoryAndEnabled(String category, Boolean enabled);
     
-    @Query("SELECT m FROM MedicalSupply m WHERE LOWER(m.name) LIKE LOWER(CONCAT('%', :name, '%'))")
-    List<MedicalSupply> findByNameContainingIgnoreCase(@Param("name") String name);
+    @Query("SELECT m FROM MedicalSupply m WHERE LOWER(m.name) LIKE LOWER(CONCAT('%', :name, '%')) AND m.enabled = true")
+    List<MedicalSupply> findByNameContainingIgnoreCaseAndEnabled(@Param("name") String name);
     
-    @Query("SELECT m FROM MedicalSupply m WHERE LOWER(m.name) = LOWER(:name) AND m.quantity > 0 ORDER BY m.expirationDate ASC")
-    List<MedicalSupply> findByNameOrderByExpirationDateAsc(@Param("name") String name);
-
-    @Query("SELECT m FROM MedicalSupply m WHERE m.location = :location")
-    List<MedicalSupply> findByLocation(@Param("location") String location);
+    @Query("SELECT m FROM MedicalSupply m WHERE m.name = :name AND m.enabled = true ORDER BY m.expirationDate ASC")
+    List<MedicalSupply> findByNameAndEnabledOrderByExpirationDateAsc(@Param("name") String name);
     
-    @Query("SELECT COUNT(m) FROM MedicalSupply m WHERE m.quantity <= m.minStockLevel")
+    @Query("SELECT m FROM MedicalSupply m WHERE m.location = :location AND m.enabled = true")
+    List<MedicalSupply> findByLocationAndEnabled(@Param("location") String location);
+    
+    List<MedicalSupply> findByEnabled(Boolean enabled);
+    
+    @Query("SELECT COUNT(m) FROM MedicalSupply m WHERE m.quantityInBaseUnit <= m.minStockLevelInBaseUnit AND m.enabled = true")
     long countLowStockItems();
     
-    @Query("SELECT COUNT(m) FROM MedicalSupply m WHERE m.expirationDate <= :date")
+    @Query("SELECT COUNT(m) FROM MedicalSupply m WHERE m.expirationDate <= :date AND m.enabled = true")
     long countExpiringSoon(@Param("date") LocalDate date);
+    
+    @Query("SELECT COUNT(m) FROM MedicalSupply m WHERE m.expirationDate < CURRENT_DATE AND m.enabled = true")
+    long countExpired();
 }

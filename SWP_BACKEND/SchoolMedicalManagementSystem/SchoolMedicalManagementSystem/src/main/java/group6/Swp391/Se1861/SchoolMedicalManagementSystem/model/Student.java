@@ -65,7 +65,7 @@ public class Student {
     private Set<HealthProfile> healthProfiles;
 
     public String getFullName() {
-        return firstName + " " + lastName;
+        return lastName + " " + firstName;
     }
 
     /**

@@ -8,8 +8,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Map;
 
@@ -21,46 +24,44 @@ public class RestockRequestController {
     
     private final IRestockRequestService restockRequestService;
     
+    // School Nurse endpoints
     @GetMapping
-    @PreAuthorize("hasRole('SCHOOLNURSE')")
+    @PreAuthorize("hasRole('SCHOOLNURSE') or hasRole('MANAGER')")
     public ResponseEntity<List<RestockRequestDTO>> getAllRestockRequests() {
-        List<RestockRequestDTO> requests = restockRequestService.getAllRestockRequests();
-        return ResponseEntity.ok(requests);
+        try {
+            List<RestockRequestDTO> requests = restockRequestService.getAllRestockRequests();
+            return ResponseEntity.ok(requests);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
     
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('SCHOOLNURSE')")
+    @PreAuthorize("hasRole('SCHOOLNURSE') or hasRole('MANAGER')")
     public ResponseEntity<RestockRequestDTO> getRestockRequestById(@PathVariable Long id) {
-        return restockRequestService.getRestockRequestById(id)
-                .map(request -> ResponseEntity.ok(request))
-                .orElse(ResponseEntity.notFound().build());
+        try {
+            return restockRequestService.getRestockRequestById(id)
+                    .map(request -> ResponseEntity.ok(request))
+                    .orElse(ResponseEntity.notFound().build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
     
     @PostMapping
     @PreAuthorize("hasRole('SCHOOLNURSE')")
-    public ResponseEntity<RestockRequestDTO> createRestockRequest(@RequestBody RestockRequestDTO restockRequestDTO) {
+    public ResponseEntity<RestockRequestDTO> createRestockRequest(@Valid @RequestBody RestockRequestDTO restockRequestDTO) {
         try {
-            System.out.println("Received restock request: " + restockRequestDTO);
-            System.out.println("Number of restock items: " + 
-                (restockRequestDTO.getRestockItems() != null ? restockRequestDTO.getRestockItems().size() : 0));
-            
-            // Use user ID from frontend request
             if (restockRequestDTO.getRequestedBy() == null) {
-                throw new RuntimeException("User ID is required");
+                return ResponseEntity.badRequest().build();
             }
             
-            System.out.println("Using user ID: " + restockRequestDTO.getRequestedBy());
-            
-            RestockRequestDTO createdRequest = restockRequestService.createRestockRequest(restockRequestDTO);
-            System.out.println("Created request with ID: " + createdRequest.getId());
-            System.out.println("Created request items count: " + 
-                (createdRequest.getRestockItems() != null ? createdRequest.getRestockItems().size() : 0));
-            System.out.println("Created request requestedByName: " + createdRequest.getRequestedByName());
-            
+            RestockRequestDTO createdRequest = restockRequestService.createRestockRequestWithDisplayUnits(restockRequestDTO);
             return ResponseEntity.status(HttpStatus.CREATED).body(createdRequest);
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (RuntimeException e) {
             return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
     
@@ -68,14 +69,14 @@ public class RestockRequestController {
     @PreAuthorize("hasRole('SCHOOLNURSE')")
     public ResponseEntity<RestockRequestDTO> updateRestockRequest(
             @PathVariable Long id, 
-            @RequestBody RestockRequestDTO restockRequestDTO) {
+            @Valid @RequestBody RestockRequestDTO restockRequestDTO) {
         try {
             RestockRequestDTO updatedRequest = restockRequestService.updateRestockRequest(id, restockRequestDTO);
             return ResponseEntity.ok(updatedRequest);
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
     
@@ -87,19 +88,24 @@ public class RestockRequestController {
             return ResponseEntity.noContent().build();
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
     
     @GetMapping("/my-requests")
     @PreAuthorize("hasRole('SCHOOLNURSE')")
-    public ResponseEntity<List<RestockRequestDTO>> getMyRestockRequests() {
-        // For now, return all requests - this should be improved to get actual user ID
-        List<RestockRequestDTO> requests = restockRequestService.getAllRestockRequests();
-        return ResponseEntity.ok(requests);
+    public ResponseEntity<List<RestockRequestDTO>> getMyRestockRequests(@RequestParam Long userId) {
+        try {
+            List<RestockRequestDTO> requests = restockRequestService.getRequestsByUser(userId);
+            return ResponseEntity.ok(requests);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
     
     @GetMapping("/status/{status}")
-    @PreAuthorize("hasRole('SCHOOLNURSE')")
+    @PreAuthorize("hasRole('SCHOOLNURSE') or hasRole('MANAGER')")
     public ResponseEntity<List<RestockRequestDTO>> getRequestsByStatus(@PathVariable String status) {
         try {
             RestockRequest.RestockStatus restockStatus = RestockRequest.RestockStatus.valueOf(status.toUpperCase());
@@ -107,6 +113,8 @@ public class RestockRequestController {
             return ResponseEntity.ok(requests);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
     
@@ -114,12 +122,14 @@ public class RestockRequestController {
     @PreAuthorize("hasRole('SCHOOLNURSE')")
     public ResponseEntity<RestockRequestDTO> addItemToRequest(
             @PathVariable Long id, 
-            @RequestBody RestockItemDTO restockItemDTO) {
+            @Valid @RequestBody RestockItemDTO restockItemDTO) {
         try {
             RestockRequestDTO updatedRequest = restockRequestService.addItemToRequest(id, restockItemDTO);
             return ResponseEntity.ok(updatedRequest);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
     
@@ -133,6 +143,8 @@ public class RestockRequestController {
             return ResponseEntity.ok(updatedRequest);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
     
@@ -141,68 +153,102 @@ public class RestockRequestController {
     public ResponseEntity<RestockRequestDTO> updateRequestItem(
             @PathVariable Long requestId, 
             @PathVariable Long itemId, 
-            @RequestBody RestockItemDTO restockItemDTO) {
+            @Valid @RequestBody RestockItemDTO restockItemDTO) {
         try {
             RestockRequestDTO updatedRequest = restockRequestService.updateRequestItem(requestId, itemId, restockItemDTO);
             return ResponseEntity.ok(updatedRequest);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
     
     // Manager endpoints
-    @GetMapping("/pending")
-    @PreAuthorize("hasRole('MANAGER')")
-    public ResponseEntity<List<RestockRequestDTO>> getPendingRequests() {
-        List<RestockRequestDTO> pendingRequests = restockRequestService.getPendingRequests();
-        return ResponseEntity.ok(pendingRequests);
-    }
-    
-    @GetMapping("/all")
+    @GetMapping("/manager/all")
     @PreAuthorize("hasRole('MANAGER')")
     public ResponseEntity<List<RestockRequestDTO>> getAllRequestsForManager() {
-        List<RestockRequestDTO> requests = restockRequestService.getAllRestockRequests();
-        return ResponseEntity.ok(requests);
+        try {
+            List<RestockRequestDTO> requests = restockRequestService.getAllRestockRequests();
+            return ResponseEntity.ok(requests);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
     
-    @PutMapping("/{id}/approve")
+    @GetMapping("/manager/pending")
+    @PreAuthorize("hasRole('MANAGER')")
+    public ResponseEntity<List<RestockRequestDTO>> getPendingRequests() {
+        try {
+            List<RestockRequestDTO> requests = restockRequestService.getPendingRequests();
+            return ResponseEntity.ok(requests);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+    
+    @GetMapping("/manager/high-priority")
+    @PreAuthorize("hasRole('MANAGER')")
+    public ResponseEntity<List<RestockRequestDTO>> getHighPriorityRequests() {
+        try {
+            List<RestockRequestDTO> requests = restockRequestService.getHighPriorityRequests();
+            return ResponseEntity.ok(requests);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+    
+    @GetMapping("/manager/requiring-attention")
+    @PreAuthorize("hasRole('MANAGER')")
+    public ResponseEntity<List<RestockRequestDTO>> getRequestsRequiringAttention() {
+        try {
+            List<RestockRequestDTO> requests = restockRequestService.getRequestsRequiringAttention();
+            return ResponseEntity.ok(requests);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+    
+    @PostMapping("/{id}/approve")
     @PreAuthorize("hasRole('MANAGER')")
     public ResponseEntity<RestockRequestDTO> approveRequest(
             @PathVariable Long id,
             @RequestBody Map<String, Object> approvalData) {
         try {
-            // For now, use a default manager ID - this should be improved
-            Long managerId = 1L; // Default manager ID
-            
-            String reviewNotes = (String) approvalData.get("reviewNotes");
+            Long reviewerId = ((Number) approvalData.get("reviewerId")).longValue();
+            String reviewNotes = (String) approvalData.getOrDefault("reviewNotes", "");
             @SuppressWarnings("unchecked")
-            List<Map<String, Object>> itemApprovals = (List<Map<String, Object>>) approvalData.get("itemApprovals");
+            Map<Long, Map<String, Object>> itemApprovals = (Map<Long, Map<String, Object>>) approvalData.get("itemApprovals");
             
-            RestockRequestDTO approvedRequest = restockRequestService.approveRequestWithQuantities(id, managerId, reviewNotes, itemApprovals);
+            RestockRequestDTO approvedRequest = restockRequestService.approveRequest(
+                    id, reviewerId, reviewNotes, itemApprovals);
             return ResponseEntity.ok(approvedRequest);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
     
-    @PutMapping("/{id}/reject")
+    @PostMapping("/{id}/reject")
     @PreAuthorize("hasRole('MANAGER')")
     public ResponseEntity<RestockRequestDTO> rejectRequest(
             @PathVariable Long id,
-            @RequestBody Map<String, String> rejectionData) {
+            @RequestBody Map<String, Object> rejectionData) {
         try {
-            // For now, use a default manager ID - this should be improved
-            Long managerId = 1L; // Default manager ID
+            Long reviewerId = ((Number) rejectionData.get("reviewerId")).longValue();
+            String reviewNotes = (String) rejectionData.getOrDefault("reviewNotes", "");
             
-            String reviewNotes = rejectionData.get("reviewNotes");
-            RestockRequestDTO rejectedRequest = restockRequestService.rejectRequest(id, managerId, reviewNotes);
+            RestockRequestDTO rejectedRequest = restockRequestService.rejectRequest(id, reviewerId, reviewNotes);
             return ResponseEntity.ok(rejectedRequest);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
     
-    @PutMapping("/{id}/complete")
+    @PostMapping("/{id}/complete")
     @PreAuthorize("hasRole('MANAGER')")
     public ResponseEntity<RestockRequestDTO> completeRequest(@PathVariable Long id) {
         try {
@@ -210,6 +256,21 @@ public class RestockRequestController {
             return ResponseEntity.ok(completedRequest);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+    
+    @GetMapping("/stats/counts")
+    @PreAuthorize("hasRole('MANAGER') or hasRole('SCHOOLNURSE')")
+    public ResponseEntity<Map<String, Long>> getRequestStatistics() {
+        try {
+            Map<String, Long> stats = Map.of(
+                    "pending", restockRequestService.getPendingRequestsCount()
+            );
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 }
