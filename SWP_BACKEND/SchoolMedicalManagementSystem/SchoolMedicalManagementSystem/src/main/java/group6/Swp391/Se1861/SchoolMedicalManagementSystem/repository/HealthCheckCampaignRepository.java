@@ -25,6 +25,6 @@ public interface HealthCheckCampaignRepository extends JpaRepository<HealthCheck
     @Query("SELECT c FROM HealthCheckCampaign c WHERE c.status = :status AND c.endDate < :endDate")
     List<HealthCheckCampaign> findCompletedCampaigns(CampaignStatus status, LocalDate endDate);
 
-    @Query("SELECT c FROM HealthCheckCampaign c WHERE :className MEMBER OF c.targetClasses AND c.status IN ('APPROVED', 'SCHEDULED', 'IN_PROGRESS')")
+    @Query("SELECT c FROM HealthCheckCampaign c WHERE :className MEMBER OF c.targetClasses AND c.status IN ('APPROVED', 'IN_PROGRESS')")
     List<HealthCheckCampaign> findActiveByClass(String className);
 }
