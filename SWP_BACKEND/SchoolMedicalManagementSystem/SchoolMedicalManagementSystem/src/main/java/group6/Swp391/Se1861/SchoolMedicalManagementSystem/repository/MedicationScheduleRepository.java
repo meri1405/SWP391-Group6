@@ -25,7 +25,7 @@ public interface MedicationScheduleRepository extends JpaRepository<MedicationSc
     @Query("SELECT ms FROM MedicationSchedule ms " +
            "WHERE ms.status = :status " +
            "AND ((ms.scheduledDate < :currentDate) " +
-           "     OR (ms.scheduledDate = :currentDate AND ms.scheduledTime < :overdueTime)) " +
+           "     OR (ms.scheduledDate = :currentDate AND ms.scheduledTime <= :overdueTime)) " +
            "AND ms.itemRequest.medicationRequest.status = 'APPROVED'")
     List<MedicationSchedule> findOverdueSchedules(
         @Param("status") MedicationStatus status,

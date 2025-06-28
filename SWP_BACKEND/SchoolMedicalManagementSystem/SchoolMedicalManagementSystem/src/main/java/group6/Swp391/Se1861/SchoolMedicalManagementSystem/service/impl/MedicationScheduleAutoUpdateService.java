@@ -34,14 +34,14 @@ public class MedicationScheduleAutoUpdateService {
         log.info("Auto-update enabled: true");
         log.info("Overdue threshold: {} minutes", overdueThresholdMinutes);
         log.info("System timezone: {}", ZoneId.systemDefault());
-        log.info("Service will run every 15 minutes and every 5 minutes during school hours (7AM-6PM, Mon-Fri)");
+        log.info("Service will run every 10 minutes and every 3 minutes during school hours (7AM-6PM, every day)");
     }
 
     /**
      * Automatically mark overdue medication schedules as SKIPPED
-     * Runs every 15 minutes
+     * Runs every 10 minutes
      */
-    @Scheduled(fixedRate = 900000) // 15 minutes = 900,000 milliseconds
+    @Scheduled(fixedRate = 600000) // 10 minutes = 600,000 milliseconds
     public void autoMarkOverdueSchedules() {
         try {
             log.info("=== Starting scheduled auto-update check for overdue medication schedules ===");
@@ -52,7 +52,7 @@ public class MedicationScheduleAutoUpdateService {
             if (skippedCount > 0) {
                 log.info("✅ Scheduled auto-update completed: {} medication schedules marked as SKIPPED", skippedCount);
             } else {
-                log.info("✅ Scheduled auto-update completed: No overdue medication schedules found");
+                log.debug("✅ Scheduled auto-update completed: No overdue medication schedules found");
             }
             
         } catch (Exception e) {
@@ -63,9 +63,9 @@ public class MedicationScheduleAutoUpdateService {
 
     /**
      * More frequent check during school hours (7 AM to 6 PM)
-     * Runs every 5 minutes from 7 AM to 6 PM, Monday to Friday
+     * Runs every 3 minutes from 7 AM to 6 PM, Monday to Sunday
      */
-    @Scheduled(cron = "0 */5 7-18 * * MON-FRI") // Every 5 minutes from 7 AM to 6 PM, Monday to Friday
+    @Scheduled(cron = "0 */3 7-18 * * *") // Every 3 minutes from 7 AM to 6 PM, every day
     public void autoMarkOverdueSchedulesDuringSchoolHours() {
         try {
             log.info("=== School hours auto-update check for overdue medication schedules ===");
