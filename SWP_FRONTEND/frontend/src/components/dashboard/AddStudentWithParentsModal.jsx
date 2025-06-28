@@ -1,37 +1,37 @@
-import React, { useState } from 'react';
-import { 
-  Modal, 
-  Form, 
-  Input, 
-  Select, 
-  DatePicker, 
-  Switch, 
-  Button, 
-  Row, 
-  Col, 
-  Typography, 
-  Divider, 
+import React, { useState } from "react";
+import {
+  Modal,
+  Form,
+  Input,
+  Select,
+  DatePicker,
+  Switch,
+  Button,
+  Row,
+  Col,
+  Typography,
+  Divider,
   message,
   Space,
-  Card
-} from 'antd';
-import { UserAddOutlined, TeamOutlined } from '@ant-design/icons';
-import { createStudentWithParents } from '../../api/studentApi';
-import moment from 'moment';
-import '../../styles/StudentManagement.css';
+  Card,
+} from "antd";
+import { UserAddOutlined, TeamOutlined } from "@ant-design/icons";
+import { createStudentWithParents } from "../../api/studentApi";
+import moment from "moment";
+import "../../styles/StudentManagement.css";
 
 const { Option } = Select;
 const { Title, Text } = Typography;
 
 // Dữ liệu tham chiếu
 const genderOptions = [
-  { value: 'M', label: 'Nam' },
-  { value: 'F', label: 'Nữ' },
+  { value: "M", label: "Nam" },
+  { value: "F", label: "Nữ" },
 ];
 
 const birthPlaceOptions = [
   "Thành phố Hà Nội",
-  "Thành phố Huế", 
+  "Thành phố Huế",
   "Tỉnh Lai Châu",
   "Tỉnh Điện Biên",
   "Tỉnh Sơn La",
@@ -63,7 +63,7 @@ const birthPlaceOptions = [
   "Tỉnh Vĩnh Long",
   "Tỉnh Đồng Tháp",
   "Tỉnh Cà Mau",
-  "Tỉnh An Giang"
+  "Tỉnh An Giang",
 ];
 
 const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
@@ -78,49 +78,65 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
         const values = form.getFieldsValue();
         const firstNameField = `${parentType}_firstName`;
         const lastNameField = `${parentType}_lastName`;
-        
+
         const hasFirstName = values[firstNameField];
         const hasLastName = values[lastNameField];
-        
+
         // Nếu có nhập họ hoặc tên thì các trường khác cũng bắt buộc
         if (hasFirstName || hasLastName) {
           if (!value) {
-            return Promise.reject(`Trường này là bắt buộc khi nhập thông tin ${parentType === 'father' ? 'cha' : 'mẹ'}`);
+            return Promise.reject(
+              `Trường này là bắt buộc khi nhập thông tin ${
+                parentType === "father" ? "cha" : "mẹ"
+              }`
+            );
           }
         }
         return Promise.resolve();
-      }
+      },
     };
   };
   const handleSubmit = async (values) => {
     setLoading(true);
     try {
       // Validation bổ sung trước khi gửi
-      if (!values.father_firstName && !values.father_lastName && 
-          !values.mother_firstName && !values.mother_lastName) {
-        message.error('Vui lòng nhập thông tin ít nhất một phụ huynh');
+      if (
+        !values.father_firstName &&
+        !values.father_lastName &&
+        !values.mother_firstName &&
+        !values.mother_lastName
+      ) {
+        message.error("Vui lòng nhập thông tin ít nhất một phụ huynh");
         setLoading(false);
         return;
       }
 
       // Chuẩn bị dữ liệu theo định dạng API
       const requestData = {
-        students: [{
-          firstName: values.student_firstName,
-          lastName: values.student_lastName,
-          dob: (studentDob || values.student_dob).format('YYYY-MM-DD'),
-          gender: values.student_gender,
-          className: values.student_className,
-          birthPlace: values.student_birthPlace,
-          address: values.student_address,
-          citizenship: values.student_citizenship || 'Việt Nam',
-          isDisabled: false
-        }]
+        students: [
+          {
+            firstName: values.student_firstName,
+            lastName: values.student_lastName,
+            dob: (studentDob || values.student_dob).format("YYYY-MM-DD"),
+            gender: values.student_gender,
+            className: values.student_className,
+            birthPlace: values.student_birthPlace,
+            address: values.student_address,
+            citizenship: values.student_citizenship || "Việt Nam",
+            isDisabled: false,
+          },
+        ],
       };
 
       if (values.father_firstName && values.father_lastName) {
-        if (!values.father_phone || !values.father_jobTitle || !values.father_dob) {
-          message.error('Vui lòng nhập đầy đủ thông tin bắt buộc của cha: số điện thoại, nghề nghiệp, ngày sinh');
+        if (
+          !values.father_phone ||
+          !values.father_jobTitle ||
+          !values.father_dob
+        ) {
+          message.error(
+            "Vui lòng nhập đầy đủ thông tin bắt buộc của cha: số điện thoại, nghề nghiệp, ngày sinh"
+          );
           setLoading(false);
           return;
         }
@@ -128,18 +144,24 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
           firstName: values.father_firstName,
           lastName: values.father_lastName,
           phone: values.father_phone,
-          gender: 'M',
+          gender: "M",
           jobTitle: values.father_jobTitle,
           address: values.father_address || values.student_address,
-          dob: values.father_dob.format('YYYY-MM-DD'),
-          enabled: true
+          dob: values.father_dob.format("YYYY-MM-DD"),
+          enabled: true,
         };
       }
 
       // Thêm thông tin mẹ nếu có đầy đủ thông tin bắt buộc
       if (values.mother_firstName && values.mother_lastName) {
-        if (!values.mother_phone || !values.mother_jobTitle || !values.mother_dob) {
-          message.error('Vui lòng nhập đầy đủ thông tin bắt buộc của mẹ: số điện thoại, nghề nghiệp, ngày sinh');
+        if (
+          !values.mother_phone ||
+          !values.mother_jobTitle ||
+          !values.mother_dob
+        ) {
+          message.error(
+            "Vui lòng nhập đầy đủ thông tin bắt buộc của mẹ: số điện thoại, nghề nghiệp, ngày sinh"
+          );
           setLoading(false);
           return;
         }
@@ -147,22 +169,24 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
           firstName: values.mother_firstName,
           lastName: values.mother_lastName,
           phone: values.mother_phone,
-          gender: 'F',
+          gender: "F",
           jobTitle: values.mother_jobTitle,
           address: values.mother_address || values.student_address,
-          dob: values.mother_dob.format('YYYY-MM-DD'),
-          enabled: true
+          dob: values.mother_dob.format("YYYY-MM-DD"),
+          enabled: true,
         };
       }
 
       const response = await createStudentWithParents(requestData);
-      
-      message.success('Tạo học sinh và phụ huynh thành công!');
+
+      message.success("Tạo học sinh và phụ huynh thành công!");
       form.resetFields();
       onSuccess && onSuccess(response);
       onCancel();
     } catch (error) {
-      message.error(error.message || 'Có lỗi xảy ra khi tạo học sinh và phụ huynh');
+      message.error(
+        error.message || "Có lỗi xảy ra khi tạo học sinh và phụ huynh"
+      );
     } finally {
       setLoading(false);
     }
@@ -174,7 +198,8 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
     onCancel();
   };
 
-  return (    <Modal
+  return (
+    <Modal
       title={
         <Space>
           <UserAddOutlined />
@@ -185,17 +210,19 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
       onCancel={handleCancel}
       footer={null}
       width={1000}
-      destroyOnClose
+      destroyOnHidden
       className="student-form-modal"
-    >      <Form
+    >
+      {" "}
+      <Form
         form={form}
         layout="vertical"
         onFinish={handleSubmit}
         scrollToFirstError
         className="student-form"
       >
-        {/* Thông tin học sinh */}        
-        <Card 
+        {/* Thông tin học sinh */}
+        <Card
           title={
             <Space>
               <UserAddOutlined />
@@ -210,7 +237,7 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
                 name="student_firstName"
                 label="Tên"
                 rules={[
-                  { required: true, message: 'Vui lòng nhập tên học sinh' }
+                  { required: true, message: "Vui lòng nhập tên học sinh" },
                 ]}
               >
                 <Input placeholder="Nhập tên học sinh" />
@@ -221,7 +248,7 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
                 name="student_lastName"
                 label="Họ"
                 rules={[
-                  { required: true, message: 'Vui lòng nhập họ học sinh' }
+                  { required: true, message: "Vui lòng nhập họ học sinh" },
                 ]}
               >
                 <Input placeholder="Nhập họ học sinh" />
@@ -229,46 +256,55 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
             </Col>
           </Row>
 
-          <Row gutter={16}>            <Col span={8}>
+          <Row gutter={16}>
+            {" "}
+            <Col span={8}>
               <Form.Item
                 name="student_dob"
                 label="Ngày sinh"
                 getValueFromEvent={(value) => {
-                  console.log('getValueFromEvent called with:', value);
+                  console.log("getValueFromEvent called with:", value);
                   return value;
                 }}
-                rules={[
-                  { required: true, message: 'Vui lòng chọn ngày sinh' }
-                ]}
+                rules={[{ required: true, message: "Vui lòng chọn ngày sinh" }]}
               >
-                <DatePicker 
-                  style={{ width: '100%' }}
+                <DatePicker
+                  style={{ width: "100%" }}
                   placeholder="Chọn ngày sinh"
                   allowClear
                   value={studentDob}
                   onChange={(date, dateString) => {
-                    console.log('Student DatePicker onChange:', date, 'dateString:', dateString);
+                    console.log(
+                      "Student DatePicker onChange:",
+                      date,
+                      "dateString:",
+                      dateString
+                    );
                     setStudentDob(date);
                     form.setFieldsValue({ student_dob: date });
                     if (date) {
-                      console.log('Date object details:', {
+                      console.log("Date object details:", {
                         year: date.year(),
                         month: date.month(),
                         day: date.date(),
-                        formatted: date.format('DD/MM/YYYY')
+                        formatted: date.format("DD/MM/YYYY"),
                       });
                     }
                   }}
                   disabledDate={(current) => {
                     if (!current) return false;
-                    
+
                     const today = moment();
                     // Tính ngày sinh tối thiểu (12 tuổi) và tối đa (2 tuổi)
-                    const minBirthDate = moment().subtract(12, 'years'); // 12 tuổi trở xuống
-                    const maxBirthDate = moment().subtract(2, 'years'); // 2 tuổi trở lên
-                    
+                    const minBirthDate = moment().subtract(12, "years"); // 12 tuổi trở xuống
+                    const maxBirthDate = moment().subtract(2, "years"); // 2 tuổi trở lên
+
                     // Disable các ngày trong tương lai và ngoài khoảng tuổi cho phép
-                    return current > today || current < minBirthDate || current > maxBirthDate;
+                    return (
+                      current > today ||
+                      current < minBirthDate ||
+                      current > maxBirthDate
+                    );
                   }}
                   format="DD/MM/YYYY"
                 />
@@ -278,10 +314,10 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
               <Form.Item
                 name="student_gender"
                 label="Giới tính"
-                rules={[{ required: true, message: 'Vui lòng chọn giới tính' }]}
+                rules={[{ required: true, message: "Vui lòng chọn giới tính" }]}
               >
                 <Select placeholder="Chọn giới tính">
-                  {genderOptions.map(option => (
+                  {genderOptions.map((option) => (
                     <Option key={option.value} value={option.value}>
                       {option.label}
                     </Option>
@@ -293,7 +329,7 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
               <Form.Item
                 name="student_className"
                 label="Lớp học"
-                rules={[{ required: true, message: 'Vui lòng nhập lớp học' }]}
+                rules={[{ required: true, message: "Vui lòng nhập lớp học" }]}
               >
                 <Input placeholder="Ví dụ: 1A" />
               </Form.Item>
@@ -305,17 +341,21 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
               <Form.Item
                 name="student_birthPlace"
                 label="Nơi sinh"
-                rules={[{ required: true, message: 'Vui lòng chọn nơi sinh' }]}
+                rules={[{ required: true, message: "Vui lòng chọn nơi sinh" }]}
               >
-                <Select 
+                <Select
                   placeholder="Chọn nơi sinh"
                   showSearch
                   filterOption={(input, option) =>
-                    option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                    option.children
+                      .toLowerCase()
+                      .indexOf(input.toLowerCase()) >= 0
                   }
                 >
-                  {birthPlaceOptions.map(place => (
-                    <Option key={place} value={place}>{place}</Option>
+                  {birthPlaceOptions.map((place) => (
+                    <Option key={place} value={place}>
+                      {place}
+                    </Option>
                   ))}
                 </Select>
               </Form.Item>
@@ -325,7 +365,7 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
                 name="student_citizenship"
                 label="Quốc tịch"
                 initialValue="Việt Nam"
-                rules={[{ required: true, message: 'Vui lòng nhập quốc tịch' }]}
+                rules={[{ required: true, message: "Vui lòng nhập quốc tịch" }]}
               >
                 <Input placeholder="Nhập quốc tịch" />
               </Form.Item>
@@ -335,13 +375,13 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
           <Form.Item
             name="student_address"
             label="Địa chỉ"
-            rules={[{ required: true, message: 'Vui lòng nhập địa chỉ' }]}
+            rules={[{ required: true, message: "Vui lòng nhập địa chỉ" }]}
           >
             <Input.TextArea rows={2} placeholder="Nhập địa chỉ" />
           </Form.Item>
         </Card>
-
-        {/* Thông tin cha */}        <Card 
+        {/* Thông tin cha */}{" "}
+        <Card
           title={
             <Space>
               <TeamOutlined />
@@ -352,78 +392,79 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
         >
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item
-                name="father_firstName"
-                label="Tên"
-              >
+              <Form.Item name="father_firstName" label="Tên">
                 <Input placeholder="Nhập tên cha" />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item
-                name="father_lastName"
-                label="Họ"
-              >
+              <Form.Item name="father_lastName" label="Họ">
                 <Input placeholder="Nhập họ cha" />
               </Form.Item>
             </Col>
-          </Row>          <Row gutter={16}>
-            <Col span={8}>              <Form.Item
+          </Row>{" "}
+          <Row gutter={16}>
+            <Col span={8}>
+              {" "}
+              <Form.Item
                 name="father_phone"
                 label="Số điện thoại"
                 rules={[
-                  validateParentInfo('father'),
-                  { pattern: /^[0-9]{10}$/, message: 'Số điện thoại phải có đúng 10 chữ số' }
+                  validateParentInfo("father"),
+                  {
+                    pattern: /^[0-9]{10}$/,
+                    message: "Số điện thoại phải có đúng 10 chữ số",
+                  },
                 ]}
               >
                 <Input placeholder="Nhập số điện thoại" />
               </Form.Item>
             </Col>
-            <Col span={8}>              <Form.Item
+            <Col span={8}>
+              {" "}
+              <Form.Item
                 name="father_dob"
                 label="Ngày sinh"
-                rules={[
-                  validateParentInfo('father')
-                ]}
+                rules={[validateParentInfo("father")]}
               >
-                <DatePicker 
-                  style={{ width: '100%' }}
+                <DatePicker
+                  style={{ width: "100%" }}
                   placeholder="Chọn ngày sinh"
                   disabledDate={(current) => {
                     if (!current) return false;
-                    
+
                     const today = moment();
-                    const minDate = moment().subtract(100, 'years'); // Tối đa 100 tuổi
-                    const maxDate = moment().subtract(18, 'years'); // Ít nhất 18 tuổi
-                    
-                    return current > today || current < minDate || current > maxDate;
+                    const minDate = moment().subtract(100, "years"); // Tối đa 100 tuổi
+                    const maxDate = moment().subtract(18, "years"); // Ít nhất 18 tuổi
+
+                    return (
+                      current > today || current < minDate || current > maxDate
+                    );
                   }}
                   format="DD/MM/YYYY"
                 />
               </Form.Item>
             </Col>
-            <Col span={8}>              <Form.Item
+            <Col span={8}>
+              {" "}
+              <Form.Item
                 name="father_jobTitle"
                 label="Nghề nghiệp"
-                rules={[
-                  validateParentInfo('father')
-                ]}
+                rules={[validateParentInfo("father")]}
               >
                 <Input placeholder="Nhập nghề nghiệp" />
               </Form.Item>
             </Col>
-          </Row>          <Form.Item
+          </Row>{" "}
+          <Form.Item
             name="father_address"
             label="Địa chỉ"
-            rules={[
-              validateParentInfo('father')
-            ]}
+            rules={[validateParentInfo("father")]}
           >
             <Input.TextArea rows={2} placeholder="Nhập địa chỉ" />
           </Form.Item>
         </Card>
-
-        {/* Thông tin mẹ */}        <Card 
+        {/* Thông tin mẹ */}{" "}
+        <Card
           title={
             <Space>
               <TeamOutlined />
@@ -434,51 +475,53 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
         >
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item
-                name="mother_firstName"
-                label="Tên"
-              >
+              <Form.Item name="mother_firstName" label="Tên">
                 <Input placeholder="Nhập tên mẹ" />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item
-                name="mother_lastName"
-                label="Họ"
-              >
+              <Form.Item name="mother_lastName" label="Họ">
                 <Input placeholder="Nhập họ mẹ" />
               </Form.Item>
             </Col>
-          </Row>          <Row gutter={16}>
-            <Col span={8}>              <Form.Item
+          </Row>{" "}
+          <Row gutter={16}>
+            <Col span={8}>
+              {" "}
+              <Form.Item
                 name="mother_phone"
                 label="Số điện thoại"
                 rules={[
-                  validateParentInfo('mother'),
-                  { pattern: /^[0-9]{10}$/, message: 'Số điện thoại phải có đúng 10 chữ số' }
+                  validateParentInfo("mother"),
+                  {
+                    pattern: /^[0-9]{10}$/,
+                    message: "Số điện thoại phải có đúng 10 chữ số",
+                  },
                 ]}
               >
                 <Input placeholder="Nhập số điện thoại" />
               </Form.Item>
             </Col>
-            <Col span={8}>              <Form.Item
+            <Col span={8}>
+              {" "}
+              <Form.Item
                 name="mother_dob"
                 label="Ngày sinh"
-                rules={[
-                  validateParentInfo('mother')
-                ]}
+                rules={[validateParentInfo("mother")]}
               >
-                <DatePicker 
-                  style={{ width: '100%' }}
+                <DatePicker
+                  style={{ width: "100%" }}
                   placeholder="Chọn ngày sinh"
                   disabledDate={(current) => {
                     if (!current) return false;
-                    
+
                     const today = moment();
-                    const minDate = moment().subtract(100, 'years'); // Tối đa 100 tuổi
-                    const maxDate = moment().subtract(18, 'years'); // Ít nhất 18 tuổi
-                    
-                    return current > today || current < minDate || current > maxDate;
+                    const minDate = moment().subtract(100, "years"); // Tối đa 100 tuổi
+                    const maxDate = moment().subtract(18, "years"); // Ít nhất 18 tuổi
+
+                    return (
+                      current > today || current < minDate || current > maxDate
+                    );
                   }}
                   format="DD/MM/YYYY"
                 />
@@ -488,30 +531,24 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
               <Form.Item
                 name="mother_jobTitle"
                 label="Nghề nghiệp"
-                rules={[
-                  validateParentInfo('mother')
-                ]}
+                rules={[validateParentInfo("mother")]}
               >
                 <Input placeholder="Nhập nghề nghiệp" />
               </Form.Item>
             </Col>
-          </Row>          <Form.Item
+          </Row>{" "}
+          <Form.Item
             name="mother_address"
             label="Địa chỉ"
-            rules={[
-              validateParentInfo('mother')
-            ]}
+            rules={[validateParentInfo("mother")]}
           >
             <Input.TextArea rows={2} placeholder="Nhập địa chỉ" />
           </Form.Item>
         </Card>
-
         {/* Buttons */}
-        <Form.Item style={{ textAlign: 'right', marginBottom: 0 }}>
+        <Form.Item style={{ textAlign: "right", marginBottom: 0 }}>
           <Space>
-            <Button onClick={handleCancel}>
-              Hủy
-            </Button>
+            <Button onClick={handleCancel}>Hủy</Button>
             <Button type="primary" htmlType="submit" loading={loading}>
               Tạo học sinh và phụ huynh
             </Button>

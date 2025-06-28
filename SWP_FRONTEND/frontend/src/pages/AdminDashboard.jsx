@@ -636,7 +636,7 @@ const UserManagement = ({
                 lastName: "",
                 phone: "",
                 address: "",
-                gender: "",
+                gender: undefined,
                 dob: null,
                 status: "ACTIVE",
               }}
@@ -1948,10 +1948,12 @@ const AdminDashboard = () => {
   useEffect(() => {
     if (isUserFormMounted && modalMode === "add" && !selectedRoleForNewUser) {
       // Form is mounted and modal is open for adding, reset the form
-      // Add a small delay to ensure form is fully connected to DOM
-      setTimeout(() => {
+      // Add a longer delay to ensure form is fully connected to DOM
+      const timer = setTimeout(() => {
         resetUserForm();
-      }, 50);
+      }, 200);
+
+      return () => clearTimeout(timer);
     }
   }, [isUserFormMounted, modalMode, selectedRoleForNewUser]);
 
@@ -1983,45 +1985,44 @@ const AdminDashboard = () => {
   const resetUserForm = () => {
     console.log("Resetting user form...");
 
-    // Only proceed if form is mounted
-    if (!isUserFormMounted) {
-      console.warn("Form not mounted yet, skipping reset");
+    // Only proceed if form is mounted and instance exists
+    if (!isUserFormMounted || !userFormInstance) {
+      console.warn("Form not ready yet, skipping reset");
       return;
     }
 
-    // Additional check to ensure form instance is properly connected
-    if (
-      !userFormInstance ||
-      typeof userFormInstance.resetFields !== "function"
-    ) {
-      console.warn("Form instance not properly connected, skipping reset");
-      return;
-    }
-
+    // Use a more reliable approach - wrap all form operations in try-catch
+    // and don't test the form connection beforehand
     try {
-      // Form is mounted, proceed with reset
+      // Reset the form first
       userFormInstance.resetFields();
 
-      // Set initial default values explicitly to ensure proper field registration
-      const initialValues = {
-        role: "SCHOOLNURSE",
-        username: "",
-        password: "",
-        email: "",
-        jobTitle: "",
-        firstName: "",
-        lastName: "",
-        phone: "",
-        address: "",
-        gender: "",
-        dob: null,
-        status: "ACTIVE",
-      };
+      // Set initial default values after a short delay
+      setTimeout(() => {
+        if (userFormInstance && isUserFormMounted) {
+          try {
+            const initialValues = {
+              role: "SCHOOLNURSE",
+              username: "",
+              password: "",
+              email: "",
+              jobTitle: "",
+              firstName: "",
+              lastName: "",
+              phone: "",
+              address: "",
+              gender: undefined,
+              dob: null,
+              status: "ACTIVE",
+            };
 
-      // Set each field value explicitly
-      userFormInstance.setFieldsValue(initialValues);
-
-      console.log("User form reset with proper initial values");
+            userFormInstance.setFieldsValue(initialValues);
+            console.log("User form reset with proper initial values");
+          } catch (setError) {
+            console.warn("Error setting form values:", setError);
+          }
+        }
+      }, 50);
     } catch (error) {
       console.warn("Error resetting form:", error);
     }
@@ -2110,42 +2111,35 @@ const AdminDashboard = () => {
   const handleRoleSelection = (role) => {
     setSelectedRoleForNewUser(role);
 
-    // Only proceed if form is mounted
-    if (!isUserFormMounted) {
-      console.warn("Form not mounted yet, skipping role selection");
+    // Only proceed if form is mounted and instance exists
+    if (!isUserFormMounted || !userFormInstance) {
+      console.warn("Form not ready yet, skipping role selection");
       return;
     }
 
-    // Additional check to ensure form instance is properly connected
-    if (
-      !userFormInstance ||
-      typeof userFormInstance.setFieldsValue !== "function"
-    ) {
-      console.warn(
-        "Form instance not properly connected, skipping role selection"
-      );
-      return;
-    }
-
-    try {
-      // Form is mounted, proceed with setting values
-      userFormInstance.setFieldsValue({
-        role: role,
-        username: "",
-        password: "",
-        email: "",
-        jobTitle: "",
-        firstName: "",
-        lastName: "",
-        phone: "",
-        address: "",
-        gender: "",
-        dob: null,
-        status: "ACTIVE",
-      });
-    } catch (error) {
-      console.warn("Error setting form values:", error);
-    }
+    // Add a small delay to ensure form is fully ready
+    setTimeout(() => {
+      if (userFormInstance && isUserFormMounted) {
+        try {
+          userFormInstance.setFieldsValue({
+            role: role,
+            username: "",
+            password: "",
+            email: "",
+            jobTitle: "",
+            firstName: "",
+            lastName: "",
+            phone: "",
+            address: "",
+            gender: undefined,
+            dob: null,
+            status: "ACTIVE",
+          });
+        } catch (error) {
+          console.warn("Error setting form values:", error);
+        }
+      }
+    }, 50);
   };
 
   const openViewUserModal = (user) => {
@@ -2420,6 +2414,7 @@ const AdminDashboard = () => {
         );
       case "settings":
         return <SettingsManagement />;
+
       default:
         return (
           <UserManagement
@@ -2465,6 +2460,7 @@ const AdminDashboard = () => {
       icon: <SettingOutlined />,
       label: "Cài đặt",
     },
+
     {
       key: "toggle-sidebar",
       icon: collapsed ? <RightOutlined /> : <LeftOutlined />,

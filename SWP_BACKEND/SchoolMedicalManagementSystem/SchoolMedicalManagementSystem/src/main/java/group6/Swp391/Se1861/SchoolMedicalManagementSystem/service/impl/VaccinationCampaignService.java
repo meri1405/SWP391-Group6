@@ -544,12 +544,16 @@ public class VaccinationCampaignService implements IVaccinationCampaignService {
 
         // Handle pre-vaccination status
         if (recordDTO.getPreVaccinationStatus() != null) {
-            record.setNotes((record.getNotes() != null ? record.getNotes() + "; " : "") +
-                    "Pre-vaccination status: " + recordDTO.getPreVaccinationStatus());
-            
-            if (recordDTO.getPreVaccinationNotes() != null) {
-                record.setNotes(record.getNotes() + "; " + recordDTO.getPreVaccinationNotes());
+            try {
+                record.setPreVaccinationStatus(VaccinationRecord.PreVaccinationStatus.valueOf(recordDTO.getPreVaccinationStatus()));
+            } catch (IllegalArgumentException e) {
+                // Default to NORMAL if invalid status provided
+                record.setPreVaccinationStatus(VaccinationRecord.PreVaccinationStatus.NORMAL);
             }
+        }
+        
+        if (recordDTO.getPreVaccinationNotes() != null) {
+            record.setPreVaccinationNotes(recordDTO.getPreVaccinationNotes());
         }
 
         record = recordRepository.save(record);
@@ -725,6 +729,12 @@ public class VaccinationCampaignService implements IVaccinationCampaignService {
         dto.setUpdatedDate(record.getUpdatedDate());
         dto.setIsActive(record.getIsActive());
         dto.setNotes(record.getNotes());
+        
+        // Set pre-vaccination status fields
+        if (record.getPreVaccinationStatus() != null) {
+            dto.setPreVaccinationStatus(record.getPreVaccinationStatus().toString());
+        }
+        dto.setPreVaccinationNotes(record.getPreVaccinationNotes());
         
         if (record.getStudent() != null) {
             dto.setStudentId(record.getStudent().getStudentID());

@@ -49,5 +49,10 @@ public interface IMedicationScheduleService {
 
     MedicationSchedule getMedicationScheduleById(Long scheduleId);
 
+    /**
+     * Auto-mark medication schedules as SKIPPED if they are more than 30 minutes overdue
+     * @return number of schedules marked as skipped
+     */
+    int autoMarkOverdueSchedulesAsSkipped();
 
 }
