@@ -28,7 +28,6 @@ import ManagerOverview from "../components/dashboard/ManagerOverview";
 import { MedicalEventManagement } from "../components/dashboard/events";
 import InventorySection from "../components/dashboard/InventorySection";
 import { Notifications } from "../components/dashboard/notifications";
-import BlogSection from "../components/dashboard/BlogSection";
 import StudentsSection from "../components/dashboard/StudentsSection";
 import "../styles/AdminDashboard.css";
 import { useAuth } from "../contexts/AuthContext";
@@ -161,8 +160,7 @@ const ManagerDashboard = () => {
         "health-checks",
         "vaccinations",
         "events",
-        "inventory",
-        "blog"
+        "inventory"
       ];
       if (validTabs.includes(tabParam)) {
         setActiveSection(tabParam);
@@ -216,11 +214,6 @@ const ManagerDashboard = () => {
       icon: <MedicineBoxOutlined />,
       label: "Quản lý kho",
     },
-    {
-      key: "blog",
-      icon: <FileTextOutlined />,
-      label: "Bài viết",
-    },
   ];
 
   const handleMenuClick = ({ key }) => {
@@ -250,8 +243,6 @@ const ManagerDashboard = () => {
         return <MedicalEventManagement />;
       case "inventory":
         return <InventorySection />;
-      case "blog":
-        return <BlogSection />;
       default:
         return null;
     }
