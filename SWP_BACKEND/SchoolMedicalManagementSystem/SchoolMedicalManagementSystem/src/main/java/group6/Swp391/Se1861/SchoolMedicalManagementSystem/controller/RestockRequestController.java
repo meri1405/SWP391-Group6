@@ -2,6 +2,7 @@ package group6.Swp391.Se1861.SchoolMedicalManagementSystem.controller;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.RestockRequestDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.RestockItemDTO;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.ExtendedRestockItemDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.RestockRequest;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IRestockRequestService;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +16,8 @@ import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.BeanUtils;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/restock-requests")
@@ -49,6 +52,34 @@ public class RestockRequestController {
         }
     }
     
+    @GetMapping("/{id}/extended")
+    @PreAuthorize("hasRole('SCHOOLNURSE') or hasRole('MANAGER')")
+    public ResponseEntity<RestockRequestDTO> getExtendedRestockRequestById(@PathVariable Long id) {
+        try {
+            return restockRequestService.getRestockRequestById(id)
+                    .map(request -> {
+                        // Ensure the extendedRestockItems field is populated
+                        if (request.getRestockItems() != null && request.getExtendedRestockItems() == null) {
+                            // Convert regular items to extended items if needed
+                            List<ExtendedRestockItemDTO> extendedItems = request.getRestockItems().stream()
+                                    .map(item -> {
+                                        ExtendedRestockItemDTO extendedItem = new ExtendedRestockItemDTO();
+                                        // Copy properties from regular item
+                                        BeanUtils.copyProperties(item, extendedItem);
+                                        return extendedItem;
+                                    })
+                                    .collect(Collectors.toList());
+                            request.setExtendedRestockItems(extendedItems);
+                        }
+                        return ResponseEntity.ok(request);
+                    })
+                    .orElse(ResponseEntity.notFound().build());
+        } catch (Exception e) {
+            log.error("Error retrieving extended restock request: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+    
     @PostMapping
     @PreAuthorize("hasRole('SCHOOLNURSE')")
     public ResponseEntity<RestockRequestDTO> createRestockRequest(@Valid @RequestBody RestockRequestDTO restockRequestDTO) {
@@ -62,6 +93,25 @@ public class RestockRequestController {
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().build();
         } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+    
+    @PostMapping("/extended")
+    @PreAuthorize("hasRole('SCHOOLNURSE')")
+    public ResponseEntity<RestockRequestDTO> createExtendedRestockRequest(@Valid @RequestBody RestockRequestDTO restockRequestDTO) {
+        try {
+            if (restockRequestDTO.getRequestedBy() == null) {
+                return ResponseEntity.badRequest().build();
+            }
+            
+            RestockRequestDTO createdRequest = restockRequestService.createExtendedRestockRequest(restockRequestDTO);
+            return ResponseEntity.status(HttpStatus.CREATED).body(createdRequest);
+        } catch (RuntimeException e) {
+            log.error("Error creating extended restock request: {}", e.getMessage());
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            log.error("Unexpected error creating extended restock request: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
@@ -130,6 +180,49 @@ public class RestockRequestController {
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().build();
         } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+    
+    @PostMapping("/{id}/items/new-supply")
+    @PreAuthorize("hasRole('SCHOOLNURSE')")
+    public ResponseEntity<RestockRequestDTO> addNewSupplyToRequest(
+            @PathVariable Long id, 
+            @Valid @RequestBody ExtendedRestockItemDTO extendedRestockItemDTO) {
+        try {
+            // Set request type explicitly
+            extendedRestockItemDTO.setRequestType("NEW");
+            RestockRequestDTO updatedRequest = restockRequestService.addNewSupplyToRequest(id, extendedRestockItemDTO);
+            return ResponseEntity.ok(updatedRequest);
+        } catch (RuntimeException e) {
+            log.error("Error adding new supply to request: {}", e.getMessage());
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            log.error("Unexpected error adding new supply to request: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+    
+    @PostMapping("/{id}/items/expired-supply")
+    @PreAuthorize("hasRole('SCHOOLNURSE')")
+    public ResponseEntity<RestockRequestDTO> addExpiredSupplyToRequest(
+            @PathVariable Long id, 
+            @Valid @RequestBody ExtendedRestockItemDTO extendedRestockItemDTO) {
+        try {
+            // Validate expiration date
+            if (extendedRestockItemDTO.getNewExpirationDate() == null) {
+                return ResponseEntity.badRequest().build();
+            }
+            
+            // Set request type explicitly
+            extendedRestockItemDTO.setRequestType("EXPIRED");
+            RestockRequestDTO updatedRequest = restockRequestService.addExpiredSupplyToRequest(id, extendedRestockItemDTO);
+            return ResponseEntity.ok(updatedRequest);
+        } catch (RuntimeException e) {
+            log.error("Error adding expired supply refill to request: {}", e.getMessage());
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            log.error("Unexpected error adding expired supply refill to request: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }

@@ -25,4 +25,6 @@ public class RestockRequestDTO {
     private LocalDateTime reviewDate;
     private LocalDateTime completedDate;
     private List<RestockItemDTO> restockItems;
+    // Updated to ExtendedRestockItemDTO to support new, expired, and existing supplies
+    private List<ExtendedRestockItemDTO> extendedRestockItems;
 }

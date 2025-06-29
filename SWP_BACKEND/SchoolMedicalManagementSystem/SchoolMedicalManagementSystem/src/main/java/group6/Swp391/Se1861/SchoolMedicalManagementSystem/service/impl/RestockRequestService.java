@@ -2,6 +2,8 @@ package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.RestockRequestDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.RestockItemDTO;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.MedicalSupplyDTO;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.ExtendedRestockItemDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.RestockRequest;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.RestockItem;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.MedicalSupply;
@@ -105,6 +107,124 @@ public class RestockRequestService implements IRestockRequestService {
     public RestockRequestDTO createRestockRequestWithDisplayUnits(RestockRequestDTO restockRequestDTO) {
         // This method specifically handles requests where all units are already converted
         return createRestockRequest(restockRequestDTO);
+    }
+    
+    @Override
+    public RestockRequestDTO createExtendedRestockRequest(RestockRequestDTO restockRequestDTO) {
+        log.info("Creating extended restock request with {} items", 
+                restockRequestDTO.getExtendedRestockItems() != null ? restockRequestDTO.getExtendedRestockItems().size() : 0);
+        
+        RestockRequest restockRequest = new RestockRequest();
+        restockRequest.setRequestedBy(restockRequestDTO.getRequestedBy());
+        restockRequest.setStatus(RestockRequest.RestockStatus.PENDING);
+        restockRequest.setPriority(restockRequestDTO.getPriority());
+        restockRequest.setReason(restockRequestDTO.getReason());
+        
+        // Save request first to get ID
+        RestockRequest savedRequest = restockRequestRepository.save(restockRequest);
+        
+        // Process each item in the request based on its type
+        if (restockRequestDTO.getExtendedRestockItems() != null) {
+            for (ExtendedRestockItemDTO itemDTO : restockRequestDTO.getExtendedRestockItems()) {
+                RestockItem item = new RestockItem();
+                item.setRestockRequest(savedRequest);
+                
+                // Handle different types of restock items
+                switch(itemDTO.getRequestType()) {
+                    case "NEW":
+                        // Create a new disabled medical supply
+                        MedicalSupplyDTO newSupplyDTO = new MedicalSupplyDTO();
+                        newSupplyDTO.setName(itemDTO.getName());
+                        newSupplyDTO.setCategory(itemDTO.getCategory());
+                        newSupplyDTO.setBaseUnit(itemDTO.getBaseUnit());
+                        newSupplyDTO.setDisplayUnit(itemDTO.getDisplayUnit());
+                        newSupplyDTO.setMinStockLevelInBaseUnit(itemDTO.getMinStockLevelInBaseUnit());
+                        newSupplyDTO.setSupplier(itemDTO.getSupplier());
+                        newSupplyDTO.setLocation(itemDTO.getLocation());
+                        newSupplyDTO.setDescription(itemDTO.getDescription());
+                        newSupplyDTO.setExpirationDate(itemDTO.getNewExpirationDate());
+                        
+                        // Create disabled supply
+                        MedicalSupplyDTO createdSupply = medicalSupplyService.createDisabledMedicalSupply(
+                                newSupplyDTO, restockRequestDTO.getRequestedBy());
+                        
+                        // Link the newly created supply to the restock item
+                        MedicalSupply newSupply = medicalSupplyRepository.findById(createdSupply.getId())
+                                .orElseThrow(() -> new RuntimeException("Không thể tìm thấy vật tư mới tạo"));
+                        
+                        item.setMedicalSupply(newSupply);
+                        break;
+                        
+                    case "EXPIRED":
+                        // Check if we have an ID of the expired supply
+                        if (itemDTO.getMedicalSupplyId() == null) {
+                            throw new RuntimeException("ID của vật tư hết hạn không được để trống");
+                        }
+                        
+                        // Check if we have a new expiration date
+                        if (itemDTO.getNewExpirationDate() == null) {
+                            throw new RuntimeException("Ngày hết hạn mới không được để trống cho vật tư hết hạn");
+                        }
+                        
+                        // Create a duplicate of the expired supply with new expiration date
+                        MedicalSupplyDTO duplicateDTO = medicalSupplyService.duplicateExpiredSupply(
+                                itemDTO.getMedicalSupplyId(), 
+                                itemDTO.getNewExpirationDate(),
+                                restockRequestDTO.getRequestedBy());
+                        
+                        // Link the newly created supply to the restock item
+                        MedicalSupply duplicateSupply = medicalSupplyRepository.findById(duplicateDTO.getId())
+                                .orElseThrow(() -> new RuntimeException("Không thể tìm thấy vật tư mới tạo"));
+                        
+                        item.setMedicalSupply(duplicateSupply);
+                        break;
+                        
+                    case "EXISTING":
+                    default:
+                        // Regular existing supply request
+                        MedicalSupply supply = medicalSupplyRepository.findById(itemDTO.getMedicalSupplyId())
+                                .orElseThrow(() -> new RuntimeException("Không tìm thấy vật tư y tế với ID: " + itemDTO.getMedicalSupplyId()));
+                        item.setMedicalSupply(supply);
+                        break;
+                }
+                
+                // Common fields for all item types
+                item.setRequestedDisplayQuantity(itemDTO.getRequestedDisplayQuantity());
+                item.setRequestedDisplayUnit(itemDTO.getRequestedDisplayUnit());
+                
+                // Convert to base unit
+                BigDecimal requestedInBaseUnit = unitConversionService.convertToBaseUnit(
+                        itemDTO.getRequestedDisplayQuantity(),
+                        itemDTO.getRequestedDisplayUnit(),
+                        item.getMedicalSupply().getBaseUnit()
+                );
+                item.setRequestedQuantityInBaseUnit(requestedInBaseUnit);
+                
+                // Add notes if any
+                item.setNotes(itemDTO.getNotes());
+                
+                // Save the item
+                restockItemRepository.save(item);
+                log.debug("Added {} item: {}", 
+                        itemDTO.getRequestType(), 
+                        item.getMedicalSupply().getName());
+            }
+        }
+        
+        // Reload the saved request with its items
+        RestockRequest finalRequest = restockRequestRepository.findById(savedRequest.getId())
+                .orElseThrow(() -> new RuntimeException("Không thể tìm thấy yêu cầu vừa tạo"));
+        
+        // Notify managers
+        try {
+            log.info("About to send notification to managers for extended restock request ID: {}", finalRequest.getId());
+            notificationService.notifyManagersAboutRestockRequest(finalRequest);
+            log.info("Notification sent to managers about extended restock request ID: {}", finalRequest.getId());
+        } catch (Exception e) {
+            log.error("Error sending notification to managers: {}", e.getMessage(), e);
+        }
+        
+        return convertToDTO(finalRequest);
     }
     
     @Override
@@ -278,6 +398,12 @@ public class RestockRequestService implements IRestockRequestService {
                     
                     MedicalSupply supply = item.getMedicalSupply();
                     
+                    // Enable any disabled supplies when they get approved
+                    if (!supply.getEnabled()) {
+                        supply.setEnabled(true);
+                        log.info("Enabled previously disabled supply: {}", supply.getName());
+                    }
+                    
                     // 1. Update base unit quantity
                     BigDecimal currentBaseQuantity = supply.getQuantityInBaseUnit();
                     BigDecimal newBaseQuantity = currentBaseQuantity.add(item.getApprovedQuantityInBaseUnit());
@@ -332,32 +458,122 @@ public class RestockRequestService implements IRestockRequestService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu bổ sung với ID: " + requestId));
         
         if (request.getStatus() != RestockRequest.RestockStatus.PENDING) {
-            throw new RuntimeException("Chỉ có thể thêm vật tư vào yêu cầu đang chờ xử lý");
+            throw new RuntimeException("Chỉ có thể thêm vào yêu cầu đang chờ xử lý");
         }
         
         MedicalSupply supply = medicalSupplyRepository.findById(restockItemDTO.getMedicalSupplyId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy vật tư y tế với ID: " + restockItemDTO.getMedicalSupplyId()));
         
-        RestockItem newItem = new RestockItem();
-        newItem.setRestockRequest(request);
-        newItem.setMedicalSupply(supply);
-        newItem.setRequestedDisplayQuantity(restockItemDTO.getRequestedDisplayQuantity());
-        newItem.setRequestedDisplayUnit(restockItemDTO.getRequestedDisplayUnit());
-        newItem.setNotes(restockItemDTO.getNotes());
+        RestockItem item = convertItemToEntity(restockItemDTO, request);
+        item.setMedicalSupply(supply);
         
-        // Convert to base unit
-        BigDecimal requestedInBaseUnit = unitConversionService.convertToBaseUnit(
-                restockItemDTO.getRequestedDisplayQuantity(),
-                restockItemDTO.getRequestedDisplayUnit(),
-                supply.getBaseUnit()
-        );
-        newItem.setRequestedQuantityInBaseUnit(requestedInBaseUnit);
-        
-        restockItemRepository.save(newItem);
-        
-        RestockRequest updatedRequest = restockRequestRepository.findById(requestId).get();
+        restockItemRepository.save(item);
         log.info("Added item to restock request ID: {}", requestId);
-        return convertToDTO(updatedRequest);
+        
+        return getRestockRequestById(requestId).orElseThrow(
+                () -> new RuntimeException("Không thể lấy yêu cầu sau khi cập nhật"));
+    }
+    
+    @Override
+    public RestockRequestDTO addNewSupplyToRequest(Long requestId, ExtendedRestockItemDTO extendedRestockItemDTO) {
+        RestockRequest request = restockRequestRepository.findById(requestId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu bổ sung với ID: " + requestId));
+        
+        if (request.getStatus() != RestockRequest.RestockStatus.PENDING) {
+            throw new RuntimeException("Chỉ có thể thêm vào yêu cầu đang chờ xử lý");
+        }
+        
+        // Create a new disabled medical supply
+        MedicalSupplyDTO newSupplyDTO = new MedicalSupplyDTO();
+        newSupplyDTO.setName(extendedRestockItemDTO.getName());
+        newSupplyDTO.setCategory(extendedRestockItemDTO.getCategory());
+        newSupplyDTO.setBaseUnit(extendedRestockItemDTO.getBaseUnit());
+        newSupplyDTO.setDisplayUnit(extendedRestockItemDTO.getDisplayUnit());
+        newSupplyDTO.setMinStockLevelInBaseUnit(extendedRestockItemDTO.getMinStockLevelInBaseUnit());
+        newSupplyDTO.setSupplier(extendedRestockItemDTO.getSupplier());
+        newSupplyDTO.setLocation(extendedRestockItemDTO.getLocation());
+        newSupplyDTO.setDescription(extendedRestockItemDTO.getDescription());
+        newSupplyDTO.setExpirationDate(extendedRestockItemDTO.getNewExpirationDate());
+        
+        // Create disabled supply
+        MedicalSupplyDTO createdSupply = medicalSupplyService.createDisabledMedicalSupply(
+                newSupplyDTO, request.getRequestedBy());
+        
+        // Link the newly created supply to the restock item
+        MedicalSupply newSupply = medicalSupplyRepository.findById(createdSupply.getId())
+                .orElseThrow(() -> new RuntimeException("Không thể tìm thấy vật tư mới tạo"));
+        
+        // Create and save restock item
+        RestockItem item = new RestockItem();
+        item.setRestockRequest(request);
+        item.setMedicalSupply(newSupply);
+        item.setRequestedDisplayQuantity(extendedRestockItemDTO.getRequestedDisplayQuantity());
+        item.setRequestedDisplayUnit(extendedRestockItemDTO.getRequestedDisplayUnit());
+        
+        BigDecimal requestedInBaseUnit = unitConversionService.convertToBaseUnit(
+                extendedRestockItemDTO.getRequestedDisplayQuantity(),
+                extendedRestockItemDTO.getRequestedDisplayUnit(),
+                newSupply.getBaseUnit()
+        );
+        item.setRequestedQuantityInBaseUnit(requestedInBaseUnit);
+        item.setNotes(extendedRestockItemDTO.getNotes());
+        
+        restockItemRepository.save(item);
+        log.info("Added new supply item to restock request ID: {}", requestId);
+        
+        return getRestockRequestById(requestId).orElseThrow(
+                () -> new RuntimeException("Không thể lấy yêu cầu sau khi cập nhật"));
+    }
+    
+    @Override
+    public RestockRequestDTO addExpiredSupplyToRequest(Long requestId, ExtendedRestockItemDTO extendedRestockItemDTO) {
+        RestockRequest request = restockRequestRepository.findById(requestId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu bổ sung với ID: " + requestId));
+        
+        if (request.getStatus() != RestockRequest.RestockStatus.PENDING) {
+            throw new RuntimeException("Chỉ có thể thêm vào yêu cầu đang chờ xử lý");
+        }
+        
+        // Check if we have an ID of the expired supply
+        if (extendedRestockItemDTO.getMedicalSupplyId() == null) {
+            throw new RuntimeException("ID của vật tư hết hạn không được để trống");
+        }
+        
+        // Check if we have a new expiration date
+        if (extendedRestockItemDTO.getNewExpirationDate() == null) {
+            throw new RuntimeException("Ngày hết hạn mới không được để trống cho vật tư hết hạn");
+        }
+        
+        // Create a duplicate of the expired supply with new expiration date
+        MedicalSupplyDTO duplicateDTO = medicalSupplyService.duplicateExpiredSupply(
+                extendedRestockItemDTO.getMedicalSupplyId(), 
+                extendedRestockItemDTO.getNewExpirationDate(),
+                request.getRequestedBy());
+        
+        // Link the newly created supply to the restock item
+        MedicalSupply duplicateSupply = medicalSupplyRepository.findById(duplicateDTO.getId())
+                .orElseThrow(() -> new RuntimeException("Không thể tìm thấy vật tư mới tạo"));
+        
+        // Create and save restock item
+        RestockItem item = new RestockItem();
+        item.setRestockRequest(request);
+        item.setMedicalSupply(duplicateSupply);
+        item.setRequestedDisplayQuantity(extendedRestockItemDTO.getRequestedDisplayQuantity());
+        item.setRequestedDisplayUnit(extendedRestockItemDTO.getRequestedDisplayUnit());
+        
+        BigDecimal requestedInBaseUnit = unitConversionService.convertToBaseUnit(
+                extendedRestockItemDTO.getRequestedDisplayQuantity(),
+                extendedRestockItemDTO.getRequestedDisplayUnit(),
+                duplicateSupply.getBaseUnit()
+        );
+        item.setRequestedQuantityInBaseUnit(requestedInBaseUnit);
+        item.setNotes(extendedRestockItemDTO.getNotes());
+        
+        restockItemRepository.save(item);
+        log.info("Added expired supply refill item to restock request ID: {}", requestId);
+        
+        return getRestockRequestById(requestId).orElseThrow(
+                () -> new RuntimeException("Không thể lấy yêu cầu sau khi cập nhật"));
     }
     
     @Override
@@ -474,6 +690,12 @@ public class RestockRequestService implements IRestockRequestService {
                     .map(this::convertItemToDTO)
                     .collect(Collectors.toList());
             dto.setRestockItems(itemDTOs);
+            
+            // Also populate extendedRestockItems for compatibility
+            List<ExtendedRestockItemDTO> extendedItemDTOs = restockRequest.getRestockItems().stream()
+                    .map(this::convertToExtendedItemDTO)
+                    .collect(Collectors.toList());
+            dto.setExtendedRestockItems(extendedItemDTOs);
         }
         
         return dto;
@@ -493,8 +715,8 @@ public class RestockRequestService implements IRestockRequestService {
         request.setReviewDate(dto.getReviewDate());
         request.setCompletedDate(dto.getCompletedDate());
         
-        // Convert restock items
-        if (dto.getRestockItems() != null) {
+        // Convert regular restock items
+        if (dto.getRestockItems() != null && !dto.getRestockItems().isEmpty()) {
             List<RestockItem> items = dto.getRestockItems().stream()
                     .map(itemDTO -> convertItemToEntity(itemDTO, request))
                     .collect(Collectors.toList());
@@ -556,5 +778,58 @@ public class RestockRequestService implements IRestockRequestService {
         item.setNotes(dto.getNotes());
         
         return item;
+    }
+    
+    // Add a method to convert RestockItem to ExtendedRestockItemDTO
+    private ExtendedRestockItemDTO convertToExtendedItemDTO(RestockItem item) {
+        ExtendedRestockItemDTO dto = new ExtendedRestockItemDTO();
+        
+        // Copy all basic fields from RestockItem
+        dto.setId(item.getId());
+        dto.setRestockRequestId(item.getRestockRequest().getId());
+        dto.setMedicalSupplyId(item.getMedicalSupply().getId());
+        dto.setMedicalSupplyName(item.getMedicalSupply().getName());
+        dto.setCategory(item.getMedicalSupply().getCategory());
+        
+        // Current stock information
+        dto.setCurrentStockInBaseUnit(item.getMedicalSupply().getQuantityInBaseUnit());
+        dto.setBaseUnit(item.getMedicalSupply().getBaseUnit());
+        dto.setCurrentDisplayQuantity(item.getMedicalSupply().getDisplayQuantity());
+        dto.setCurrentDisplayUnit(item.getMedicalSupply().getDisplayUnit());
+        dto.setMinStockLevelInBaseUnit(item.getMedicalSupply().getMinStockLevelInBaseUnit());
+        
+        // Requested quantities
+        dto.setRequestedDisplayQuantity(item.getRequestedDisplayQuantity());
+        dto.setRequestedDisplayUnit(item.getRequestedDisplayUnit());
+        dto.setRequestedQuantityInBaseUnit(item.getRequestedQuantityInBaseUnit());
+        
+        // Approved quantities
+        dto.setApprovedDisplayQuantity(item.getApprovedDisplayQuantity());
+        dto.setApprovedDisplayUnit(item.getApprovedDisplayUnit());
+        dto.setApprovedQuantityInBaseUnit(item.getApprovedQuantityInBaseUnit());
+        
+        dto.setNotes(item.getNotes());
+        
+        // Set extended fields based on the medical supply
+        MedicalSupply supply = item.getMedicalSupply();
+        dto.setName(supply.getName());
+        dto.setCategory(supply.getCategory());
+        dto.setBaseUnit(supply.getBaseUnit());
+        dto.setDisplayUnit(supply.getDisplayUnit());
+        dto.setMinStockLevelInBaseUnit(supply.getMinStockLevelInBaseUnit());
+        dto.setSupplier(supply.getSupplier());
+        dto.setLocation(supply.getLocation());
+        dto.setDescription(supply.getDescription());
+        
+        // Try to determine the request type based on supply status
+        if (!supply.getEnabled()) {
+            dto.setRequestType("NEW");
+        } else if (supply.isExpired()) {
+            dto.setRequestType("EXPIRED");
+        } else {
+            dto.setRequestType("EXISTING");
+        }
+        
+        return dto;
     }
 }
