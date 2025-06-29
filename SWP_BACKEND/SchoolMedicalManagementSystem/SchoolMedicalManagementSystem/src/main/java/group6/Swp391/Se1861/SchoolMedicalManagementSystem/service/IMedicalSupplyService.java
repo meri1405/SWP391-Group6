@@ -4,6 +4,7 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.MedicalSupplyDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.MedicalSupply;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -16,6 +17,10 @@ public interface IMedicalSupplyService {
     Optional<MedicalSupplyDTO> getMedicalSupplyById(Long id);
     
     MedicalSupplyDTO createMedicalSupply(MedicalSupplyDTO medicalSupplyDTO);
+    
+    MedicalSupplyDTO createDisabledMedicalSupply(MedicalSupplyDTO medicalSupplyDTO, Long createdBy);
+    
+    MedicalSupplyDTO duplicateExpiredSupply(Long originalSupplyId, LocalDate newExpirationDate, Long createdBy);
     
     MedicalSupplyDTO updateMedicalSupply(Long id, MedicalSupplyDTO medicalSupplyDTO);
     

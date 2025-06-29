@@ -72,6 +72,80 @@ public class MedicalSupplyService implements IMedicalSupplyService {
     }
     
     @Override
+    public MedicalSupplyDTO createDisabledMedicalSupply(MedicalSupplyDTO medicalSupplyDTO, Long createdBy) {
+        MedicalSupply medicalSupply = convertToEntity(medicalSupplyDTO);
+        
+        // Set as disabled until approved by manager
+        medicalSupply.setEnabled(false);
+        
+        // For new supplies, starting quantity is 0
+        medicalSupply.setQuantityInBaseUnit(BigDecimal.ZERO);
+        medicalSupply.setDisplayQuantity(BigDecimal.ZERO);
+        
+        // Store who created this supply for tracking
+        // This would normally go in an audit field but we're using the description field
+        // to avoid schema changes
+        String creatorInfo = "Created by user ID: " + createdBy;
+        if (medicalSupply.getDescription() != null && !medicalSupply.getDescription().isEmpty()) {
+            medicalSupply.setDescription(medicalSupply.getDescription() + " | " + creatorInfo);
+        } else {
+            medicalSupply.setDescription(creatorInfo);
+        }
+        
+        MedicalSupply savedSupply = medicalSupplyRepository.save(medicalSupply);
+        log.info("Created disabled medical supply: {} with requestor ID: {}", 
+                savedSupply.getName(), createdBy);
+        return convertToDTO(savedSupply);
+    }
+    
+    @Override
+    public MedicalSupplyDTO duplicateExpiredSupply(Long originalSupplyId, LocalDate newExpirationDate, Long createdBy) {
+        // Find the original expired supply
+        MedicalSupply originalSupply = medicalSupplyRepository.findById(originalSupplyId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy vật tư y tế với ID: " + originalSupplyId));
+        
+        // Check if it's actually expired
+        if (!originalSupply.isExpired()) {
+            log.warn("Trying to duplicate non-expired supply: {}", originalSupplyId);
+            throw new RuntimeException("Vật tư này chưa hết hạn, không thể tạo phiên bản mới.");
+        }
+        
+        // Create a new supply with the same details but new expiration date
+        MedicalSupply newSupply = new MedicalSupply();
+        newSupply.setName(originalSupply.getName());
+        newSupply.setCategory(originalSupply.getCategory());
+        newSupply.setBaseUnit(originalSupply.getBaseUnit());
+        newSupply.setDisplayUnit(originalSupply.getDisplayUnit());
+        newSupply.setMinStockLevelInBaseUnit(originalSupply.getMinStockLevelInBaseUnit());
+        newSupply.setSupplier(originalSupply.getSupplier());
+        newSupply.setLocation(originalSupply.getLocation());
+        
+        // Set new expiration date
+        newSupply.setExpirationDate(newExpirationDate);
+        
+        // Initially set quantity to 0
+        newSupply.setQuantityInBaseUnit(BigDecimal.ZERO);
+        newSupply.setDisplayQuantity(BigDecimal.ZERO);
+        
+        // Enable the new supply (can be used immediately once approved/stocked)
+        newSupply.setEnabled(true);
+        
+        // Add reference to original supply in description
+        String refInfo = "Replacement for expired supply ID: " + originalSupplyId + " | Created by user ID: " + createdBy;
+        if (originalSupply.getDescription() != null && !originalSupply.getDescription().isEmpty()) {
+            newSupply.setDescription(originalSupply.getDescription() + " | " + refInfo);
+        } else {
+            newSupply.setDescription(refInfo);
+        }
+        
+        MedicalSupply savedSupply = medicalSupplyRepository.save(newSupply);
+        log.info("Created replacement for expired supply ID {}: new supply ID: {}, expiration: {}", 
+                originalSupplyId, savedSupply.getId(), newExpirationDate);
+        
+        return convertToDTO(savedSupply);
+    }
+    
+    @Override
     public MedicalSupplyDTO updateMedicalSupply(Long id, MedicalSupplyDTO medicalSupplyDTO) {
         MedicalSupply existingSupply = medicalSupplyRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy vật tư y tế với ID: " + id));
