@@ -448,5 +448,146 @@ export const healthCheckApi = {
       console.error('Error calculating target count:', error);
       throw error;
     }
-  }
+  },
+
+  // Get eligible students with their form status for a campaign
+  getEligibleStudentsWithStatus: async (campaignId, campaignData = null) => {
+    try {
+      // Get all forms for the campaign to determine status
+      const formsResponse = await healthCheckApiClient.get(`/health-check/forms/campaign/${campaignId}`);
+      const forms = formsResponse.data;
+      
+      // Get eligible students using campaign criteria if provided
+      let studentsResponse;
+      if (campaignData && (campaignData.minAge || campaignData.maxAge || campaignData.targetClasses)) {
+        // Build query parameters for the filtered API
+        const params = new URLSearchParams();
+        
+        if (campaignData.minAge !== undefined && campaignData.minAge !== null) {
+          params.append('minAge', campaignData.minAge);
+        }
+        if (campaignData.maxAge !== undefined && campaignData.maxAge !== null) {
+          params.append('maxAge', campaignData.maxAge);
+        }
+        
+        // Handle targetClasses - it might be a Set or Array
+        if (campaignData.targetClasses && campaignData.targetClasses.length > 0) {
+          const classArray = Array.isArray(campaignData.targetClasses) 
+            ? campaignData.targetClasses 
+            : Array.from(campaignData.targetClasses);
+          
+          classArray.forEach(className => {
+            if (className && className.trim()) {
+              params.append('classNames', className.trim());
+            }
+          });
+        }
+        
+        const queryString = params.toString();
+        const url = `/health-check/forms/campaign/${campaignId}/eligible-students${queryString ? `?${queryString}` : ''}`;
+        
+        console.log('Fetching eligible students with filters:', {
+          campaignId,
+          minAge: campaignData.minAge,
+          maxAge: campaignData.maxAge,
+          targetClasses: campaignData.targetClasses,
+          url
+        });
+        
+        studentsResponse = await healthCheckApiClient.get(url);
+      } else {
+        // Fallback to basic API without filters
+        console.log('Fetching eligible students without filters for campaign:', campaignId);
+        studentsResponse = await healthCheckApiClient.get(`/health-check/forms/campaign/${campaignId}/eligible-students`);
+      }
+      
+      // Handle different response structures
+      const eligibleStudents = studentsResponse.data.students || studentsResponse.data;
+      
+      console.log('Eligible students response:', {
+        totalStudents: Array.isArray(eligibleStudents) ? eligibleStudents.length : 0,
+        sampleStudent: Array.isArray(eligibleStudents) && eligibleStudents.length > 0 ? eligibleStudents[0] : null
+      });
+      
+      // Create a map of student ID to form status
+      const formStatusMap = {};
+      forms.forEach(form => {
+        if (form.student && form.student.studentID) {
+          formStatusMap[form.student.studentID] = {
+            status: form.status,
+            statusDisplay: form.status === 'CONFIRMED' ? 'Đã xác nhận khám' : 
+                         form.status === 'DECLINED' ? 'Từ chối khám' : 
+                         form.status === 'PENDING' ? 'Chưa phản hồi' : 'Chưa phản hồi'
+          };
+        }
+      });
+      
+      // Helper function to calculate age from date of birth
+      const calculateAge = (dob) => {
+        if (!dob) return { years: 0, months: 0, totalMonths: 0 };
+        
+        const today = new Date();
+        const birthDate = new Date(dob);
+        let years = today.getFullYear() - birthDate.getFullYear();
+        let months = today.getMonth() - birthDate.getMonth();
+        
+        if (months < 0) {
+          years--;
+          months += 12;
+        }
+        
+        const totalMonths = years * 12 + months;
+        return {
+          years,
+          months,
+          totalMonths
+        };
+      };
+      
+      // Ensure eligibleStudents is an array
+      const studentsArray = Array.isArray(eligibleStudents) ? eligibleStudents : [];
+      
+      // Combine student data with status information
+      const studentsWithStatus = studentsArray.map(student => {
+        const statusInfo = formStatusMap[student.studentID] || { 
+          status: 'NO_FORM', 
+          statusDisplay: 'Chưa phản hồi' 
+        };
+        
+        // Calculate age from date of birth
+        const ageInfo = calculateAge(student.dob);
+        const ageDisplay = `${ageInfo.years} tuổi ${ageInfo.months} tháng (${ageInfo.totalMonths} tháng)`;
+        
+        return {
+          ...student,
+          studentCode: student.studentID, // Map studentID to studentCode for table display
+          fullName: student.lastName + ' ' + student.firstName,
+          status: statusInfo.status,
+          statusDisplay: statusInfo.statusDisplay,
+          ageDisplay: ageDisplay
+        };
+      });
+      
+      console.log('Students with status:', {
+        totalProcessed: studentsWithStatus.length,
+        sampleProcessed: studentsWithStatus.length > 0 ? studentsWithStatus[0] : null
+      });
+      
+      return studentsWithStatus;
+    } catch (error) {
+      console.error(`Error fetching eligible students with status for campaign ${campaignId}:`, error);
+      throw error;
+    }
+  },
+
+  // Send notifications to parents for eligible students in a campaign
+  sendNotificationsToParents: async (campaignId) => {
+    try {
+      const response = await healthCheckApiClient.post(`/health-check/campaigns/${campaignId}/send-notifications`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error sending notifications to parents for campaign ${campaignId}:`, error);
+      throw error;
+    }
+  },
 };

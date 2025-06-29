@@ -1,0 +1,102 @@
+/* Health Check Notifications Styles */
+.health-check-notifications {
+  padding: 24px;
+}
+
+.health-check-notifications .ant-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.health-check-notifications .ant-table-thead > tr > th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  border-bottom: 2px solid #e9ecef;
+}
+
+.health-check-notifications .ant-table-tbody > tr:hover > td {
+  background-color: #f8f9fa;
+}
+
+.health-check-notifications .ant-tag {
+  border-radius: 12px;
+  font-weight: 500;
+  padding: 2px 8px;
+}
+
+.health-check-notifications .ant-descriptions-item-label {
+  font-weight: 600;
+  color: #495057;
+}
+
+.health-check-notifications .ant-descriptions-item-content {
+  color: #212529;
+}
+
+.health-check-notifications .response-modal .ant-alert {
+  margin-bottom: 16px;
+}
+
+.health-check-notifications .response-modal .ant-input {
+  border-radius: 6px;
+}
+
+.health-check-notifications .ant-tabs .ant-tabs-tab {
+  font-weight: 500;
+}
+
+.health-check-notifications .ant-tabs .ant-tabs-tab.ant-tabs-tab-active {
+  font-weight: 600;
+}
+
+.health-check-notifications .ant-badge .ant-badge-count {
+  background-color: #1890ff;
+  box-shadow: 0 0 0 1px #fff;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .health-check-notifications {
+    padding: 16px;
+  }
+  
+  .health-check-notifications .ant-table {
+    font-size: 12px;
+  }
+  
+  .health-check-notifications .ant-btn {
+    font-size: 12px;
+    padding: 4px 8px;
+  }
+}
+
+/* Status specific colors */
+.health-check-notifications .status-pending {
+  background-color: #fff7e6;
+  border-color: #ffc53d;
+  color: #d48806;
+}
+
+.health-check-notifications .status-confirmed {
+  background-color: #f6ffed;
+  border-color: #73d13d;
+  color: #389e0d;
+}
+
+.health-check-notifications .status-declined {
+  background-color: #fff2f0;
+  border-color: #ff7875;
+  color: #cf1322;
+}
+
+.health-check-notifications .status-scheduled {
+  background-color: #e6f7ff;
+  border-color: #40a9ff;
+  color: #096dd9;
+}
+
+.health-check-notifications .status-completed {
+  background-color: #f9f9f9;
+  border-color: #d9d9d9;
+  color: #595959;
+}

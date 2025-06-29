@@ -217,4 +217,18 @@ public class HealthCheckCampaignController {
             ));
         }
     }
+
+    @PostMapping("/{id}/send-notifications")
+    @PreAuthorize("hasRole('SCHOOLNURSE')")
+    public ResponseEntity<?> sendNotificationsToParents(@PathVariable Long id) {
+        try {
+            Map<String, Object> result = campaignService.sendNotificationsToParents(id);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "error", "Error sending notifications: " + e.getMessage(),
+                "notificationsSent", 0
+            ));
+        }
+    }
 }
