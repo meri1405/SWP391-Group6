@@ -32,7 +32,6 @@ import dayjs from 'dayjs';
 import { healthCheckApi } from '../../../api/healthCheckApi';
 
 const { Title, Paragraph, Text } = Typography;
-const { TabPane } = Tabs;
 
 const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
   const [campaign, setCampaign] = useState(null);
@@ -41,10 +40,21 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
   const [results, setResults] = useState([]);
   const [resultsLoading, setResultsLoading] = useState(false);
   const [confirmModal, setConfirmModal] = useState({ visible: false, action: null, title: '', message: '' });
+  const [eligibleStudents, setEligibleStudents] = useState([]);
+  const [studentsLoading, setStudentsLoading] = useState(false);
+  const [notificationSent, setNotificationSent] = useState(false);
+  const [sendingNotification, setSendingNotification] = useState(false);
 
   useEffect(() => {
     fetchCampaignDetails();
   }, [campaignId]);
+
+  // Fetch eligible students when campaign becomes APPROVED
+  useEffect(() => {
+    if (campaign && campaign.status === 'APPROVED') {
+      fetchEligibleStudents(campaign);
+    }
+  }, [campaign?.status]);
 
   const fetchCampaignDetails = async () => {
     setLoading(true);
@@ -55,6 +65,11 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
       // If campaign has started, fetch results
       if (data.status === 'IN_PROGRESS' || data.status === 'COMPLETED') {
         fetchResults();
+      }
+      
+      // If campaign is approved, fetch eligible students
+      if (data.status === 'APPROVED') {
+        fetchEligibleStudents(data);
       }
     } catch (error) {
       console.error('Error fetching campaign details:', error);
@@ -75,6 +90,37 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
       setResults([]);
     } finally {
       setResultsLoading(false);
+    }
+  };
+
+  const fetchEligibleStudents = async (campaignData = null) => {
+    setStudentsLoading(true);
+    try {
+      // Use the provided campaign data or fall back to current state
+      const dataToUse = campaignData || campaign;
+      
+      console.log('fetchEligibleStudents called with:', {
+        campaignId,
+        providedData: !!campaignData,
+        currentCampaignState: !!campaign,
+        dataToUse: dataToUse ? {
+          minAge: dataToUse.minAge,
+          maxAge: dataToUse.maxAge,
+          targetClasses: dataToUse.targetClasses,
+          targetCount: dataToUse.targetCount
+        } : null
+      });
+      
+      // Pass campaign data to ensure we use the same filtering criteria
+      const data = await healthCheckApi.getEligibleStudentsWithStatus(campaignId, dataToUse);
+      console.log('Eligible students fetched:', data.length);
+      setEligibleStudents(data);
+    } catch (error) {
+      console.error('Error fetching eligible students:', error);
+      message.error('Không thể tải danh sách học sinh đủ điều kiện');
+      setEligibleStudents([]);
+    } finally {
+      setStudentsLoading(false);
     }
   };
 
@@ -106,6 +152,9 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
           response = await healthCheckApi.cancelCampaign(campaignId, 'Cancelled by nurse');
           message.success('Đã hủy đợt khám');
           break;
+        case 'sendNotifications':
+          await executeSendNotifications();
+          return; // Don't update campaign state for this action
         default:
           console.warn('Unknown action:', action);
           return;
@@ -129,6 +178,32 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
       onEdit(campaign);
     } else {
       message.warning('Chỉ có thể chỉnh sửa đợt khám ở trạng thái CHƯA DUYỆT');
+    }
+  };
+
+  const handleSendNotifications = () => {
+    showConfirmModal(
+      'sendNotifications',
+      'Xác nhận gửi thông báo',
+      `Bạn có chắc chắn muốn gửi thông báo khám sức khỏe cho phụ huynh của các học sinh đủ điều kiện? Thông báo sẽ được gửi đến ${eligibleStudents.length} học sinh.`
+    );
+  };
+
+  const executeSendNotifications = async () => {
+    setSendingNotification(true);
+    try {
+      console.log('Sending notifications for campaign:', campaignId);
+      const response = await healthCheckApi.sendNotificationsToParents(campaignId);
+      console.log('Notification response:', response);
+      message.success(`Đã gửi thông báo thành công đến ${response.notificationsSent} phụ huynh`);
+      setNotificationSent(true);
+      // Refresh the eligible students list to update any changes
+      fetchEligibleStudents();
+    } catch (error) {
+      console.error('Error sending notifications:', error);
+      message.error('Không thể gửi thông báo đến phụ huynh');
+    } finally {
+      setSendingNotification(false);
     }
   };
 
@@ -263,6 +338,53 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
     }
   ];
 
+  const eligibleStudentsColumns = [
+    {
+      title: 'Mã học sinh',
+      dataIndex: 'studentCode',
+      key: 'studentCode',
+      width: 120,
+    },
+    {
+      title: 'Họ và tên',
+      dataIndex: 'fullName',
+      key: 'fullName',
+      width: 200,
+    },
+    {
+      title: 'Lớp',
+      dataIndex: 'className',
+      key: 'className',
+      width: 100,
+    },
+    {
+      title: 'Tuổi',
+      dataIndex: 'ageDisplay',
+      key: 'ageDisplay',
+      width: 150,
+    },
+    {
+      title: 'Trạng thái',
+      dataIndex: 'statusDisplay',
+      key: 'statusDisplay',
+      width: 150,
+      render: (statusDisplay, record) => {
+        const { status } = record;
+        let color = 'default';
+        if (status === 'CONFIRMED') {
+          color = 'green';
+        } else if (status === 'DECLINED') {
+          color = 'red';
+        } else if (status === 'PENDING') {
+          color = 'orange';
+        } else {
+          color = 'orange'; // Default to orange for "Chưa phản hồi"
+        }
+        return <Tag color={color}>{statusDisplay}</Tag>;
+      },
+    },
+  ];
+
   if (loading) {
     return (
       <Card>
@@ -312,119 +434,197 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
           </Space>
         }
       >
-        <Tabs activeKey={activeTab} onChange={setActiveTab}>
-          <TabPane tab="Thông tin chung" key="info">
-            <Row gutter={[24, 24]}>
-              <Col span={24}>
-                <Card bordered={false}>
-                  <Title level={4}>{campaign.name}</Title>
-                  <div style={{ marginBottom: 16 }}>
-                    {getStatusTag(campaign.status)}
-                  </div>
-                  <Paragraph>{campaign.description}</Paragraph>
-                </Card>
-              </Col>
-
-              <Col xs={24} sm={24} md={12}>
-                <Card title="Thông tin đợt khám" bordered={false}>
-                  <Descriptions column={1}>
-                    <Descriptions.Item label="Mã đợt khám">#{campaign.id}</Descriptions.Item>
-                    <Descriptions.Item label="Thời gian bắt đầu">
-                      {dayjs(campaign.startDate).format('DD/MM/YYYY')}
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Thời gian kết thúc">
-                      {dayjs(campaign.endDate).format('DD/MM/YYYY')}
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Địa điểm">{campaign.location}</Descriptions.Item>
-                    <Descriptions.Item label="Người tạo">{campaign.nurse?.fullName || 'N/A'}</Descriptions.Item>
-                    <Descriptions.Item label="Ngày tạo">
-                      {dayjs(campaign.createdAt).format('DD/MM/YYYY HH:mm')}
-                    </Descriptions.Item>
-                  </Descriptions>
-                </Card>
-              </Col>
-
-              <Col xs={24} sm={24} md={12}>
-                <Card title="Phạm vi khám" bordered={false}>
-                  <Descriptions column={1}>
-                    <Descriptions.Item label="Độ tuổi">
-                      {campaign.minAge} - {campaign.maxAge} tuổi
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Lớp mục tiêu">
-                      {campaign.targetClasses || 'Tất cả các lớp'}
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Loại khám">
-                      <div>
-                        {campaign.categories?.map((category) => (
-                          <Tag key={category} color="blue" style={{ marginBottom: 4 }}>
-                            {category === 'VISION' && 'Khám mắt'}
-                            {category === 'HEARING' && 'Khám tai'}
-                            {category === 'ORAL' && 'Khám răng miệng'}
-                            {category === 'SKIN' && 'Khám da liễu'}
-                            {category === 'RESPIRATORY' && 'Khám hô hấp'}
-                          </Tag>
-                        ))}
+        <Tabs 
+          activeKey={activeTab} 
+          onChange={setActiveTab}
+          items={[
+            {
+              key: 'info',
+              label: 'Thông tin chung',
+              children: (
+                <Row gutter={[24, 24]}>
+                  <Col span={24}>
+                    <Card variant="outlined">
+                      <Title level={4}>{campaign.name}</Title>
+                      <div style={{ marginBottom: 16 }}>
+                        {getStatusTag(campaign.status)}
                       </div>
-                    </Descriptions.Item>
-                  </Descriptions>
-                </Card>
-              </Col>
+                      <Paragraph>{campaign.description}</Paragraph>
+                    </Card>
+                  </Col>
 
-              {campaign.status !== 'PENDING' && (
-                <Col span={24}>
-                  <Card title="Thống kê" bordered={false}>
-                    <Row gutter={16}>
-                      <Col span={6}>
-                        <Statistic 
-                          title="Tổng số học sinh" 
-                          value={campaign.targetCount || 0} 
-                          prefix={<UserOutlined />} 
-                        />
-                      </Col>
-                      <Col span={6}>
-                        <Statistic 
-                          title="Đã khám" 
-                          value={results.length} 
-                          suffix={`/ ${campaign.targetCount || 0}`}
-                          prefix={<CheckCircleOutlined />} 
-                        />
-                      </Col>
-                      <Col span={6}>
-                        <Statistic 
-                          title="Kết quả bất thường" 
-                          value={results.filter(r => r.status === 'ABNORMAL' || r.status === 'NEEDS_FOLLOWUP' || r.status === 'NEEDS_TREATMENT').length} 
-                          prefix={<CloseCircleOutlined />} 
-                        />
-                      </Col>
-                      <Col span={6}>
-                        <Statistic 
-                          title="Tiến độ" 
-                          value={campaign.targetCount ? Math.round((results.length / campaign.targetCount) * 100) : 0} 
-                          suffix="%" 
-                        />
-                      </Col>
-                    </Row>
-                  </Card>
-                </Col>
-              )}
-            </Row>
-          </TabPane>
+                  <Col xs={24} sm={24} md={12}>
+                    <Card title="Thông tin đợt khám" variant="outlined">
+                      <Descriptions column={1}>
+                        <Descriptions.Item label="Mã đợt khám">#{campaign.id}</Descriptions.Item>
+                        <Descriptions.Item label="Thời gian bắt đầu">
+                          {dayjs(campaign.startDate).format('DD/MM/YYYY')}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Thời gian kết thúc">
+                          {dayjs(campaign.endDate).format('DD/MM/YYYY')}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Địa điểm">{campaign.location}</Descriptions.Item>
+                        <Descriptions.Item label="Người tạo">{campaign.nurse?.fullName || 'N/A'}</Descriptions.Item>
+                        <Descriptions.Item label="Ngày tạo">
+                          {dayjs(campaign.createdAt).format('DD/MM/YYYY HH:mm')}
+                        </Descriptions.Item>
+                      </Descriptions>
+                    </Card>
+                  </Col>
 
-          <TabPane tab="Kết quả khám" key="results" disabled={campaign.status !== 'IN_PROGRESS' && campaign.status !== 'COMPLETED'}>
-            <div style={{ marginBottom: 16 }}>
-              <Button onClick={fetchResults} loading={resultsLoading}>
-                <FileTextOutlined /> Làm mới kết quả
-              </Button>
-            </div>
-            
-            <Table 
-              columns={resultColumns} 
-              dataSource={results.map(result => ({ ...result, key: result.id }))} 
-              loading={resultsLoading}
-              pagination={{ pageSize: 10 }}
-            />
-          </TabPane>
-        </Tabs>
+                  <Col xs={24} sm={24} md={12}>
+                    <Card title="Phạm vi khám" variant="outlined">
+                      <Descriptions column={1}>
+                        <Descriptions.Item label="Độ tuổi">
+                          {campaign.minAge} - {campaign.maxAge} tuổi
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Lớp mục tiêu">
+                          {campaign.targetClasses || 'Tất cả các lớp'}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Loại khám">
+                          <div>
+                            {campaign.categories?.map((category) => (
+                              <Tag key={category} color="blue" style={{ marginBottom: 4 }}>
+                                {category === 'VISION' && 'Khám mắt'}
+                                {category === 'HEARING' && 'Khám tai'}
+                                {category === 'ORAL' && 'Khám răng miệng'}
+                                {category === 'SKIN' && 'Khám da liễu'}
+                                {category === 'RESPIRATORY' && 'Khám hô hấp'}
+                              </Tag>
+                            ))}
+                          </div>
+                        </Descriptions.Item>
+                      </Descriptions>
+                    </Card>
+                  </Col>
+
+                  {campaign.status !== 'PENDING' && (
+                    <Col span={24}>
+                      <Card title="Thống kê" variant="outlined">
+                        <Row gutter={16}>
+                          <Col span={6}>
+                            <Statistic 
+                              title="Học sinh đủ điều kiện" 
+                              value={campaign.status === 'APPROVED' ? eligibleStudents.length : (campaign.targetCount || 0)} 
+                              prefix={<UserOutlined />} 
+                            />
+                          </Col>
+                          <Col span={6}>
+                            <Statistic 
+                              title="Đã khám" 
+                              value={results.length} 
+                              suffix={campaign.status === 'APPROVED' ? `/ ${eligibleStudents.length}` : `/ ${campaign.targetCount || 0}`}
+                              prefix={<CheckCircleOutlined />} 
+                            />
+                          </Col>
+                          <Col span={6}>
+                            <Statistic 
+                              title="Kết quả bất thường" 
+                              value={results.filter(r => r.status === 'ABNORMAL' || r.status === 'NEEDS_FOLLOWUP' || r.status === 'NEEDS_TREATMENT').length} 
+                              prefix={<CloseCircleOutlined />} 
+                            />
+                          </Col>
+                          <Col span={6}>
+                            <Statistic 
+                              title="Tiến độ" 
+                              value={campaign.status === 'APPROVED' && eligibleStudents.length > 0 ? 
+                                Math.round((results.length / eligibleStudents.length) * 100) : 
+                                (campaign.targetCount ? Math.round((results.length / campaign.targetCount) * 100) : 0)} 
+                              suffix="%" 
+                            />
+                          </Col>
+                        </Row>
+                      </Card>
+                    </Col>
+                  )}
+
+                  {/* Eligible Students List - shown when campaign is approved */}
+                  {campaign.status === 'APPROVED' && (
+                    <Col span={24}>
+                      <Card title="Danh sách học sinh đủ điều kiện" variant="outlined">
+                        {/* Statistics Row */}
+                        <Row gutter={16} style={{ marginBottom: 16 }}>
+                          <Col span={6}>
+                            <Statistic 
+                              title="Tổng số học sinh" 
+                              value={eligibleStudents.length} 
+                              prefix={<UserOutlined />} 
+                            />
+                          </Col>
+                          <Col span={6}>
+                            <Statistic 
+                              title="Đã xác nhận" 
+                              value={eligibleStudents.filter(s => s.status === 'CONFIRMED').length} 
+                              prefix={<CheckCircleOutlined />} 
+                              valueStyle={{ color: '#52c41a' }}
+                            />
+                          </Col>
+                          <Col span={6}>
+                            <Statistic 
+                              title="Từ chối" 
+                              value={eligibleStudents.filter(s => s.status === 'DECLINED').length} 
+                              prefix={<CloseCircleOutlined />} 
+                              valueStyle={{ color: '#ff4d4f' }}
+                            />
+                          </Col>
+                          <Col span={6}>
+                            <Statistic 
+                              title="Chưa phản hồi" 
+                              value={eligibleStudents.filter(s => s.status === 'PENDING' || s.status === 'NO_FORM').length} 
+                              prefix={<UsergroupAddOutlined />} 
+                              valueStyle={{ color: '#faad14' }}
+                            />
+                          </Col>
+                        </Row>
+                        
+                        <div style={{ marginBottom: 16 }}>
+                          <Button 
+                            type="primary" 
+                            icon={<SendOutlined />} 
+                            onClick={handleSendNotifications} 
+                            loading={sendingNotification}
+                            disabled={notificationSent}
+                          >
+                            {notificationSent ? 'Đã gửi thông báo' : 'Gửi thông báo cho phụ huynh'}
+                          </Button>
+                        </div>
+                        
+                        <Table
+                          columns={eligibleStudentsColumns}
+                          dataSource={eligibleStudents.map(student => ({ ...student, key: student.studentID || student.studentCode }))}
+                          loading={studentsLoading}
+                          pagination={{ pageSize: 10 }}
+                          scroll={{ x: 800 }}
+                        />
+                      </Card>
+                    </Col>
+                  )}
+                </Row>
+              )
+            },
+            {
+              key: 'results',
+              label: 'Kết quả khám',
+              disabled: campaign.status !== 'IN_PROGRESS' && campaign.status !== 'COMPLETED',
+              children: (
+                <div>
+                  <div style={{ marginBottom: 16 }}>
+                    <Button onClick={fetchResults} loading={resultsLoading}>
+                      <FileTextOutlined /> Làm mới kết quả
+                    </Button>
+                  </div>
+                  
+                  <Table 
+                    columns={resultColumns} 
+                    dataSource={results.map(result => ({ ...result, key: result.id }))} 
+                    loading={resultsLoading}
+                    pagination={{ pageSize: 10 }}
+                  />
+                </div>
+              )
+            }
+          ]}
+        />
       </Card>
 
       <Modal
@@ -440,4 +640,4 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
   );
 };
 
-export default HealthCheckCampaignDetail; 
+export default HealthCheckCampaignDetail;

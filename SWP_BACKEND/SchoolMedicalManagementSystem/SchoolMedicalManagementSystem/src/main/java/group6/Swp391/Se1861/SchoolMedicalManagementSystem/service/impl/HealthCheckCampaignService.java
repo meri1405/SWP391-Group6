@@ -1,10 +1,13 @@
 package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl;
 
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.StudentDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.HealthCheckCampaign;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.Student;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.CampaignStatus;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.HealthCheckCategory;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.HealthCheckCampaignRepository;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.StudentRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IHealthCheckCampaignService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.INotificationService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IStudentService;
@@ -14,10 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +26,7 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
     private final HealthCheckCampaignRepository campaignRepository;
     private final INotificationService notificationService;
     private final IStudentService studentService;
+    private final StudentRepository studentRepository;
 
     @Transactional
     public HealthCheckCampaign createCampaign(String name, String description, LocalDate startDate,
@@ -299,5 +300,111 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
     @Override
     public int calculateTargetCount(Integer minAge, Integer maxAge, Set<String> targetClasses) {
         return calculateTargetCountInternal(minAge, maxAge, targetClasses);
+    }
+
+    /**
+     * Send notifications to parents of eligible students for a health check campaign
+     */
+    @Override
+    @Transactional
+    public Map<String, Object> sendNotificationsToParents(Long campaignId) {
+        // Get the campaign and validate it's approved
+        HealthCheckCampaign campaign = getCampaignById(campaignId);
+        if (campaign.getStatus() != CampaignStatus.APPROVED) {
+            throw new RuntimeException("Campaign must be APPROVED before sending notifications to parents");
+        }
+
+        // Get eligible students for this campaign
+        List<StudentDTO> eligibleStudents = studentService.getEligibleStudentsForClasses(
+            campaign.getTargetClasses(), 
+            campaign.getMinAge(), 
+            campaign.getMaxAge()
+        );
+
+        // Get parents who have active accounts and eligible for notifications
+        List<User> eligibleParents = new ArrayList<>();
+        List<StudentDTO> studentsWithParents = new ArrayList<>();
+        
+        for (StudentDTO studentDTO : eligibleStudents) {
+            // Find the student entity to get parent relationship
+            try {
+                // Convert StudentDTO to actual student entity to get parent information
+                List<User> parents = findParentsForStudent(studentDTO);
+                for (User parent : parents) {
+                    if (parent != null && parent.isEnabled() && parent.getRole().getRoleName().equals("PARENT")) {
+                        eligibleParents.add(parent);
+                        studentsWithParents.add(studentDTO);
+                        
+                        // Note: Health check forms will be generated separately by the nurse
+                        // This avoids circular dependency issues
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("Error finding parents for student " + studentDTO.getStudentID() + ": " + e.getMessage());
+            }
+        }
+
+        // Send notifications to eligible parents
+        int notificationsSent = 0;
+        String notificationTitle = "Thông báo khám sức khỏe";
+        String notificationMessage = "Trường đang tổ chức đợt khám sức khỏe cho học sinh. " +
+                                   "Vui lòng xác nhận đồng ý hoặc từ chối khám cho con em mình.";
+
+        Set<Long> notifiedParents = new HashSet<>(); // Avoid duplicate notifications
+        for (User parent : eligibleParents) {
+            if (!notifiedParents.contains(parent.getId())) {
+                try {
+                    notificationService.createGeneralNotification(
+                        parent,
+                        notificationTitle,
+                        notificationMessage,
+                        "HEALTH_CHECK_CAMPAIGN"
+                    );
+                    notifiedParents.add(parent.getId());
+                    notificationsSent++;
+                } catch (Exception e) {
+                    System.err.println("Error sending notification to parent " + parent.getId() + ": " + e.getMessage());
+                }
+            }
+        }
+
+        return Map.of(
+            "message", "Notifications sent successfully",
+            "campaignId", campaignId,
+            "campaignName", campaign.getName(),
+            "totalEligibleStudents", eligibleStudents.size(),
+            "studentsWithParents", studentsWithParents.size(),
+            "notificationsSent", notificationsSent,
+            "eligibleParents", eligibleParents.size()
+        );
+    }
+
+    /**
+     * Helper method to find parents for a student
+     */
+    private List<User> findParentsForStudent(StudentDTO studentDTO) {
+        List<User> parents = new ArrayList<>();
+        try {
+            // Get the student entity with parent relationships
+            Optional<Student> studentOpt = studentRepository.findByIdWithParents(studentDTO.getStudentID());
+            if (studentOpt.isPresent()) {
+                Student student = studentOpt.get();
+                
+                // Add mother if exists and is enabled
+                if (student.getMother() != null && student.getMother().isEnabled()) {
+                    parents.add(student.getMother());
+                }
+                
+                // Add father if exists and is enabled
+                if (student.getFather() != null && student.getFather().isEnabled()) {
+                    parents.add(student.getFather());
+                }
+            }
+            
+            return parents;
+        } catch (Exception e) {
+            System.err.println("Error finding parents for student: " + e.getMessage());
+            return parents;
+        }
     }
 }

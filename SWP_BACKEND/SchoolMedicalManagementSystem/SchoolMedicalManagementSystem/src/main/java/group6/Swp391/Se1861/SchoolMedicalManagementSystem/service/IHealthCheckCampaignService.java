@@ -48,4 +48,9 @@ public interface IHealthCheckCampaignService {
      * Calculate target count based on criteria without creating a campaign
      */
     int calculateTargetCount(Integer minAge, Integer maxAge, Set<String> targetClasses);
+
+    /**
+     * Send notifications to parents of eligible students for a health check campaign
+     */
+    java.util.Map<String, Object> sendNotificationsToParents(Long campaignId);
 }
