@@ -37,6 +37,7 @@ import {
   getAllStudents,
 } from "../../../api/medicalEventApi";
 import { medicalSupplyApi } from "../../../api/medicalSupplyApi";
+import { useAuth } from "../../../contexts/AuthContext";
 import "../../../styles/MedicalEventManagement.css";
 
 const { Title, Text } = Typography;
@@ -65,6 +66,13 @@ const MedicalEventManagement = () => {
     pending: 0,
     processed: 0,
   });
+
+  // Get user context for role-based permissions
+  const { user } = useAuth();
+  
+  // Check if user is manager (view-only mode)
+  const isManager = user?.roleName === 'MANAGER';
+  const isViewOnly = isManager;
 
   // Backend EventType enum values (từ backend)
   const eventTypes = [
@@ -245,6 +253,10 @@ const MedicalEventManagement = () => {
   };
 
   const handleAddEvent = () => {
+    if (isViewOnly) {
+      message.warning('Bạn không có quyền thêm sự kiện y tế');
+      return;
+    }
     setSelectedEvent(null);
     setModalVisible(true);
     // Reset form after modal is opened to avoid the warning
@@ -265,6 +277,10 @@ const MedicalEventManagement = () => {
   };
 
   const handleProcessEvent = async (eventId) => {
+    if (isViewOnly) {
+      message.warning('Bạn không có quyền xử lý sự kiện y tế');
+      return;
+    }
     try {
       setLoading(true);
       // Backend endpoint /process chỉ cần eventId, không cần status parameter
@@ -280,6 +296,10 @@ const MedicalEventManagement = () => {
   };
 
   const onSubmitForm = async (values) => {
+    if (isViewOnly) {
+      message.error('Bạn không có quyền thêm sự kiện y tế');
+      return;
+    }
     try {
       setLoading(true);
       
@@ -524,7 +544,7 @@ const MedicalEventManagement = () => {
               size="small"
             />
           </Tooltip>
-          {!record.processed && (
+          {!record.processed && !isViewOnly && (
             <Popconfirm
               title="Đánh dấu đã xử lý?"
               description="Bạn có chắc chắn muốn đánh dấu sự kiện này là đã xử lý?"
@@ -584,15 +604,17 @@ const MedicalEventManagement = () => {
       <Card>
         <div className="header-section">
           <Title level={3}>
-            <MedicineBoxOutlined /> Quản lý sự kiện y tế
+            <MedicineBoxOutlined /> {isViewOnly ? 'Xem sự kiện y tế' : 'Quản lý sự kiện y tế'}
           </Title>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={handleAddEvent}
-          >
-            Thêm sự kiện y tế
-          </Button>
+          {!isViewOnly && (
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={handleAddEvent}
+            >
+              Thêm sự kiện y tế
+            </Button>
+          )}
         </div>
 
         {/* Filters */}

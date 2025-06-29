@@ -22,13 +22,11 @@ import {
   DashboardOutlined,
 } from "@ant-design/icons";
 import ConsultationsSection from "../components/dashboard/ConsultationsSection";
-import HealthChecksSection from "../components/dashboard/HealthChecksSection";
 import ManagerVaccinationManagement from "../components/dashboard/ManagerVaccinationManagement";
 import ManagerHealthCheckManagement from "../components/dashboard/ManagerHealthCheckManagement";
 import ManagerOverview from "../components/dashboard/ManagerOverview";
-import MedicalEventsSection from "../components/dashboard/MedicalEventsSection";
+import { MedicalEventManagement } from "../components/dashboard/events";
 import InventorySection from "../components/dashboard/InventorySection";
-import NotificationsSection from "../components/dashboard/NotificationsSection";
 import { Notifications } from "../components/dashboard/notifications";
 import BlogSection from "../components/dashboard/BlogSection";
 import StudentsSection from "../components/dashboard/StudentsSection";
@@ -164,7 +162,6 @@ const ManagerDashboard = () => {
         "vaccinations",
         "events",
         "inventory",
-        "notifications-management",
         "blog"
       ];
       if (validTabs.includes(tabParam)) {
@@ -220,11 +217,6 @@ const ManagerDashboard = () => {
       label: "Quản lý kho",
     },
     {
-      key: "notifications-management",
-      icon: <BellOutlined />,
-      label: "Quản lý thông báo",
-    },
-    {
       key: "blog",
       icon: <FileTextOutlined />,
       label: "Bài viết",
@@ -255,11 +247,9 @@ const ManagerDashboard = () => {
       case "vaccinations":
         return <ManagerVaccinationManagement />;
       case "events":
-        return <MedicalEventsSection />;
+        return <MedicalEventManagement />;
       case "inventory":
         return <InventorySection />;
-      case "notifications-management":
-        return <NotificationsSection />;
       case "blog":
         return <BlogSection />;
       default:

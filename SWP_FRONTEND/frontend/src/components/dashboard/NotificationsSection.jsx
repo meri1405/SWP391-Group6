@@ -1,3 +1,12 @@
+/*
+ * DEPRECATED: This component was used for notification management functionality for managers.
+ * As per requirements, this feature has been removed from the manager role.
+ * This file is kept for potential future use but is no longer imported or used anywhere.
+ * 
+ * For viewing notifications (which is still available), see: 
+ * - components/dashboard/notifications/Notifications.jsx
+ */
+
 import React, { useState } from 'react';
 import {
     Card,

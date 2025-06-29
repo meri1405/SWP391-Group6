@@ -18,9 +18,11 @@ import {
     PlusOutlined,
     EditOutlined,
     DeleteOutlined,
-    SearchOutlined
+    SearchOutlined,
+    EyeOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import { useAuth } from '../../contexts/AuthContext';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -32,6 +34,11 @@ const MedicalEventsSection = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [messageApi, contextHolder] = message.useMessage();
+    const { user } = useAuth();
+
+    // Check if user is manager (view-only mode)
+    const isManager = user?.roleName === 'MANAGER';
+    const isViewOnly = isManager;
 
     // Mock data for medical events
     const [events, setEvents] = useState([
@@ -137,28 +144,48 @@ const MedicalEventsSection = () => {
             key: 'action',
             render: (_, record) => (
                 <Space size="middle">
-                    <Button
-                        type="primary"
-                        icon={<EditOutlined />}
-                        size="small"
-                        onClick={() => handleEdit(record)}
-                    >
-                        Sửa
-                    </Button>
-                    <Button
-                        danger
-                        icon={<DeleteOutlined />}
-                        size="small"
-                        onClick={() => handleDelete(record)}
-                    >
-                        Xóa
-                    </Button>
+                    {!isViewOnly && (
+                        <>
+                            <Button
+                                type="primary"
+                                icon={<EditOutlined />}
+                                size="small"
+                                onClick={() => handleEdit(record)}
+                            >
+                                Sửa
+                            </Button>
+                            <Button
+                                danger
+                                icon={<DeleteOutlined />}
+                                size="small"
+                                onClick={() => handleDelete(record)}
+                            >
+                                Xóa
+                            </Button>
+                        </>
+                    )}
+                    {isViewOnly && (
+                        <Button
+                            type="primary"
+                            ghost
+                            icon={<EyeOutlined />}
+                            size="small"
+                            onClick={() => handleView(record)}
+                        >
+                            Xem chi tiết
+                        </Button>
+                    )}
                 </Space>
             ),
         },
     ];
 
     const handleAdd = (values) => {
+        if (isViewOnly) {
+            messageApi.error('Bạn không có quyền thêm sự kiện y tế');
+            return;
+        }
+        
         const newEvent = {
             id: Date.now(),
             ...values,
@@ -174,6 +201,10 @@ const MedicalEventsSection = () => {
     };
 
     const handleEdit = (record) => {
+        if (isViewOnly) {
+            messageApi.warning('Bạn không có quyền chỉnh sửa sự kiện y tế');
+            return;
+        }
         setEditingRecord(record);
         form.setFieldsValue({
             ...record,
@@ -183,6 +214,10 @@ const MedicalEventsSection = () => {
     };
 
     const handleDelete = (record) => {
+        if (isViewOnly) {
+            messageApi.warning('Bạn không có quyền xóa sự kiện y tế');
+            return;
+        }
         Modal.confirm({
             title: 'Xác nhận xóa',
             content: 'Bạn có chắc chắn muốn xóa sự kiện này?',
@@ -193,6 +228,45 @@ const MedicalEventsSection = () => {
                 setEvents(events.filter(item => item.id !== record.id));
                 messageApi.success('Xóa sự kiện thành công');
             }
+        });
+    };
+
+    const handleView = (record) => {
+        // For view-only mode, show event details in a modal
+        Modal.info({
+            title: 'Chi tiết sự kiện y tế',
+            width: 600,
+            content: (
+                <div style={{ marginTop: 16 }}>
+                    <Row gutter={[16, 16]}>
+                        <Col span={24}>
+                            <strong>Tiêu đề:</strong> {record.title}
+                        </Col>
+                        <Col span={12}>
+                            <strong>Loại sự kiện:</strong> {record.eventType}
+                        </Col>
+                        <Col span={12}>
+                            <strong>Trạng thái:</strong> {getStatusTag(record.status)}
+                        </Col>
+                        <Col span={12}>
+                            <strong>Ngày bắt đầu:</strong> {dayjs(record.startDate).format('DD/MM/YYYY')}
+                        </Col>
+                        <Col span={12}>
+                            <strong>Ngày kết thúc:</strong> {dayjs(record.endDate).format('DD/MM/YYYY')}
+                        </Col>
+                        <Col span={24}>
+                            <strong>Địa điểm:</strong> {record.location}
+                        </Col>
+                        <Col span={24}>
+                            <strong>Mô tả:</strong> {record.description}
+                        </Col>
+                        <Col span={12}>
+                            <strong>Độ ưu tiên:</strong> {getPriorityTag(record.priority)}
+                        </Col>
+                    </Row>
+                </div>
+            ),
+            okText: 'Đóng'
         });
     };
 
@@ -208,18 +282,20 @@ const MedicalEventsSection = () => {
             {contextHolder}
             <Card>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-                    <h2>Quản lý sự kiện y tế</h2>
-                    <Button
-                        type="primary"
-                        icon={<PlusOutlined />}
-                        onClick={() => {
-                            setEditingRecord(null);
-                            form.resetFields();
-                            setShowAddModal(true);
-                        }}
-                    >
-                        Thêm sự kiện
-                    </Button>
+                    <h2>{isViewOnly ? 'Xem sự kiện y tế' : 'Quản lý sự kiện y tế'}</h2>
+                    {!isViewOnly && (
+                        <Button
+                            type="primary"
+                            icon={<PlusOutlined />}
+                            onClick={() => {
+                                setEditingRecord(null);
+                                form.resetFields();
+                                setShowAddModal(true);
+                            }}
+                        >
+                            Thêm sự kiện
+                        </Button>
+                    )}
                 </div>
 
                 <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>

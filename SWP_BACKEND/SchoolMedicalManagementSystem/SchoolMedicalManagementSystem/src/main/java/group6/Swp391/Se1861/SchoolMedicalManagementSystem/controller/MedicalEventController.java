@@ -42,7 +42,7 @@ public class MedicalEventController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('SCHOOLNURSE', 'PARENT')")
+    @PreAuthorize("hasAnyRole('SCHOOLNURSE', 'MANAGER', 'PARENT')")
     public ResponseEntity<MedicalEventResponseDTO> getMedicalEventById(@PathVariable Long id) {
         return ResponseEntity.ok(IMedicalEventService.getMedicalEventById(id));
     }
@@ -103,7 +103,7 @@ public class MedicalEventController {
     }
 
     @PatchMapping("/{id}/process")
-    @PreAuthorize("hasAnyRole('SCHOOLNURSE', 'MANAGER')")
+    @PreAuthorize("hasRole('SCHOOLNURSE')")
     public ResponseEntity<MedicalEventResponseDTO> processMedicalEvent(
             @PathVariable Long id,
             Authentication authentication) {
