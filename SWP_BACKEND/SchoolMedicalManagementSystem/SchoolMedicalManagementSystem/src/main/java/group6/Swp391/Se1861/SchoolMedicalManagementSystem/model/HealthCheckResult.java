@@ -5,7 +5,6 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.ResultStat
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -72,28 +71,6 @@ public class HealthCheckResult {
     // Reference to the specific result table for each category
     @Column(name = "categoryResultId", nullable = true)
     private Long categoryResultId;
-
-    // Fields for consultation if abnormal
-    @Column(name = "consultationRequired", nullable = false)
-    private boolean consultationRequired = false;
-
-    @Column(name = "consultationDate", nullable = true)
-    private LocalDate consultationDate;
-
-    @Column(name = "consultationTime", nullable = true)
-    private String consultationTime;
-
-    @Column(name = "consultationLocation", nullable = true)
-    private String consultationLocation;
-
-    @Column(name = "isOnline", nullable = true)
-    private Boolean isOnline;
-
-    @Column(name = "meetingLink", nullable = true)
-    private String meetingLink;
-
-    @Column(name = "meetingPassword", nullable = true)
-    private String meetingPassword;
 
     @Column(name = "parentNotified", nullable = false)
     private boolean parentNotified = false;

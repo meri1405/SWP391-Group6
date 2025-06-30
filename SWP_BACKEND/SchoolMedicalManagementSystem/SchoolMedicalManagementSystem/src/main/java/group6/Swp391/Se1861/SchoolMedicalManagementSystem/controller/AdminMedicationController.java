@@ -1,6 +1,5 @@
 package group6.Swp391.Se1861.SchoolMedicalManagementSystem.controller;
 
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IMedicationScheduleService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

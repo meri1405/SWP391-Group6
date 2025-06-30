@@ -90,25 +90,7 @@ const MedicalEventManagement = () => {
     { value: "SEVERE", label: "Nặng", color: "#ff4d4f" },
   ];
 
-  // Load data on component mount
-  useEffect(() => {
-    loadEvents();
-    loadStudents();
-    loadMedicalSupplies();
-  }, []);
-
-  // Filter events when search or filter changes
-  useEffect(() => {
-    filterEvents();
-  }, [
-    events,
-    searchText,
-    filterProcessed,
-    filterType,
-    filterSeverity,
-    dateRange,
-  ]);
-
+  // Define all callback functions first
   const loadEvents = useCallback(async () => {
     setLoading(true);
     try {
@@ -201,8 +183,8 @@ const MedicalEventManagement = () => {
       processed,
     });
   };
-
-  const filterEvents = () => {
+  
+  const filterEvents = useCallback(() => {
     let filtered = events;
 
     // Search filter
@@ -250,7 +232,19 @@ const MedicalEventManagement = () => {
 
     // Make sure filtered events maintain the same sort order as the original list (newest first)
     setFilteredEvents(filtered);
-  };
+  }, [events, searchText, filterProcessed, filterType, filterSeverity, dateRange]);
+
+  // Load data on component mount
+  useEffect(() => {
+    loadEvents();
+    loadStudents();
+    loadMedicalSupplies();
+  }, [loadEvents, loadStudents, loadMedicalSupplies]);
+
+  // Filter events when search or filter changes
+  useEffect(() => {
+    filterEvents();
+  }, [filterEvents]);
 
   const handleAddEvent = () => {
     if (isViewOnly) {
@@ -714,6 +708,7 @@ const MedicalEventManagement = () => {
         destroyOnHidden
         forceRender
         className="event-modal"
+        styles={{ body: { maxHeight: '70vh', overflow: 'auto', paddingTop: 10 } }}
       >
         <Form form={form} layout="vertical" preserve={false} onFinish={onSubmitForm}>
           <Row gutter={[16, 16]}>
@@ -966,6 +961,7 @@ const MedicalEventManagement = () => {
           </Button>,
         ]}
         width={800}
+        styles={{ body: { maxHeight: '70vh', overflow: 'auto', paddingTop: 10 } }}
       >
         {selectedEvent && (
           <div>

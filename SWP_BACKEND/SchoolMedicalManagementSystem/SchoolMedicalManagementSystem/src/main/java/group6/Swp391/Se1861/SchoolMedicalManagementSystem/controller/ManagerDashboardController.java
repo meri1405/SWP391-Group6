@@ -11,10 +11,8 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.*;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.*;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.*;
 
-import java.time.LocalDateTime;
 import java.time.Month;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/manager/dashboard")

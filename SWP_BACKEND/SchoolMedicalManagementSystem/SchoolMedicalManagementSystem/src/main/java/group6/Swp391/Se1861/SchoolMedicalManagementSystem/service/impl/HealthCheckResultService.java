@@ -246,47 +246,6 @@ public class HealthCheckResultService implements IHealthCheckResultService {
 
     @Transactional
     @Override
-    public HealthCheckResult scheduleConsultation(Long resultId, LocalDate consultationDate,
-                                                String consultationTime, String consultationLocation,
-                                                boolean isOnline, String meetingLink, String meetingPassword) {
-
-        Optional<HealthCheckResult> optionalResult = resultRepository.findById(resultId);
-        if (optionalResult.isEmpty()) {
-            throw new RuntimeException("Result not found with id: " + resultId);
-        }
-
-        HealthCheckResult result = optionalResult.get();
-
-        // Only allow scheduling consultation for abnormal results
-        if (!result.isAbnormal()) {
-            throw new RuntimeException("Cannot schedule consultation for normal result");
-        }
-
-        result.setConsultationRequired(true);
-        result.setConsultationDate(consultationDate);
-        result.setConsultationTime(consultationTime);
-        result.setConsultationLocation(consultationLocation);
-        result.setIsOnline(isOnline);
-
-        if (isOnline) {
-            result.setMeetingLink(meetingLink);
-            result.setMeetingPassword(meetingPassword);
-        }
-
-        HealthCheckResult updatedResult = resultRepository.save(result);
-
-        // Notify parent about the consultation
-        notificationService.notifyParentAboutConsultation(updatedResult);
-
-        // Mark as parent notified
-        updatedResult.setParentNotified(true);
-        resultRepository.save(updatedResult);
-
-        return updatedResult;
-    }
-
-    @Transactional
-    @Override
     public HealthCheckResult markAsNotified(Long resultId, boolean parent, boolean manager) {
         Optional<HealthCheckResult> optionalResult = resultRepository.findById(resultId);
         if (optionalResult.isEmpty()) {
@@ -356,11 +315,6 @@ public class HealthCheckResultService implements IHealthCheckResultService {
     @Override
     public List<HealthCheckResult> getResultsByStatus(ResultStatus status) {
         return resultRepository.findByStatus(status);
-    }
-
-    @Override
-    public List<HealthCheckResult> getResultsRequiringConsultation() {
-        return resultRepository.findByConsultationRequired(true);
     }
 
     @Override

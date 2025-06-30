@@ -209,11 +209,6 @@ public interface INotificationService {
     void notifyManagerAboutAbnormalResult(HealthCheckResult result);
 
     /**
-     * Notify parent about consultation
-     */
-    void notifyParentAboutConsultation(HealthCheckResult result);
-
-    /**
      * Notify parent about appointment scheduling
      */
     void notifyParentAboutAppointment(HealthCheckForm form);
