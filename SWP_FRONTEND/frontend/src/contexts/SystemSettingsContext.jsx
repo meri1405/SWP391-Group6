@@ -28,7 +28,7 @@ const SystemSettingsProvider = ({ children }) => {
     activityLogging: true,
   });
   const [loading, setLoading] = useState(false);
-  const { user, isAuthenticated, isStaff } = useAuth();
+  const { user, isAuthenticated } = useAuth();
 
   // Load public system info on component mount (available to everyone)
   useEffect(() => {
@@ -162,6 +162,5 @@ const SystemSettingsProvider = ({ children }) => {
   );
 };
 
-// Export with default pattern for Fast Refresh compatibility
+// Export only as named exports for consistency
 export { useSystemSettings, SystemSettingsProvider };
-export default SystemSettingsProvider;

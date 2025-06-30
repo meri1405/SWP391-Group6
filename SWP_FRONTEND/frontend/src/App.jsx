@@ -17,6 +17,7 @@ import ScrollToTop from "./components/ScrollToTop";
 import ScrollToTopOnMount from "./components/ScrollToTopOnMount";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
+import ForgotPassword from "./pages/ForgotPassword";
 import Blog from "./pages/Blog";
 import BlogDetail from "./pages/BlogDetail";
 import Documents from "./pages/Documents";
@@ -31,20 +32,21 @@ import "./styles/App.css";
 
 function App() {
   return (
-    <AuthProvider>
-      <SystemSettingsProvider>
-        <Router
-          future={{
-            v7_startTransition: true,
-            v7_relativeSplatPath: true,
-          }}
-        >
+    <Router
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true,
+      }}
+    >
+      <AuthProvider>
+        <SystemSettingsProvider>
           <div className="App">
             <Navbar />
             <ScrollToTopOnMount />
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route
                 path="/oauth2/redirect"
                 element={<OAuth2RedirectHandler />}
@@ -94,9 +96,9 @@ function App() {
             <ScrollToTop />
             <SessionTimeoutWarning />
           </div>
-        </Router>
-      </SystemSettingsProvider>
-    </AuthProvider>
+        </SystemSettingsProvider>
+      </AuthProvider>
+    </Router>
   );
 }
 
