@@ -1,6 +1,5 @@
 package group6.Swp391.Se1861.SchoolMedicalManagementSystem.controller;
 
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.ConsultationDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.HealthCheckResultDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.HealthCheckResult;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.Student;
@@ -52,26 +51,6 @@ public class HealthCheckResultController {
 
         return ResponseEntity.ok(Map.of(
             "message", "Health check result recorded successfully",
-            "result", result
-        ));
-    }
-
-    @PostMapping("/{resultId}/consultation")
-    @PreAuthorize("hasRole('SCHOOLNURSE')")
-    public ResponseEntity<?> scheduleConsultation(@PathVariable Long resultId,
-                                                 @RequestBody ConsultationDTO dto) {
-        HealthCheckResult result = resultService.scheduleConsultation(
-            resultId,
-            dto.getConsultationDate(),
-            dto.getConsultationTime(),
-            dto.getConsultationLocation(),
-            dto.isOnline(),
-            dto.getMeetingLink(),
-            dto.getMeetingPassword()
-        );
-
-        return ResponseEntity.ok(Map.of(
-            "message", "Consultation scheduled successfully",
             "result", result
         ));
     }
@@ -188,13 +167,6 @@ public class HealthCheckResultController {
     public ResponseEntity<?> getResultsByStatus(@PathVariable String status) {
         ResultStatus resultStatus = ResultStatus.valueOf(status.toUpperCase());
         List<HealthCheckResult> results = resultService.getResultsByStatus(resultStatus);
-        return ResponseEntity.ok(results);
-    }
-
-    @GetMapping("/consultation-required")
-    @PreAuthorize("hasAnyRole('SCHOOLNURSE', 'MANAGER')")
-    public ResponseEntity<?> getResultsRequiringConsultation() {
-        List<HealthCheckResult> results = resultService.getResultsRequiringConsultation();
         return ResponseEntity.ok(results);
     }
 

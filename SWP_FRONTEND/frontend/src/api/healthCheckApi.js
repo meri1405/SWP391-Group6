@@ -201,17 +201,6 @@ export const healthCheckApi = {
       throw error;
     }
   },
-  
-  // Schedule consultation for a result
-  scheduleConsultation: async (resultId, consultationData) => {
-    try {
-      const response = await healthCheckApiClient.post(`/health-check/results/${resultId}/consultation`, consultationData);
-      return response.data;
-    } catch (error) {
-      console.error(`Error scheduling consultation for result ${resultId}:`, error);
-      throw error;
-    }
-  },
 
   // Get eligible students with flexible filtering (supports single/multiple classes, with/without age range)
   getEligibleStudentsWithFilters: async (campaignId, filters = {}) => {
@@ -374,16 +363,6 @@ export const healthCheckApi = {
       return response.data;
     } catch (error) {
       console.error(`Error fetching results with status ${status}:`, error);
-      throw error;
-    }
-  },
-
-  getResultsRequiringConsultation: async () => {
-    try {
-      const response = await healthCheckApiClient.get('/health-check/results/consultation-required');
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching results requiring consultation:', error);
       throw error;
     }
   },

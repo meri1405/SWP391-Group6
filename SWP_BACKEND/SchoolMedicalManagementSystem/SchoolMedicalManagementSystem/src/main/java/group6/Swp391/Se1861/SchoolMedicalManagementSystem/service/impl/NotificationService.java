@@ -556,35 +556,7 @@ public class NotificationService implements INotificationService {
         // Send WebSocket notification
         sendWebSocketNotification(savedNotification);
     }
-
-    /**
-     * Notify parent about consultation
-     */
-    @Transactional
-    @Override
-    public void notifyParentAboutConsultation(HealthCheckResult result) {
-        User parent = result.getStudent().getParent();
-        if (parent == null) {
-            return; // No parent to notify
-        }
-
-        String location = result.getIsOnline() != null && result.getIsOnline() ?
-                "Cuộc họp trực tuyến (liên kết đã được gửi) " : result.getConsultationLocation();
-
-        Notification notification = new Notification();
-        notification.setTitle("LỊCH TƯ VẤN SỨC KHỎE");
-        notification.setMessage("Một cuộc tư vấn đã được lên lịch cho " + result.getStudent().getFullName() +
-                " vào " + result.getConsultationDate() + " lúc " + result.getConsultationTime() +
-                ". Địa điểm: " + location);
-        notification.setNotificationType("CONSULTATION_SCHEDULED");
-        notification.setRecipient(parent);
-
-        Notification savedNotification = notificationRepository.save(notification);
-
-        // Send WebSocket notification
-        sendWebSocketNotification(savedNotification);
-    }
-
+    
     /**
      * Notify parent about appointment scheduling
      */

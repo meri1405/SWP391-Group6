@@ -17,7 +17,7 @@ import {
 } from "antd";
 import { CheckOutlined, CloseOutlined, EyeOutlined } from "@ant-design/icons";
 import { managerVaccinationApi } from "../../api/vaccinationCampaignApi";
-import "../../styles/AdminDashboard.css";
+import "../../styles/ManagerVaccination.css";
 
 const { TextArea } = Input;
 const { Title, Text } = Typography;
@@ -191,7 +191,7 @@ const ManagerVaccinationManagement = () => {
       title: "Tên chiến dịch",
       dataIndex: "name",
       key: "name",
-      width: "25%",
+      width: "20%",
       render: (text) => (
         <Text
           strong
@@ -259,13 +259,13 @@ const ManagerVaccinationManagement = () => {
       title: "Người duyệt",
       dataIndex: "approvedByName",
       key: "approvedByName",
-      width: "12%",
+      width: "15%",
       render: (text) => text || "Chưa duyệt",
     },
     {
       title: "Thao tác",
       key: "actions",
-      width: "12%",
+      width: "15%",
       render: (_, record) => (
         <Space>
           <Button

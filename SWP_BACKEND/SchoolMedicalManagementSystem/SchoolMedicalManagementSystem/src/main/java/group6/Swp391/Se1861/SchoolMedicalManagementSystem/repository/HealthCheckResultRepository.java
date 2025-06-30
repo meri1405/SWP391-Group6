@@ -27,8 +27,6 @@ public interface HealthCheckResultRepository extends JpaRepository<HealthCheckRe
 
     List<HealthCheckResult> findByStatus(ResultStatus status);
 
-    List<HealthCheckResult> findByConsultationRequired(boolean consultationRequired);
-
     @Query("SELECT r FROM HealthCheckResult r WHERE r.form.campaign.id = :campaignId")
     List<HealthCheckResult> findByCampaignId(Long campaignId);
 

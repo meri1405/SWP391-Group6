@@ -3,12 +3,6 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Layout,
   Menu,
-  Card,
-  Row,
-  Col,
-  Statistic,
-  Avatar,
-  Typography,
   Badge,
   notification,
 } from "antd";
@@ -17,11 +11,9 @@ import {
   CalendarOutlined,
   MedicineBoxOutlined,
   BellOutlined,
-  FileTextOutlined,
   TeamOutlined,
   DashboardOutlined,
 } from "@ant-design/icons";
-import ConsultationsSection from "../components/dashboard/ConsultationsSection";
 import ManagerVaccinationManagement from "../components/dashboard/ManagerVaccinationManagement";
 import ManagerHealthCheckManagement from "../components/dashboard/ManagerHealthCheckManagement";
 import ManagerOverview from "../components/dashboard/ManagerOverview";
@@ -156,7 +148,6 @@ const ManagerDashboard = () => {
         "overview",
         "notifications", 
         "students",
-        "consultations",
         "health-checks",
         "vaccinations",
         "events",
@@ -188,11 +179,6 @@ const ManagerDashboard = () => {
       key: "students",
       icon: <UserOutlined />,
       label: "Học sinh",
-    },
-    {
-      key: "consultations",
-      icon: <UserOutlined />,
-      label: "Tư vấn sức khỏe",
     },
     {
       key: "health-checks",
@@ -233,8 +219,6 @@ const ManagerDashboard = () => {
         return <Notifications role="manager" />;
       case "students":
         return <StudentsSection />;
-      case "consultations":
-        return <ConsultationsSection />;
       case "health-checks":
         return <ManagerHealthCheckManagement />;
       case "vaccinations":

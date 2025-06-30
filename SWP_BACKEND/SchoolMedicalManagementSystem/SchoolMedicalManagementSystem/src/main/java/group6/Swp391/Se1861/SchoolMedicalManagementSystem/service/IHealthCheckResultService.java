@@ -6,7 +6,6 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.HealthCheckCategory;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.ResultStatus;
 
-import java.time.LocalDate;
 import java.util.List;
 
 public interface IHealthCheckResultService {
@@ -18,10 +17,6 @@ public interface IHealthCheckResultService {
     Long syncResultWithCategoryTable(HealthCheckCategory category,
                                      HealthCheckResult result,
                                      HealthProfile healthProfile);
-
-    HealthCheckResult scheduleConsultation(Long resultId, LocalDate consultationDate,
-                                           String consultationTime, String consultationLocation,
-                                           boolean isOnline, String meetingLink, String meetingPassword);
 
     HealthCheckResult markAsNotified(Long resultId, boolean parent, boolean manager);
 
@@ -40,8 +35,6 @@ public interface IHealthCheckResultService {
     List<HealthCheckResult> getAbnormalResults();
 
     List<HealthCheckResult> getResultsByStatus(ResultStatus status);
-
-    List<HealthCheckResult> getResultsRequiringConsultation();
 
     List<HealthCheckResult> getResultsByCampaign(Long campaignId);
 

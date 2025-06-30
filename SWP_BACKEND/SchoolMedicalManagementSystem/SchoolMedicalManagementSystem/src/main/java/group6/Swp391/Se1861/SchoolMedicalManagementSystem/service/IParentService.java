@@ -1,7 +1,6 @@
 package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.ParentDTO;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.ParentCreationDTO;
 
 import java.util.List;
 
