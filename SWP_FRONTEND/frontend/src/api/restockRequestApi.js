@@ -34,15 +34,22 @@ export const restockRequestApi = {
   },
   
   // Notify all subscribers
-  notifySubscribers: () => {
-    console.log(`[RestockRequestApi] Notifying ${subscribers.length} subscribers`);
-    subscribers.forEach(callback => {
+  notifySubscribers: async () => {
+    console.log(`[WebSocketService] Notifying ${subscribers.length} restock request listeners`);
+    
+    // Execute callbacks sequentially to ensure all operations complete
+    for (const callback of subscribers) {
       try {
-        callback();
+        // Check if callback returns a promise
+        const result = callback();
+        if (result && typeof result.then === 'function') {
+          await result;
+        }
       } catch (error) {
-        console.error('[RestockRequestApi] Error in subscriber callback:', error);
+        console.error('[WebSocketService] Error in subscriber callback:', error);
+        // Continue with other subscribers even if one fails
       }
-    });
+    }
   },
 
   // Get all restock requests
@@ -230,6 +237,61 @@ export const restockRequestApi = {
       return response.data;
     } catch (error) {
       console.error(`Error completing restock request ${requestId}:`, error);
+      throw error;
+    }
+  },
+
+  // Extended restock request endpoints
+  // Get extended restock request by id
+  // THIS ENDPOINT ALLOWS SCHOOL NURSE AND MANAGER ACCESS THIS API
+  getExtendedRestockRequestById: async (requestId) => {
+    try {
+      const response = await axios.get(`${BASE_URL}/${requestId}/extended`);
+      return response.data;
+    } catch (error){
+      console.error(`Error fetching extended restock request with id ${requestId}:`, error);
+      throw error;
+    }
+  },
+
+  // Create extended restock request
+  // THIS ENDPOINT ALLOWS SCHOOL NURSE ACCESS THIS API
+  createExtendedRestockRequest: async (requestData) => {
+    try {
+      console.log('[RestockRequestApi] Creating new extended restock request');
+      const response = await axios.post(`${BASE_URL}/extended`, requestData);
+      console.log('[RestockRequestApi] Extended request created successfully, notifying subscribers');
+      
+      // Notify subscribers about the new request
+      await restockRequestApi.notifySubscribers();
+      
+      return response.data;
+    } catch (error){
+      console.error(`Error creating extended restock request:`, error);
+      throw error;
+    }
+  },
+
+  // Add new supply to request
+  // THIS ENDPOINT ALLOWS SCHOOL NURSE ACCESS THIS API
+  addNewSupplyToRequest: async (requestId, extendedRequestData) => {
+    try {
+      const response = await axios.post(`${BASE_URL}/${requestId}/items/new-supply`, extendedRequestData);
+      return response.data;
+    } catch (error){
+      console.error(`Error adding new supply to extended restock request ${requestId}:`, error);
+      throw error;
+    }
+  },
+
+  // Add expired supply to request
+  // THIS ENDPOINT ALLOWS SCHOOL NURSE ACCESS THIS API
+  addExpiredSupplyToRequest: async (requestId, extendedRequestData) => {
+    try {
+      const response = await axios.post(`${BASE_URL}/${requestId}/items/expired-supply`, extendedRequestData);
+      return response.data;
+    } catch (error){
+      console.error(`Error adding expired supply to extended restock request ${requestId}:`, error);
       throw error;
     }
   }

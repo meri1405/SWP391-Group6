@@ -1,10 +1,12 @@
-const API_BASE_URL = "http://localhost:8080/api";
+const API_BASE_URL = "/api";
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem("token");
   
   if (!token) {
     console.warn("No token found in localStorage");
+  } else {
+    console.log("Getting auth headers for unit conversions, token:", token ? "exists" : "missing");
   }
 
   return {

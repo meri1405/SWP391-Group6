@@ -22,7 +22,7 @@ public class UnitConversionController {
     private final IUnitConversionService unitConversionService;
     
     @GetMapping
-    @PreAuthorize("hasRole('MANAGER')")
+    @PreAuthorize("hasRole('MANAGER') or hasRole('SCHOOLNURSE')")
     public ResponseEntity<List<UnitConversionDTO>> getAllUnitConversions() {
         try {
             List<UnitConversionDTO> conversions = unitConversionService.getAllUnitConversions();
@@ -66,7 +66,7 @@ public class UnitConversionController {
     }
     
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('MANAGER')")
+    @PreAuthorize("hasRole('MANAGER') or hasRole('SCHOOLNURSE')")
     public ResponseEntity<UnitConversionDTO> getUnitConversionById(@PathVariable Long id) {
         try {
             return unitConversionService.getUnitConversionById(id)
@@ -78,7 +78,7 @@ public class UnitConversionController {
     }
     
     @PostMapping
-    @PreAuthorize("hasRole('MANAGER')")
+    @PreAuthorize("hasRole('MANAGER') or hasRole('SCHOOLNURSE')")
     public ResponseEntity<UnitConversionDTO> createUnitConversion(@Valid @RequestBody UnitConversionDTO unitConversionDTO) {
         try {
             UnitConversionDTO createdConversion = unitConversionService.createUnitConversion(unitConversionDTO);
@@ -91,7 +91,7 @@ public class UnitConversionController {
     }
     
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('MANAGER')")
+    @PreAuthorize("hasRole('MANAGER') or hasRole('SCHOOLNURSE')")
     public ResponseEntity<UnitConversionDTO> updateUnitConversion(
             @PathVariable Long id, 
             @Valid @RequestBody UnitConversionDTO unitConversionDTO) {
@@ -106,7 +106,7 @@ public class UnitConversionController {
     }
     
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('MANAGER')")
+    @PreAuthorize("hasRole('MANAGER') or hasRole('SCHOOLNURSE')")
     public ResponseEntity<Void> deleteUnitConversion(@PathVariable Long id) {
         try {
             unitConversionService.deleteUnitConversion(id);
@@ -119,7 +119,7 @@ public class UnitConversionController {
     }
     
     @PutMapping("/{id}/enable")
-    @PreAuthorize("hasRole('MANAGER')")
+    @PreAuthorize("hasRole('MANAGER') or hasRole('SCHOOLNURSE')")
     public ResponseEntity<Void> enableUnitConversion(@PathVariable Long id) {
         try {
             unitConversionService.enableUnitConversion(id);
@@ -132,7 +132,7 @@ public class UnitConversionController {
     }
     
     @PutMapping("/{id}/disable")
-    @PreAuthorize("hasRole('MANAGER')")
+    @PreAuthorize("hasRole('MANAGER') or hasRole('SCHOOLNURSE')")
     public ResponseEntity<Void> disableUnitConversion(@PathVariable Long id) {
         try {
             unitConversionService.disableUnitConversion(id);
@@ -194,7 +194,7 @@ public class UnitConversionController {
     }
     
     @PostMapping("/seed-defaults")
-    @PreAuthorize("hasRole('MANAGER')")
+    @PreAuthorize("hasRole('MANAGER') or hasRole('SCHOOLNURSE')")
     public ResponseEntity<Map<String, String>> seedDefaultConversions() {
         try {
             unitConversionService.seedDefaultConversions();
