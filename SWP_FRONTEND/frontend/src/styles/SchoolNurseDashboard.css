@@ -221,49 +221,33 @@
 
 /* Profile Content Grid */
 .nurse-profile-content-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-direction: column;
   gap: 24px;
-  margin-top: 30px;
+  max-width: 100%;
+  margin: 0 auto;
 }
 
 .nurse-profile-card {
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  border: 1px solid #f0f0f0;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   overflow: hidden;
-  transition: all 0.3s ease;
-}
-
-.nurse-profile-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
-}
-
-.nurse-profile-card-full {
-  grid-column: 1 / -1;
+  width: 100%;
 }
 
 .nurse-profile-card-header {
-  background: linear-gradient(135deg, #f8fafb 0%, #f0f4f8 100%);
-  padding: 20px 24px;
-  border-bottom: 1px solid #e8eef5;
+  padding: 16px 24px;
+  border-bottom: 1px solid #f0f0f0;
 }
 
 .nurse-profile-card-header h3 {
   margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: #1a202c;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.nurse-profile-card-header h3 .anticon {
   color: #1976d2;
   font-size: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .nurse-profile-card-content {
@@ -273,8 +257,9 @@
 /* Form Grid */
 .nurse-profile-form-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+  width: 100%;
 }
 
 .nurse-form-group {
@@ -288,59 +273,19 @@
 }
 
 .nurse-form-group label {
-  font-size: 14px;
-  font-weight: 600;
-  color: #374151;
+  font-weight: 500;
+  color: #666;
   display: flex;
   align-items: center;
-  gap: 6px;
-}
-
-.nurse-form-group label .anticon {
-  color: #1976d2;
-  font-size: 14px;
-}
-
-.nurse-required {
-  color: #ef4444;
-  margin-left: 2px;
-}
-
-.nurse-input {
-  padding: 12px 16px;
-  border: 2px solid #e5e7eb;
-  border-radius: 8px;
-  font-size: 14px;
-  transition: all 0.3s ease;
-  background: #fafbfc;
-}
-
-.nurse-input:focus {
-  outline: none;
-  border-color: #1976d2;
-  background: white;
-  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
-}
-
-.nurse-input:hover {
-  border-color: #9ca3af;
-  background: white;
-}
-
-.nurse-textarea {
-  resize: vertical;
-  min-height: 80px;
-  font-family: inherit;
+  gap: 8px;
 }
 
 .nurse-form-value {
-  padding: 12px 16px;
-  background: #f8fafc;
-  border: 2px solid #e2e8f0;
-  border-radius: 8px;
-  color: #1a202c;
-  font-size: 14px;
-  min-height: 44px;
+  padding: 8px 12px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  color: #333;
+  min-height: 40px;
   display: flex;
   align-items: center;
 }
@@ -541,166 +486,106 @@
 /* Profile Styles - từ Parent Dashboard */
 .nurse-profile-container {
   padding: 24px;
-  background: #f5f5f5;
-  min-height: 100vh;
+  background: #f4f6fb;
 }
 
 .nurse-profile-header {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 16px;
-  padding: 32px;
-  margin-bottom: 24px;
-  color: white;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  margin-top: 100px;
 }
 
 .nurse-profile-header-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 20px;
+  background: #fff;
+  border-radius: 8px;
+  margin-bottom: 24px;
   overflow: hidden;
-  margin-bottom: 30px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-  position: relative;
 }
 
 .nurse-profile-background {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, #1976d2 0%, #42a5f5 50%, #64b5f6 100%);
-}
-
-.nurse-profile-background-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(45deg, rgba(255, 255, 255, 0.1) 25%, transparent 25%),
-              linear-gradient(-45deg, rgba(255, 255, 255, 0.1) 25%, transparent 25%),
-              linear-gradient(45deg, transparent 75%, rgba(255, 255, 255, 0.1) 75%),
-              linear-gradient(-45deg, transparent 75%, rgba(255, 255, 255, 0.1) 75%);
-  background-size: 30px 30px;
-  background-position: 0 0, 0 15px, 15px -15px, -15px 0px;
-  opacity: 0.3;
-}
-
-.nurse-profile-background-pattern {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 200px;
-  height: 200px;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 2px, transparent 2px);
-  background-size: 20px 20px;
+  height: 120px;
+  background: linear-gradient(135deg, #1976d2 0%, #64b5f6 100%);
 }
 
 .nurse-profile-header-content {
-  position: relative;
-  z-index: 2;
-  padding: 40px;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  color: white;
+  padding: 24px;
+  background: linear-gradient(135deg, #1976d2 0%, #64b5f6 100%);
+  color: #fff;
 }
 
 .nurse-profile-avatar-section {
   display: flex;
-  gap: 30px;
-  align-items: flex-start;
+  align-items: center;
+  gap: 24px;
 }
 
 .nurse-profile-avatar-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 15px;
+  flex-shrink: 0;
 }
 
 .nurse-profile-avatar-wrapper {
-  position: relative;
   width: 120px;
   height: 120px;
   border-radius: 50%;
-  border: 4px solid rgba(255, 255, 255, 0.3);
-  overflow: hidden;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  transition: all 0.3s ease;
+  background: #fff;
+  padding: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  position: relative;
 }
 
-.nurse-profile-avatar-wrapper:hover {
-  transform: scale(1.05);
-  border-color: rgba(255, 255, 255, 0.5);
-}
-
-.nurse-profile-avatar-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
+.nurse-profile-avatar-image,
 .nurse-profile-avatar-placeholder {
   width: 100%;
   height: 100%;
+  border-radius: 50%;
+  background: #f0f2f5;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 48px;
-  color: rgba(255, 255, 255, 0.8);
-}
-
-.nurse-avatar-upload-overlay {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 36px;
-  height: 36px;
-  background: #1976d2;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  cursor: pointer;
-  border: 3px solid white;
-  transition: all 0.3s ease;
-}
-
-.nurse-avatar-upload-overlay:hover {
-  background: #1565c0;
-  transform: scale(1.1);
-}
-
-.nurse-profile-status-badge {
-  background: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(10px);
-  border-radius: 20px;
-  padding: 8px 16px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #1976d2;
 }
 
 .nurse-profile-info-section {
-  flex: 1;
-  max-width: 500px;
+  flex-grow: 1;
 }
 
 .nurse-profile-name-container {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .nurse-profile-name {
-  font-size: 32px;
-  font-weight: 700;
   margin: 0;
-  color: white;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  font-size: 24px;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.nurse-profile-role {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #fff;
+  opacity: 0.9;
+  font-weight: 500;
+  margin: 0 0 16px;
+}
+
+.nurse-profile-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.nurse-profile-detail-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #fff;
+  opacity: 0.9;
+}
+
+.nurse-profile-detail-item .anticon {
+  opacity: 0.8;
 }
 
 .nurse-profile-verified {
@@ -713,39 +598,6 @@
   font-size: 12px;
   font-weight: 500;
   border: 1px solid rgba(76, 175, 80, 0.3);
-}
-
-.nurse-profile-role {
-  font-size: 18px;
-  font-weight: 500;
-  margin: 15px 0;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.nurse-profile-details {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin: 20px 0;
-}
-
-.nurse-profile-detail-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.8);
-}
-
-.nurse-profile-employee-id {
-  background: rgba(255, 255, 255, 0.1);
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
 }
 
 .nurse-profile-completion-container {

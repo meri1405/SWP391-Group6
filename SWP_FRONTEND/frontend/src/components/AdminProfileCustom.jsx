@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { Card, Button, Tag, Spin, message, Upload } from "antd";
+import { Card, Button, Tag, Spin, message } from "antd";
 import {
   UserOutlined,
   EditOutlined,
   CloseOutlined,
-  UploadOutlined,
   SettingOutlined,
   MailOutlined,
   PhoneOutlined,
@@ -18,9 +17,6 @@ import "../styles/AdminProfileCustom.css";
 const AdminProfileCustom = ({ userInfo: initialUserInfo, onProfileUpdate }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [avatarUrl, setAvatarUrl] = useState(null);
-  const [previewVisible, setPreviewVisible] = useState(false);
-  const [previewImage, setPreviewImage] = useState("");
   const [adminProfile, setAdminProfile] = useState(null);
   const [formData, setFormData] = useState({
     firstName: "",
@@ -188,41 +184,6 @@ const AdminProfileCustom = ({ userInfo: initialUserInfo, onProfileUpdate }) => {
     }
   };
 
-  const beforeUpload = (file) => {
-    const isJpgOrPng = file.type === "image/jpeg" || file.type === "image/png";
-    if (!isJpgOrPng) {
-      message.error("Chỉ có thể upload file JPG/PNG!");
-    }
-    const isLt2M = file.size / 1024 / 1024 < 2;
-    if (!isLt2M) {
-      message.error("Ảnh phải nhỏ hơn 2MB!");
-    }
-    return isJpgOrPng && isLt2M;
-  };
-
-  const handleAvatarChange = (info) => {
-    if (info.file.status === "uploading") {
-      setLoading(true);
-      return;
-    }
-    if (info.file.status === "done") {
-      setAvatarUrl(info.file.response?.url);
-      setLoading(false);
-    }
-  };
-
-  const handlePreview = async (file) => {
-    if (!file.url && !file.preview) {
-      file.preview = await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file.originFileObj);
-        reader.onload = () => resolve(reader.result);
-      });
-    }
-    setPreviewImage(file.url || file.preview);
-    setPreviewVisible(true);
-  };
-
   // Show loading spinner while fetching data
   if (loading && !adminProfile) {
     return (
@@ -277,16 +238,12 @@ const AdminProfileCustom = ({ userInfo: initialUserInfo, onProfileUpdate }) => {
           <div className="admin-profile-combined-section">
             <div className="admin-profile-avatar-section">
               <div className="admin-profile-avatar-large">
-                {avatarUrl ? (
-                  <img src={avatarUrl} alt="Avatar" />
-                ) : (
-                  <div className="admin-avatar-placeholder">
-                    <UserOutlined style={{ fontSize: 48 }} />
-                  </div>
-                )}
+                <div className="admin-avatar-placeholder">
+                  <UserOutlined style={{ fontSize: 48 }} />
+                </div>
               </div>
               {isEditing && (
-                <Button icon={<UploadOutlined />} size="small">
+                <Button icon={<EditOutlined />} size="small" disabled>
                   Đổi ảnh
                 </Button>
               )}

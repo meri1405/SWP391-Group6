@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Layout, Menu, Breadcrumb, Spin, message, notification } from "antd";
 import { useAuth } from "../contexts/AuthContext";
@@ -14,9 +14,7 @@ import {
   Space,
   Popconfirm,
   Card,
-  Divider,
-  DatePicker,
-  Upload,
+  DatePicker
 } from "antd";
 import {
   TeamOutlined,
@@ -24,7 +22,6 @@ import {
   SettingOutlined,
   EyeOutlined,
   EditOutlined,
-  DeleteOutlined,
   PlusOutlined,
   CloseOutlined,
   SaveOutlined,
@@ -45,7 +42,6 @@ import "../styles/AdminDashboard.css";
 import {
   getAllUsers,
   createUser,
-  updateUser,
   toggleUserStatus,
   getAdminProfile,
   updateAdminProfile,
@@ -56,29 +52,6 @@ import AdminProfileCustom from "../components/AdminProfileCustom";
 const { Header, Sider, Content } = Layout;
 
 // Validation helper functions
-const validateVietnamesePhoneNumber = (phone) => {
-  const phoneRegex = /^(0[3|5|7|8|9])[0-9]{8}$/;
-  return phoneRegex.test(phone);
-};
-
-const validateVietnameseName = (name) => {
-  const nameRegex = /^[a-zA-ZÀ-ỹ\s]+$/;
-  return nameRegex.test(name) && name.trim() === name && !/\s{2,}/.test(name);
-};
-
-const validateEmail = (email) => {
-  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-  return emailRegex.test(email) && !email.includes(" ");
-};
-
-const validateUsername = (username) => {
-  const usernameRegex = /^[a-zA-Z][a-zA-Z0-9_]*$/;
-  return (
-    usernameRegex.test(username) &&
-    username.length >= 3 &&
-    username.length <= 30
-  );
-};
 
 const validatePassword = (password) => {
   if (!password) return false;
@@ -166,7 +139,6 @@ const UserManagement = ({
   selectedUser,
   handleSaveUser,
   userFormInstance,
-  handleRoleChange,
   selectedRoleForNewUser,
   setSelectedRoleForNewUser,
   handleRoleSelection,
@@ -1152,9 +1124,9 @@ const UserManagement = ({
 const AdminProfile = ({ userInfo: initialUserInfo, onProfileUpdate }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [avatarUrl, setAvatarUrl] = useState(null);
+  const [avatarUrl] = useState(null);  // Removed setAvatarUrl since it's unused
   const [previewVisible, setPreviewVisible] = useState(false);
-  const [previewImage, setPreviewImage] = useState("");
+  const [previewImage] = useState("");  // Removed setPreviewImage since it's unused
   const [adminProfile, setAdminProfile] = useState(null);
   const [formData, setFormData] = useState({
     firstName: "",
@@ -1320,41 +1292,6 @@ const AdminProfile = ({ userInfo: initialUserInfo, onProfileUpdate }) => {
         [name]: "",
       }));
     }
-  };
-
-  const beforeUpload = (file) => {
-    const isJpgOrPng = file.type === "image/jpeg" || file.type === "image/png";
-    if (!isJpgOrPng) {
-      message.error("Chỉ có thể upload file JPG/PNG!");
-    }
-    const isLt2M = file.size / 1024 / 1024 < 2;
-    if (!isLt2M) {
-      message.error("Ảnh phải nhỏ hơn 2MB!");
-    }
-    return isJpgOrPng && isLt2M;
-  };
-
-  const handleAvatarChange = (info) => {
-    if (info.file.status === "uploading") {
-      setLoading(true);
-      return;
-    }
-    if (info.file.status === "done") {
-      setAvatarUrl(info.file.response?.url);
-      setLoading(false);
-    }
-  };
-
-  const handlePreview = async (file) => {
-    if (!file.url && !file.preview) {
-      file.preview = await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file.originFileObj);
-        reader.onload = () => resolve(reader.result);
-      });
-    }
-    setPreviewImage(file.url || file.preview);
-    setPreviewVisible(true);
   };
 
   // Show loading spinner while fetching data
@@ -1801,8 +1738,18 @@ const AdminDashboard = () => {
   const [collapsed, setCollapsed] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterRole, setFilterRole] = useState("all");
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [modalMode, setModalMode] = useState("add");
+  const [selectedRoleForNewUser, setSelectedRoleForNewUser] = useState("");
+  const [users, setUsers] = useState([]);
+  const [userFormInstance] = Form.useForm();
+  const [isUserFormMounted, setIsUserFormMounted] = useState(false);
 
-  // Antd v5 notification context
+  const { user, isAuthenticated, isStaff } = useAuth();
   const [api, contextHolder] = notification.useNotification();
 
   // Configure notification placement and style
@@ -1811,91 +1758,68 @@ const AdminDashboard = () => {
     notification.config({
       placement: "topRight",
       duration: 4.5,
-      top: 90, // Account for header height
-      maxCount: 1, // Only show 1 notification at a time to avoid overlap
-      getContainer: () => {
-        console.log("Notification getContainer called");
-        return document.body;
-      },
+      top: 90,
+      maxCount: 1,
+      getContainer: () => document.body,
     });
 
-    // Configure message component for better display
     message.config({
-      top: 100, // Position from top
+      top: 100,
       duration: 3,
       maxCount: 3,
-      getContainer: () => {
-        console.log("Message getContainer called");
-        return document.body;
-      },
+      getContainer: () => document.body,
     });
-
-    console.log("Notification and message configured");
-
-    // Test multiple notification positions
-    // No test notifications on component mount
   }, []);
 
-  // Helper function to translate role names to Vietnamese
-  const getRoleNameInVietnamese = (role) => {
-    switch (role) {
-      case "ADMIN":
-        return "Quản trị viên";
-      case "MANAGER":
-        return "Quản lý";
-      case "SCHOOLNURSE":
-        return "Y tá";
-      default:
-        return role;
+  // Define functions before they're used in useEffects
+  const resetUserForm = useCallback(() => {
+    console.log("Resetting user form...");
+
+    if (!isUserFormMounted || !userFormInstance) {
+      console.warn("Form not ready yet, skipping reset");
+      return;
     }
-  };
 
-  // Missing state variables being added
-  const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterRole, setFilterRole] = useState("all");
-  const [showUserModal, setShowUserModal] = useState(false);
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [modalMode, setModalMode] = useState("add"); // "add", "edit", "view"
-  const [selectedRoleForNewUser, setSelectedRoleForNewUser] = useState(""); // New state for role selection
-  const [users, setUsers] = useState([]);
-  const [stats, setStats] = useState({
-    totalUsers: 0,
-    totalParents: 0,
-    totalStudents: 0,
-  });
+    try {
+      userFormInstance.resetFields();
 
-  // Ant Design form instances
-  const [userFormInstance] = Form.useForm();
-  const [isUserFormMounted, setIsUserFormMounted] = useState(false);
+      setTimeout(() => {
+        if (userFormInstance && isUserFormMounted) {
+          try {
+            const initialValues = {
+              role: "SCHOOLNURSE",
+              username: "",
+              password: "",
+              email: "",
+              jobTitle: "",
+              firstName: "",
+              lastName: "",
+              phone: "",
+              address: "",
+              gender: undefined,
+              dob: null,
+              status: "ACTIVE",
+            };
 
-  const { user, isAuthenticated, isStaff } = useAuth();
+            userFormInstance.setFieldsValue(initialValues);
+            console.log("User form reset with proper initial values");
+          } catch (setError) {
+            console.warn("Error setting form values:", setError);
+          }
+        }
+      }, 50);
+    } catch (error) {
+      console.warn("Error resetting form:", error);
+    }
+  }, [isUserFormMounted, userFormInstance]);
 
-  // Function to fetch/refresh users data
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     if (isAuthenticated && isStaff()) {
       try {
         setLoading(true);
         const data = await getAllUsers();
-
-        // Ensure data is an array
         const usersArray = Array.isArray(data) ? data : [];
         setUsers(usersArray);
-
-        // Calculate stats
-        const totalUsers = usersArray.length;
-        const totalParents = usersArray.filter(
-          (u) => u.roleName === "PARENT"
-        ).length;
-        const totalStudents = usersArray.filter(
-          (u) => u.roleName === "STUDENT"
-        ).length;
-
-        setStats({
-          totalUsers,
-          totalParents,
-          totalStudents,
-        });
         setLoading(false);
       } catch (error) {
         console.error("Failed to fetch users:", error);
@@ -1903,15 +1827,14 @@ const AdminDashboard = () => {
         setLoading(false);
       }
     }
-  };
+  }, [isAuthenticated, isStaff, setLoading, setUsers]);
 
-  // Load users from API
+  // useEffects that depend on the above functions
   useEffect(() => {
     fetchUsers();
-  }, [isAuthenticated, isStaff]);
+  }, [fetchUsers]);
 
   useEffect(() => {
-    // Redirect if not authenticated or not an admin
     if (!isAuthenticated) {
       navigate("/login");
       return;
@@ -1923,9 +1846,32 @@ const AdminDashboard = () => {
       return;
     }
 
-    // Set user info from auth context
     setUserInfo(user);
   }, [navigate, isAuthenticated, isStaff, user]);
+
+  useEffect(() => {
+    if (showUserModal && modalMode === "add") {
+      const timer = setTimeout(() => {
+        setIsUserFormMounted(true);
+      }, 100);
+
+      return () => {
+        clearTimeout(timer);
+      };
+    } else {
+      setIsUserFormMounted(false);
+    }
+  }, [showUserModal, modalMode]);
+
+  useEffect(() => {
+    if (isUserFormMounted && modalMode === "add" && !selectedRoleForNewUser) {
+      const timer = setTimeout(() => {
+        resetUserForm();
+      }, 200);
+
+      return () => clearTimeout(timer);
+    }
+  }, [isUserFormMounted, modalMode, selectedRoleForNewUser, resetUserForm]);
 
   // Effect to handle form mounting when modal is shown
   useEffect(() => {
@@ -1955,7 +1901,7 @@ const AdminDashboard = () => {
 
       return () => clearTimeout(timer);
     }
-  }, [isUserFormMounted, modalMode, selectedRoleForNewUser]);
+  }, [isUserFormMounted, modalMode, selectedRoleForNewUser, resetUserForm]);
 
   // Separate useEffect to handle URL parameter changes
   useEffect(() => {
@@ -1982,53 +1928,6 @@ const AdminDashboard = () => {
   };
 
   // User Management Functions
-  const resetUserForm = () => {
-    console.log("Resetting user form...");
-
-    // Only proceed if form is mounted and instance exists
-    if (!isUserFormMounted || !userFormInstance) {
-      console.warn("Form not ready yet, skipping reset");
-      return;
-    }
-
-    // Use a more reliable approach - wrap all form operations in try-catch
-    // and don't test the form connection beforehand
-    try {
-      // Reset the form first
-      userFormInstance.resetFields();
-
-      // Set initial default values after a short delay
-      setTimeout(() => {
-        if (userFormInstance && isUserFormMounted) {
-          try {
-            const initialValues = {
-              role: "SCHOOLNURSE",
-              username: "",
-              password: "",
-              email: "",
-              jobTitle: "",
-              firstName: "",
-              lastName: "",
-              phone: "",
-              address: "",
-              gender: undefined,
-              dob: null,
-              status: "ACTIVE",
-            };
-
-            userFormInstance.setFieldsValue(initialValues);
-            console.log("User form reset with proper initial values");
-          } catch (setError) {
-            console.warn("Error setting form values:", setError);
-          }
-        }
-      }, 50);
-    } catch (error) {
-      console.warn("Error resetting form:", error);
-    }
-  };
-
-  // Handle role change to clear irrelevant fields
   const handleRoleChange = (newRole, form) => {
     console.log("Role changed to:", newRole);
 
@@ -2264,13 +2163,6 @@ const AdminDashboard = () => {
             const updatedUsers = [...prev, formattedNewUser];
             console.log("Updated users list:", updatedUsers);
             return updatedUsers;
-          });
-
-          // Update stats
-          setStats((prev) => {
-            const newStats = { ...prev, totalUsers: prev.totalUsers + 1 };
-            console.log("Updated stats:", newStats);
-            return newStats;
           });
 
           // Clear any existing notifications first to avoid overlapping
