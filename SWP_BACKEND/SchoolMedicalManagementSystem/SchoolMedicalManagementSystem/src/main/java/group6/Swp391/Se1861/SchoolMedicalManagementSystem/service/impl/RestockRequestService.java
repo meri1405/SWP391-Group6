@@ -693,7 +693,7 @@ public class RestockRequestService implements IRestockRequestService {
             
             // Also populate extendedRestockItems for compatibility
             List<ExtendedRestockItemDTO> extendedItemDTOs = restockRequest.getRestockItems().stream()
-                    .map(this::convertToExtendedItemDTO)
+                    .<ExtendedRestockItemDTO>map(this::convertToExtendedItemDTO)
                     .collect(Collectors.toList());
             dto.setExtendedRestockItems(extendedItemDTOs);
         }

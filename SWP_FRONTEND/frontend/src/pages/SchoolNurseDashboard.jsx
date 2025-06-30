@@ -66,6 +66,7 @@ import { MedicalEventManagement } from "../components/dashboard/events";
 // Import the campaign management components
 import VaccinationCampaignManagement from "../components/schoolnurse/vaccinationCampaign/VaccinationCampaignManagement";
 import { HealthCheckCampaignManagement } from "../components/schoolnurse/healthCheck";
+import { nurseApi } from "../api/nurseApi";
 
 ChartJS.register(
   CategoryScale,
@@ -83,7 +84,7 @@ const { Header, Sider, Content } = Layout;
 
 const SchoolNurseDashboard = () => {
   const navigate = useNavigate();
-  const { user, isAuthenticated, isSchoolNurse, setUserInfo } =
+  const { user, isAuthenticated, isSchoolNurse, setUserInfo, refreshSession } =
     useAuth();
   const [activeSection, setActiveSection] = useState("dashboard");
   const [userInfo, setUserInfoState] = useState(null);
@@ -93,30 +94,30 @@ const SchoolNurseDashboard = () => {
   const [api, notificationContextHolder] = notification.useNotification();
 
   // Function to update notification count from API
-  const updateNotificationCount = useCallback(() => {
+  const updateNotificationCount = useCallback(async () => {
     if (!user) return;
     
-    // Fetch unread notification count from the API
-    fetch(`/api/notifications/unread-count?userId=${user.id}`, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("token")}`
+    try {
+      // Refresh session before fetching notifications
+      const refreshResult = await refreshSession();
+      if (!refreshResult) {
+        // Handle silently if session refresh fails
+        return;
       }
-    })
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('Failed to fetch notification count');
-        }
-        return response.json();
-      })
-      .then(data => {
-        setNotificationCount(data.count || 0);
-      })
-      .catch(error => {
-        console.error("Failed to fetch notification count:", error);
-        // Default to 0 on error
-        setNotificationCount(0);
-      });
-  }, [user]);
+      
+      // Use nurseApi instead of direct fetch
+      const data = await nurseApi.getUnreadNotificationCount();
+      setNotificationCount(data.count || 0);
+    } catch (error) {
+      console.error("Failed to fetch notification count:", error);
+      if (error.response?.status === 401) {
+        // Handle unauthorized error silently
+        return;
+      }
+      // Default to 0 on error
+      setNotificationCount(0);
+    }
+  }, [user, refreshSession]);
   
   // Subscribe to restock request notifications
   useEffect(() => {
@@ -147,16 +148,21 @@ const SchoolNurseDashboard = () => {
     
     // Subscribe to restock request updates
     console.log("[SchoolNurseDashboard] Subscribing to restock request updates");
-    const unsubscribe = restockRequestApi.subscribeToUpdates(() => {
+    const unsubscribe = restockRequestApi.subscribeToUpdates(async () => {
       // Update notification count
       console.log("[SchoolNurseDashboard] Received restock request update");
-      updateNotificationCount();
+      try {
+        await refreshSession();
+        await updateNotificationCount();
+      } catch (error) {
+        console.error("[SchoolNurseDashboard] Error handling restock request update:", error);
+      }
     });
     
     // Subscribe to WebSocket notifications if available
     if (user && webSocketService) {
       console.log("[SchoolNurseDashboard] Adding WebSocket message handler");
-      webSocketService.addMessageHandler('nurseNotifications', (notification) => {
+      webSocketService.addMessageHandler('nurseNotifications', async (notification) => {
         console.log("[SchoolNurseDashboard] Received WebSocket notification:", notification);
         
         if (notification.notificationType === 'RESTOCK_REQUEST_APPROVED' || 
@@ -178,7 +184,12 @@ const SchoolNurseDashboard = () => {
           });
           
           // Update notification count
-          updateNotificationCount();
+          try {
+            await refreshSession();
+            await updateNotificationCount();
+          } catch (error) {
+            console.error("[SchoolNurseDashboard] Error updating notification count:", error);
+          }
         }
       });
     }
@@ -190,7 +201,7 @@ const SchoolNurseDashboard = () => {
         webSocketService.removeMessageHandler('nurseNotifications');
       }
     };
-  }, [api, navigate, updateNotificationCount, user]);
+  }, [api, navigate, updateNotificationCount, user, refreshSession]);
 
   // Sample data for the dashboard
   const [stats] = useState({
