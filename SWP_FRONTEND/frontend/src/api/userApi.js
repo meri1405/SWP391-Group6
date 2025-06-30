@@ -8,6 +8,81 @@ const getAuthHeaders = () => {
   };
 };
 
+export const requestPasswordReset = async (email) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/password/reset-request`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+    return {
+      ok: response.ok,
+      status: response.status,
+      data
+    };
+  } catch {
+    return {
+      ok: false,
+      status: 500,
+      data: { message: "Network error" }
+    };
+  }
+};
+
+export const verifyOtp = async (email, otp) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/password/verify-otp`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email, otp }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+    return {
+      ok: response.ok,
+      status: response.status,
+      data
+    };
+  } catch {
+    return {
+      ok: false,
+      status: 500,
+      data: { message: "Network error" }
+    };
+  }
+};
+
+export const resetPassword = async (email, otp, newPassword) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/password/reset-password`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email, otp, newPassword }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+    return {
+      ok: response.ok,
+      status: response.status,
+      data
+    };
+  } catch {
+    return {
+      ok: false,
+      status: 500,
+      data: { message: "Network error" }
+    };
+  }
+};
+
 // Get all users
 export const getAllUsers = async () => {
   try {

@@ -37,7 +37,7 @@ import java.util.stream.Collectors;
  */
 @RestController
 @RequestMapping("/api/parent")
-@PreAuthorize("hasRole('PARENT')")  // Chỉ phụ huynh mới có thể truy cập các endpoint này
+@PreAuthorize("hasRole('PARENT')") 
 public class ParentController {
 
     @Autowired
