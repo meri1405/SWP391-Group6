@@ -1,4 +1,27 @@
 import React, { useState, useEffect, useCallback } from "react";
+import {
+  Modal,
+  Button,
+  Descriptions,
+  Tag,
+  Alert,
+  Space,
+  Input,
+  Typography,
+  Spin,
+  message,
+  Dropdown,
+} from "antd";
+import {
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  CalendarOutlined,
+  UserOutlined,
+  MedicineBoxOutlined,
+  InfoCircleOutlined,
+  ExclamationCircleOutlined,
+  DownOutlined,
+} from "@ant-design/icons";
 import { useAuth } from "../../../contexts/AuthContext";
 import { parentApi } from "../../../api/parentApi";
 import { nurseApi } from "../../../api/nurseApi";
@@ -6,6 +29,458 @@ import managerApi from "../../../api/managerApi";
 import webSocketService from "../../../services/webSocketService";
 import { VaccinationFormModal } from "../vaccinations";
 import "../../../styles/Notifications.css";
+
+const { Title, Text, Paragraph } = Typography;
+const { TextArea } = Input;
+
+// Health Check Form Modal Component
+const HealthCheckFormModal = ({
+  isOpen,
+  healthCheckForm,
+  onClose,
+  onFormUpdated,
+  loading,
+}) => {
+  const [responseType, setResponseType] = useState("");
+  const [parentNote, setParentNote] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const { getToken } = useAuth();
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "Chưa xác định";
+    return new Date(dateString).toLocaleDateString("vi-VN");
+  };
+
+  const formatDateTime = (dateString) => {
+    if (!dateString) return "Chưa xác định";
+    return new Date(dateString).toLocaleString("vi-VN");
+  };
+
+  const getStatusTag = (status) => {
+    const statusMap = {
+      PENDING: { color: "warning", text: "Chờ phản hồi" },
+      CONFIRMED: { color: "success", text: "Đã đồng ý" },
+      DECLINED: { color: "error", text: "Từ chối" },
+      SCHEDULED: { color: "processing", text: "Đã lên lịch" },
+      CHECKED_IN: { color: "cyan", text: "Đã check-in" },
+      COMPLETED: { color: "default", text: "Hoàn thành" },
+    };
+    return (
+      <Tag color={statusMap[status]?.color || "default"}>
+        {statusMap[status]?.text || status}
+      </Tag>
+    );
+  };
+
+  const handleResponse = async (type) => {
+    if (!healthCheckForm?.id) {
+      message.warning(
+        "Không thể thực hiện hành động này. Vui lòng thử lại sau."
+      );
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      const token = getToken();
+
+      if (type === "confirm") {
+        await parentApi.confirmHealthCheckForm(
+          healthCheckForm.id,
+          parentNote,
+          token
+        );
+        message.success("Đã xác nhận đồng ý cho con tham gia khám sức khỏe");
+      } else {
+        await parentApi.declineHealthCheckForm(
+          healthCheckForm.id,
+          parentNote,
+          token
+        );
+        message.success("Đã gửi phản hồi từ chối tham gia khám sức khỏe");
+      }
+
+      onFormUpdated();
+    } catch (error) {
+      console.error("Error responding to health check form:", error);
+      message.error("Lỗi khi gửi phản hồi. Vui lòng thử lại.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const showResponseConfirm = (type) => {
+    setResponseType(type);
+
+    Modal.confirm({
+      title:
+        type === "confirm"
+          ? "Xác nhận tham gia khám sức khỏe"
+          : "Từ chối tham gia khám sức khỏe",
+      content: (
+        <div>
+          <Alert
+            message={
+              type === "confirm" ? "Xác nhận đồng ý" : "Xác nhận từ chối"
+            }
+            description={
+              type === "confirm"
+                ? `Bạn đang xác nhận đồng ý cho ${
+                    healthCheckForm.student?.fullName || "con bạn"
+                  } tham gia đợt khám sức khỏe "${
+                    healthCheckForm.campaign?.name || ""
+                  }".`
+                : `Bạn đang từ chối cho ${
+                    healthCheckForm.student?.fullName || "con bạn"
+                  } tham gia đợt khám sức khỏe "${
+                    healthCheckForm.campaign?.name || ""
+                  }".`
+            }
+            type={type === "confirm" ? "success" : "warning"}
+            showIcon
+            style={{ marginBottom: 16 }}
+          />
+
+          <div style={{ marginBottom: 8 }}>
+            <Text strong>Ghi chú (tuỳ chọn):</Text>
+          </div>
+          <TextArea
+            placeholder={
+              type === "confirm"
+                ? "Nhập ghi chú nếu có (ví dụ: thời gian phù hợp, yêu cầu đặc biệt...)"
+                : "Nhập lý do từ chối (ví dụ: con đang ốm, có lịch trình khác...)"
+            }
+            value={parentNote}
+            onChange={(e) => setParentNote(e.target.value)}
+            rows={3}
+            maxLength={500}
+          />
+        </div>
+      ),
+      okText: type === "confirm" ? "Đồng ý" : "Từ chối",
+      cancelText: "Hủy",
+      confirmLoading: submitting,
+      onOk: () => handleResponse(type),
+      width: 600,
+    });
+  };
+
+  return (
+    <Modal
+      title={
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <MedicineBoxOutlined style={{ color: "#1890ff" }} />
+          <span>Chi tiết thông báo khám sức khỏe</span>
+        </div>
+      }
+      open={isOpen}
+      onCancel={onClose}
+      footer={[
+        healthCheckForm?.status === "PENDING" && healthCheckForm?.id && (
+          <Dropdown
+            key="response-dropdown"
+            menu={{
+              items: [
+                {
+                  key: "confirm",
+                  label: "Đồng ý tham gia",
+                  icon: <CheckCircleOutlined />,
+                  onClick: () => showResponseConfirm("confirm"),
+                },
+                {
+                  key: "decline",
+                  label: "Từ chối tham gia",
+                  icon: <CloseCircleOutlined />,
+                  onClick: () => showResponseConfirm("decline"),
+                  danger: true,
+                },
+              ],
+            }}
+            placement="topLeft"
+          >
+            <Button
+              type="primary"
+              loading={submitting}
+              icon={<ExclamationCircleOutlined />}
+            >
+              Phản hồi <DownOutlined />
+            </Button>
+          </Dropdown>
+        ),
+        <Button key="close" onClick={onClose}>
+          Đóng
+        </Button>,
+      ]}
+      width={800}
+    >
+      {loading ? (
+        <div style={{ textAlign: "center", padding: "40px 0" }}>
+          <Spin size="large" />
+          <div style={{ marginTop: 12 }}>
+            <Text type="secondary">Đang tải thông tin...</Text>
+          </div>
+        </div>
+      ) : (
+        healthCheckForm && (
+          <div>
+            <Alert
+              message="Thông báo từ y tá trường"
+              description={`Nhà trường đã tổ chức đợt khám sức khỏe cho học sinh ${
+                healthCheckForm.student?.fullName || "N/A"
+              }. Vui lòng xem xét thông tin chi tiết bên dưới và đưa ra quyết định phù hợp.`}
+              type="info"
+              showIcon
+              style={{ marginBottom: 24 }}
+            />
+
+            <Descriptions bordered column={1} size="middle">
+              <Descriptions.Item
+                label={
+                  <>
+                    <CalendarOutlined style={{ marginRight: 4 }} />
+                    Tên đợt khám
+                  </>
+                }
+              >
+                <Text strong style={{ fontSize: 16 }}>
+                  {healthCheckForm.campaign?.name || "Đợt khám sức khỏe"}
+                </Text>
+              </Descriptions.Item>
+
+              <Descriptions.Item
+                label={
+                  <>
+                    <InfoCircleOutlined style={{ marginRight: 4 }} />
+                    Thông tin từ y tá
+                  </>
+                }
+              >
+                <Paragraph style={{ margin: 0 }}>
+                  {healthCheckForm.campaign?.description ||
+                    "Trường đang tổ chức đợt khám sức khỏe cho học sinh. Vui lòng xác nhận đồng ý hoặc từ chối khám cho con em mình."}
+                </Paragraph>
+              </Descriptions.Item>
+
+              <Descriptions.Item
+                label={
+                  <>
+                    <UserOutlined style={{ marginRight: 4 }} />
+                    Học sinh
+                  </>
+                }
+              >
+                <Text strong>{healthCheckForm.student?.fullName || "N/A"}</Text>
+                {healthCheckForm.student?.className && (
+                  <Text type="secondary">
+                    {" "}
+                    - Lớp {healthCheckForm.student.className}
+                  </Text>
+                )}
+              </Descriptions.Item>
+
+              {healthCheckForm.campaign?.startDate &&
+                healthCheckForm.campaign?.endDate && (
+                  <Descriptions.Item
+                    label={
+                      <>
+                        <CalendarOutlined style={{ marginRight: 4 }} />
+                        Thời gian thực hiện
+                      </>
+                    }
+                  >
+                    <div>
+                      <Text>
+                        Từ: {formatDate(healthCheckForm.campaign.startDate)}
+                      </Text>
+                      <br />
+                      <Text>
+                        Đến: {formatDate(healthCheckForm.campaign.endDate)}
+                      </Text>
+                    </div>
+                  </Descriptions.Item>
+                )}
+
+              <Descriptions.Item
+                label={
+                  <>
+                    <CalendarOutlined style={{ marginRight: 4 }} />
+                    Ngày khám dự kiến
+                  </>
+                }
+              >
+                <Text
+                  type={
+                    healthCheckForm.appointmentTime ? "default" : "secondary"
+                  }
+                >
+                  {formatDateTime(healthCheckForm.appointmentTime)}
+                </Text>
+              </Descriptions.Item>
+
+              <Descriptions.Item
+                label={
+                  <>
+                    <MedicineBoxOutlined style={{ marginRight: 4 }} />
+                    Địa điểm khám
+                  </>
+                }
+              >
+                <Text>
+                  {healthCheckForm.appointmentLocation ||
+                    "Tại trường (sẽ thông báo chi tiết sau)"}
+                </Text>
+              </Descriptions.Item>
+
+              {healthCheckForm.campaign?.targetClasses && (
+                <Descriptions.Item
+                  label={
+                    <>
+                      <UserOutlined style={{ marginRight: 4 }} />
+                      Đối tượng tham gia
+                    </>
+                  }
+                >
+                  <Text>Lớp: {healthCheckForm.campaign.targetClasses}</Text>
+                  {healthCheckForm.campaign.minAge &&
+                    healthCheckForm.campaign.maxAge && (
+                      <Text type="secondary">
+                        {" "}
+                        (Tuổi: {healthCheckForm.campaign.minAge} -{" "}
+                        {healthCheckForm.campaign.maxAge})
+                      </Text>
+                    )}
+                </Descriptions.Item>
+              )}
+
+              <Descriptions.Item
+                label={
+                  <>
+                    <InfoCircleOutlined style={{ marginRight: 4 }} />
+                    Trạng thái
+                  </>
+                }
+              >
+                {getStatusTag(healthCheckForm.status)}
+                {healthCheckForm.status === "PENDING" && (
+                  <Text type="warning" style={{ marginLeft: 8 }}>
+                    - Cần phản hồi trước ngày khám
+                  </Text>
+                )}
+              </Descriptions.Item>
+
+              <Descriptions.Item
+                label={
+                  <>
+                    <CalendarOutlined style={{ marginRight: 4 }} />
+                    Ngày nhận thông báo
+                  </>
+                }
+              >
+                <Text type="secondary">
+                  {formatDateTime(healthCheckForm.sentAt)}
+                </Text>
+              </Descriptions.Item>
+
+              {healthCheckForm.parentNote && (
+                <Descriptions.Item
+                  label={
+                    <>
+                      <InfoCircleOutlined style={{ marginRight: 4 }} />
+                      Ghi chú của phụ huynh
+                    </>
+                  }
+                >
+                  <Paragraph
+                    style={{
+                      margin: 0,
+                      padding: 8,
+                      backgroundColor: "#f6ffed",
+                      border: "1px solid #b7eb8f",
+                      borderRadius: 4,
+                    }}
+                  >
+                    {healthCheckForm.parentNote}
+                  </Paragraph>
+                </Descriptions.Item>
+              )}
+            </Descriptions>
+
+            {healthCheckForm?.status === "PENDING" && healthCheckForm?.id && (
+              <Alert
+                message="Cần phản hồi"
+                description="Vui lòng xác nhận đồng ý hoặc từ chối tham gia đợt khám sức khỏe này để nhà trường có thể sắp xếp lịch trình phù hợp cho con em mình."
+                type="warning"
+                showIcon
+                style={{ marginTop: 16 }}
+                action={
+                  <Dropdown
+                    menu={{
+                      items: [
+                        {
+                          key: "confirm",
+                          label: "Đồng ý tham gia",
+                          icon: <CheckCircleOutlined />,
+                          onClick: () => showResponseConfirm("confirm"),
+                        },
+                        {
+                          key: "decline",
+                          label: "Từ chối tham gia",
+                          icon: <CloseCircleOutlined />,
+                          onClick: () => showResponseConfirm("decline"),
+                          danger: true,
+                        },
+                      ],
+                    }}
+                    placement="bottomRight"
+                  >
+                    <Button
+                      size="small"
+                      type="primary"
+                      icon={<ExclamationCircleOutlined />}
+                    >
+                      Phản hồi <DownOutlined />
+                    </Button>
+                  </Dropdown>
+                }
+              />
+            )}
+
+            {!healthCheckForm?.id && (
+              <Alert
+                message={
+                  healthCheckForm?.error
+                    ? "Lỗi tải dữ liệu"
+                    : "Thông tin giới hạn"
+                }
+                description={
+                  healthCheckForm?.error
+                    ? "Không thể tải thông tin chi tiết từ server. Để xem đầy đủ thông tin và thực hiện hành động, vui lòng truy cập mục 'Thông báo khám sức khỏe' trong menu bên trái."
+                    : "Đây là thông báo tổng quát từ hệ thống. Để xem chi tiết đầy đủ và thực hiện hành động xác nhận, vui lòng truy cập mục 'Thông báo khám sức khỏe' trong menu để có đầy đủ chức năng."
+                }
+                type={healthCheckForm?.error ? "warning" : "info"}
+                showIcon
+                style={{ marginTop: 16 }}
+                action={
+                  <Button
+                    type="primary"
+                    size="small"
+                    onClick={() => {
+                      onClose();
+                      window.location.href =
+                        "/parent-dashboard?section=health-check-notifications";
+                    }}
+                  >
+                    Đi đến trang chi tiết
+                  </Button>
+                }
+              />
+            )}
+          </div>
+        )
+      )}
+    </Modal>
+  );
+};
 
 const Notifications = ({ role = "parent" }) => {
   const [filter, setFilter] = useState("all");
@@ -15,10 +490,18 @@ const Notifications = ({ role = "parent" }) => {
   const [showVaccinationModal, setShowVaccinationModal] = useState(false);
   const [selectedVaccinationFormId, setSelectedVaccinationFormId] =
     useState(null);
+  const [showHealthCheckModal, setShowHealthCheckModal] = useState(false);
+  const [selectedHealthCheckForm, setSelectedHealthCheckForm] = useState(null);
+  const [healthCheckLoading, setHealthCheckLoading] = useState(false);
   const { getToken } = useAuth();
 
   // Use appropriate API based on role
-  const api = role === "schoolnurse" ? nurseApi : role === "manager" ? managerApi : parentApi;
+  const api =
+    role === "schoolnurse"
+      ? nurseApi
+      : role === "manager"
+      ? managerApi
+      : parentApi;
 
   // Helper functions for notification processing
   const getNotificationType = (notification) => {
@@ -35,6 +518,20 @@ const Notifications = ({ role = "parent" }) => {
     // Check title and message content for additional clues
     const titleLower = notification.title?.toLowerCase() || "";
     const messageLower = notification.message?.toLowerCase() || "";
+
+    // Check for health check notifications
+    if (
+      titleLower.includes("khám sức khỏe") ||
+      titleLower.includes("health check") ||
+      messageLower.includes("khám sức khỏe") ||
+      messageLower.includes("health check") ||
+      titleLower.includes("thông báo khám sức khỏe") ||
+      messageLower.includes("kiểm tra sức khỏe") ||
+      notification.notificationType === "HEALTH_CHECK_NOTIFICATION" ||
+      notification.notificationType === "HEALTH_CHECK_CAMPAIGN"
+    ) {
+      return "health";
+    }
 
     // Check for medication keywords
     if (
@@ -108,10 +605,15 @@ const Notifications = ({ role = "parent" }) => {
   const determineActionRequired = (notification) => {
     // Medication-related notifications usually require some action/attention
     // Vaccination notifications with vaccinationFormId also require action
+    // Health check notifications also require parent action (view details and respond)
+
+    const notificationType = getNotificationType(notification);
+
     return (
       notification.medicationRequest ||
       notification.medicationSchedule ||
-      notification.vaccinationFormId
+      notification.vaccinationFormId ||
+      notificationType === "health"
     );
   };
 
@@ -362,8 +864,287 @@ const Notifications = ({ role = "parent" }) => {
       console.error("Error marking notification as read:", error);
     }
   };
+  // Load health check form details
+  const loadHealthCheckFormDetails = async (notification) => {
+    try {
+      setHealthCheckLoading(true);
+      const token = getToken();
+
+      console.log(
+        "Loading health check details for notification:",
+        notification
+      );
+
+      // Get all health check forms for parent
+      const healthCheckForms = await parentApi.getHealthCheckForms(token);
+      console.log("Available health check forms:", healthCheckForms);
+
+      // Handle different response formats
+      let formsArray = [];
+      if (Array.isArray(healthCheckForms)) {
+        formsArray = healthCheckForms;
+      } else if (healthCheckForms && typeof healthCheckForms === "object") {
+        // If it's a single object, wrap it in an array
+        formsArray = [healthCheckForms];
+      } else if (typeof healthCheckForms === "string") {
+        // Try to parse if it's a JSON string
+        try {
+          const parsed = JSON.parse(healthCheckForms);
+          formsArray = Array.isArray(parsed) ? parsed : [parsed];
+        } catch (e) {
+          console.error("Failed to parse health check forms JSON:", e);
+          throw new Error("Invalid JSON response from server");
+        }
+      } else {
+        console.warn("Health check forms is not an array:", healthCheckForms);
+        throw new Error(
+          "Invalid response format from server - expected array but got: " +
+            typeof healthCheckForms
+        );
+      }
+
+      // Try multiple strategies to find matching form
+      let matchingForm = null;
+
+      // Strategy 1: Find most recent PENDING form
+      const pendingForms = formsArray.filter(
+        (form) => form.status === "PENDING"
+      );
+      if (pendingForms.length > 0) {
+        // Sort by creation date and get the most recent
+        matchingForm = pendingForms.sort(
+          (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+        )[0];
+        console.log("Found matching form by PENDING status:", matchingForm);
+      }
+
+      // Strategy 2: If no pending forms, try to match by message content
+      if (!matchingForm) {
+        const notificationMessage = notification.message?.toLowerCase() || "";
+        const notificationTitle = notification.title?.toLowerCase() || "";
+
+        matchingForm = formsArray.find((form) => {
+          const studentName = form.student?.fullName?.toLowerCase() || "";
+          const campaignName = form.campaign?.name?.toLowerCase() || "";
+
+          return (
+            notificationMessage.includes(studentName) ||
+            notificationMessage.includes(campaignName) ||
+            notificationTitle.includes(studentName) ||
+            notificationTitle.includes(campaignName)
+          );
+        });
+        console.log("Found matching form by content:", matchingForm);
+      }
+
+      // Strategy 3: If still no match, get the most recent form
+      if (!matchingForm && formsArray.length > 0) {
+        matchingForm = formsArray.sort(
+          (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+        )[0];
+        console.log("Using most recent form as fallback:", matchingForm);
+      }
+
+      if (matchingForm) {
+        console.log("Setting selected form:", matchingForm);
+
+        // Check if form has valid ID before calling API
+        if (!matchingForm.id) {
+          console.warn("Form found but has no valid ID:", matchingForm);
+          // Skip API call and use basic form
+        } else {
+          // Try to get detailed form information from NURSE using new API
+          try {
+            console.log(
+              "Attempting to get form details for formId:",
+              matchingForm.id
+            );
+            const formDetails = await parentApi.getHealthCheckFormDetails(
+              matchingForm.id,
+              token
+            );
+            console.log("Got detailed form info from nurse:", formDetails);
+
+            // Check if we got valid data
+            if (!formDetails || !formDetails.formId) {
+              console.warn("Form details is empty or invalid:", formDetails);
+              throw new Error("Invalid form details received");
+            }
+
+            // Replace the basic form with detailed information
+            matchingForm = {
+              id: formDetails.formId,
+              status: formDetails.status,
+              campaign: {
+                id: formDetails.campaignId,
+                name: formDetails.campaignName || "Đợt khám sức khỏe",
+                description: formDetails.campaignDescription,
+                startDate: formDetails.campaignStartDate,
+                endDate: formDetails.campaignEndDate,
+                location: formDetails.campaignLocation || "Tại trường",
+                minAge: formDetails.minAge,
+                maxAge: formDetails.maxAge,
+                targetClasses: formDetails.targetClasses || new Set(),
+                status: formDetails.campaignStatus,
+                createdAt: formDetails.campaignCreatedAt,
+                createdBy: {
+                  fullName: formDetails.nurseFullName || "Y tá trường",
+                  email: formDetails.nurseEmail,
+                  phone: formDetails.nursePhone,
+                },
+                // Keep detailed information from nurse
+                nurseDescription: formDetails.campaignDescription,
+                nurseInstructions: formDetails.specialNotes,
+                detailedInstructions: formDetails.detailedInstructions,
+                detailedInfo: true,
+              },
+              student: {
+                id: formDetails.studentId,
+                fullName: formDetails.studentFullName || "Học sinh",
+                className: formDetails.studentClassName || "Chưa xác định",
+                age: formDetails.studentAge,
+                gender: formDetails.studentGender,
+              },
+              parent: {
+                id: formDetails.parentId,
+                fullName: formDetails.parentFullName,
+                email: formDetails.parentEmail,
+                phone: formDetails.parentPhone,
+              },
+              appointmentTime: formDetails.appointmentTime,
+              appointmentLocation:
+                formDetails.appointmentLocation || "Tại trường",
+              sentAt: formDetails.sentAt,
+              respondedAt: formDetails.respondedAt,
+              parentNote: formDetails.parentNote,
+              deadline: formDetails.deadline,
+              isUrgent: formDetails.isUrgent,
+            };
+          } catch (error) {
+            console.log(
+              "Could not get detailed form info from nurse, using basic form data:",
+              error
+            );
+          }
+        }
+
+        setSelectedHealthCheckForm(matchingForm);
+        setShowHealthCheckModal(true);
+      } else {
+        console.log("No forms found, attempting to auto-generate...");
+
+        try {
+          // Try to auto-generate a health check form
+          const autoGenResult = await parentApi.autoGenerateHealthCheckForm();
+          console.log("Auto-generated form result:", autoGenResult);
+
+          if (autoGenResult && autoGenResult.form) {
+            // Use the auto-generated form
+            setSelectedHealthCheckForm(autoGenResult.form);
+            setShowHealthCheckModal(true);
+          } else {
+            throw new Error("Auto-generation returned no form data");
+          }
+        } catch (autoGenError) {
+          console.error("Error auto-generating form:", autoGenError);
+          console.log(
+            "Creating basic form from notification as final fallback"
+          );
+
+          // Final fallback: Create enhanced form object with better data extraction
+          const basicForm = {
+            id: null,
+            status: "PENDING",
+            campaign: {
+              name: extractCampaignName(notification) || "Đợt khám sức khỏe",
+              description:
+                notification.message ||
+                "Trường đang tổ chức đợt khám sức khỏe cho học sinh. Vui lòng xác nhận đồng ý hoặc từ chối khám cho con em mình.",
+              targetClasses: "Tất cả các lớp",
+              startDate: null,
+              endDate: null,
+            },
+            student: {
+              fullName: extractStudentName(notification) || "Học sinh Demo",
+              className: "Lớp 5A",
+            },
+            appointmentTime: null,
+            appointmentLocation: "Tại trường",
+            createdAt: notification.date,
+            parentNote: null,
+          };
+          setSelectedHealthCheckForm(basicForm);
+          setShowHealthCheckModal(true);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading health check form details:", error);
+      // Enhanced fallback with better error handling
+      const enhancedForm = {
+        id: null,
+        status: "PENDING",
+        campaign: {
+          name: extractCampaignName(notification) || "Đợt khám sức khỏe",
+          description:
+            notification.message ||
+            "Có lỗi khi tải thông tin chi tiết. Vui lòng thử lại hoặc liên hệ y tá trường để biết thêm thông tin.",
+          targetClasses: "Chưa xác định",
+        },
+        student: {
+          fullName: extractStudentName(notification) || "Học sinh của bạn",
+          className: "Chưa xác định",
+        },
+        appointmentTime: null,
+        appointmentLocation: "Tại trường",
+        createdAt: notification.date,
+        parentNote: null,
+        error: true,
+      };
+      setSelectedHealthCheckForm(enhancedForm);
+      setShowHealthCheckModal(true);
+    } finally {
+      setHealthCheckLoading(false);
+    }
+  };
+
+  // Helper function to extract campaign name from notification
+  const extractCampaignName = (notification) => {
+    const message = notification.message || "";
+    const title = notification.title || "";
+
+    // Look for patterns like "campaign name" or specific keywords
+    if (message.includes("đợt khám") || title.includes("đợt khám")) {
+      // Try to extract campaign name between quotes or after keywords
+      const campaignMatch =
+        message.match(/["'](.*?)["']/) || title.match(/["'](.*?)["']/);
+      if (campaignMatch) {
+        return campaignMatch[1];
+      }
+    }
+
+    return null;
+  };
+
+  // Helper function to extract student name from notification
+  const extractStudentName = (notification) => {
+    const message = notification.message || "";
+
+    // Look for patterns like "học sinh [Name]" or "cho [Name]"
+    const nameMatch =
+      message.match(/học sinh\s+([A-Za-zÀ-ÿ\s]+)/i) ||
+      message.match(/cho\s+([A-Za-zÀ-ÿ\s]+)/i);
+
+    if (nameMatch) {
+      return nameMatch[1].trim();
+    }
+
+    return null;
+  };
+
   const confirmAction = (notification) => {
     // Handle different types of confirmations based on notification type
+    const notificationType = getNotificationType(notification);
+
     if (notification.medicationRequest) {
       // Redirect to medication request details
       console.log(
@@ -380,6 +1161,17 @@ const Notifications = ({ role = "parent" }) => {
       // Open vaccination form modal
       setSelectedVaccinationFormId(notification.vaccinationFormId);
       setShowVaccinationModal(true);
+    } else if (notificationType === "health") {
+      // For health check notifications, show modal with details
+      if (role === "parent" || !role) {
+        loadHealthCheckFormDetails(notification);
+      } else {
+        console.log(
+          "Health check notification action for role:",
+          role,
+          notification
+        );
+      }
     }
 
     // Mark as read when action is taken
@@ -522,11 +1314,18 @@ const Notifications = ({ role = "parent" }) => {
                         className={`status-badge ${notification.medicationRequest.status?.toLowerCase()}`}
                       >
                         {(() => {
-                          switch(notification.medicationRequest.status) {
-                            case 'PENDING': return 'Chờ duyệt';
-                            case 'APPROVED': return 'Đã duyệt';
-                            case 'REJECTED': return 'Từ chối';
-                            default: return notification.medicationRequest.status || "Không xác định";
+                          switch (notification.medicationRequest.status) {
+                            case "PENDING":
+                              return "Chờ duyệt";
+                            case "APPROVED":
+                              return "Đã duyệt";
+                            case "REJECTED":
+                              return "Từ chối";
+                            default:
+                              return (
+                                notification.medicationRequest.status ||
+                                "Không xác định"
+                              );
                           }
                         })()}
                       </span>
@@ -589,6 +1388,23 @@ const Notifications = ({ role = "parent" }) => {
           vaccinationFormId={selectedVaccinationFormId}
           onClose={() => setShowVaccinationModal(false)}
           onFormUpdated={handleVaccinationFormUpdated}
+        />
+      )}
+      {/* Health Check Form Modal */}
+      {showHealthCheckModal && selectedHealthCheckForm && (
+        <HealthCheckFormModal
+          isOpen={showHealthCheckModal}
+          healthCheckForm={selectedHealthCheckForm}
+          onClose={() => {
+            setShowHealthCheckModal(false);
+            setSelectedHealthCheckForm(null);
+          }}
+          onFormUpdated={() => {
+            loadNotifications(); // Refresh notifications
+            setShowHealthCheckModal(false);
+            setSelectedHealthCheckForm(null);
+          }}
+          loading={healthCheckLoading}
         />
       )}
     </div>

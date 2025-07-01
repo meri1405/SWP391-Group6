@@ -97,7 +97,7 @@ const MedicalEventManagement = () => {
       const response = await getMedicalEvents();
       console.log("Events API Response:", response);
       const eventsData = Array.isArray(response) ? response : [];
-      
+
       // Sort events by creation date - newest first
       const sortedEvents = [...eventsData].sort((a, b) => {
         // Primary sort by creation date (newest first)
@@ -105,7 +105,7 @@ const MedicalEventManagement = () => {
         const dateB = new Date(b.createdAt || b.occurrenceTime);
         return dateB - dateA;
       });
-      
+
       setEvents(sortedEvents);
       calculateStatistics(sortedEvents);
     } catch (error) {
@@ -296,40 +296,50 @@ const MedicalEventManagement = () => {
     }
     try {
       setLoading(true);
-      
+
       // values is already provided by form.onFinish
-      
+
       // Check that all required fields have values
       const requiredFields = [
-        'occurrenceTime', 'studentId', 'eventType', 'severityLevel', 'location'
+        "occurrenceTime",
+        "studentId",
+        "eventType",
+        "severityLevel",
+        "location",
       ];
-      
-      const missingFields = requiredFields.filter(field => !values[field]);
-      
+
+      const missingFields = requiredFields.filter((field) => !values[field]);
+
       if (missingFields.length > 0) {
         // Create a friendly message about missing fields
         const fieldLabels = {
-          'occurrenceTime': 'Thời gian xảy ra',
-          'studentId': 'Học sinh',
-          'eventType': 'Loại sự kiện',
-          'severityLevel': 'Mức độ nghiêm trọng',
-          'location': 'Địa điểm xảy ra'
+          occurrenceTime: "Thời gian xảy ra",
+          studentId: "Học sinh",
+          eventType: "Loại sự kiện",
+          severityLevel: "Mức độ nghiêm trọng",
+          location: "Địa điểm xảy ra",
         };
-        
-        const missingFieldLabels = missingFields.map(field => fieldLabels[field]);
-        message.error(`Vui lòng điền đầy đủ thông tin: ${missingFieldLabels.join(', ')}`);
+
+        const missingFieldLabels = missingFields.map(
+          (field) => fieldLabels[field]
+        );
+        message.error(
+          `Vui lòng điền đầy đủ thông tin: ${missingFieldLabels.join(", ")}`
+        );
         setLoading(false);
         return;
       }
-      
+
       // Validate medical supplies if any are provided
       if (values.suppliesUsed && values.suppliesUsed.length > 0) {
         const invalidSupplies = values.suppliesUsed.filter(
-          supply => !supply.medicalSupplyId || !supply.quantityUsed
+          (supply) => !supply.medicalSupplyId || !supply.quantityUsed
         );
-        
+
         if (invalidSupplies.length > 0) {
-          message.error('Vui lòng chọn vật tư và nhập số lượng cho tất cả vật tư y tế');
+          message.error(
+            "Vui lòng chọn vật tư và nhập số lượng cho tất cả vật tư y tế"
+          );
           setLoading(false);
           return;
         }
@@ -362,38 +372,38 @@ const MedicalEventManagement = () => {
 
       // Show success message
       message.success("Đã thêm sự kiện mới thành công");
-      
+
       // Add the new event to the top of the list
       if (response) {
         const newEvent = response;
-        setEvents(prevEvents => [newEvent, ...prevEvents]);
+        setEvents((prevEvents) => [newEvent, ...prevEvents]);
         // Recalculate statistics
         calculateStatistics([newEvent, ...events]);
       } else {
         // If no response or incomplete response, refresh the full list
         loadEvents();
       }
-      
+
       setModalVisible(false);
       form.resetFields();
     } catch (error) {
       console.error("Error saving event:", error);
-      
+
       // Show more helpful error messages for validation failures
       if (error.errorFields) {
         // This is a form validation error
         const fieldLabels = {
-          'occurrenceTime': 'Thời gian xảy ra',
-          'studentId': 'Học sinh',
-          'eventType': 'Loại sự kiện',
-          'severityLevel': 'Mức độ nghiêm trọng',
-          'location': 'Địa điểm xảy ra'
+          occurrenceTime: "Thời gian xảy ra",
+          studentId: "Học sinh",
+          eventType: "Loại sự kiện",
+          severityLevel: "Mức độ nghiêm trọng",
+          location: "Địa điểm xảy ra",
         };
-        
+
         const firstError = error.errorFields[0];
         const fieldName = firstError.name[0];
         const fieldLabel = fieldLabels[fieldName] || fieldName;
-        
+
         message.error(`Vui lòng điền đúng thông tin: ${fieldLabel}`);
       } else {
         // This is another type of error
@@ -671,6 +681,14 @@ const MedicalEventManagement = () => {
                 value={dateRange}
                 onChange={setDateRange}
                 placeholder={["Từ ngày", "Đến ngày"]}
+                disabledDate={(current, { from }) => {
+                  if (!current) return false;
+
+                  // Cho phép xem events trong quá khứ, nhưng tạo events mới phải từ hôm nay + 7 ngày
+                  // Đối với filter, chúng ta chỉ disable quá xa trong tương lai (> 1 năm)
+                  const maxDate = dayjs().add(1, "year");
+                  return current.isAfter(maxDate, "day");
+                }}
               />
             </Col>
           </Row>
@@ -710,7 +728,15 @@ const MedicalEventManagement = () => {
         className="event-modal"
         styles={{ body: { maxHeight: '70vh', overflow: 'auto', paddingTop: 10 } }}
       >
-        <Form form={form} layout="vertical" preserve={false} onFinish={onSubmitForm}>
+        <Form
+          form={form}
+          layout="vertical"
+          preserve={false}
+          onFinish={onSubmitForm}
+          initialValues={{
+            location: "Tại trường",
+          }}
+        >
           <Row gutter={[16, 16]}>
             <Col xs={24} sm={12}>
               <Form.Item
@@ -736,11 +762,16 @@ const MedicalEventManagement = () => {
                   format="DD/MM/YYYY HH:mm"
                   style={{ width: "100%" }}
                   placeholder="Chọn thời gian"
-                  disabledDate={(current) => current && current > dayjs().endOf('day')}
+                  disabledDate={(current) =>
+                    current && current > dayjs().endOf("day")
+                  }
                   disabledTime={() => ({
                     disabledHours: () => {
                       const hours = [];
-                      if (dayjs().format('DD/MM/YYYY') === dayjs().format('DD/MM/YYYY')) {
+                      if (
+                        dayjs().format("DD/MM/YYYY") ===
+                        dayjs().format("DD/MM/YYYY")
+                      ) {
                         for (let i = dayjs().hour() + 1; i < 24; i++) {
                           hours.push(i);
                         }
@@ -749,14 +780,17 @@ const MedicalEventManagement = () => {
                     },
                     disabledMinutes: (hour) => {
                       const minutes = [];
-                      if (dayjs().format('DD/MM/YYYY') === dayjs().format('DD/MM/YYYY') && 
-                          hour === dayjs().hour()) {
+                      if (
+                        dayjs().format("DD/MM/YYYY") ===
+                          dayjs().format("DD/MM/YYYY") &&
+                        hour === dayjs().hour()
+                      ) {
                         for (let i = dayjs().minute() + 1; i < 60; i++) {
                           minutes.push(i);
                         }
                       }
                       return minutes;
-                    }
+                    },
                   })}
                 />
               </Form.Item>
@@ -894,7 +928,7 @@ const MedicalEventManagement = () => {
                                     >
                                       <span>
                                         {supply.name} - Còn:{" "}
-                                        {supply.displayQuantity || 0 }{" "}
+                                        {supply.displayQuantity || 0}{" "}
                                         {supply.displayUnit}
                                       </span>
                                       {expiryStatus && (

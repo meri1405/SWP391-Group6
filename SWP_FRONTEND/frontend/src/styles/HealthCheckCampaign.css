@@ -2,6 +2,7 @@
 
 .health-check-campaign-management {
   width: 100%;
+  min-height: 100vh;
 }
 
 .health-check-campaign-management .cancelled-row {
@@ -33,6 +34,74 @@
 .health-check-campaign-management .campaign-description {
   margin-bottom: 24px;
   white-space: pre-line;
+}
+
+/* Auto-Expanding Table Styles */
+.health-check-campaign-management .ant-card {
+  width: 100%;
+  min-height: auto;
+  overflow: visible;
+}
+
+.health-check-campaign-management .ant-card-body {
+  padding: 16px;
+  overflow: visible;
+}
+
+.health-check-campaign-management .ant-table-wrapper {
+  width: 100%;
+  overflow: auto;
+}
+
+.health-check-campaign-management .ant-table {
+  width: 100%;
+  min-width: 800px;
+  table-layout: auto;
+}
+
+.health-check-campaign-management .ant-table-thead > tr > th {
+  white-space: nowrap;
+  padding: 12px 8px;
+  font-weight: 600;
+  background-color: #fafafa;
+}
+
+.health-check-campaign-management .ant-table-tbody > tr > td {
+  padding: 12px 8px;
+  word-wrap: break-word;
+  word-break: break-all;
+}
+
+/* Responsive Column Widths */
+.health-check-campaign-management .ant-table-column {
+  min-width: 100px;
+}
+
+/* Filter Controls */
+.health-check-campaign-management .ant-space {
+  width: 100%;
+  flex-wrap: wrap;
+  gap: 8px !important;
+}
+
+.health-check-campaign-management .ant-select {
+  min-width: 120px;
+}
+
+.health-check-campaign-management .ant-picker {
+  min-width: 250px;
+}
+
+/* Pagination Enhancement */
+.health-check-campaign-management .ant-pagination {
+  margin-top: 16px;
+  text-align: center;
+}
+
+.health-check-campaign-management .ant-pagination-options {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 /* Detail view */
@@ -71,8 +140,149 @@
 }
 
 /* Responsive adjustments */
+@media (max-width: 1200px) {
+  .health-check-campaign-management .ant-table {
+    min-width: 700px;
+  }
+
+  .health-check-campaign-management .ant-table-thead > tr > th,
+  .health-check-campaign-management .ant-table-tbody > tr > td {
+    padding: 10px 6px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 992px) {
+  .health-check-campaign-management .ant-table {
+    min-width: 600px;
+  }
+
+  .health-check-campaign-management .ant-picker {
+    min-width: 200px;
+  }
+
+  .health-check-campaign-management .ant-card-extra {
+    margin-top: 8px;
+  }
+}
+
 @media (max-width: 768px) {
   .health-check-campaign-management .ant-statistic {
     margin-bottom: 24px;
   }
-} 
+
+  .health-check-campaign-management .ant-table {
+    min-width: 500px;
+  }
+
+  .health-check-campaign-management .ant-table-thead > tr > th,
+  .health-check-campaign-management .ant-table-tbody > tr > td {
+    padding: 8px 4px;
+    font-size: 12px;
+  }
+
+  .health-check-campaign-management .ant-picker {
+    min-width: 180px;
+  }
+
+  .health-check-campaign-management .ant-select {
+    min-width: 100px;
+  }
+
+  .health-check-campaign-management .ant-space {
+    justify-content: center;
+  }
+
+  .health-check-campaign-management .ant-card-head-title {
+    font-size: 16px;
+  }
+
+  .health-check-campaign-management .ant-btn {
+    font-size: 12px;
+    padding: 4px 8px;
+    height: auto;
+  }
+}
+
+@media (max-width: 576px) {
+  .health-check-campaign-management .ant-card {
+    margin: 0 -8px;
+  }
+
+  .health-check-campaign-management .ant-card-body {
+    padding: 12px;
+  }
+
+  .health-check-campaign-management .ant-table {
+    min-width: 400px;
+  }
+
+  .health-check-campaign-management .ant-pagination {
+    text-align: left;
+  }
+
+  .health-check-campaign-management .ant-pagination-options {
+    margin-top: 8px;
+  }
+
+  .health-check-campaign-management .ant-space {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .health-check-campaign-management .ant-picker,
+  .health-check-campaign-management .ant-select {
+    width: 100%;
+    min-width: auto;
+  }
+}
+
+/* Auto-scroll enhancements */
+.health-check-campaign-management .ant-table-content {
+  overflow-x: auto;
+  overflow-y: auto;
+}
+
+.health-check-campaign-management .ant-table-scroll {
+  overflow-x: auto;
+  overflow-y: auto;
+}
+
+/* Tooltip improvements */
+.health-check-campaign-management .ant-tooltip {
+  max-width: 300px;
+  word-wrap: break-word;
+}
+
+/* Loading states */
+.health-check-campaign-management .ant-spin-container {
+  min-height: 200px;
+}
+
+/* Action buttons responsive */
+.health-check-campaign-management .ant-space-compact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+/* Enhanced scrollbar for webkit browsers */
+.health-check-campaign-management .ant-table-body::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+
+.health-check-campaign-management .ant-table-body::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.health-check-campaign-management .ant-table-body::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.health-check-campaign-management
+  .ant-table-body::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}

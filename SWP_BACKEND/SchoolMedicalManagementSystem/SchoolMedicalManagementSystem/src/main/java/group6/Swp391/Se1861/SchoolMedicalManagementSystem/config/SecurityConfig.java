@@ -70,6 +70,7 @@ public class SecurityConfig {
                     .requestMatchers("/login/oauth2/**").permitAll()
                     .requestMatchers("/ws/**").permitAll()  // Allow WebSocket endpoint
                     .requestMatchers("/api/nurse/students/test").permitAll()  // Debug endpoint
+                    .requestMatchers("/api/health-check/campaigns/debug/**").permitAll()  // Debug endpoints
                     .requestMatchers("/api/nurse/students/debug-user").authenticated()  // Any authenticated user
                     .requestMatchers("/api/nurse/students/all").authenticated()  // Any authenticated user
                     .requestMatchers("/api/admin/**").hasRole("ADMIN")

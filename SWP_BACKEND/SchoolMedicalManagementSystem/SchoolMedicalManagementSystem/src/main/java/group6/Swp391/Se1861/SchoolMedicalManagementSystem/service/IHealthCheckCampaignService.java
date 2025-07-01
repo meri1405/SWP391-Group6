@@ -53,4 +53,24 @@ public interface IHealthCheckCampaignService {
      * Send notifications to parents of eligible students for a health check campaign
      */
     java.util.Map<String, Object> sendNotificationsToParents(Long campaignId);
+
+    /**
+     * Fix parent data for campaign - enable disabled parents and create missing parent accounts
+     */
+    java.util.Map<String, Object> fixParentData(Long campaignId);
+
+    /**
+     * Get campaign information by form ID for parent
+     */
+    HealthCheckCampaign getCampaignByFormIdForParent(Long formId, User parent);
+
+    /**
+     * Get all active campaigns for a parent's children
+     */
+    List<HealthCheckCampaign> getActiveCampaignsForParent(User parent);
+
+    /**
+     * Reset (delete) all forms for a campaign to allow re-sending notifications
+     */
+    java.util.Map<String, Object> resetCampaignForms(Long campaignId);
 }

@@ -1,11 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import {
-  Layout,
-  Menu,
-  Badge,
-  notification,
-} from "antd";
+import { Layout, Menu, Badge, notification } from "antd";
 import {
   UserOutlined,
   CalendarOutlined,
@@ -25,6 +20,7 @@ import "../styles/AdminDashboard.css";
 import { useAuth } from "../contexts/AuthContext";
 import { restockRequestApi } from "../api/restockRequestApi";
 import webSocketService from "../services/webSocketService";
+import managerApi from "../api/managerApi";
 
 const { Header, Sider, Content } = Layout;
 
@@ -38,36 +34,25 @@ const ManagerDashboard = () => {
   const { user } = useAuth();
 
   // Function to update notification count
-  const updateNotificationCount = useCallback(() => {
+  const updateNotificationCount = useCallback(async () => {
     if (!user) return;
-    
-    // Fetch unread notification count from the API
-    fetch(`/api/notifications/unread-count?userId=${user.id}`, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("token")}`
-      }
-    })
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('Failed to fetch notification count');
-        }
-        return response.json();
-      })
-      .then(data => {
-        setNotificationCount(data.count || 0);
-      })
-      .catch(error => {
-        console.error("Failed to fetch notification count:", error);
-        // Default to 0 on error
-        setNotificationCount(0);
-      });
+
+    try {
+      // Use manager-specific notification API
+      const data = await managerApi.getUnreadNotificationCount();
+      setNotificationCount(data.count || 0);
+    } catch (error) {
+      console.error("Failed to fetch notification count:", error);
+      // Default to 0 on error
+      setNotificationCount(0);
+    }
   }, [user]);
 
   // Subscribe to restock request notifications
   useEffect(() => {
     // Initial notification count
     updateNotificationCount();
-    
+
     // Connect to WebSocket if necessary
     const connectWebSocket = async () => {
       const token = localStorage.getItem("token");
@@ -82,14 +67,17 @@ const ManagerDashboard = () => {
             console.log("[ManagerDashboard] WebSocket already connected");
           }
         } catch (error) {
-          console.error("[ManagerDashboard] Failed to connect to WebSocket:", error);
+          console.error(
+            "[ManagerDashboard] Failed to connect to WebSocket:",
+            error
+          );
         }
       }
     };
-    
+
     // Connect to WebSocket
     connectWebSocket();
-    
+
     // Subscribe to restock request updates
     console.log("[ManagerDashboard] Subscribing to restock request updates");
     const unsubscribe = restockRequestApi.subscribeToUpdates(() => {
@@ -104,38 +92,44 @@ const ManagerDashboard = () => {
       //     navigate('/manager-dashboard?tab=notifications');
       //   },
       // });
-      
+
       // Update notification count
       updateNotificationCount();
     });
-    
+
     // Subscribe to WebSocket notifications if available
     if (user && webSocketService) {
       console.log("[ManagerDashboard] Adding WebSocket message handler");
-      webSocketService.addMessageHandler('managerNotifications', (notification) => {
-        console.log("[ManagerDashboard] Received WebSocket notification:", notification);
-        if (notification.notificationType === 'RESTOCK_REQUEST_NEW') {
-          api.info({
-            message: notification.title || 'Thông báo mới',
-            description: notification.message || 'Bạn có thông báo mới',
-            placement: 'topRight',
-            onClick: () => {
-              setActiveSection('notifications');
-              navigate('/manager-dashboard?tab=notifications');
-            },
-          });
-          
-          // Update notification count
-          updateNotificationCount();
+      webSocketService.addMessageHandler(
+        "managerNotifications",
+        (notification) => {
+          console.log(
+            "[ManagerDashboard] Received WebSocket notification:",
+            notification
+          );
+          if (notification.notificationType === "RESTOCK_REQUEST_NEW") {
+            api.info({
+              message: notification.title || "Thông báo mới",
+              description: notification.message || "Bạn có thông báo mới",
+              placement: "topRight",
+              onClick: () => {
+                setActiveSection("notifications");
+                navigate("/manager-dashboard?tab=notifications");
+              },
+            });
+
+            // Update notification count
+            updateNotificationCount();
+          }
         }
-      });
+      );
     }
-    
+
     // Cleanup subscriptions on unmount
     return () => {
       unsubscribe && unsubscribe();
       if (webSocketService) {
-        webSocketService.removeMessageHandler('managerNotifications');
+        webSocketService.removeMessageHandler("managerNotifications");
       }
     };
   }, [api, navigate, updateNotificationCount, user]);
@@ -146,12 +140,12 @@ const ManagerDashboard = () => {
     if (tabParam) {
       const validTabs = [
         "overview",
-        "notifications", 
+        "notifications",
         "students",
         "health-checks",
         "vaccinations",
         "events",
-        "inventory"
+        "inventory",
       ];
       if (validTabs.includes(tabParam)) {
         setActiveSection(tabParam);
@@ -170,9 +164,11 @@ const ManagerDashboard = () => {
     },
     {
       key: "notifications",
-      icon: <Badge count={notificationCount} offset={[10, 0]}>
-              <BellOutlined />
-            </Badge>,
+      icon: (
+        <Badge count={notificationCount} offset={[10, 0]}>
+          <BellOutlined />
+        </Badge>
+      ),
       label: "Thông báo",
     },
     {

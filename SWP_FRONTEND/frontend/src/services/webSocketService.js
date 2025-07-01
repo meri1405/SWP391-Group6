@@ -13,51 +13,60 @@ class WebSocketService {
     this.reconnectDelay = 3000;
     this.currentToken = null; // Store current token for reconnection
     this.webSocketDisabled = false; // Added to track WebSocket state
-    
+
     // Add custom event system for restock requests
     this.restockRequestListeners = [];
   }
-  
+
   // Add methods for restock request notifications
   addRestockRequestListener(listener) {
-    if (typeof listener === 'function') {
-      console.log('[WebSocketService] Adding restock request listener');
+    if (typeof listener === "function") {
+      console.log("[WebSocketService] Adding restock request listener");
       this.restockRequestListeners.push(listener);
       return () => this.removeRestockRequestListener(listener);
     }
     return () => {};
   }
-  
+
   removeRestockRequestListener(listener) {
     const index = this.restockRequestListeners.indexOf(listener);
     if (index !== -1) {
-      console.log('[WebSocketService] Removing restock request listener');
+      console.log("[WebSocketService] Removing restock request listener");
       this.restockRequestListeners.splice(index, 1);
     }
   }
-  
+
   notifyRestockRequestListeners() {
-    console.log(`[WebSocketService] Notifying ${this.restockRequestListeners.length} restock request listeners`);
-    this.restockRequestListeners.forEach(listener => {
+    console.log(
+      `[WebSocketService] Notifying ${this.restockRequestListeners.length} restock request listeners`
+    );
+    this.restockRequestListeners.forEach((listener) => {
       try {
         listener();
       } catch (error) {
-        console.error('[WebSocketService] Error in restock request listener:', error);
+        console.error(
+          "[WebSocketService] Error in restock request listener:",
+          error
+        );
       }
     });
   }
-  
+
   // Initialize the service with restockRequestApi
   initialize() {
     // Subscribe to restock request notifications from the API
     restockRequestApi.subscribeToUpdates(() => {
-      console.log('[WebSocketService] Received restock request update from API');
+      console.log(
+        "[WebSocketService] Received restock request update from API"
+      );
       this.notifyRestockRequestListeners();
     });
-    
-    console.log('[WebSocketService] Initialized with restock request subscription');
+
+    console.log(
+      "[WebSocketService] Initialized with restock request subscription"
+    );
   }
-  
+
   connect(token) {
     return new Promise((resolve, reject) => {
       try {
@@ -73,10 +82,10 @@ class WebSocketService {
 
         // WebSocket connection is now enabled
         console.log("Attempting to establish WebSocket connection");
-        
+
         // Set WebSocket disabled flag to false
         this.webSocketDisabled = false;
-        
+
         if (!this.webSocketDisabled) {
           // Create SockJS connection with token in URL
           const wsUrl = `${
@@ -113,8 +122,11 @@ class WebSocketService {
             this.webSocketDisabled = false;
             this.reconnectAttempts = 0;
 
-            // Subscribe to personal notifications
-            this.subscribeToNotifications();
+            // Wait a small delay to ensure connection is fully established
+            setTimeout(() => {
+              // Subscribe to personal notifications
+              this.subscribeToNotifications();
+            }, 100);
 
             resolve(frame);
           };
@@ -153,12 +165,23 @@ class WebSocketService {
   }
 
   subscribeToNotifications() {
-    if (!this.client || !this.connected) {
-      console.warn("Cannot subscribe - client not connected");
+    // Check if client exists and is properly connected
+    if (!this.client || !this.connected || !this.client.connected) {
+      console.warn("Cannot subscribe - client not connected", {
+        hasClient: !!this.client,
+        isConnected: this.connected,
+        clientConnected: this.client?.connected,
+      });
       return;
     }
 
     try {
+      // Double-check client state before subscribing
+      if (!this.client.active) {
+        console.warn("STOMP client is not active, skipping subscription");
+        return;
+      }
+
       // Subscribe to personal notification queue
       const subscription = this.client.subscribe(
         "/user/queue/notifications",
@@ -185,9 +208,18 @@ class WebSocketService {
       );
 
       this.subscriptions.set("notifications", subscription);
-      console.log("Subscribed to notifications");
+      console.log("Successfully subscribed to notifications");
     } catch (error) {
       console.error("Error subscribing to notifications:", error);
+
+      // If subscription fails, mark as disconnected and attempt to reconnect
+      this.connected = false;
+      if (this.currentToken) {
+        console.log("Attempting to reconnect after subscription failure...");
+        setTimeout(() => {
+          this.handleReconnect(this.currentToken);
+        }, 1000);
+      }
     }
   }
 
@@ -249,9 +281,14 @@ class WebSocketService {
     if (this.webSocketDisabled) {
       return false;
     }
-    
-    // Return connection status
-    return this.connected && this.client && this.client.connected;
+
+    // Return connection status with more thorough checks
+    return (
+      this.connected &&
+      this.client &&
+      this.client.connected &&
+      this.client.active
+    );
   }
 
   // Send a message (if needed in the future)

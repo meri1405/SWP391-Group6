@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Spin, Typography, Progress, Row, Col } from "antd";
 import { managerVaccinationApi } from "../../api/vaccinationCampaignApi";
 import { healthCheckApi } from "../../api/healthCheckApi";
-import { getMedicalEventStatistics } from "../../api/medicalEventApi";
+import managerApi from "../../api/managerApi";
 import { restockRequestApi } from "../../api/restockRequestApi";
 import {
   Chart as ChartJS,
@@ -43,37 +43,49 @@ const ManagerOverview = () => {
   const fetchAllData = async () => {
     setLoading(true);
     try {
-      // Fetch data from existing APIs
-      const [vaccinationData, medicalEventData] = await Promise.all([
-        managerVaccinationApi.getCampaignStatistics(),
-        getMedicalEventStatistics().catch(() => ({
-          total: 89,
-          emergency: 12,
-          resolved: 76,
-          pending: 13,
-        })),
-      ]);
+      // Fetch data from manager dashboard API
+      const dashboardData = await managerApi.getDashboardStatistics();
 
-      setVaccinationStats(vaccinationData);
-      setMedicalEventStats(medicalEventData);
+      // Set statistics from manager dashboard response
+      setVaccinationStats(
+        dashboardData.vaccination || {
+          pending: 0,
+          approved: 0,
+          rejected: 0,
+          completed: 0,
+          inProgress: 0,
+          total: 0,
+        }
+      );
 
-      // Set health check stats (sample data for now)
-      setHealthCheckStats({
-        pending: 2,
-        approved: 5,
-        inProgress: 3,
-        completed: 8,
-        cancelled: 1,
-        total: 19,
-      });
+      setMedicalEventStats(
+        dashboardData.medicalEvents || {
+          total: 0,
+          emergency: 0,
+          resolved: 0,
+          pending: 0,
+        }
+      );
 
-      // Set inventory stats (sample data)
-      setInventoryStats({
-        totalSupplies: 156,
-        lowStockItems: 23,
-        outOfStockItems: 5,
-        pendingRestockRequests: 4,
-      });
+      setHealthCheckStats(
+        dashboardData.healthCheck || {
+          pending: 0,
+          approved: 0,
+          inProgress: 0,
+          completed: 0,
+          cancelled: 0,
+          total: 0,
+        }
+      );
+
+      setInventoryStats(
+        dashboardData.inventory || {
+          totalSupplies: 0,
+          lowStockItems: 0,
+          outOfStockItems: 0,
+          pendingRestockRequests: 0,
+        }
+      );
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
       // Fallback data if APIs fail

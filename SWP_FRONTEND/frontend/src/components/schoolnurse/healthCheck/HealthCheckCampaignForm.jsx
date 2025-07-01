@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Form,
   Input,
@@ -13,11 +13,11 @@ import {
   message,
   Spin,
   Typography,
-  Alert
-} from 'antd';
-import { SaveOutlined, CloseOutlined } from '@ant-design/icons';
-import dayjs from 'dayjs';
-import { healthCheckApi } from '../../../api/healthCheckApi';
+  Alert,
+} from "antd";
+import { SaveOutlined, CloseOutlined } from "@ant-design/icons";
+import dayjs from "dayjs";
+import { healthCheckApi } from "../../../api/healthCheckApi";
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -39,10 +39,11 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
       // Set form values from campaign data
       const formData = {
         ...campaign,
-        dateRange: campaign.startDate && campaign.endDate ? 
-          [dayjs(campaign.startDate), dayjs(campaign.endDate)] : 
-          undefined,
-        targetClasses: campaign.targetClasses || []
+        dateRange:
+          campaign.startDate && campaign.endDate
+            ? [dayjs(campaign.startDate), dayjs(campaign.endDate)]
+            : undefined,
+        targetClasses: campaign.targetClasses || [],
       };
       form.setFieldsValue(formData);
       // Set initial target count if editing
@@ -57,10 +58,14 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
     if (minAge && maxAge && minAge <= maxAge) {
       setCalculatingTargetCount(true);
       try {
-        const result = await healthCheckApi.calculateTargetCount(minAge, maxAge, targetClasses || []);
+        const result = await healthCheckApi.calculateTargetCount(
+          minAge,
+          maxAge,
+          targetClasses || []
+        );
         setTargetCount(result.targetCount || 0);
       } catch (error) {
-        console.error('Error calculating target count:', error);
+        console.error("Error calculating target count:", error);
         setTargetCount(0);
       } finally {
         setCalculatingTargetCount(false);
@@ -73,14 +78,18 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
   // Watch for changes in form fields that affect target count
   const onValuesChange = (changedValues, allValues) => {
     const { minAge, maxAge, targetClasses } = allValues;
-    
+
     // Only recalculate if the relevant fields have changed
-    if ('minAge' in changedValues || 'maxAge' in changedValues || 'targetClasses' in changedValues) {
+    if (
+      "minAge" in changedValues ||
+      "maxAge" in changedValues ||
+      "targetClasses" in changedValues
+    ) {
       // Add a small delay to avoid too many API calls
       const timeoutId = setTimeout(() => {
         calculateTargetCount(minAge, maxAge, targetClasses);
       }, 500);
-      
+
       return () => clearTimeout(timeoutId);
     }
   };
@@ -91,10 +100,16 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
       const categories = await healthCheckApi.getAvailableCategories();
       setAvailableCategories(categories);
     } catch (error) {
-      message.error('Không thể tải danh sách loại khám sức khỏe');
-      console.error('Error fetching health check categories:', error);
+      message.error("Không thể tải danh sách loại khám sức khỏe");
+      console.error("Error fetching health check categories:", error);
       // Set some default categories for development
-      setAvailableCategories(['VISION', 'HEARING', 'ORAL', 'SKIN', 'RESPIRATORY']);
+      setAvailableCategories([
+        "VISION",
+        "HEARING",
+        "ORAL",
+        "SKIN",
+        "RESPIRATORY",
+      ]);
     } finally {
       setLoading(false);
     }
@@ -104,28 +119,33 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
     setSubmitting(true);
     try {
       const [startDate, endDate] = values.dateRange || [];
-      
+
       const campaignData = {
         ...values,
-        startDate: startDate ? startDate.format('YYYY-MM-DDTHH:mm:ss') : null,
-        endDate: endDate ? endDate.format('YYYY-MM-DDTHH:mm:ss') : null,
+        startDate: startDate ? startDate.format("YYYY-MM-DDTHH:mm:ss") : null,
+        endDate: endDate ? endDate.format("YYYY-MM-DDTHH:mm:ss") : null,
       };
-      
+
       // Remove dateRange field as it's not part of the backend DTO
       delete campaignData.dateRange;
 
       let result;
       if (isEditing) {
         result = await healthCheckApi.updateCampaign(campaign.id, campaignData);
-        message.success('Cập nhật đợt khám sức khỏe thành công');
+        message.success("Cập nhật đợt khám sức khỏe thành công");
       } else {
         result = await healthCheckApi.createCampaign(campaignData);
-        message.success('Tạo đợt khám sức khỏe mới thành công');
+        message.success("Tạo đợt khám sức khỏe mới thành công");
       }
       onSuccess(result);
     } catch (error) {
-      message.error(`Không thể ${isEditing ? 'cập nhật' : 'tạo'} đợt khám sức khỏe`);
-      console.error(`Error ${isEditing ? 'updating' : 'creating'} campaign:`, error);
+      message.error(
+        `Không thể ${isEditing ? "cập nhật" : "tạo"} đợt khám sức khỏe`
+      );
+      console.error(
+        `Error ${isEditing ? "updating" : "creating"} campaign:`,
+        error
+      );
     } finally {
       setSubmitting(false);
     }
@@ -134,7 +154,7 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
   if (loading) {
     return (
       <Card>
-        <div style={{ textAlign: 'center', padding: '30px' }}>
+        <div style={{ textAlign: "center", padding: "30px" }}>
           <Spin size="large" />
           <p>Đang tải dữ liệu...</p>
         </div>
@@ -143,10 +163,12 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
   }
 
   return (
-    <Card 
+    <Card
       title={
         <Title level={4}>
-          {isEditing ? 'Chỉnh sửa đợt khám sức khỏe cho học sinh tiểu học' : 'Tạo đợt khám sức khỏe mới cho học sinh tiểu học'}
+          {isEditing
+            ? "Chỉnh sửa đợt khám sức khỏe cho học sinh tiểu học"
+            : "Tạo đợt khám sức khỏe mới cho học sinh tiểu học"}
         </Title>
       }
     >
@@ -158,6 +180,7 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
         initialValues={{
           minAge: 6,
           maxAge: 12,
+          location: "Tại Trường",
         }}
       >
         <Row gutter={16}>
@@ -165,7 +188,9 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
             <Form.Item
               name="name"
               label="Tên đợt khám"
-              rules={[{ required: true, message: 'Vui lòng nhập tên đợt khám' }]}
+              rules={[
+                { required: true, message: "Vui lòng nhập tên đợt khám" },
+              ]}
             >
               <Input placeholder="Nhập tên đợt khám sức khỏe cho học sinh tiểu học" />
             </Form.Item>
@@ -177,9 +202,12 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
             <Form.Item
               name="description"
               label="Mô tả"
-              rules={[{ required: true, message: 'Vui lòng nhập mô tả' }]}
+              rules={[{ required: true, message: "Vui lòng nhập mô tả" }]}
             >
-              <TextArea rows={3} placeholder="Nhập mô tả chi tiết về đợt khám sức khỏe cho học sinh tiểu học" />
+              <TextArea
+                rows={3}
+                placeholder="Nhập mô tả chi tiết về đợt khám sức khỏe cho học sinh tiểu học"
+              />
             </Form.Item>
           </Col>
         </Row>
@@ -189,12 +217,34 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
             <Form.Item
               name="dateRange"
               label="Thời gian thực hiện"
-              rules={[{ required: true, message: 'Vui lòng chọn thời gian thực hiện' }]}
+              rules={[
+                {
+                  required: true,
+                  message: "Vui lòng chọn thời gian thực hiện",
+                },
+              ]}
             >
-              <RangePicker 
+              <RangePicker
                 format="DD/MM/YYYY"
-                style={{ width: '100%' }}
-                placeholder={['Ngày bắt đầu', 'Ngày kết thúc']}
+                style={{ width: "100%" }}
+                placeholder={["Ngày bắt đầu", "Ngày kết thúc"]}
+                disabledDate={(current, { from }) => {
+                  if (!current) return false;
+
+                  // Ngày hiện tại + 7 ngày (ngày sớm nhất có thể chọn)
+                  const minStartDate = dayjs().add(7, "day");
+
+                  // Nếu đang chọn ngày bắt đầu (from không có giá trị)
+                  if (!from) {
+                    // Chỉ cho phép chọn từ hôm nay + 7 ngày trở đi
+                    return current.isBefore(minStartDate, "day");
+                  }
+
+                  // Nếu đang chọn ngày kết thúc (from đã có giá trị)
+                  // Ngày kết thúc phải sau ngày bắt đầu + 7 ngày
+                  const minEndDate = dayjs(from).add(7, "day");
+                  return current.isBefore(minEndDate, "day");
+                }}
               />
             </Form.Item>
           </Col>
@@ -202,7 +252,7 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
             <Form.Item
               name="location"
               label="Địa điểm"
-              rules={[{ required: true, message: 'Vui lòng nhập địa điểm' }]}
+              rules={[{ required: true, message: "Vui lòng nhập địa điểm" }]}
             >
               <Input placeholder="Nhập địa điểm khám sức khỏe cho học sinh tiểu học" />
             </Form.Item>
@@ -214,12 +264,14 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
             <Form.Item
               name="minAge"
               label="Độ tuổi tối thiểu"
-              rules={[{ required: true, message: 'Vui lòng nhập độ tuổi tối thiểu' }]}
+              rules={[
+                { required: true, message: "Vui lòng nhập độ tuổi tối thiểu" },
+              ]}
             >
-              <InputNumber 
-                min={6} 
+              <InputNumber
+                min={6}
                 max={12}
-                style={{ width: '100%' }}
+                style={{ width: "100%" }}
                 placeholder="Nhập độ tuổi tối thiểu"
               />
             </Form.Item>
@@ -228,12 +280,14 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
             <Form.Item
               name="maxAge"
               label="Độ tuổi tối đa"
-              rules={[{ required: true, message: 'Vui lòng nhập độ tuổi tối đa' }]}
+              rules={[
+                { required: true, message: "Vui lòng nhập độ tuổi tối đa" },
+              ]}
             >
-              <InputNumber 
-                min={6} 
+              <InputNumber
+                min={6}
                 max={12}
-                style={{ width: '100%' }}
+                style={{ width: "100%" }}
                 placeholder="Nhập độ tuổi tối đa"
               />
             </Form.Item>
@@ -242,15 +296,12 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
 
         <Row gutter={16}>
           <Col span={12}>
-            <Form.Item
-              name="targetClasses"
-              label="Lớp mục tiêu (tuỳ chọn)"
-            >
-              <Select 
+            <Form.Item name="targetClasses" label="Lớp mục tiêu (tuỳ chọn)">
+              <Select
                 mode="tags"
                 placeholder="Chọn hoặc nhập lớp mục tiêu (Ví dụ: 1A, 2B, 3C, toàn trường)"
-                style={{ width: '100%' }}
-                tokenSeparators={[',']}
+                style={{ width: "100%" }}
+                tokenSeparators={[","]}
               >
                 <Option value="toàn trường">Toàn trường</Option>
                 <Option value="1A">Lớp 1A</Option>
@@ -275,19 +326,24 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
             <Form.Item
               name="categories"
               label="Loại khám"
-              rules={[{ required: true, message: 'Vui lòng chọn ít nhất một loại khám' }]}
+              rules={[
+                {
+                  required: true,
+                  message: "Vui lòng chọn ít nhất một loại khám",
+                },
+              ]}
             >
-              <Select 
+              <Select
                 mode="multiple"
                 placeholder="Chọn các loại khám sức khỏe cho học sinh tiểu học"
               >
-                {availableCategories.map(category => (
+                {availableCategories.map((category) => (
                   <Option key={category} value={category}>
-                    {category === 'VISION' && 'Khám mắt'}
-                    {category === 'HEARING' && 'Khám tai'}
-                    {category === 'ORAL' && 'Khám răng miệng'}
-                    {category === 'SKIN' && 'Khám da liễu'}
-                    {category === 'RESPIRATORY' && 'Khám hô hấp'}
+                    {category === "VISION" && "Khám mắt"}
+                    {category === "HEARING" && "Khám tai"}
+                    {category === "ORAL" && "Khám răng miệng"}
+                    {category === "SKIN" && "Khám da liễu"}
+                    {category === "RESPIRATORY" && "Khám hô hấp"}
                   </Option>
                 ))}
               </Select>
@@ -301,20 +357,26 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
             <Alert
               message={
                 <div>
-                  <strong>Số lượng học sinh dự kiến:</strong> {' '}
+                  <strong>Số lượng học sinh dự kiến:</strong>{" "}
                   {calculatingTargetCount ? (
                     <Spin size="small" />
                   ) : (
-                    <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#1890ff' }}>
+                    <span
+                      style={{
+                        fontSize: "16px",
+                        fontWeight: "bold",
+                        color: "#1890ff",
+                      }}
+                    >
                       {targetCount} học sinh
                     </span>
                   )}
                 </div>
               }
               description={
-                targetCount > 0 
+                targetCount > 0
                   ? `Dựa trên tiêu chí độ tuổi và lớp đã chọn, hệ thống tính toán có ${targetCount} học sinh phù hợp cho đợt khám này.`
-                  : 'Vui lòng nhập đầy đủ thông tin độ tuổi và lớp mục tiêu để tính toán số lượng học sinh.'
+                  : "Vui lòng nhập đầy đủ thông tin độ tuổi và lớp mục tiêu để tính toán số lượng học sinh."
               }
               type={targetCount > 0 ? "info" : "warning"}
               showIcon
@@ -328,21 +390,18 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
         <Form.Item>
           <Row justify="end" gutter={16}>
             <Col>
-              <Button 
-                icon={<CloseOutlined />}
-                onClick={onCancel}
-              >
+              <Button icon={<CloseOutlined />} onClick={onCancel}>
                 Hủy
               </Button>
             </Col>
             <Col>
-              <Button 
-                type="primary" 
-                htmlType="submit" 
+              <Button
+                type="primary"
+                htmlType="submit"
                 loading={submitting}
                 icon={<SaveOutlined />}
               >
-                {isEditing ? 'Cập nhật' : 'Tạo đợt khám'}
+                {isEditing ? "Cập nhật" : "Tạo đợt khám"}
               </Button>
             </Col>
           </Row>
@@ -352,4 +411,4 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
   );
 };
 
-export default HealthCheckCampaignForm; 
+export default HealthCheckCampaignForm;

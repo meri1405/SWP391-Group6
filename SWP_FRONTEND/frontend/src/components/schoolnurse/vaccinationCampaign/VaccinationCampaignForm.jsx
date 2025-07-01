@@ -224,6 +224,12 @@ const VaccinationCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
                 format="DD/MM/YYYY HH:mm"
                 style={{ width: "100%" }}
                 placeholder="Chọn ngày và giờ thực hiện"
+                disabledDate={(current) => {
+                  if (!current) return false;
+                  // Chỉ cho phép chọn từ hôm nay + 7 ngày trở đi
+                  const minDate = dayjs().add(7, "day").startOf("day");
+                  return current.isBefore(minDate, "day");
+                }}
               />
             </Form.Item>
           </Col>

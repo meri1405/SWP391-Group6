@@ -1,5 +1,7 @@
 package group6.Swp391.Se1861.SchoolMedicalManagementSystem.controller;
 
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.HealthCheckFormDetailDTO;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.HealthCheckFormSummaryDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.HealthCheckForm;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.Student;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
@@ -205,7 +207,7 @@ public class HealthCheckFormController {
             return ResponseEntity.badRequest().body("User not found");
         }
         User parent = userOptional.get();
-        List<HealthCheckForm> forms = formService.getFormsByParent(parent);
+        List<HealthCheckFormSummaryDTO> forms = formService.getFormsSummaryByParent(parent);
         return ResponseEntity.ok(forms);
     }
 
@@ -219,7 +221,7 @@ public class HealthCheckFormController {
         }
         User parent = userOptional.get();
         FormStatus formStatus = FormStatus.valueOf(status.toUpperCase());
-        List<HealthCheckForm> forms = formService.getFormsByParentAndStatus(parent, formStatus);
+        List<HealthCheckFormSummaryDTO> forms = formService.getFormsSummaryByParentAndStatus(parent, formStatus);
         return ResponseEntity.ok(forms);
     }
 
@@ -244,5 +246,53 @@ public class HealthCheckFormController {
     public ResponseEntity<?> getPendingCountByCampaign(@PathVariable Long campaignId) {
         int count = formService.getPendingCountByCampaign(campaignId);
         return ResponseEntity.ok(Map.of("count", count));
+    }
+
+    @GetMapping("/{formId}/details")
+    @PreAuthorize("hasRole('PARENT')")
+    public ResponseEntity<?> getFormDetailsForParent(@PathVariable Long formId,
+                                                    @AuthenticationPrincipal UserDetails userDetails) {
+        try {
+            // Get the authenticated parent
+            Optional<User> userOptional = userService.findByUsername(userDetails.getUsername());
+            if (userOptional.isEmpty()) {
+                return ResponseEntity.badRequest().body("User not found");
+            }
+            User parent = userOptional.get();
+
+            // Get the form details
+            HealthCheckFormDetailDTO formDetails = formService.getFormDetailsForParent(formId, parent);
+            
+            return ResponseEntity.ok(formDetails);
+        } catch (SecurityException e) {
+            return ResponseEntity.status(403).body("You are not authorized to view this form");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error retrieving form details: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/auto-generate")
+    @PreAuthorize("hasRole('PARENT')")
+    public ResponseEntity<?> autoGenerateFormForParent(@AuthenticationPrincipal UserDetails userDetails,
+                                                      @RequestParam(required = false) Long campaignId,
+                                                      @RequestParam(required = false) Long studentId) {
+        try {
+            // Get the authenticated parent
+            Optional<User> userOptional = userService.findByUsername(userDetails.getUsername());
+            if (userOptional.isEmpty()) {
+                return ResponseEntity.badRequest().body("User not found");
+            }
+            User parent = userOptional.get();
+
+            // Auto-generate form for this parent
+            HealthCheckFormDetailDTO generatedForm = formService.autoGenerateFormForParent(parent, campaignId, studentId);
+            
+            return ResponseEntity.ok(Map.of(
+                "message", "Health check form auto-generated successfully",
+                "form", generatedForm
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error auto-generating form: " + e.getMessage());
+        }
     }
 }

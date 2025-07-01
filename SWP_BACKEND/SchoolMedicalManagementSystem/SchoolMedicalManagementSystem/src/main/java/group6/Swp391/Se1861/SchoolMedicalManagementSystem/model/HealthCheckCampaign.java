@@ -4,6 +4,7 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.CampaignSt
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.HealthCheckCategory;
 import jakarta.persistence.*;
 import lombok.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -69,10 +70,12 @@ public class HealthCheckCampaign {
 
     @ManyToOne
     @JoinColumn(name = "createdById", nullable = false)
+    @JsonIgnore
     private User createdBy;
 
     @ManyToOne
     @JoinColumn(name = "approvedById", nullable = true)
+    @JsonIgnore
     private User approvedBy;
 
     @Column(name = "approvedAt", nullable = true)
@@ -82,6 +85,7 @@ public class HealthCheckCampaign {
     private String notes;
 
     @OneToMany(mappedBy = "campaign", cascade = CascadeType.ALL)
+    @JsonIgnore
     private Set<HealthCheckForm> forms = new HashSet<>();
 
     @Column(name = "confirmedCount", nullable = false)

@@ -1,5 +1,7 @@
 package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service;
 
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.HealthCheckFormDetailDTO;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.HealthCheckFormSummaryDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.HealthCheckForm;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.Student;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
@@ -36,4 +38,12 @@ public interface IHealthCheckFormService {
     int getConfirmedCountByCampaign(Long campaignId);
 
     int getPendingCountByCampaign(Long campaignId);
+
+    HealthCheckFormDetailDTO getFormDetailsForParent(Long formId, User parent);
+
+    HealthCheckFormDetailDTO autoGenerateFormForParent(User parent, Long campaignId, Long studentId);
+    
+    // Summary DTOs for parent APIs to avoid circular reference
+    List<HealthCheckFormSummaryDTO> getFormsSummaryByParent(User parent);
+    List<HealthCheckFormSummaryDTO> getFormsSummaryByParentAndStatus(User parent, FormStatus status);
 }
