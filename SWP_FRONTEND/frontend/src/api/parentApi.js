@@ -623,9 +623,10 @@ export const parentApi = {
     try {
       const authAxios = createAuthAxios(token);
       const response = await authAxios.put(
-        `/api/health-check/forms/${formId}/confirm?parentNote=${encodeURIComponent(
-          notes
-        )}`
+        `/api/health-check/forms/${formId}/confirm`, 
+        {
+          parentNote: notes,
+        }
       );
       return response.data;
     } catch (error) {
@@ -642,9 +643,10 @@ export const parentApi = {
     try {
       const authAxios = createAuthAxios(token);
       const response = await authAxios.put(
-        `/api/health-check/forms/${formId}/decline?parentNote=${encodeURIComponent(
-          notes
-        )}`
+        `/api/health-check/forms/${formId}/decline`,
+        {
+          parentNote: notes,
+        }
       );
       return response.data;
     } catch (error) {

@@ -23,10 +23,14 @@ healthCheckApiClient.interceptors.request.use(
   (error) => {
     return Promise.reject(error);
   }
+  
 );
 
+const getTokenFromStorage = () => {
+  return localStorage.getItem("token");
+};
+
 export const healthCheckApi = {
-  // Get all health check campaigns by combining different status endpoints
   getAllCampaigns: async () => {
     try {
       // Get campaigns from all available status endpoints
@@ -38,8 +42,6 @@ export const healthCheckApi = {
         "CANCELED",
       ];
       const allCampaigns = [];
-
-      console.log("🔄 Fetching campaigns from multiple status endpoints...");
 
       // Fetch campaigns for each status
       for (const status of statuses) {
@@ -130,77 +132,14 @@ export const healthCheckApi = {
   // Get campaign by ID
   getCampaignById: async (id) => {
     try {
-      console.log(`🔍 NETWORK DEBUG: Calling getCampaignById for ID: ${id}`);
-      console.log(`🌐 NETWORK DEBUG: Full URL: /health-check/campaigns/${id}`);
 
       const response = await healthCheckApiClient.get(
         `/health-check/campaigns/${id}`
       );
-
-      console.log(`✅ NETWORK DEBUG: HTTP Response received:`, {
-        status: response.status,
-        statusText: response.statusText,
-        headers: response.headers,
-        dataType: typeof response.data,
-        dataKeys: response.data ? Object.keys(response.data) : "NO_DATA",
-        dataLength:
-          typeof response.data === "string" ? response.data.length : "N/A",
-        stringPreview:
-          typeof response.data === "string"
-            ? response.data.substring(0, 500) + "..."
-            : "NOT_STRING",
-        fullResponse: response,
-        rawData: response.data,
-      });
-
-      // Check if response.data is valid
-      if (!response.data) {
-        console.error("❌ NETWORK DEBUG: response.data is null/undefined!");
-        throw new Error("No data received from server");
-      }
-
-      if (typeof response.data !== "object") {
-        console.error(
-          "❌ NETWORK DEBUG: response.data is not an object:",
-          typeof response.data
-        );
-        throw new Error("Invalid data format received from server");
-      }
-
-      // Check for required fields
-      const requiredFields = ["id", "name", "status"];
-      const missingFields = requiredFields.filter(
-        (field) =>
-          response.data[field] === undefined || response.data[field] === null
-      );
-
-      if (missingFields.length > 0) {
-        console.error(
-          "❌ NETWORK DEBUG: Missing required fields:",
-          missingFields
-        );
-        console.error(
-          "❌ NETWORK DEBUG: Available fields:",
-          Object.keys(response.data)
-        );
-        console.error("❌ NETWORK DEBUG: Raw response data:", response.data);
-      }
-
-      console.log(`📋 NETWORK DEBUG: Returning campaign data:`, response.data);
-      return response.data;
+      return response.data; 
+      
     } catch (error) {
-      console.error(
-        `❌ NETWORK DEBUG: Error fetching health check campaign ${id}:`,
-        {
-          message: error.message,
-          response: error.response?.data,
-          status: error.response?.status,
-          statusText: error.response?.statusText,
-          url: error.config?.url,
-          fullError: error,
-        }
-      );
-      throw error;
+      console.error(`Error fetching health check campaign ${id}:`, error);
     }
   },
 
@@ -677,6 +616,21 @@ export const healthCheckApi = {
     }
   },
 
+  sendNotificationsToParents: async (campaignId) => {
+    try {
+      const response = await healthCheckApiClient.post(
+        `/health-check/campaigns/${campaignId}/send-notifications`
+      );
+      return response.data;
+    } catch (error) {
+      console.error(
+        `Error sending notifications to parents for campaign ${campaignId}:`,
+        error
+      );
+      throw error;
+    }
+  },
+
   // Get eligible students with their form status for a campaign
   getEligibleStudentsWithStatus: async (campaignId, campaignData = null) => {
     try {
@@ -792,28 +746,12 @@ export const healthCheckApi = {
       // Handle different response structures from various endpoints
       let eligibleStudents;
 
-      // Debug the raw response structure
-      console.log("🔍 Raw API response:", {
-        hasData: !!studentsResponse.data,
-        dataType: typeof studentsResponse.data,
-        isDataArray: Array.isArray(studentsResponse.data),
-        hasStudentsProperty: !!(
-          studentsResponse.data && studentsResponse.data.students
-        ),
-        dataKeys: studentsResponse.data
-          ? Object.keys(studentsResponse.data)
-          : null,
-        rawData: studentsResponse.data,
-      });
-
       if (studentsResponse.data && studentsResponse.data.students) {
         // Format: { message: "...", students: [...] }
         eligibleStudents = studentsResponse.data.students;
-        console.log("📊 Using students property from response");
       } else if (Array.isArray(studentsResponse.data)) {
         // Format: [student1, student2, ...]
         eligibleStudents = studentsResponse.data;
-        console.log("📊 Using array data directly");
       } else if (
         studentsResponse.data &&
         typeof studentsResponse.data === "object"
@@ -829,30 +767,16 @@ export const healthCheckApi = {
         for (const key of possibleStudentsArrays) {
           if (Array.isArray(studentsResponse.data[key])) {
             eligibleStudents = studentsResponse.data[key];
-            console.log(`📊 Using ${key} property from response`);
             break;
           }
         }
 
         if (!eligibleStudents) {
-          console.warn("⚠️ Could not find students array in response");
           eligibleStudents = [];
         }
       } else {
-        console.warn("⚠️ Unexpected response format:", studentsResponse.data);
         eligibleStudents = [];
       }
-
-      console.log("📊 Processed eligible students:", {
-        totalStudents: Array.isArray(eligibleStudents)
-          ? eligibleStudents.length
-          : 0,
-        isArray: Array.isArray(eligibleStudents),
-        sampleStudent:
-          Array.isArray(eligibleStudents) && eligibleStudents.length > 0
-            ? eligibleStudents[0]
-            : null,
-      });
 
       // Create a map of student ID to form status
       const formStatusMap = {};
@@ -894,19 +818,16 @@ export const healthCheckApi = {
         };
       };
 
-      // Ensure eligibleStudents is an array
       const studentsArray = Array.isArray(eligibleStudents)
         ? eligibleStudents
         : [];
 
-      // Combine student data with status information
       const studentsWithStatus = studentsArray.map((student) => {
         const statusInfo = formStatusMap[student.studentID] || {
-          status: "NO_FORM",
+          status: "PENDING",
           statusDisplay: "Chưa phản hồi",
         };
 
-        // Calculate age from date of birth
         const ageInfo = calculateAge(student.dob);
         const ageDisplay = `${ageInfo.years} tuổi ${ageInfo.months} tháng (${ageInfo.totalMonths} tháng)`;
 
@@ -920,12 +841,6 @@ export const healthCheckApi = {
         };
       });
 
-      console.log("Students with status:", {
-        totalProcessed: studentsWithStatus.length,
-        sampleProcessed:
-          studentsWithStatus.length > 0 ? studentsWithStatus[0] : null,
-      });
-
       return studentsWithStatus;
     } catch (error) {
       console.error(
@@ -936,64 +851,25 @@ export const healthCheckApi = {
     }
   },
 
-  // Send notifications to parents for eligible students in a campaign
-  sendNotificationsToParents: async (campaignId) => {
+  getCampaignByFormIdForParent: async (formId, token = getTokenFromStorage()) => {
     try {
-      const response = await healthCheckApiClient.post(
-        `/health-check/campaigns/${campaignId}/send-notifications`
+      const response = await healthCheckApiClient.get(
+        `/health-check/campaigns/form/${formId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
       );
       return response.data;
     } catch (error) {
       console.error(
-        `Error sending notifications to parents for campaign ${campaignId}:`,
+        `Error fetching campaign by form ID ${formId}:`,
         error
       );
       throw error;
     }
-  },
-
-  // Fix parent data for campaign
-  fixParentData: async (campaignId) => {
-    try {
-      const response = await healthCheckApiClient.post(
-        `/health-check/campaigns/${campaignId}/fix-parent-data`
-      );
-      return response.data;
-    } catch (error) {
-      console.error(
-        `Error fixing parent data for campaign ${campaignId}:`,
-        error
-      );
-      throw error;
-    }
-  },
-
-  // Fix target classes for campaign
-  fixTargetClasses: async (campaignId) => {
-    try {
-      const response = await healthCheckApiClient.post(
-        `/health-check/campaigns/${campaignId}/fix-target-classes`
-      );
-      return response.data;
-    } catch (error) {
-      console.error(
-        `Error fixing target classes for campaign ${campaignId}:`,
-        error
-      );
-      throw error;
-    }
-  },
-
-  // Reset Campaign Forms endpoint
-  resetCampaignForms: async (campaignId) => {
-    try {
-      const response = await healthCheckApiClient.post(
-        `/health-check/campaigns/${campaignId}/reset-forms`
-      );
-      return response.data;
-    } catch (error) {
-      console.error("Error resetting campaign forms:", error);
-      throw error;
-    }
-  },
+  }
+  
 };

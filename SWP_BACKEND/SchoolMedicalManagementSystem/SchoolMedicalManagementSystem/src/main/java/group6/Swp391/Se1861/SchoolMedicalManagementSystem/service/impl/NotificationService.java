@@ -361,7 +361,7 @@ public class NotificationService implements INotificationService {
     @Override
     public void notifyManagersAboutCampaignApproval(HealthCheckCampaign campaign) {
         // Find all manager users
-        List<User> managers = userRepository.findByRole_RoleName("ROLE_MANAGER");
+        List<User> managers = userRepository.findByRole_RoleName("MANAGER");
 
         for (User manager : managers) {
             Notification notification = new Notification();
@@ -637,6 +637,10 @@ public class NotificationService implements INotificationService {
         
         if (notification.getRestockRequest() != null) {
             dto.setRestockRequestId(notification.getRestockRequest().getId());
+        }
+
+        if (notification.getHealthCheckForm() != null) {
+            dto.setHealthCheckFormId(notification.getHealthCheckForm().getId());
         }
 
         return dto;

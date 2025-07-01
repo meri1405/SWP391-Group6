@@ -63,4 +63,9 @@ public class Notification {
     @ManyToOne
     @JoinColumn(name = "restockRequestId")
     private RestockRequest restockRequest;
+
+    // Optional reference to related health check form
+    @ManyToOne
+    @JoinColumn(name = "healthCheckFormId")
+    private HealthCheckForm healthCheckForm;
 }

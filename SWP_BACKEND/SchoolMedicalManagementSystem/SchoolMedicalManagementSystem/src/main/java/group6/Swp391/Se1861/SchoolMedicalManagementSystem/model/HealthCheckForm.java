@@ -58,4 +58,5 @@ public class HealthCheckForm {
 
     @Column(name = "checkedInAt", nullable = true)
     private LocalDateTime checkedInAt;
+
 }

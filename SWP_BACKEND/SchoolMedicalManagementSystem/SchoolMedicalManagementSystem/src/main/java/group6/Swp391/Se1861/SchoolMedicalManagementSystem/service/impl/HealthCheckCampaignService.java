@@ -334,20 +334,13 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
     @Override
     @Transactional
     public Map<String, Object> sendNotificationsToParents(Long campaignId) {
-        System.out.println("🚀 NOTIFICATION DEBUG: Starting sendNotificationsToParents for campaign " + campaignId);
         
         // Get the campaign and validate it's approved
         HealthCheckCampaign campaign = getCampaignByIdWithTargetClasses(campaignId);
-        System.out.println("📋 NOTIFICATION DEBUG: Campaign found - " + campaign.getName() + " (Status: " + campaign.getStatus() + ")");
         
         if (campaign.getStatus() != CampaignStatus.APPROVED) {
             throw new RuntimeException("Campaign must be APPROVED before sending notifications to parents");
         }
-
-        // Get eligible students for this campaign
-        System.out.println("🔍 CAMPAIGN DEBUG: Campaign details for student search:");
-        System.out.println("   - Campaign ID: " + campaign.getId());
-        System.out.println("   - Campaign Name: " + campaign.getName());
         
         // DETAILED DEBUG for targetClasses
         Set<String> campaignTargetClasses = campaign.getTargetClasses();
@@ -797,43 +790,6 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
         String roleName = parent.getRole().getRoleName();
         return "parent role is '" + roleName + "' not 'PARENT' or 'ROLE_PARENT' (" + parent.getPhone() + ")";
     }
-
-    /**
-     * Debug method to check parent accounts status
-     */
-    private void debugParentAccountsStatus() {
-        try {
-            System.out.println("📊 PARENT ACCOUNTS DEBUG SUMMARY:");
-            
-            // Count all users with PARENT role
-            List<User> allParents = userRepository.findByRole_RoleName("PARENT");
-            System.out.println("   Total PARENT role users: " + allParents.size());
-            
-            // Count enabled vs disabled parents
-            long enabledParents = allParents.stream().filter(User::isEnabled).count();
-            long disabledParents = allParents.stream().filter(p -> !p.isEnabled()).count();
-            System.out.println("   Enabled parents: " + enabledParents);
-            System.out.println("   Disabled parents: " + disabledParents);
-            
-            // Count students with no parents
-            List<Student> allStudents = studentRepository.findAllWithParents();
-            long studentsWithNoParents = allStudents.stream()
-                .filter(s -> s.getMother() == null && s.getFather() == null)
-                .count();
-            long studentsWithValidParents = allStudents.stream()
-                .filter(s -> hasValidParent(s))
-                .count();
-            
-            System.out.println("   Total students: " + allStudents.size());
-            System.out.println("   Students with no parents: " + studentsWithNoParents);
-            System.out.println("   Students with valid parents: " + studentsWithValidParents);
-            System.out.println("📊 END DEBUG SUMMARY");
-            
-        } catch (Exception e) {
-            System.err.println("Error in debug summary: " + e.getMessage());
-        }
-    }
-    
     /**
      * Check if student has at least one valid parent
      */
@@ -897,57 +853,6 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
             
         } catch (Exception e) {
             throw new RuntimeException("Error retrieving active campaigns for parent: " + e.getMessage());
-        }
-    }
-    
-    /**
-     * Reset (delete) all forms for a campaign to allow re-sending notifications
-     */
-    @Override
-    @Transactional
-    public Map<String, Object> resetCampaignForms(Long campaignId) {
-        try {
-            System.out.println("🔄 RESET FORMS DEBUG: Starting reset for campaign ID: " + campaignId);
-            
-            // Verify campaign exists
-            Optional<HealthCheckCampaign> campaignOpt = campaignRepository.findById(campaignId);
-            if (campaignOpt.isEmpty()) {
-                throw new RuntimeException("Campaign not found with id: " + campaignId);
-            }
-            
-            HealthCheckCampaign campaign = campaignOpt.get();
-            System.out.println("✅ RESET FORMS DEBUG: Campaign found: " + campaign.getName());
-            
-            // Find all forms for this campaign
-            List<group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.HealthCheckForm> campaignForms = 
-                healthCheckFormRepository.findByCampaign(campaign);
-            
-            int formsCount = campaignForms.size();
-            System.out.println("📊 RESET FORMS DEBUG: Found " + formsCount + " forms to delete");
-            
-            // Delete all forms
-            if (!campaignForms.isEmpty()) {
-                healthCheckFormRepository.deleteAll(campaignForms);
-                System.out.println("🗑️ RESET FORMS DEBUG: Deleted " + formsCount + " forms");
-            }
-            
-            // Force flush to ensure changes are persisted
-            healthCheckFormRepository.flush();
-            
-            System.out.println("✅ RESET FORMS DEBUG: Reset completed successfully");
-            
-            return Map.of(
-                "message", "Campaign forms reset successfully",
-                "campaignId", campaignId,
-                "campaignName", campaign.getName(),
-                "formsDeleted", formsCount,
-                "status", "success"
-            );
-            
-        } catch (Exception e) {
-            System.err.println("❌ RESET FORMS ERROR: " + e.getMessage());
-            e.printStackTrace();
-            throw new RuntimeException("Failed to reset campaign forms: " + e.getMessage());
         }
     }
 }

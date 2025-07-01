@@ -14,9 +14,7 @@ import {
 import {
   PlusOutlined,
   EditOutlined,
-  DeleteOutlined,
   EyeOutlined,
-  CheckCircleOutlined,
   CloseCircleOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
@@ -64,23 +62,7 @@ const HealthCheckCampaignList = ({
         // Toggle between all campaigns and nurse's campaigns
         if (showAllCampaigns) {
           try {
-            console.log(
-              "🌐 Attempting to fetch ALL campaigns from all nurses..."
-            );
             data = await healthCheckApi.getAllCampaigns();
-            console.log(
-              `✅ Successfully fetched ${data.length} campaigns from all sources`
-            );
-
-            // Show breakdown by status for debugging
-            const statusBreakdown = data.reduce((acc, campaign) => {
-              acc[campaign.status] = (acc[campaign.status] || 0) + 1;
-              return acc;
-            }, {});
-            console.log(
-              "📈 Status breakdown (ALL campaigns):",
-              statusBreakdown
-            );
           } catch (allCampaignsError) {
             console.warn(
               "⚠️ Failed to fetch all campaigns, falling back to nurse campaigns:",
