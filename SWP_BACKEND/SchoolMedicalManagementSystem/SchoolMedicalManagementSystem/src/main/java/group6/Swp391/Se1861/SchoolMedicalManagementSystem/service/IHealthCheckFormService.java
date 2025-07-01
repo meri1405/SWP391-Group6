@@ -1,5 +1,6 @@
 package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service;
 
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.HealthCheckFormDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.HealthCheckForm;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.Student;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
@@ -22,6 +23,8 @@ public interface IHealthCheckFormService {
     HealthCheckForm checkInStudent(Long formId);
 
     HealthCheckForm getFormById(Long id);
+
+    HealthCheckFormDTO getFormDTOById(Long id);
 
     List<HealthCheckForm> getFormsByCampaign(Long campaignId);
 

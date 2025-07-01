@@ -2,11 +2,14 @@ package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.StudentDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.HealthCheckCampaign;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.HealthCheckForm;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.Student;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.CampaignStatus;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.HealthCheckCategory;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.FormStatus;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.HealthCheckCampaignRepository;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.HealthCheckFormRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.StudentRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IHealthCheckCampaignService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.INotificationService;
@@ -15,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -24,6 +28,7 @@ import java.util.*;
 public class HealthCheckCampaignService implements IHealthCheckCampaignService {
 
     private final HealthCheckCampaignRepository campaignRepository;
+    private final HealthCheckFormRepository healthCheckFormRepository;
     private final INotificationService notificationService;
     private final IStudentService studentService;
     private final StudentRepository studentRepository;
@@ -165,6 +170,7 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
         return campaignRepository.save(campaign);
     }
 
+    @Override
     @Transactional
     public HealthCheckCampaign scheduleCampaign(Long id, int targetCount) {
         Optional<HealthCheckCampaign> optionalCampaign = campaignRepository.findById(id);
@@ -186,6 +192,28 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
 
         // Notify manager about campaign scheduling and target count
         notificationService.notifyManagerAboutCampaignSchedule(campaign);
+
+        return campaignRepository.save(campaign);
+    }
+
+    @Override
+    @Transactional
+    public HealthCheckCampaign updateTargetCount(Long id, int targetCount) {
+        Optional<HealthCheckCampaign> optionalCampaign = campaignRepository.findById(id);
+        if (optionalCampaign.isEmpty()) {
+            throw new RuntimeException("Campaign not found with id: " + id);
+        }
+
+        HealthCheckCampaign campaign = optionalCampaign.get();
+
+        // Only allow updating if the campaign is in APPROVED status
+        if (campaign.getStatus() != CampaignStatus.APPROVED) {
+            throw new RuntimeException("Cannot update target count for campaign that is not in APPROVED status");
+        }
+
+        // Update the target count without sending notification
+        campaign.setTargetCount(targetCount);
+        campaign.setUpdatedAt(LocalDateTime.now());
 
         return campaignRepository.save(campaign);
     }
@@ -267,6 +295,10 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
         return campaignRepository.findByStatus(status);
     }
 
+    public List<HealthCheckCampaign> getAllCampaigns() {
+        return campaignRepository.findAll();
+    }
+
     public List<HealthCheckCampaign> getUpcomingCampaigns() {
         return campaignRepository.findUpcomingCampaigns(CampaignStatus.APPROVED, LocalDate.now());
     }
@@ -344,22 +376,34 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
             }
         }
 
-        // Send notifications to eligible parents
+        // Send notifications to eligible parents with health check forms
         int notificationsSent = 0;
         String notificationTitle = "Thông báo khám sức khỏe";
         String notificationMessage = "Trường đang tổ chức đợt khám sức khỏe cho học sinh. " +
                                    "Vui lòng xác nhận đồng ý hoặc từ chối khám cho con em mình.";
 
         Set<Long> notifiedParents = new HashSet<>(); // Avoid duplicate notifications
-        for (User parent : eligibleParents) {
+        
+        for (int i = 0; i < eligibleParents.size(); i++) {
+            User parent = eligibleParents.get(i);
+            StudentDTO studentDTO = studentsWithParents.get(i);
+            
             if (!notifiedParents.contains(parent.getId())) {
                 try {
-                    notificationService.createGeneralNotification(
+                    // First, create a health check form for this student and campaign
+                    HealthCheckForm healthCheckForm = createHealthCheckFormForStudent(studentDTO, campaign, parent);
+                    
+                    // Then create a notification with the form attached
+                    String studentName = studentDTO.getLastName() + " " + studentDTO.getFirstName();
+                    notificationService.createHealthCheckFormNotification(
                         parent,
-                        notificationTitle,
-                        notificationMessage,
-                        "HEALTH_CHECK_CAMPAIGN"
+                        studentName,
+                        campaign.getName(),
+                        campaign.getStartDate() != null ? campaign.getStartDate().toString() : null,
+                        campaign.getLocation(),
+                        healthCheckForm
                     );
+                    
                     notifiedParents.add(parent.getId());
                     notificationsSent++;
                 } catch (Exception e) {
@@ -405,6 +449,43 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
         } catch (Exception e) {
             System.err.println("Error finding parents for student: " + e.getMessage());
             return parents;
+        }
+    }
+
+    /**
+     * Helper method to create a health check form for a student and campaign
+     */
+    private HealthCheckForm createHealthCheckFormForStudent(StudentDTO studentDTO, HealthCheckCampaign campaign, User parent) {
+        try {
+            // Check if a form already exists for this student and campaign
+            Optional<Student> studentOpt = studentRepository.findById(studentDTO.getStudentID());
+            if (!studentOpt.isPresent()) {
+                throw new RuntimeException("Student not found with ID: " + studentDTO.getStudentID());
+            }
+            
+            Student student = studentOpt.get();
+            
+            // Check if form already exists to avoid duplicates
+            HealthCheckForm existingForm = healthCheckFormRepository
+                .findByCampaignAndStudent(campaign, student);
+            
+            if (existingForm != null) {
+                return existingForm;
+            }
+            
+            // Create new health check form
+            HealthCheckForm healthCheckForm = new HealthCheckForm();
+            healthCheckForm.setStudent(student);
+            healthCheckForm.setCampaign(campaign);
+            healthCheckForm.setParent(parent);
+            healthCheckForm.setStatus(FormStatus.PENDING);
+            // sentAt is automatically set to LocalDateTime.now() by default
+            
+            return healthCheckFormRepository.save(healthCheckForm);
+            
+        } catch (Exception e) {
+            System.err.println("Error creating health check form for student " + studentDTO.getStudentID() + ": " + e.getMessage());
+            throw new RuntimeException("Failed to create health check form", e);
         }
     }
 }

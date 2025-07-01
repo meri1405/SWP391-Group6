@@ -6,7 +6,7 @@ import managerApi from "../../../api/managerApi";
 import webSocketService from "../../../services/webSocketService";
 import { VaccinationFormModal } from "../vaccinations";
 import "../../../styles/Notifications.css";
-
+import { HealthCheckFormModal } from "../health";
 const Notifications = ({ role = "parent" }) => {
   const [filter, setFilter] = useState("all");
   const [notifications, setNotifications] = useState([]);
@@ -14,6 +14,9 @@ const Notifications = ({ role = "parent" }) => {
   const [error, setError] = useState(null);
   const [showVaccinationModal, setShowVaccinationModal] = useState(false);
   const [selectedVaccinationFormId, setSelectedVaccinationFormId] =
+    useState(null);
+  const [showHealthCheckModal, setShowHealthCheckModal] = useState(false);
+  const [selectedHealthCheckFormId, setSelectedHealthCheckFormId] =
     useState(null);
   const { getToken } = useAuth();
 
@@ -31,6 +34,12 @@ const Notifications = ({ role = "parent" }) => {
     if (notification.vaccinationFormId) {
       return "vaccination";
     }
+
+    if(notification.healthCheckFormId) {
+      return "health";
+    }
+
+    console.log(notification.healthCheckFormId);
 
     // Check title and message content for additional clues
     const titleLower = notification.title?.toLowerCase() || "";
@@ -111,7 +120,8 @@ const Notifications = ({ role = "parent" }) => {
     return (
       notification.medicationRequest ||
       notification.medicationSchedule ||
-      notification.vaccinationFormId
+      notification.vaccinationFormId ||
+      notification.healthCheckFormId
     );
   };
 
@@ -235,7 +245,10 @@ const Notifications = ({ role = "parent" }) => {
           medicationRequest: notification.medicationRequest,
           medicationSchedule: notification.medicationSchedule,
           vaccinationFormId: notification.vaccinationFormId,
+          healthCheckFormId: notification.healthCheckFormId,
         };
+
+        
       });
 
       setNotifications(transformedNotifications);
@@ -290,6 +303,7 @@ const Notifications = ({ role = "parent" }) => {
           medicationRequest: newNotification.medicationRequest,
           medicationSchedule: newNotification.medicationSchedule,
           vaccinationFormId: newNotification.vaccinationFormId,
+          healthCheckFormId: newNotification.healthCheckFormId,
         };
 
         // Add new notification to the beginning of the list
@@ -380,7 +394,13 @@ const Notifications = ({ role = "parent" }) => {
       // Open vaccination form modal
       setSelectedVaccinationFormId(notification.vaccinationFormId);
       setShowVaccinationModal(true);
-    }
+    } else if (notification.healthCheckFormId) {
+      // Open health check form modal
+      console.log(notification.healthCheckFormId);
+      console.log("Opening health check form modal for ID:", notification.healthCheckFormId);
+      setSelectedHealthCheckFormId(notification.healthCheckFormId);
+      setShowHealthCheckModal(true);
+    } 
 
     // Mark as read when action is taken
     if (!notification.read) {
@@ -392,6 +412,12 @@ const Notifications = ({ role = "parent" }) => {
     // Refresh notifications when vaccination form is updated
     loadNotifications();
   };
+
+  const handleHealthCheckFormUpdated = () => {
+    // Refresh notifications when health check form is updated
+    loadNotifications();
+  };
+
   const getTypeIcon = (type) => {
     switch (type) {
       case "vaccination":
@@ -589,6 +615,16 @@ const Notifications = ({ role = "parent" }) => {
           vaccinationFormId={selectedVaccinationFormId}
           onClose={() => setShowVaccinationModal(false)}
           onFormUpdated={handleVaccinationFormUpdated}
+        />
+      )}
+
+      {/* Health Check Form Modal */}
+      {showHealthCheckModal && (
+        <HealthCheckFormModal
+          isOpen={showHealthCheckModal}
+          healthCheckFormId={selectedHealthCheckFormId}
+          onClose={() => setShowHealthCheckModal(false)}
+          onFormUpdated={handleHealthCheckFormUpdated}
         />
       )}
     </div>

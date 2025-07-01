@@ -16,7 +16,14 @@ export default defineConfig({
       }
     },
     // Thêm cấu hình historyApiFallback để xử lý client-side routing
-    historyApiFallback: true
+    historyApiFallback: true,
+    // Fix WebSocket connection issues
+    hmr: {
+      port: 5174,
+    },
+    watch: {
+      usePolling: true,
+    }
   },
   // Thêm cấu hình base để tránh lỗi routing khi reload
   base: '/'

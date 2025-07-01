@@ -90,10 +90,10 @@ const ManagerHealthCheckManagement = () => {
           response = await healthCheckApi.getCampaignsByStatus('APPROVED');
           break;
         case 'canceled':
-          response = await healthCheckApi.getCampaignsByStatus('CANCELED'); // Show rejected campaigns (back to canceled)
+          response = await healthCheckApi.getCampaignsByStatus('CANCELED');
           break;
         case 'ongoing':
-          response = await healthCheckApi.getCampaignsByStatus('IN_PROGRESS'); // Use IN_PROGRESS instead of ONGOING
+          response = await healthCheckApi.getCampaignsByStatus('IN_PROGRESS');
           break;
         case 'completed':
           response = await healthCheckApi.getCompletedCampaigns();
@@ -143,52 +143,47 @@ const ManagerHealthCheckManagement = () => {
   };
 
   const showCampaignDetail = async (campaign) => {
+    setSelectedCampaign(campaign);
+    setDetailModalVisible(true);
+    
     try {
-      const [campaignDetail, formsData, resultsData] = await Promise.all([
-        healthCheckApi.getCampaignById(campaign.id),
-        healthCheckApi.getFormsByCampaign(campaign.id).catch(() => []),
-        healthCheckApi.getResultsByCampaign(campaign.id).catch(() => [])
+      // Fetch additional details for the campaign
+      const [campaignForms, campaignResults] = await Promise.all([
+        healthCheckApi.getFormsByCampaign(campaign.id),
+        healthCheckApi.getResultsByCampaign(campaign.id)
       ]);
-      
-      setSelectedCampaign(campaignDetail);
-      setForms(formsData || []);
-      setResults(resultsData || []);
-      setDetailModalVisible(true);
+      setForms(campaignForms);
+      setResults(campaignResults);
     } catch (error) {
-      message.error('Lỗi khi tải thông tin chi tiết chiến dịch');
       console.error('Error fetching campaign details:', error);
     }
   };
 
   const getStatusBadge = (status) => {
-    const statusMap = {
-      PENDING: { color: 'processing', text: 'Chờ duyệt' },
-      APPROVED: { color: 'success', text: 'Đã duyệt' },
-      IN_PROGRESS: { color: 'warning', text: 'Đang tiến hành' },
-      COMPLETED: { color: 'default', text: 'Hoàn thành' },
-      CANCELED: { color: 'error', text: 'Đã hủy' },
-      REJECTED: { color: 'error', text: 'Bị từ chối' },
-      ONGOING: { color: 'warning', text: 'Đang tiến hành' }
+    const statusConfig = {
+      PENDING: { color: 'orange', text: 'Chờ phê duyệt' },
+      APPROVED: { color: 'green', text: 'Đã phê duyệt' },
+      IN_PROGRESS: { color: 'blue', text: 'Đang thực hiện' },
+      COMPLETED: { color: 'purple', text: 'Hoàn thành' },
+      CANCELED: { color: 'red', text: 'Đã hủy' }
     };
-    const statusInfo = statusMap[status] || { color: 'default', text: status };
-    return <Badge status={statusInfo.color} text={statusInfo.text} />;
+    
+    const config = statusConfig[status] || { color: 'default', text: status };
+    return <Badge color={config.color} text={config.text} />;
   };
 
   const formatCategories = (categories) => {
-    if (!categories || categories.length === 0) return 'N/A';
-    const categoryMap = {
-      VISION: 'Khám mắt',
-      HEARING: 'Khám tai',
-      ORAL: 'Khám răng miệng',
-      SKIN: 'Khám da liễu',
-      RESPIRATORY: 'Khám hô hấp'
+    if (!categories || categories.length === 0) return 'Không có';
+    
+    const categoryNames = {
+      'VISION': 'Thị lực',
+      'HEARING': 'Thính giác', 
+      'ORAL': 'Răng miệng',
+      'SKIN': 'Da liễu',
+      'RESPIRATORY': 'Hô hấp'
     };
     
-    return categories.map(cat => (
-      <Tag key={cat} color="blue" style={{ marginBottom: 4 }}>
-        {categoryMap[cat] || cat}
-      </Tag>
-    ));
+    return categories.map(cat => categoryNames[cat] || cat).join(', ');
   };
 
   const columns = [

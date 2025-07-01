@@ -217,7 +217,7 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
               rules={[{ required: true, message: 'Vui lòng nhập độ tuổi tối thiểu' }]}
             >
               <InputNumber 
-                min={6} 
+                min={2} 
                 max={12}
                 style={{ width: '100%' }}
                 placeholder="Nhập độ tuổi tối thiểu"
@@ -253,6 +253,7 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
                 tokenSeparators={[',']}
               >
                 <Option value="toàn trường">Toàn trường</Option>
+                <Option value="Mầm non">Mầm non</Option>
                 <Option value="1A">Lớp 1A</Option>
                 <Option value="1B">Lớp 1B</Option>
                 <Option value="1C">Lớp 1C</Option>

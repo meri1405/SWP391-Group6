@@ -28,4 +28,7 @@ public interface HealthCheckFormRepository extends JpaRepository<HealthCheckForm
 
     @Query("SELECT COUNT(f) FROM HealthCheckForm f WHERE f.campaign = :campaign AND f.status = :status")
     int countByCampaignAndStatus(HealthCheckCampaign campaign, FormStatus status);
+
+    // New method for scheduler service - find forms by status and reminderSent flag
+    List<HealthCheckForm> findByStatusAndReminderSent(FormStatus status, boolean reminderSent);
 }

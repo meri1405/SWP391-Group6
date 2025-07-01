@@ -4,6 +4,7 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.HealthCheckForm;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.Student;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.FormStatus;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.HealthCheckFormDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IHealthCheckFormService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IStudentService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IUserService;
@@ -178,7 +179,9 @@ public class HealthCheckFormController {
             return ResponseEntity.status(403).body("You are not authorized to view this form");
         }
 
-        return ResponseEntity.ok(form);
+        // Return DTO instead of entity
+        HealthCheckFormDTO formDTO = formService.getFormDTOById(formId);
+        return ResponseEntity.ok(formDTO);
     }
 
     @GetMapping("/campaign/{campaignId}")

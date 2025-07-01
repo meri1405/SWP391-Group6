@@ -26,10 +26,10 @@ healthCheckApiClient.interceptors.request.use(
 );
 
 export const healthCheckApi = {
-  // Get all health check campaigns
-  getAllCampaigns: async () => {
+  // Get all health check campaigns with pagination
+  getAllCampaigns: async (page = 0, size = 10) => {
     try {
-      const response = await healthCheckApiClient.get('/health-check/campaigns');
+      const response = await healthCheckApiClient.get(`/health-check/campaigns?page=${page}&size=${size}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching health check campaigns:', error);
@@ -37,13 +37,35 @@ export const healthCheckApi = {
     }
   },
   
-  // Get campaigns created by current nurse
-  getNurseCampaigns: async () => {
+  // Get all campaigns (without pagination, for when you need all data)
+  getAllCampaignsNoPagination: async () => {
+    try {
+      const response = await healthCheckApiClient.get('/health-check/campaigns');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching all health check campaigns:', error);
+      throw error;
+    }
+  },
+  
+  // Get campaigns created by current nurse with pagination
+  getNurseCampaigns: async (page = 0, size = 10) => {
+    try {
+      const response = await healthCheckApiClient.get(`/health-check/campaigns/nurse?page=${page}&size=${size}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching nurse health check campaigns:', error);
+      throw error;
+    }
+  },
+  
+  // Get all campaigns created by current nurse (no pagination)
+  getAllNurseCampaigns: async () => {
     try {
       const response = await healthCheckApiClient.get('/health-check/campaigns/nurse');
       return response.data;
     } catch (error) {
-      console.error('Error fetching nurse health check campaigns:', error);
+      console.error('Error fetching all nurse health check campaigns:', error);
       throw error;
     }
   },
@@ -434,7 +456,14 @@ export const healthCheckApi = {
     try {
       // Get all forms for the campaign to determine status
       const formsResponse = await healthCheckApiClient.get(`/health-check/forms/campaign/${campaignId}`);
-      const forms = formsResponse.data;
+      const forms = Array.isArray(formsResponse.data) ? formsResponse.data : 
+                   (formsResponse.data && Array.isArray(formsResponse.data.forms) ? formsResponse.data.forms : []);
+      
+      console.log('Forms response structure:', {
+        isArray: Array.isArray(formsResponse.data),
+        dataKeys: formsResponse.data ? Object.keys(formsResponse.data) : 'null',
+        formsLength: forms.length
+      });
       
       // Get eligible students using campaign criteria if provided
       let studentsResponse;
@@ -490,16 +519,20 @@ export const healthCheckApi = {
       
       // Create a map of student ID to form status
       const formStatusMap = {};
-      forms.forEach(form => {
-        if (form.student && form.student.studentID) {
-          formStatusMap[form.student.studentID] = {
-            status: form.status,
-            statusDisplay: form.status === 'CONFIRMED' ? 'Đã xác nhận khám' : 
-                         form.status === 'DECLINED' ? 'Từ chối khám' : 
-                         form.status === 'PENDING' ? 'Chưa phản hồi' : 'Chưa phản hồi'
-          };
-        }
-      });
+      if (Array.isArray(forms)) {
+        forms.forEach(form => {
+          if (form.student && form.student.studentID) {
+            formStatusMap[form.student.studentID] = {
+              status: form.status,
+              statusDisplay: form.status === 'CONFIRMED' ? 'Đã xác nhận khám' : 
+                           form.status === 'DECLINED' ? 'Từ chối khám' : 
+                           form.status === 'PENDING' ? 'Chưa phản hồi' : 'Chưa phản hồi'
+            };
+          }
+        });
+      } else {
+        console.warn('Forms is not an array:', forms);
+      }
       
       // Helper function to calculate age from date of birth
       const calculateAge = (dob) => {
@@ -529,7 +562,7 @@ export const healthCheckApi = {
       // Combine student data with status information
       const studentsWithStatus = studentsArray.map(student => {
         const statusInfo = formStatusMap[student.studentID] || { 
-          status: 'NO_FORM', 
+          status: 'PENDFING', 
           statusDisplay: 'Chưa phản hồi' 
         };
         

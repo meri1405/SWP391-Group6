@@ -2,26 +2,28 @@ package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.*;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.FormStatus;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.HealthCheckCampaignRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.HealthCheckFormRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.StudentRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IHealthCheckCampaignService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IHealthCheckFormService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.INotificationService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.HealthCheckFormDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class HealthCheckFormService implements IHealthCheckFormService {
 
     private final HealthCheckFormRepository formRepository;
+    private final HealthCheckCampaignRepository campaignRepository;
     private final StudentRepository studentRepository;
     private final INotificationService notificationService;
     private final IHealthCheckCampaignService campaignService;
@@ -66,14 +68,18 @@ public class HealthCheckFormService implements IHealthCheckFormService {
 
             forms.add(formRepository.save(form));
 
-            // Send notification to parent
+            // Send notification to parent with proper health_check_form_id
+            // This ensures parents can view campaign details from the notification
             notificationService.notifyParentAboutHealthCheck(form);
         }
 
-        // Update the target count in the campaign
+        // Update the target count in the campaign without sending notification
+        // Just update the database directly without calling scheduleCampaign method
         campaign.setTargetCount(campaign.getTargetCount() + forms.size());
-        campaignService.scheduleCampaign(campaignId, campaign.getTargetCount());
-
+        campaign.setUpdatedAt(LocalDateTime.now());
+        // Save the campaign directly to avoid triggering notification
+        campaignRepository.save(campaign);
+        
         return forms;
     }
 
@@ -180,8 +186,8 @@ public class HealthCheckFormService implements IHealthCheckFormService {
 
     @Override
     public HealthCheckForm getFormById(Long id) {
-        Optional<HealthCheckForm> form = formRepository.findById(id);
-        return form.orElseThrow(() -> new RuntimeException("Form not found with id: " + id));
+        return formRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Form not found with id: " + id));
     }
 
     @Override
@@ -221,5 +227,74 @@ public class HealthCheckFormService implements IHealthCheckFormService {
     public int getPendingCountByCampaign(Long campaignId) {
         HealthCheckCampaign campaign = campaignService.getCampaignById(campaignId);
         return formRepository.countByCampaignAndStatus(campaign, FormStatus.PENDING);
+    }
+
+    public HealthCheckFormDTO convertToDTO(HealthCheckForm form) {
+        HealthCheckFormDTO dto = new HealthCheckFormDTO();
+        
+        // Form basic info
+        dto.setId(form.getId());
+        dto.setStatus(form.getStatus());
+        dto.setSentAt(form.getSentAt());
+        dto.setRespondedAt(form.getRespondedAt());
+        dto.setParentNote(form.getParentNote());
+        dto.setAppointmentTime(form.getAppointmentTime());
+        dto.setAppointmentLocation(form.getAppointmentLocation());
+        dto.setReminderSent(form.isReminderSent());
+        dto.setCheckedIn(form.isCheckedIn());
+        dto.setCheckedInAt(form.getCheckedInAt());
+
+        // Campaign info
+        HealthCheckCampaign campaign = form.getCampaign();
+        if (campaign != null) {
+            dto.setCampaignId(campaign.getId());
+            dto.setCampaignName(campaign.getName());
+            dto.setCampaignDescription(campaign.getDescription());
+            dto.setCampaignLocation(campaign.getLocation());
+            dto.setCampaignStartDate(campaign.getStartDate() != null ? campaign.getStartDate().toString() : null);
+            dto.setCampaignEndDate(campaign.getEndDate() != null ? campaign.getEndDate().toString() : null);
+            dto.setCampaignCategories(campaign.getCategories().stream()
+                    .map(Enum::name)
+                    .collect(Collectors.toList()));
+            dto.setCampaignNotes(campaign.getNotes());
+            dto.setCampaignCreatedAt(campaign.getCreatedAt());
+            dto.setCampaignApprovedAt(campaign.getApprovedAt());
+            
+            if (campaign.getCreatedBy() != null) {
+                dto.setCampaignCreatedBy(campaign.getCreatedBy().getFullName());
+            }
+            if (campaign.getApprovedBy() != null) {
+                dto.setCampaignApprovedBy(campaign.getApprovedBy().getFullName());
+            }
+        }
+
+        // Student info
+        Student student = form.getStudent();
+        if (student != null) {
+            dto.setStudentId(student.getStudentID());
+            dto.setStudentFirstName(student.getFirstName());
+            dto.setStudentLastName(student.getLastName());
+            dto.setStudentDob(student.getDob() != null ? student.getDob().toString() : null);
+            dto.setStudentGender(student.getGender());
+            dto.setStudentClassName(student.getClassName());
+        }
+
+        // Parent info
+        User parent = form.getParent();
+        if (parent != null) {
+            dto.setParentId(parent.getId());
+            dto.setParentFirstName(parent.getFirstName());
+            dto.setParentLastName(parent.getLastName());
+            dto.setParentEmail(parent.getEmail());
+            dto.setParentPhone(parent.getPhone());
+        }
+
+        return dto;
+    }
+
+    public HealthCheckFormDTO getFormDTOById(Long id) {
+        HealthCheckForm form = formRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Form not found with id: " + id));
+        return convertToDTO(form);
     }
 }

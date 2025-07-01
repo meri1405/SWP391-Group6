@@ -507,22 +507,100 @@ export const parentApi = {
   getStudentsWithHealthProfileStatus: async (token = getTokenFromStorage()) => {
     try {
       const authAxios = createAuthAxios(token);
-      const response = await authAxios.get("/api/parent/students/health-profile-status");
+      const response = await authAxios.get('/api/parent/students/health-profile-status');
       return response.data;
     } catch (error) {
-      console.error("Error fetching students with health profile status:", error);
+      console.error('Error fetching students with health profile status:', error);
       throw error;
     }
   },
 
-  // Check if any students are missing health profiles
+  // Get students missing health profiles
   getStudentsMissingHealthProfiles: async (token = getTokenFromStorage()) => {
     try {
       const authAxios = createAuthAxios(token);
-      const response = await authAxios.get("/api/parent/students/missing-health-profiles");
+      const response = await authAxios.get('/api/parent/students/missing-health-profiles');
       return response.data;
     } catch (error) {
-      console.error("Error fetching students missing health profiles:", error);
+      console.error('Error fetching students missing health profiles:', error);
+      throw error;
+    }
+  },
+
+  // HEALTH CHECK FORM MANAGEMENT
+  
+  // Get all health check forms for parent
+  getHealthCheckForms: async (token = getTokenFromStorage()) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.get('/api/health-check/forms/parent');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching health check forms:', error);
+      throw error;
+    }
+  },
+
+  // Get health check forms by status
+  getHealthCheckFormsByStatus: async (status, token = getTokenFromStorage()) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.get(`/api/health-check/forms/parent/status/${status}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching health check forms with status ${status}:`, error);
+      throw error;
+    }
+  },
+
+  // Confirm health check form
+  confirmHealthCheckForm: async (formId, parentNote = '', token = getTokenFromStorage()) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.put(`/api/health-check/forms/${formId}/confirm`, null, {
+        params: { parentNote }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error confirming health check form:', error);
+      throw error;
+    }
+  },
+
+  // Decline health check form
+  declineHealthCheckForm: async (formId, parentNote = '', token = getTokenFromStorage()) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.put(`/api/health-check/forms/${formId}/decline`, null, {
+        params: { parentNote }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error declining health check form:', error);
+      throw error;
+    }
+  },
+
+  // Get health check form by ID
+  getHealthCheckFormById: async (formId, token = getTokenFromStorage()) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.get(`/api/health-check/forms/${formId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching health check form:', error);
+      throw error;
+    }
+  },
+
+  // Get health check results for student
+  getHealthCheckResults: async (studentId, token = getTokenFromStorage()) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.get(`/api/health-check/results/student/${studentId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching health check results:', error);
       throw error;
     }
   },

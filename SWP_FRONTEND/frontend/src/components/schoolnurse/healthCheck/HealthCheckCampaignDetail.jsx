@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Card,
   Descriptions,
@@ -27,6 +27,7 @@ import {
   CheckOutlined,
   FileTextOutlined,
   UserOutlined,
+  ReloadOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { healthCheckApi } from '../../../api/healthCheckApi';
@@ -44,42 +45,10 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
   const [studentsLoading, setStudentsLoading] = useState(false);
   const [notificationSent, setNotificationSent] = useState(false);
   const [sendingNotification, setSendingNotification] = useState(false);
+  const [refreshInterval, setRefreshInterval] = useState(null);
+  const [lastRefresh, setLastRefresh] = useState(null);
 
-  useEffect(() => {
-    fetchCampaignDetails();
-  }, [campaignId]);
-
-  // Fetch eligible students when campaign becomes APPROVED
-  useEffect(() => {
-    if (campaign && campaign.status === 'APPROVED') {
-      fetchEligibleStudents(campaign);
-    }
-  }, [campaign?.status]);
-
-  const fetchCampaignDetails = async () => {
-    setLoading(true);
-    try {
-      const data = await healthCheckApi.getCampaignById(campaignId);
-      setCampaign(data);
-      
-      // If campaign has started, fetch results
-      if (data.status === 'IN_PROGRESS' || data.status === 'COMPLETED') {
-        fetchResults();
-      }
-      
-      // If campaign is approved, fetch eligible students
-      if (data.status === 'APPROVED') {
-        fetchEligibleStudents(data);
-      }
-    } catch (error) {
-      console.error('Error fetching campaign details:', error);
-      message.error('Không thể tải thông tin chi tiết đợt khám');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchResults = async () => {
+  const fetchResults = useCallback(async () => {
     setResultsLoading(true);
     try {
       const data = await healthCheckApi.getResultsByCampaign(campaignId);
@@ -91,9 +60,9 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
     } finally {
       setResultsLoading(false);
     }
-  };
+  }, [campaignId]);
 
-  const fetchEligibleStudents = async (campaignData = null) => {
+  const fetchEligibleStudents = useCallback(async (campaignData = null) => {
     setStudentsLoading(true);
     try {
       // Use the provided campaign data or fall back to current state
@@ -115,6 +84,7 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
       const data = await healthCheckApi.getEligibleStudentsWithStatus(campaignId, dataToUse);
       console.log('Eligible students fetched:', data.length);
       setEligibleStudents(data);
+      setLastRefresh(new Date());
     } catch (error) {
       console.error('Error fetching eligible students:', error);
       message.error('Không thể tải danh sách học sinh đủ điều kiện');
@@ -122,7 +92,76 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
     } finally {
       setStudentsLoading(false);
     }
-  };
+  }, [campaignId, campaign]);
+
+  const fetchCampaignDetails = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await healthCheckApi.getCampaignById(campaignId);
+      setCampaign(data);
+      
+      // If campaign has started, fetch results
+      if (data.status === 'IN_PROGRESS' || data.status === 'COMPLETED') {
+        fetchResults();
+      }
+      
+      // If campaign is approved, fetch eligible students
+      if (data.status === 'APPROVED') {
+        fetchEligibleStudents(data);
+      }
+    } catch (error) {
+      console.error('Error fetching campaign details:', error);
+      message.error('Không thể tải thông tin chi tiết đợt khám');
+    } finally {
+      setLoading(false);
+    }
+  }, [campaignId, fetchResults, fetchEligibleStudents]);
+
+  useEffect(() => {
+    fetchCampaignDetails();
+  }, [fetchCampaignDetails]);
+
+  // Fetch eligible students when campaign becomes APPROVED
+  useEffect(() => {
+    if (campaign && campaign.status === 'APPROVED') {
+      fetchEligibleStudents(campaign);
+    }
+  }, [campaign?.status, campaign, fetchEligibleStudents]);
+
+  // Set up automatic refresh for approved campaigns
+  useEffect(() => {
+    if (campaign && campaign.status === 'APPROVED') {
+      // Set up periodic refresh every 30 seconds to check for form updates
+      const interval = setInterval(() => {
+        console.log('Auto-refreshing eligible students data...');
+        fetchEligibleStudents(); // Don't pass campaign to avoid stale closure
+      }, 3000000); // 30 seconds
+      
+      setRefreshInterval(interval);
+      
+      return () => {
+        if (interval) {
+          clearInterval(interval);
+        }
+      };
+    } else {
+      // Clear interval if campaign status changes
+      if (refreshInterval) {
+        clearInterval(refreshInterval);
+        setRefreshInterval(null);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [campaign?.status, fetchEligibleStudents]);
+
+  // Cleanup interval on component unmount
+  useEffect(() => {
+    return () => {
+      if (refreshInterval) {
+        clearInterval(refreshInterval);
+      }
+    };
+  }, [refreshInterval]);
 
   const showConfirmModal = (action, title, message) => {
     setConfirmModal({ visible: true, action, title, message });
@@ -187,6 +226,11 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
       'Xác nhận gửi thông báo',
       `Bạn có chắc chắn muốn gửi thông báo khám sức khỏe cho phụ huynh của các học sinh đủ điều kiện? Thông báo sẽ được gửi đến ${eligibleStudents.length} học sinh.`
     );
+  };
+
+  const handleRefreshStudents = () => {
+    console.log('Manual refresh triggered by user');
+    fetchEligibleStudents(); // Use current campaign state from closure
   };
 
   const executeSendNotifications = async () => {
@@ -479,7 +523,11 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
                           {campaign.minAge} - {campaign.maxAge} tuổi
                         </Descriptions.Item>
                         <Descriptions.Item label="Lớp mục tiêu">
-                          {campaign.targetClasses || 'Tất cả các lớp'}
+                          {campaign.targetClasses && campaign.targetClasses.length > 0 
+                            ? (Array.isArray(campaign.targetClasses) 
+                                ? campaign.targetClasses.join(', ') 
+                                : campaign.targetClasses)
+                            : 'Tất cả các lớp'}
                         </Descriptions.Item>
                         <Descriptions.Item label="Loại khám">
                           <div>
@@ -578,15 +626,32 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
                         </Row>
                         
                         <div style={{ marginBottom: 16 }}>
-                          <Button 
-                            type="primary" 
-                            icon={<SendOutlined />} 
-                            onClick={handleSendNotifications} 
-                            loading={sendingNotification}
-                            disabled={notificationSent}
-                          >
-                            {notificationSent ? 'Đã gửi thông báo' : 'Gửi thông báo cho phụ huynh'}
-                          </Button>
+                          <Space>
+                            <Button 
+                              type="primary" 
+                              icon={<SendOutlined />} 
+                              onClick={handleSendNotifications} 
+                              loading={sendingNotification}
+                              disabled={notificationSent}
+                            >
+                              {notificationSent ? 'Đã gửi thông báo' : 'Gửi thông báo cho phụ huynh'}
+                            </Button>
+                            <Button 
+                              icon={<ReloadOutlined />} 
+                              onClick={handleRefreshStudents} 
+                              loading={studentsLoading}
+                            >
+                              Làm mới dữ liệu
+                            </Button>
+                          </Space>
+                          {lastRefresh && (
+                            <div style={{ marginTop: 8, fontSize: '12px', color: '#666' }}>
+                              <Text type="secondary">
+                                Cập nhật lần cuối: {dayjs(lastRefresh).format('DD/MM/YYYY HH:mm:ss')}
+                                {' • Tự động làm mới mỗi 30 giây'}
+                              </Text>
+                            </div>
+                          )}
                         </div>
                         
                         <Table

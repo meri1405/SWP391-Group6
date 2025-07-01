@@ -44,10 +44,21 @@ public interface IHealthCheckCampaignService {
 
     List<HealthCheckCampaign> getActiveCampaignsByClass(String className);
 
+    List<HealthCheckCampaign> getAllCampaigns();
+
     /**
      * Calculate target count based on criteria without creating a campaign
      */
     int calculateTargetCount(Integer minAge, Integer maxAge, Set<String> targetClasses);
+
+    /**
+     * Schedule campaign with target count (this will send notification to manager)
+     */
+    
+    /**
+     * Update target count without sending notification (for internal use when generating forms)
+     */
+    HealthCheckCampaign updateTargetCount(Long id, int targetCount);
 
     /**
      * Send notifications to parents of eligible students for a health check campaign

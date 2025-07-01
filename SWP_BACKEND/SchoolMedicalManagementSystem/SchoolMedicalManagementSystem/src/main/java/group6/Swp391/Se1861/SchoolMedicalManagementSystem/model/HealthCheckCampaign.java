@@ -1,5 +1,6 @@
 package group6.Swp391.Se1861.SchoolMedicalManagementSystem.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.CampaignStatus;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.HealthCheckCategory;
 import jakarta.persistence.*;
@@ -82,6 +83,7 @@ public class HealthCheckCampaign {
     private String notes;
 
     @OneToMany(mappedBy = "campaign", cascade = CascadeType.ALL)
+    @JsonIgnore  // Prevent circular reference during JSON serialization
     private Set<HealthCheckForm> forms = new HashSet<>();
 
     @Column(name = "confirmedCount", nullable = false)

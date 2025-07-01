@@ -125,6 +125,17 @@ public interface INotificationService {
             VaccinationForm vaccinationForm);
 
     /**
+     * Create health check form notification
+     */
+    NotificationDTO createHealthCheckFormNotification(
+            User recipient,
+            String studentName,
+            String campaignName,
+            String appointmentDate,
+            String location,
+            HealthCheckForm healthCheckForm);
+
+    /**
      * Create a general notification
      */
     List<NotificationDTO> getAllNotificationsForUser(User user);
@@ -231,4 +242,53 @@ public interface INotificationService {
      * Notify nurse about restock request rejection
      */
     void notifyNurseAboutRestockRequestRejection(RestockRequest restockRequest, String notes);
+
+    /**
+     * Create abnormal health check result notification
+     */
+    NotificationDTO createAbnormalHealthResultNotification(
+            User recipient,
+            String studentName,
+            String category,
+            HealthCheckForm healthCheckForm);
+
+    /**
+     * Create health check appointment notification
+     */
+    NotificationDTO createHealthCheckAppointmentNotification(
+            User recipient,
+            String studentName,
+            String appointmentDate,
+            String appointmentTime,
+            String location,
+            HealthCheckForm healthCheckForm);
+
+    /**
+     * ENHANCED HEALTH CHECK NOTIFICATIONS (In-App Only)
+     */
+    
+    /**
+     * Send reminder notification for pending health check forms
+     */
+    void sendHealthCheckFormReminderNotification(HealthCheckForm form);
+    
+    /**
+     * Notify nurse about deadline approaching for health check campaign
+     */
+    void notifyNurseAboutCampaignDeadline(HealthCheckCampaign campaign, int daysRemaining);
+    
+    /**
+     * Notify manager about campaign progress
+     */
+    void notifyManagerAboutCampaignProgress(HealthCheckCampaign campaign, int confirmedCount, int totalCount);
+    
+    /**
+     * Send bulk notifications to parents for health check forms
+     */
+    int sendBulkHealthCheckNotifications(List<HealthCheckForm> forms);
+    
+    /**
+     * Notify parent about health check result sync with health profile
+     */
+    void notifyParentAboutHealthProfileUpdate(HealthCheckResult result);
 }

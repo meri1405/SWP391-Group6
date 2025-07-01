@@ -114,6 +114,9 @@ public class HealthCheckResultService implements IHealthCheckResultService {
             notificationService.notifyManagerAboutAbnormalResult(savedResult);
         }
 
+        // Notify parent about health profile update
+        notificationService.notifyParentAboutHealthProfileUpdate(savedResult);
+
         return savedResult;
     }
 

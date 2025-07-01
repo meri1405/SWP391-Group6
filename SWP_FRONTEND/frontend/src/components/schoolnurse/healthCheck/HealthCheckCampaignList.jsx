@@ -21,19 +21,43 @@ const HealthCheckCampaignList = ({ onCreateNew, onViewDetails, refreshTrigger })
   const [dateRange, setDateRange] = useState(null);
   const [confirmDeleteModal, setConfirmDeleteModal] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState(null);
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 10,
+    total: 0,
+    showSizeChanger: true,
+    showQuickJumper: true,
+    showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} mục`,
+  });
 
   useEffect(() => {
     fetchCampaigns();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterStatus, dateRange, refreshTrigger]);
 
   const fetchCampaigns = async () => {
     setLoading(true);
     try {
       let data;
-      if (filterStatus !== 'ALL') {
+      
+      if (filterStatus === 'ALL') {
+        // Fetch campaigns created by current nurse only
+        data = await healthCheckApi.getAllNurseCampaigns();
+      } else if (filterStatus !== 'ALL') {
+        // Fetch campaigns by specific status
         data = await healthCheckApi.getCampaignsByStatus(filterStatus);
       } else {
-        data = await healthCheckApi.getNurseCampaigns();
+        // Try to fetch all campaigns, fallback to nurse campaigns if unauthorized
+        try {
+          data = await healthCheckApi.getAllCampaignsNoPagination();
+        } catch (error) {
+          if (error.response?.status === 401) {
+            console.warn('Unauthorized to fetch all campaigns, falling back to nurse campaigns');
+            data = await healthCheckApi.getAllNurseCampaigns();
+          } else {
+            throw error;
+          }
+        }
       }
       
       // Apply date range filter if selected
@@ -47,15 +71,39 @@ const HealthCheckCampaignList = ({ onCreateNew, onViewDetails, refreshTrigger })
         });
       }
       
+      // Sort campaigns by creation date (newest first)
+      filteredData.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      
+      // Update campaigns state
       setCampaigns(filteredData);
+      
+      // Update pagination total
+      setPagination(prev => ({
+        ...prev,
+        total: filteredData.length,
+        current: 1, // Reset to first page when data changes
+      }));
+      
     } catch (error) {
       message.error('Không thể tải danh sách đợt khám sức khỏe');
       console.error('Error fetching campaigns:', error);
-      // Set mock data for development if needed
       setCampaigns([]);
+      setPagination(prev => ({
+        ...prev,
+        total: 0,
+        current: 1
+      }));
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleTableChange = (newPagination) => {
+    setPagination(prev => ({
+      ...prev,
+      current: newPagination.current,
+      pageSize: newPagination.pageSize,
+    }));
   };
 
   const handleDelete = (campaign) => {
@@ -226,7 +274,8 @@ const HealthCheckCampaignList = ({ onCreateNew, onViewDetails, refreshTrigger })
           columns={columns} 
           dataSource={campaigns.map(campaign => ({ ...campaign, key: campaign.id }))} 
           loading={loading}
-          pagination={{ pageSize: 10 }}
+          pagination={pagination}
+          onChange={handleTableChange}
           rowClassName={record => record.status === 'CANCELED' ? 'cancelled-row' : ''}
         />
       </Card>
