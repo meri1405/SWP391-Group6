@@ -8,6 +8,7 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.RoleReposit
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.StudentRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.UserRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IStudentService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.utils.PhoneValidator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -549,10 +550,11 @@ public class StudentService implements IStudentService {
             throw new IllegalArgumentException("Họ phụ huynh là bắt buộc khi có số điện thoại phụ huynh");
         }
         
-        // Validate phone number format (10-11 digits)
+        // Validate phone number format (10 digits with valid Vietnamese prefix)
         String phone = parentDto.getPhone().trim();
-        if (!phone.matches("^0\\d{9,10}$")) {
-            throw new IllegalArgumentException("Số điện thoại phụ huynh không đúng định dạng (phải có 10-11 số và bắt đầu bằng 0)");
+        String phoneError = PhoneValidator.validatePhone(phone);
+        if (phoneError != null) {
+            throw new IllegalArgumentException(phoneError);
         }
         
         // Validate parent age if DOB is provided - must be at least 18 years old

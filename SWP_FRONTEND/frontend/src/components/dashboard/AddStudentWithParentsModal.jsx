@@ -17,6 +17,7 @@ import {
 } from "antd";
 import { UserAddOutlined, TeamOutlined } from "@ant-design/icons";
 import { createStudentWithParents } from "../../api/studentApi";
+import { validatePhone, VIETNAMESE_MOBILE_PREFIXES } from "../../utils/phoneValidator";
 import moment from "moment";
 import "../../styles/StudentManagement.css";
 
@@ -105,6 +106,14 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
           }
           if (currentField === jobTitleField && (!jobTitle || !jobTitle.trim())) {
             return Promise.reject(new Error('Nghề nghiệp là bắt buộc khi có số điện thoại'));
+          }
+          
+          // Validate phone format
+          if (currentField === phoneField) {
+            const phoneError = validatePhone(phone);
+            if (phoneError) {
+              return Promise.reject(new Error(phoneError));
+            }
           }
         }
         
@@ -458,8 +467,15 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
                 rules={[
                   validateParentInfo("father"),
                   {
-                    pattern: /^[0-9]{10}$/,
-                    message: "Số điện thoại phải có đúng 10 chữ số",
+                    validator: (_, value) => {
+                      if (value && value.trim()) {
+                        const phoneError = validatePhone(value);
+                        if (phoneError) {
+                          return Promise.reject(new Error(phoneError));
+                        }
+                      }
+                      return Promise.resolve();
+                    },
                   },
                 ]}
               >
@@ -570,8 +586,15 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
                 rules={[
                   validateParentInfo("mother"),
                   {
-                    pattern: /^[0-9]{10}$/,
-                    message: "Số điện thoại phải có đúng 10 chữ số",
+                    validator: (_, value) => {
+                      if (value && value.trim()) {
+                        const phoneError = validatePhone(value);
+                        if (phoneError) {
+                          return Promise.reject(new Error(phoneError));
+                        }
+                      }
+                      return Promise.resolve();
+                    },
                   },
                 ]}
               >
