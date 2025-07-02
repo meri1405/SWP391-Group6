@@ -1,0 +1,270 @@
+.overview-container {
+  padding: 0; /* Remove padding since parent container already has it */
+}
+
+.main-title {
+  font-size: 20px; /* Further reduced font size */
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 16px; /* Reduced margin */
+  text-align: left;
+}
+
+.health-summary-section {
+  margin-bottom: 20px; /* Reduced margin */
+}
+
+.child-name-title {
+  font-size: 18px; /* Further reduced font size */
+  font-weight: 600;
+  color: #444;
+  margin-bottom: 12px; /* Reduced margin */
+  padding-left: 5px;
+}
+
+.health-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); /* Further reduced minmax */
+  gap: 12px; /* Reduced gap */
+}
+
+.health-card {
+  background: white;
+  border-radius: 8px; /* Reduced border-radius */
+  padding: 12px; /* Reduced padding */
+  display: flex;
+  align-items: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05); /* Softer shadow */
+  border-left: 3px solid; /* Thinner border */
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.health-card:hover {
+  transform: translateY(-1px); /* Reduced transform */
+  box-shadow: 0 3px 8px rgba(0,0,0,0.08);
+}
+
+.health-card-icon {
+  width: 40px; /* Further reduced size */
+  height: 40px; /* Further reduced size */
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 10px; /* Reduced margin */
+  flex-shrink: 0;
+}
+
+.health-card-icon i {
+  color: white;
+  font-size: 18px; /* Further reduced icon size */
+}
+
+.health-card-content h4 {
+  margin: 0 0 4px 0; /* Adjusted margin */
+  font-size: 12px; /* Further reduced font size */
+  font-weight: 600;
+  color: #333;
+}
+
+.health-card-content p {
+  margin: 0;
+  color: #555;
+  font-size: 14px; /* Further reduced font size */
+  font-weight: 500;
+}
+
+.notifications-section {
+  margin-top: 24px; /* Reduced margin */
+}
+
+.overview-card {
+  background: white;
+  border-radius: 8px; /* Reduced border-radius for consistency */
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05); /* Softer shadow */
+  overflow: hidden;
+}
+
+.card-header {
+  padding: 12px 16px; /* Further reduced padding */
+  border-bottom: 1px solid #e8e8e8;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 14px; /* Further reduced font size */
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+}
+
+.card-header h3 i {
+  margin-right: 6px; /* Reduced margin */
+  color: #1976d2;
+  font-size: 14px; /* Smaller icon */
+}
+
+.view-all-btn {
+  background: none;
+  border: none;
+  color: #1976d2;
+  cursor: pointer;
+  font-size: 12px; /* Further reduced font size */
+  font-weight: 500;
+  padding: 4px 8px; /* Reduced padding */
+  border-radius: 4px;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.view-all-btn:hover {
+  background-color: #e3f2fd;
+  color: #155a9a;
+}
+
+.notifications-list {
+  max-height: 280px; /* Further reduced height */
+  overflow-y: auto;
+}
+
+.notification-item {
+  padding: 10px 16px; /* Further reduced padding */
+  border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background-color 0.2s ease;
+}
+
+.notification-item:hover {
+  background-color: #f8f9fa;
+}
+
+.notification-item.unread {
+  background-color: #e3f2fd; /* Light blue for unread */
+  font-weight: 500; /* Slightly bolder text for unread items */
+}
+
+.notification-content h4 {
+  margin: 0 0 4px 0; /* Adjusted margin */
+  font-size: 14px; /* Consistent with health card title */
+  color: #333;
+}
+
+.notification-item.unread .notification-content h4 {
+  color: #155a9a; 
+}
+
+.notification-content p {
+  margin: 0 0 4px 0; /* Adjusted margin */
+  font-size: 12px; /* Reduced font size */
+  color: #666;
+  line-height: 1.4;
+}
+
+.notification-time {
+  font-size: 11px; /* Reduced font size */
+  color: #888;
+}
+
+.unread-indicator {
+  width: 8px; /* Reduced size */
+  height: 8px; /* Reduced size */
+  background: #1976d2;
+  border-radius: 50%;
+  margin-left: 10px; /* Reduced margin */
+  flex-shrink: 0;
+}
+
+/* Remove old stats-grid and children-list related styles if they are no longer used elsewhere */
+/* For example, if .stats-grid, .stat-card, .children-list, .child-card are exclusively for the old Overview */
+.stats-grid,
+.stat-card,
+.stat-icon,
+.stat-content,
+.overview-grid, /* If this was specific to the old two-column layout */
+.children-list,
+.child-card,
+.child-info,
+.child-class,
+.child-status,
+.status-badge,
+.last-checkup,
+.view-details-btn {
+  /* display: none; */ /* Or simply remove these rules if they are not used by other components */
+  /* For now, let's comment them out or ensure they are not applied if not needed */
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .main-title {
+    font-size: 18px; /* Further reduced */
+    margin-bottom: 14px;
+  }
+  .child-name-title {
+    font-size: 16px; /* Further reduced */
+  }
+  .health-cards-grid {
+    grid-template-columns: 1fr;
+    gap: 10px; /* Further reduced */
+  }
+  .health-card {
+    padding: 10px;
+  }
+  .health-card-icon {
+    width: 36px;
+    height: 36px;
+  }
+  .health-card-icon i {
+    font-size: 16px;
+  }
+  .health-card-content h4 {
+    font-size: 11px;
+  }
+  .health-card-content p {
+    font-size: 13px;
+  }
+  .notifications-section {
+    margin-top: 20px;
+  }
+  .card-header h3 {
+    font-size: 13px;
+  }
+  .notification-content h4 {
+    font-size: 12px;
+  }
+  .notification-content p {
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .main-title {
+    font-size: 16px;
+  }
+  .child-name-title {
+    font-size: 15px;
+  }
+  .card-header h3 {
+    font-size: 12px;
+  }
+  .view-all-btn {
+    padding: 3px 6px;
+    font-size: 11px;
+  }
+  .notification-content h4 {
+    font-size: 11px;
+  }
+  .notification-content p {
+    font-size: 9px;
+  }
+  .health-card-content h4 {
+    font-size: 10px;
+  }
+   .health-card-content p {
+    font-size: 12px;
+  }
+}

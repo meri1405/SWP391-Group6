@@ -1,0 +1,530 @@
+import {
+  Card, Select, Row, Col, Spin, Tag, Tabs, List, Descriptions, Empty,
+  Alert, Button, Modal, Typography
+} from 'antd';
+import {
+  HeartOutlined, EyeOutlined, UserOutlined, InfoCircleOutlined
+} from '@ant-design/icons';
+import { useApprovedHealthProfile } from '../../../hooks/useApprovedHealthProfile';
+import dayjs from 'dayjs';
+import '../../../styles/ApprovedHealthProfile.css';
+
+const { Option } = Select;
+const { Text } = Typography;
+
+const ApprovedHealthProfile = () => {
+  const {
+    loading, students, selectedStudent, approvedProfiles, selectedProfile,
+    profilesLoading, detailModalVisible, viewDetailData, viewDetailType,
+    handleStudentSelect, handleProfileSelect, handleViewDetail, handleCloseDetailModal,
+    getBMICategory, getStudentName, getStudentId
+  } = useApprovedHealthProfile();
+
+  console.log('Component rendered - selectedProfile:', selectedProfile);
+  console.log('approvedProfiles:', approvedProfiles);
+  
+  const renderBasicInfo = (profile) => {
+    if (!profile) return null;
+
+    console.log('Profile:', profile);
+
+    return (      
+    <Descriptions bordered size="small" column={2}>
+        <Descriptions.Item label="Cân nặng" span={1}>
+          {profile.weight} kg
+        </Descriptions.Item>
+        <Descriptions.Item label="Chiều cao" span={1}>
+          {profile.height} cm
+        </Descriptions.Item>
+        <Descriptions.Item label="Nhóm máu" span={1}>
+          {(profile.bloodType || 'N/A')}
+        </Descriptions.Item>
+        <Descriptions.Item label="BMI" span={1}>
+          {(profile.weight / Math.pow(profile.height / 100, 2)).toFixed(1)}
+        </Descriptions.Item>
+        <Descriptions.Item label="Phân loại BMI" span={1}>
+          {getBMICategory(profile.weight, profile.height)}
+        </Descriptions.Item>
+        <Descriptions.Item label="Ngày tạo" span={1}>
+          {dayjs(profile.createdAt).format('DD/MM/YYYY')}
+        </Descriptions.Item>
+        <Descriptions.Item label="Ngày duyệt" span={1}>
+          {dayjs(profile.updatedAt).format('DD/MM/YYYY')}
+        </Descriptions.Item>
+        <Descriptions.Item label="Y tá duyệt" span={1}>
+          {profile.additionalFields.schoolNurseFullName || 'N/A'}
+        </Descriptions.Item>
+        <Descriptions.Item label="Trạng thái" span={1}>
+          <Tag color="success">Đã duyệt</Tag>
+        </Descriptions.Item>
+        <Descriptions.Item label="Ghi chú của phụ huynh" span={2}>
+          {profile.note || 'Không có ghi chú'}
+        </Descriptions.Item>
+        {profile.nurseNote && (
+          <Descriptions.Item label="Ghi chú của Y tá" span={2}>
+            <Text style={{ fontStyle: 'italic', color: '#1890ff' }}>
+              {profile.nurseNote}
+            </Text>
+          </Descriptions.Item>
+        )}
+      </Descriptions>
+    );
+  };
+
+  const renderAllergies = (allergies) => (
+    <Card title="Dị ứng" className="approved-health-card">
+      {allergies && allergies.length > 0 ? (
+        <List
+          dataSource={allergies}
+          renderItem={(allergy) => (
+            <List.Item
+              actions={[
+                <Button
+                  type="link"
+                  icon={<EyeOutlined />}
+                  onClick={() => handleViewDetail(allergy, 'allergy')}
+                >
+                  Xem chi tiết
+                </Button>
+              ]}
+            >
+              <List.Item.Meta
+                title={allergy.allergen}
+                description={
+                  <div>
+                    <p>{allergy.description}</p>
+                    <Tag color={
+                      allergy.status === 'MILD' ? 'green' : 
+                      allergy.status === 'MODERATE' ? 'orange' : 
+                      allergy.status === 'SEVERE' ? 'red' : 'blue'
+                    }>
+                      {allergy.status === 'MILD' ? 'Nhẹ' : 
+                       allergy.status === 'MODERATE' ? 'Trung bình' : 
+                       allergy.status === 'SEVERE' ? 'Nặng' : 'Không xác định'}
+                    </Tag>
+                    {allergy.onsetDate && (
+                      <span style={{ marginLeft: '8px', color: '#666' }}>
+                        Khởi phát: {dayjs(allergy.onsetDate).format('DD/MM/YYYY')}
+                      </span>
+                    )}
+                  </div>
+                }
+              />
+            </List.Item>
+          )}
+          locale={{ emptyText: 'Không có thông tin dị ứng' }}
+        />
+      ) : (
+        <Empty description="Không có thông tin dị ứng" />
+      )}
+    </Card>
+  );
+
+  const renderChronicDiseases = (diseases) => (
+    <Card title="Bệnh mãn tính" className="approved-health-card">
+      {diseases && diseases.length > 0 ? (
+        <List
+          dataSource={diseases}
+          renderItem={(disease) => (
+            <List.Item
+              actions={[
+                <Button
+                  type="link"
+                  icon={<EyeOutlined />}
+                  onClick={() => handleViewDetail(disease, 'chronicDisease')}
+                >
+                  Xem chi tiết
+                </Button>
+              ]}
+            >
+              <List.Item.Meta
+                title={disease.diseaseName}
+                description={
+                  <div>
+                    <p>{disease.description}</p>
+                    <Tag color={
+                      disease.status === 'RECOVERED' ? 'green' : 
+                      disease.status === 'UNDER_TREATMENT' ? 'orange' :
+                      disease.status === 'STABLE' ? 'blue' : 'default'
+                    }>
+                      {disease.status === 'UNDER_TREATMENT' ? 'Đang điều trị' : 
+                       disease.status === 'RECOVERED' ? 'Đã khỏi' :
+                       disease.status === 'STABLE' ? 'Ổn định' : 'Không xác định'}
+                    </Tag>
+                    {disease.dateDiagnosed && (
+                      <span style={{ marginLeft: '8px', color: '#666' }}>
+                        Chẩn đoán: {dayjs(disease.dateDiagnosed).format('DD/MM/YYYY')}
+                      </span>
+                    )}
+                  </div>
+                }
+              />
+            </List.Item>
+          )}
+          locale={{ emptyText: 'Không có thông tin bệnh mãn tính' }}
+        />
+      ) : (
+        <Empty description="Không có thông tin bệnh mãn tính" />
+      )}
+    </Card>
+  );
+
+  const renderTreatments = (treatments) => (
+    <Card title="Lịch sử điều trị" className="approved-health-card">
+      {treatments && treatments.length > 0 ? (
+        <List
+          dataSource={treatments}
+          renderItem={(treatment) => (
+            <List.Item
+              actions={[
+                <Button
+                  type="link"
+                  icon={<EyeOutlined />}
+                  onClick={() => handleViewDetail(treatment, 'treatment')}
+                >
+                  Xem chi tiết
+                </Button>
+              ]}
+            >
+              <List.Item.Meta
+                title={treatment.treatmentType}
+                description={
+                  <div>
+                    <p>{treatment.description}</p>
+                    <p><strong>Bác sĩ:</strong> {treatment.doctorName}</p>
+                    {treatment.dateOfAdmission && (
+                      <p>Nhập viện: {dayjs(treatment.dateOfAdmission).format('DD/MM/YYYY')}</p>
+                    )}
+                    {treatment.placeOfTreatment && (
+                      <p>Nơi điều trị: {treatment.placeOfTreatment}</p>
+                    )}
+                  </div>
+                }
+              />
+            </List.Item>
+          )}
+          locale={{ emptyText: 'Không có lịch sử điều trị' }}
+        />
+      ) : (
+        <Empty description="Không có lịch sử điều trị" />
+      )}
+    </Card>
+  );
+
+  const renderVisionData = (vision) => (
+    <Card title="Thị lực" className="approved-health-card">
+      {vision && vision.length > 0 ? (
+        <List
+          dataSource={vision}
+          renderItem={(visionItem) => (
+            <List.Item>
+              <List.Item.Meta
+                title={`Khám ngày ${dayjs(visionItem.dateOfExamination).format('DD/MM/YYYY')}`}
+                description={
+                  <div>
+                    <Row gutter={16}>
+                      <Col span={12}>
+                        <p><strong>Mắt trái:</strong> {visionItem.visionLeft}</p>
+                        <p><strong>Mắt trái (có kính):</strong> {visionItem.visionLeftWithGlass || 'N/A'}</p>
+                      </Col>
+                      <Col span={12}>
+                        <p><strong>Mắt phải:</strong> {visionItem.visionRight}</p>
+                        <p><strong>Mắt phải (có kính):</strong> {visionItem.visionRightWithGlass || 'N/A'}</p>
+                      </Col>
+                    </Row>
+                    {visionItem.visionDescription && (
+                      <p><strong>Mô tả:</strong> {visionItem.visionDescription}</p>
+                    )}
+                  </div>
+                }
+              />
+            </List.Item>
+          )}
+          locale={{ emptyText: 'Không có dữ liệu thị lực' }}
+        />
+      ) : (
+        <Empty description="Không có dữ liệu thị lực" />
+      )}
+    </Card>
+  );
+
+  const renderHearingData = (hearing) => (
+    <Card title="Thính lực" className="approved-health-card">
+      {hearing && hearing.length > 0 ? (
+        <List
+          dataSource={hearing}
+          renderItem={(hearingItem) => (
+            <List.Item>
+              <List.Item.Meta
+                title={`Khám ngày ${dayjs(hearingItem.dateOfExamination).format('DD/MM/YYYY')}`}
+                description={
+                  <div>
+                    <Row gutter={16}>
+                      <Col span={12}>
+                        <p><strong>Tai trái:</strong> {hearingItem.leftEar}</p>
+                      </Col>
+                      <Col span={12}>
+                        <p><strong>Tai phải:</strong> {hearingItem.rightEar}</p>
+                      </Col>
+                    </Row>
+                    {hearingItem.description && (
+                      <p><strong>Mô tả:</strong> {hearingItem.description}</p>
+                    )}
+                  </div>
+                }
+              />
+            </List.Item>
+          )}
+          locale={{ emptyText: 'Không có dữ liệu thính lực' }}
+        />
+      ) : (
+        <Empty description="Không có dữ liệu thính lực" />
+      )}
+    </Card>
+  );
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '50px' }}>
+        <Spin size="large" />
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
+      <Card>
+        <div style={{ marginBottom: '24px' }}>
+          <h2 style={{ marginBottom: '16px', color: '#1890ff' }}>
+            <HeartOutlined style={{ marginRight: '8px' }} />
+            Tiền sử sức khỏe
+          </h2>
+          <Alert
+            message="Thông tin sức khỏe đã được xác nhận"
+            description="Đây là thông tin sức khỏe của con em bạn đã được nhà trường xác nhận và duyệt. Bạn có thể theo dõi các thông tin này để chăm sóc sức khỏe tốt hơn."
+            type="success"
+            showIcon
+            style={{ marginBottom: '24px' }}
+          />
+        </div>
+
+        {/* Student Selection */}
+        <Card size="small" style={{ marginBottom: '24px', backgroundColor: '#f9f9f9' }}>
+          <Row gutter={[16, 16]} align="middle">
+            <Col span={8}>
+              <label style={{ fontWeight: 600 }}>Chọn học sinh:</label>
+            </Col>
+            <Col span={16}>
+              <Select
+                placeholder="Chọn học sinh để xem hồ sơ sức khỏe đã duyệt"
+                style={{ width: '100%' }}
+                value={getStudentId(selectedStudent)}
+                onChange={handleStudentSelect}
+                size="large"
+                showSearch
+                optionFilterProp="children"
+                filterOption={(input, option) =>
+                  option?.children?.toLowerCase().includes(input.toLowerCase())
+                }              >
+                {students.map((student, index) => {
+                  const studentId = getStudentId(student);
+                  const studentName = getStudentName(student);
+                  
+                  if (!studentId) return null;
+                  
+                  return (
+                    <Option key={studentId || `student-${index}`} value={studentId}>
+                      {studentName} - Lớp {student.className || 'N/A'}
+                    </Option>
+                  );
+                })}
+              </Select>
+            </Col>
+          </Row>
+        </Card>
+
+        {!selectedStudent && (
+          <Card style={{ textAlign: 'center', padding: '48px', marginBottom: '24px' }}>
+            <UserOutlined style={{ fontSize: '48px', color: '#1890ff', marginBottom: '16px' }} />
+            <h3 style={{ color: '#1890ff', marginBottom: '8px' }}>Chọn học sinh để xem hồ sơ</h3>
+            <p style={{ color: '#666', margin: 0 }}>
+              Vui lòng chọn học sinh từ danh sách để xem hồ sơ sức khỏe đã được duyệt
+            </p>
+          </Card>
+        )}
+
+        {selectedStudent && profilesLoading && (
+          <div style={{ textAlign: 'center', padding: '50px' }}>
+            <Spin size="large" />
+          </div>
+        )}
+
+        {selectedStudent && !profilesLoading && approvedProfiles.length === 0 && (
+          <Card style={{ textAlign: 'center', padding: '48px' }}>
+            <InfoCircleOutlined style={{ fontSize: '48px', color: '#faad14', marginBottom: '16px' }} />
+            <h3 style={{ color: '#faad14', marginBottom: '8px' }}>Chưa có hồ sơ sức khỏe được duyệt</h3>
+            <p style={{ color: '#666', margin: 0 }}>
+              Học sinh này chưa có hồ sơ sức khỏe nào được duyệt bởi nhà trường
+            </p>
+          </Card>
+        )}
+
+        {selectedStudent && approvedProfiles.length > 0 && (
+          <>
+            {/* Profile Selection */}
+            {approvedProfiles.length > 1 && (
+              <Card size="small" style={{ marginBottom: '24px' }}>
+                <Row gutter={[16, 16]} align="middle">
+                  <Col span={8}>
+                    <label style={{ fontWeight: 600 }}>Chọn hồ sơ:</label>
+                  </Col>
+                  <Col span={16}>
+                    <Select
+                      style={{ width: '100%' }}
+                      value={selectedProfile?.id}
+                      onChange={handleProfileSelect}
+                      placeholder="Chọn hồ sơ để xem"
+                    >
+                      {approvedProfiles.map(profile => (
+                        <Option key={profile.id} value={profile.id}>
+                          Hồ sơ ngày {dayjs(profile.updatedAt).format('DD/MM/YYYY')}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Col>
+                </Row>
+              </Card>
+            )}
+
+            {/* Profile Content */}
+            {selectedProfile && (              <Card title={`Hồ sơ sức khỏe của ${getStudentName(selectedStudent)}`}><Tabs 
+                  defaultActiveKey="basic" 
+                  type="card"
+                  items={[
+                    {
+                      key: 'basic',
+                      label: 'Thông tin cơ bản',
+                      children: renderBasicInfo(selectedProfile)
+                    },
+                    {
+                      key: 'allergies',
+                      label: 'Dị ứng',
+                      children: renderAllergies(selectedProfile.allergies)
+                    },
+                    {
+                      key: 'chronic',
+                      label: 'Bệnh mãn tính',
+                      children: renderChronicDiseases(selectedProfile.chronicDiseases)
+                    },
+                    {
+                      key: 'treatments',
+                      label: 'Lịch sử điều trị',
+                      children: renderTreatments(selectedProfile.treatments)
+                    },
+                    {
+                      key: 'vision',
+                      label: 'Thị lực',
+                      children: renderVisionData(selectedProfile.vision)
+                    },
+                    {
+                      key: 'hearing',
+                      label: 'Thính lực',
+                      children: renderHearingData(selectedProfile.hearing)
+                    }
+                  ]}
+                />
+              </Card>
+            )}
+          </>
+        )}
+
+        {/* Detail Modal */}        <Modal
+          title="Chi tiết thông tin"
+          open={detailModalVisible}
+          onCancel={handleCloseDetailModal}
+          footer={null}
+          width={600}
+        >
+          {viewDetailData && viewDetailType === 'allergy' && (
+            <div>
+              <p><strong>Chất gây dị ứng:</strong> {viewDetailData.allergen}</p>
+              <p><strong>Mô tả:</strong> {viewDetailData.description}</p>
+              <p><strong>Mức độ nghiêm trọng:</strong>
+                <Tag color={
+                  viewDetailData.status === 'MILD' ? 'green' : 
+                  viewDetailData.status === 'MODERATE' ? 'orange' : 
+                  viewDetailData.status === 'SEVERE' ? 'red' : 'blue'
+                }>
+                  {viewDetailData.status === 'MILD' ? 'Nhẹ' : 
+                   viewDetailData.status === 'MODERATE' ? 'Trung bình' : 
+                   viewDetailData.status === 'SEVERE' ? 'Nặng' : 'Không xác định'}
+                </Tag>
+              </p>
+              {viewDetailData.onsetDate && (
+                <p><strong>Ngày khởi phát:</strong> {dayjs(viewDetailData.onsetDate).format('DD/MM/YYYY')}</p>
+              )}
+            </div>
+          )}
+
+          {viewDetailData && viewDetailType === 'chronicDisease' && (
+            <div>
+              <p><strong>Tên bệnh:</strong> {viewDetailData.diseaseName}</p>
+              <p><strong>Mô tả:</strong> {viewDetailData.description}</p>
+              <p><strong>Trạng thái:</strong>
+                <Tag 
+                    color={
+                        viewDetailData.status === 'RECOVERED' ? 'green' : 
+                        viewDetailData.status === 'UNDER_TREATMENT' ? 'orange' :
+                        viewDetailData.status === 'STABLE' ? 'blue' :
+                        viewDetailData.status === 'WORSENED' ? 'red' :
+                        viewDetailData.status === 'RELAPSED' ? 'volcano' :
+                        viewDetailData.status === 'NEWLY_DIAGNOSED' ? 'purple' :
+                        viewDetailData.status === 'UNDER_OBSERVATION' ? 'cyan' :
+                        viewDetailData.status === 'ISOLATED' ? 'magenta' :
+                        viewDetailData.status === 'UNTREATED' ? 'gold' : 'default'
+                    }>
+                    {
+                        viewDetailData.status === 'UNDER_TREATMENT' ? 'Đang điều trị' : 
+                        viewDetailData.status === 'RECOVERED' ? 'Đã khỏi' :
+                        viewDetailData.status === 'STABLE' ? 'Ổn định' :
+                        viewDetailData.status === 'WORSENED' ? 'Đang xấu đi' :
+                        viewDetailData.status === 'RELAPSED' ? 'Tái phát' :
+                        viewDetailData.status === 'NEWLY_DIAGNOSED' ? 'Mới chẩn đoán' :
+                        viewDetailData.status === 'UNDER_OBSERVATION' ? 'Đang theo dõi' :
+                        viewDetailData.status === 'UNKNOWN' ? 'Không rõ' :
+                        viewDetailData.status === 'ISOLATED' ? 'Cách ly' :
+                        viewDetailData.status === 'UNTREATED' ? 'Chưa điều trị' : 'Không xác định'}
+                </Tag>
+              </p>
+              {viewDetailData.dateDiagnosed && (
+                <p><strong>Ngày chẩn đoán:</strong> {dayjs(viewDetailData.dateDiagnosed).format('DD/MM/YYYY')}</p>
+              )}
+              {viewDetailData.placeOfTreatment && (
+                <p><strong>Nơi điều trị:</strong> {viewDetailData.placeOfTreatment}</p>
+              )}
+            </div>
+          )}
+
+          {viewDetailData && viewDetailType === 'treatment' && (
+            <div>
+              <p><strong>Loại điều trị:</strong> {viewDetailData.treatmentType}</p>
+              <p><strong>Mô tả:</strong> {viewDetailData.description}</p>
+              <p><strong>Bác sĩ điều trị:</strong> {viewDetailData.doctorName}</p>
+              {viewDetailData.dateOfAdmission && (
+                <p><strong>Ngày nhập viện:</strong> {dayjs(viewDetailData.dateOfAdmission).format('DD/MM/YYYY')}</p>
+              )}
+              {viewDetailData.dateOfDischarge && (
+                <p><strong>Ngày xuất viện:</strong> {dayjs(viewDetailData.dateOfDischarge).format('DD/MM/YYYY')}</p>
+              )}
+              {viewDetailData.placeOfTreatment && (
+                <p><strong>Nơi điều trị:</strong> {viewDetailData.placeOfTreatment}</p>
+              )}
+            </div>
+          )}
+        </Modal>
+      </Card>
+    </div>
+  );
+};
+
+export default ApprovedHealthProfile;

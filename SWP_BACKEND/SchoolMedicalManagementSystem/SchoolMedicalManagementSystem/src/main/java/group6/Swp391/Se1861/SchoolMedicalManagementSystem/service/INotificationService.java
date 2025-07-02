@@ -1,0 +1,261 @@
+package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service;
+
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.NotificationDTO;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.*;
+
+import java.util.List;
+
+public interface INotificationService {
+
+    /**
+     * Create a new notification for medication request approval/rejection
+     */
+    NotificationDTO createMedicationRequestNotification(
+            MedicationRequest medicationRequest,
+            String notificationType,
+            String title,
+            String message);
+
+
+    /**
+     * NOTIFICATION FOR UPDATE HEALTH PROFILE
+     * */
+
+    NotificationDTO createHealthProfileUpdateNotification(
+            HealthProfile healthProfile,
+            User recipient,
+            String notificationType,
+            String title,
+            String message);
+
+    /**
+     * Create a new notification for medical events
+     */
+    NotificationDTO createMedicalEventNotification(
+        MedicalEvent medicalEvent,
+        String notificationType,
+        String title,
+        String message);
+
+    /**
+     * Create a new notification for medication schedule updates
+     */
+    NotificationDTO createMedicationScheduleNotification(
+            MedicationSchedule medicationSchedule,
+            String notificationType,
+            String title,
+            String message);
+
+    /**
+     * Create a new notification for health profile actions
+     */
+    NotificationDTO createHealthProfileNotification(
+            HealthProfile healthProfile,
+            User recipient,
+            String notificationType,
+            String title,
+            String message);
+
+    /**
+     * Create a general notification
+     */
+    NotificationDTO createGeneralNotification(
+            User recipient,
+            String title,
+            String message,
+            String notificationType);
+
+    /**
+     * Create vaccination form confirmation notification
+     */
+    NotificationDTO createVaccinationFormConfirmationNotification(
+            User recipient,
+            String studentName,
+            String vaccineName);
+
+    /**
+     * Create vaccination form decline notification
+     */
+    NotificationDTO createVaccinationFormDeclineNotification(
+            User recipient,
+            String studentName,
+            String vaccineName,
+            String reason);
+
+    /**
+     * Create vaccination form expiry notification
+     */
+    NotificationDTO createVaccinationFormExpiryNotification(
+            User recipient,
+            String studentName);
+
+    /**
+     * Create campaign approval notification
+     */
+    NotificationDTO createCampaignApprovalNotification(
+            User recipient,
+            String campaignName,
+            String approverName);
+
+    /**
+     * Create campaign rejection notification
+     */
+    NotificationDTO createCampaignRejectionNotification(
+            User recipient,
+            String campaignName,
+            String reason);
+
+    /**
+     * Create campaign approval request notification
+     */
+    NotificationDTO createCampaignApprovalRequestNotification(
+            User recipient,
+            String campaignName,
+            String creatorName);
+
+    /**
+     * Create campaign completion notification
+     */
+    NotificationDTO createCampaignCompletionNotification(
+            User recipient,
+            VaccinationCampaign campaign,
+            User completedBy);
+
+    /**
+     * Create vaccination consent form notification
+     */
+    NotificationDTO createVaccinationConsentFormNotification(
+            User recipient,
+            String studentName,
+            String vaccineName,
+            String location,
+            String scheduledDate,
+            VaccinationForm vaccinationForm);
+
+    /**
+     * Create a general notification
+     */
+    List<NotificationDTO> getAllNotificationsForUser(User user);
+
+    /**
+     * Get notifications for a user with pagination
+     */
+    List<NotificationDTO> getAllNotificationsForUser(User user, int limit);
+
+    /**
+     * Get unread notifications count for a user
+     */
+    List<NotificationDTO> getUnreadNotificationsForUser(User user);
+
+    /**
+     * Mark notification as read
+     */
+    NotificationDTO markNotificationAsRead(Long notificationId, User user);
+
+    /**
+     * Mark all notifications as read for a user
+     */
+    void markAllNotificationsAsRead(User user);
+
+    /**
+     * Delete a notification
+     */
+    long getUnreadNotificationCount(User user);
+
+    /**
+     * Delete all notifications for a user
+     */
+    NotificationDTO convertToDTO(Notification notification);
+    
+
+    /***
+     * HEALTH CHECK CAMPAIGN NOTIFICATIONS
+     * */
+    /**
+     * Notify managers about a campaign pending approval
+     */
+    void notifyManagersAboutCampaignApproval(HealthCheckCampaign campaign);
+
+    /**
+     * Notify nurse about campaign approval
+     */
+    void notifyNurseAboutCampaignApproval(HealthCheckCampaign campaign);
+
+    /**
+     * Notify nurse about campaign rejection
+     */
+    void notifyNurseAboutCampaignRejection(HealthCheckCampaign campaign, String notes);
+
+    /**
+     * Notify manager about campaign scheduling
+     */
+    void notifyManagerAboutCampaignSchedule(HealthCheckCampaign campaign);
+
+    /**
+     * Notify manager about campaign completion
+     */
+    void notifyManagerAboutCampaignCompletion(HealthCheckCampaign campaign);
+
+    /**
+     * Notify parent about health check
+     */
+    void notifyParentAboutHealthCheck(HealthCheckForm form);
+
+    /**
+     * Notify nurse about parent confirmation
+     */
+    void notifyNurseAboutParentConfirmation(HealthCheckForm form);
+
+    /**
+     * Notify parent about abnormal health check result
+     */
+    void notifyParentAboutAbnormalResult(HealthCheckResult result);
+
+    /**
+     * Notify manager about abnormal health check result
+     */
+    void notifyManagerAboutAbnormalResult(HealthCheckResult result);
+
+    /**
+     * Notify parent about appointment scheduling
+     */
+    void notifyParentAboutAppointment(HealthCheckForm form);
+    
+    /**
+     * RESTOCK REQUEST NOTIFICATIONS
+     */
+    
+    /**
+     * Notify managers about a new restock request
+     */
+    void notifyManagersAboutRestockRequest(RestockRequest restockRequest);
+    
+    /**
+     * Notify nurse about restock request approval
+     */
+    void notifyNurseAboutRestockRequestApproval(RestockRequest restockRequest);
+    
+    /**
+     * Notify nurse about restock request rejection
+     */
+    void notifyNurseAboutRestockRequestRejection(RestockRequest restockRequest, String notes);
+    
+    /**
+     * CAMPAIGN COMPLETION REQUEST NOTIFICATIONS
+     */
+    
+    /**
+     * Notify managers about a new campaign completion request
+     */
+    void notifyManagersAboutCampaignCompletionRequest(CampaignCompletionRequest request);
+    
+    /**
+     * Notify nurse about campaign completion request approval
+     */
+    void notifyNurseAboutCampaignCompletionApproval(CampaignCompletionRequest request, User manager);
+    
+    /**
+     * Notify nurse about campaign completion request rejection
+     */
+    void notifyNurseAboutCampaignCompletionRejection(CampaignCompletionRequest request, User manager);
+}

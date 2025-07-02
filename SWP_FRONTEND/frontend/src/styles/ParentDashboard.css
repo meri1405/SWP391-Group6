@@ -1,0 +1,139 @@
+.parent-dashboard {
+  display: flex;
+  min-height: calc(100vh - 140px); /* Account for navbar + footer */
+  margin: 90px 20px 20px 20px; /* Top margin increased to avoid navbar overlap (navbar height 70px + 20px) */
+  background-color: #f8f9fa;
+  border-radius: 16px; /* Add border-radius to main container */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  overflow: hidden; /* Ensure border-radius works properly */
+}
+
+.dashboard-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.content-header {
+  background: white;
+  padding: 16px 24px; /* Reduced padding */
+  border-bottom: 1px solid #e8e8e8;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+  border-radius: 0px 16px 0 0; /* Round top corners */
+}
+
+.content-header h1 {
+  color: #1976d2;
+  margin: 0 0 4px 0;
+  font-size: 22px; /* Reduced font size */
+  font-weight: 600;
+}
+
+.content-header p {
+  color: #666;
+  margin: 0;
+  font-size: 13px; /* Reduced font size */
+}
+
+.content-body {
+  flex: 1;
+  padding: 16px 20px; /* Reduced padding */
+  overflow-y: auto;
+  background: #f8f9fa;
+  max-width: 100%;
+}
+
+/* Enhanced content styling with better margins and border radius */
+.content-body > * {
+  background: white;
+  border-radius: 12px; /* Reduced border-radius */
+  padding: 16px; /* Reduced padding */
+  margin: 8px; /* Reduced margin */
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  width: calc(100% - 16px);
+  max-width: 100%;
+  overflow: visible;
+  border: 1px solid #e8e8e8;
+  transition: all 0.2s ease;
+}
+
+/* Add hover effect for better user experience */
+.content-body > *:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px); /* Reduced transform */
+}
+
+/* Remove margin from last child to avoid extra spacing */
+.content-body > *:last-child {
+  margin-bottom: 0;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  font-size: 18px;
+  color: #1976d2;
+}
+
+/* Custom sidebar integration for parent dashboard */
+.parent-dashboard .ant-layout-sider {
+  position: relative;
+  z-index: 10;
+}
+
+/* Ensure sidebar content doesn't interfere with trigger button */
+.parent-dashboard .ant-layout-sider .ant-menu {
+  padding-right: 8px;
+}
+
+/* Smooth transition for the main content when sidebar toggles */
+.parent-dashboard .ant-layout {
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Enhanced styling for collapsed sidebar */
+.parent-dashboard .ant-layout-sider-collapsed {
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .parent-dashboard {
+    flex-direction: column;
+    margin: 80px 10px 10px 10px; /* Top margin for navbar (70px + 10px) */
+    min-height: calc(100vh - 120px); /* Adjust for mobile navbar/footer */
+  }
+  
+  .content-header {
+    padding: 12px 16px; /* Further reduced padding */
+    border-radius: 12px 12px 0 0; /* Adjust for mobile */
+  }
+  
+  .content-body {
+    padding: 12px 16px; /* Further reduced padding */
+  }
+  
+  .content-header h1 {
+    font-size: 20px; /* Further reduced */
+  }
+  
+  .content-header p {
+    font-size: 12px; /* Further reduced */
+  }
+  
+  /* Adjust content styling for mobile */
+  .content-body > * {
+    border-radius: 10px; /* Smaller border-radius */
+    padding: 12px; /* Smaller padding */
+    margin: 6px; /* Smaller margin */
+    transition: none;
+  }
+  
+  /* Disable hover effects on mobile for better performance */
+  .content-body > *:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    transform: none;
+  }
+}

@@ -1,0 +1,57 @@
+/* Medication Notes Styling */
+.medication-notes-cell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+}
+
+.no-notes {
+  color: #d9d9d9;
+  font-style: italic;
+  text-align: center;
+  width: calc(100% - 32px);
+}
+
+.medication-notes {
+  font-size: 12px;
+  color: black;
+  padding: 4px 0;
+  margin-top: 0;
+  display: flex;
+  align-items: center;
+  width: calc(100% - 32px);
+}
+
+.edit-note-button {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 0 4px;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.medication-notes-cell:hover .edit-note-button {
+  opacity: 1;
+}
+
+/* Responsive adjustments for notes column */
+@media (max-width: 1024px) {
+  .medication-notes {
+    font-size: 11px;
+    padding: 3px 6px;
+  }
+}
+
+@media (max-width: 768px) {
+  .medication-notes {
+    font-size: 10px;
+    padding: 2px 4px;
+  }
+  
+  .no-notes {
+    font-size: 10px;
+  }
+}

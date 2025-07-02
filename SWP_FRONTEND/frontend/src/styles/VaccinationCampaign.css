@@ -1,0 +1,93 @@
+/* VaccinationCampaign.css */
+
+.vaccination-campaign-management {
+  width: 100%;
+}
+
+.vaccination-campaign-detail {
+  width: 100%;
+}
+
+.vaccination-campaign-detail .ant-card-body {
+  padding: 24px;
+}
+
+.vaccination-campaign-detail .ant-descriptions {
+  margin-bottom: 24px;
+}
+
+.vaccination-result-form {
+  padding: 16px 0;
+}
+
+.vaccination-result-form .ant-alert {
+  margin-bottom: 24px;
+}
+
+/* Status badges styling */
+.status-badge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.status-badge.pending {
+  background-color: #ffe58f;
+  color: #d48806;
+}
+
+.status-badge.active {
+  background-color: #b7eb8f;
+  color: #52c41a;
+}
+
+.status-badge.completed {
+  background-color: #91caff;
+  color: #1890ff;
+}
+
+.status-badge.cancelled {
+  background-color: #ffccc7;
+  color: #f5222d;
+}
+
+/* Row styling for cancelled campaigns */
+.cancelled-row {
+  background-color: #fff1f0;
+}
+
+/* Statistics cards */
+.statistics-card {
+  text-align: center;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.09);
+  margin-bottom: 16px;
+}
+
+.statistics-card .ant-statistic-title {
+  font-weight: 500;
+  font-size: 14px;
+  color: #8c8c8c;
+}
+
+.statistics-card .ant-statistic-content {
+  font-weight: 600;
+}
+
+/* Table styling */
+.vaccination-campaign-detail .ant-table-thead > tr > th {
+  background-color: #f0f5ff;
+  color: #1890ff;
+  font-weight: 600;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .vaccination-campaign-detail .ant-statistic-title {
+    font-size: 12px;
+  }
+  
+  .vaccination-campaign-detail .ant-statistic-content {
+    font-size: 20px;
+  }
+} 
