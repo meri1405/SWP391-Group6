@@ -3,6 +3,7 @@ package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.*;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IExcelService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IStudentService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.utils.PhoneValidator;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -480,6 +481,12 @@ public class ExcelService implements IExcelService {
             throw new IllegalArgumentException("Họ và tên cha là bắt buộc khi có số điện thoại cha");
         }
         
+        // Validate phone number format
+        String phoneError = PhoneValidator.validatePhone(phone);
+        if (phoneError != null) {
+            throw new IllegalArgumentException(phoneError + " (Dòng " + (rowIndex + 1) + ")");
+        }
+        
         ParentCreationDTO father = new ParentCreationDTO();
         father.setFirstName(firstName);
         father.setLastName(lastName);
@@ -518,6 +525,12 @@ public class ExcelService implements IExcelService {
         // Validate name is provided when phone is provided
         if (isEmpty(firstName) || isEmpty(lastName)) {
             throw new IllegalArgumentException("Họ và tên mẹ là bắt buộc khi có số điện thoại mẹ");
+        }
+        
+        // Validate phone number format
+        String phoneError = PhoneValidator.validatePhone(phone);
+        if (phoneError != null) {
+            throw new IllegalArgumentException(phoneError + " (Dòng " + (rowIndex + 1) + ")");
         }
         
         ParentCreationDTO mother = new ParentCreationDTO();
