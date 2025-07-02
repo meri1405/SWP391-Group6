@@ -13,6 +13,7 @@ class WebSocketService {
     this.reconnectDelay = 3000;
     this.currentToken = null; // Store current token for reconnection
     this.webSocketDisabled = false; // Added to track WebSocket state
+    this.connectionInProgress = false; // Track if connection is in progress
     
     // Add custom event system for restock requests
     this.restockRequestListeners = [];
@@ -59,11 +60,26 @@ class WebSocketService {
   }
   
   connect(token) {
+    // Prevent multiple simultaneous connection attempts
+    if (this.connectionInProgress) {
+      console.log("Connection already in progress, returning existing promise");
+      return Promise.resolve({ status: "in_progress" });
+    }
+    
+    // If already connected with the same token, just return success
+    if (this.connected && this.currentToken === token) {
+      console.log("Already connected with the same token");
+      return Promise.resolve({ status: "connected" });
+    }
+    
+    this.connectionInProgress = true;
+    
     return new Promise((resolve, reject) => {
       try {
         // Validate token before connecting
         if (!token) {
           console.warn("No token provided for WebSocket connection");
+          this.connectionInProgress = false;
           reject(new Error("Authentication token required"));
           return;
         }
@@ -112,6 +128,7 @@ class WebSocketService {
             this.connected = true;
             this.webSocketDisabled = false;
             this.reconnectAttempts = 0;
+            this.connectionInProgress = false;
 
             // Subscribe to personal notifications
             this.subscribeToNotifications();
@@ -122,11 +139,14 @@ class WebSocketService {
           this.client.onStompError = (frame) => {
             console.error("STOMP Error:", frame);
             this.connected = false;
+            this.connectionInProgress = false;
             reject(new Error("WebSocket connection failed"));
           };
+          
           this.client.onWebSocketClose = (event) => {
             console.log("WebSocket connection closed:", event);
             this.connected = false;
+            this.connectionInProgress = false;
 
             // Use stored token for reconnection
             if (this.currentToken) {
@@ -137,16 +157,19 @@ class WebSocketService {
           this.client.onWebSocketError = (error) => {
             console.error("WebSocket error:", error);
             this.connected = false;
+            this.connectionInProgress = false;
           };
 
           // Activate the client
           this.client.activate();
         } else {
           // If WebSocket is disabled, just resolve with a disabled status
+          this.connectionInProgress = false;
           resolve({ status: "disabled" });
         }
       } catch (error) {
         console.error("Error creating WebSocket connection:", error);
+        this.connectionInProgress = false;
         reject(error);
       }
     });
@@ -160,6 +183,7 @@ class WebSocketService {
 
     try {
       // Subscribe to personal notification queue
+      console.log("Subscribing to /user/queue/notifications");
       const subscription = this.client.subscribe(
         "/user/queue/notifications",
         (message) => {

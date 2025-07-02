@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Card,
   Descriptions,
@@ -30,7 +30,8 @@ import {
   ReloadOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { healthCheckApi } from '../../../api/healthCheckApi';
+import { healthCheckApi, CAMPAIGN_STATUS_LABELS, HEALTH_CHECK_CATEGORY_LABELS } from '../../../api/healthCheckApi';
+import NotificationModal from './NotificationModal';
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -45,123 +46,141 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
   const [studentsLoading, setStudentsLoading] = useState(false);
   const [notificationSent, setNotificationSent] = useState(false);
   const [sendingNotification, setSendingNotification] = useState(false);
-  const [refreshInterval, setRefreshInterval] = useState(null);
   const [lastRefresh, setLastRefresh] = useState(null);
+  const [notificationModal, setNotificationModal] = useState({ visible: false });
+  
+  // Use refs to prevent duplicate API calls and track component mount state
+  const isMounted = useRef(true);
+  const isLoadingCampaign = useRef(false);
+  const isLoadingResults = useRef(false);
+  const isLoadingStudents = useRef(false);
 
   const fetchResults = useCallback(async () => {
+    // Prevent duplicate API calls
+    if (isLoadingResults.current) return;
+    
+    isLoadingResults.current = true;
     setResultsLoading(true);
+    
     try {
-      const data = await healthCheckApi.getResultsByCampaign(campaignId);
-      setResults(data);
+      // Note: The backend doesn't have a specific endpoint for results yet
+      // For now, we'll just show an empty array
+      // TODO: Implement getResultsByCampaign when backend supports it
+      console.log('Results endpoint not yet implemented in backend');
+      
+      // Only update state if component is still mounted
+      if (isMounted.current) {
+        setResults([]);
+      }
     } catch (error) {
-      console.error('Error fetching campaign results:', error);
-      message.error('Không thể tải kết quả khám sức khỏe');
-      setResults([]);
+      if (isMounted.current) {
+        console.error('Error fetching campaign results:', error);
+        message.error('Không thể tải kết quả khám sức khỏe');
+        setResults([]);
+      }
     } finally {
-      setResultsLoading(false);
+      isLoadingResults.current = false;
+      if (isMounted.current) {
+        setResultsLoading(false);
+      }
+    }
+  }, []); // Remove campaignId dependency since it's not used in the function body
+
+  const fetchEligibleStudents = useCallback(async () => {
+    // Prevent duplicate API calls
+    if (isLoadingStudents.current) return;
+    
+    isLoadingStudents.current = true;
+    setStudentsLoading(true);
+    
+    try {
+      console.log('fetchEligibleStudents called with campaignId:', campaignId);
+      
+      // Use the new backend endpoint that includes form status
+      const data = await healthCheckApi.getEligibleStudentsWithFormStatus(campaignId);
+      
+      // Only update state if component is still mounted
+      if (isMounted.current) {
+        console.log('Eligible students with form status fetched:', data.length);
+        setEligibleStudents(data);
+        setLastRefresh(new Date());
+        
+        // Update notification sent status based on backend data
+        // If any forms have been sent, mark notifications as sent
+        const hasFormsWithSentAt = data.some(student => student.sentAt);
+        setNotificationSent(hasFormsWithSentAt);
+        
+        // Update localStorage to reflect backend state
+        localStorage.setItem(`campaign_${campaignId}_notification_sent`, hasFormsWithSentAt.toString());
+      }
+    } catch (error) {
+      if (isMounted.current) {
+        console.error('Error fetching eligible students:', error);
+        message.error('Không thể tải danh sách học sinh đủ điều kiện');
+        setEligibleStudents([]);
+      }
+    } finally {
+      isLoadingStudents.current = false;
+      if (isMounted.current) {
+        setStudentsLoading(false);
+      }
     }
   }, [campaignId]);
 
-  const fetchEligibleStudents = useCallback(async (campaignData = null) => {
-    setStudentsLoading(true);
-    try {
-      // Use the provided campaign data or fall back to current state
-      const dataToUse = campaignData || campaign;
-      
-      console.log('fetchEligibleStudents called with:', {
-        campaignId,
-        providedData: !!campaignData,
-        currentCampaignState: !!campaign,
-        dataToUse: dataToUse ? {
-          minAge: dataToUse.minAge,
-          maxAge: dataToUse.maxAge,
-          targetClasses: dataToUse.targetClasses,
-          targetCount: dataToUse.targetCount
-        } : null
-      });
-      
-      // Pass campaign data to ensure we use the same filtering criteria
-      const data = await healthCheckApi.getEligibleStudentsWithStatus(campaignId, dataToUse);
-      console.log('Eligible students fetched:', data.length);
-      setEligibleStudents(data);
-      setLastRefresh(new Date());
-    } catch (error) {
-      console.error('Error fetching eligible students:', error);
-      message.error('Không thể tải danh sách học sinh đủ điều kiện');
-      setEligibleStudents([]);
-    } finally {
-      setStudentsLoading(false);
-    }
-  }, [campaignId, campaign]);
-
-  const fetchCampaignDetails = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await healthCheckApi.getCampaignById(campaignId);
-      setCampaign(data);
-      
-      // If campaign has started, fetch results
-      if (data.status === 'IN_PROGRESS' || data.status === 'COMPLETED') {
-        fetchResults();
-      }
-      
-      // If campaign is approved, fetch eligible students
-      if (data.status === 'APPROVED') {
-        fetchEligibleStudents(data);
-      }
-    } catch (error) {
-      console.error('Error fetching campaign details:', error);
-      message.error('Không thể tải thông tin chi tiết đợt khám');
-    } finally {
-      setLoading(false);
-    }
-  }, [campaignId, fetchResults, fetchEligibleStudents]);
-
+  // Main effect to fetch data only once when component mounts
   useEffect(() => {
-    fetchCampaignDetails();
-  }, [fetchCampaignDetails]);
-
-  // Fetch eligible students when campaign becomes APPROVED
-  useEffect(() => {
-    if (campaign && campaign.status === 'APPROVED') {
-      fetchEligibleStudents(campaign);
-    }
-  }, [campaign?.status, campaign, fetchEligibleStudents]);
-
-  // Set up automatic refresh for approved campaigns
-  useEffect(() => {
-    if (campaign && campaign.status === 'APPROVED') {
-      // Set up periodic refresh every 30 seconds to check for form updates
-      const interval = setInterval(() => {
-        console.log('Auto-refreshing eligible students data...');
-        fetchEligibleStudents(); // Don't pass campaign to avoid stale closure
-      }, 3000000); // 30 seconds
+    // Set isMounted ref to true when component mounts
+    isMounted.current = true;
+    
+    const loadCampaignData = async () => {
+      // Prevent duplicate API calls
+      if (isLoadingCampaign.current) return;
       
-      setRefreshInterval(interval);
+      isLoadingCampaign.current = true;
+      setLoading(true);
       
-      return () => {
-        if (interval) {
-          clearInterval(interval);
+      try {
+        // Fetch campaign details
+        const campaignData = await healthCheckApi.getCampaignById(campaignId);
+        
+        // Only update state if component is still mounted
+        if (!isMounted.current) return;
+        
+        setCampaign(campaignData);
+        
+        // Based on campaign status, fetch additional data
+        if (campaignData) {
+          if (campaignData.status === 'IN_PROGRESS' || campaignData.status === 'COMPLETED') {
+            // Don't await these calls to avoid blocking
+            fetchResults();
+          }
+          
+          if (campaignData.status === 'APPROVED') {
+            // Call fetchEligibleStudents without parameters
+            fetchEligibleStudents();
+          }
         }
-      };
-    } else {
-      // Clear interval if campaign status changes
-      if (refreshInterval) {
-        clearInterval(refreshInterval);
-        setRefreshInterval(null);
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [campaign?.status, fetchEligibleStudents]);
-
-  // Cleanup interval on component unmount
-  useEffect(() => {
-    return () => {
-      if (refreshInterval) {
-        clearInterval(refreshInterval);
+      } catch (error) {
+        if (!isMounted.current) return;
+        console.error('Error fetching campaign details:', error);
+        message.error('Không thể tải thông tin chi tiết đợt khám');
+      } finally {
+        isLoadingCampaign.current = false;
+        if (isMounted.current) {
+          setLoading(false);
+        }
       }
     };
-  }, [refreshInterval]);
+    
+    // Load data on mount
+    loadCampaignData();
+    
+    // Cleanup function to prevent state updates after unmount
+    return () => {
+      isMounted.current = false;
+    };
+  }, [campaignId, fetchResults, fetchEligibleStudents]);
+  // Add back the dependencies but ensure they are stable
 
   const showConfirmModal = (action, title, message) => {
     setConfirmModal({ visible: true, action, title, message });
@@ -188,12 +207,9 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
           message.success('Đã hoàn thành đợt khám');
           break;
         case 'cancel':
-          response = await healthCheckApi.cancelCampaign(campaignId, 'Cancelled by nurse');
-          message.success('Đã hủy đợt khám');
-          break;
-        case 'sendNotifications':
-          await executeSendNotifications();
-          return; // Don't update campaign state for this action
+          // Note: Cancel functionality not implemented in backend yet
+          message.warning('Tính năng hủy đợt khám chưa được hỗ trợ');
+          return;
         default:
           console.warn('Unknown action:', action);
           return;
@@ -221,34 +237,114 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
   };
 
   const handleSendNotifications = () => {
-    showConfirmModal(
-      'sendNotifications',
-      'Xác nhận gửi thông báo',
-      `Bạn có chắc chắn muốn gửi thông báo khám sức khỏe cho phụ huynh của các học sinh đủ điều kiện? Thông báo sẽ được gửi đến ${eligibleStudents.length} học sinh.`
-    );
+    setNotificationModal({ visible: true });
   };
 
-  const handleRefreshStudents = () => {
+  // Manual refresh for eligible students (disabled auto-refresh to prevent constant reloading)
+  const handleRefreshStudents = useCallback(async () => {
     console.log('Manual refresh triggered by user');
-    fetchEligibleStudents(); // Use current campaign state from closure
-  };
+    try {
+      setStudentsLoading(true);
+      // Use the new API to get students with form status
+      const data = await healthCheckApi.getEligibleStudentsWithFormStatus(campaignId);
+      setEligibleStudents(data);
+      setLastRefresh(new Date());
+      
+      // Update notification sent status based on backend data
+      const hasFormsWithSentAt = data.some(student => student.sentAt);
+      setNotificationSent(hasFormsWithSentAt);
+      localStorage.setItem(`campaign_${campaignId}_notification_sent`, hasFormsWithSentAt.toString());
+      
+      message.success('Đã cập nhật danh sách học sinh');
+    } catch (error) {
+      console.error('Error refreshing students:', error);
+      message.error('Không thể cập nhật danh sách học sinh');
+    } finally {
+      setStudentsLoading(false);
+    }
+  }, [campaignId]); // Only depend on campaignId
 
-  const executeSendNotifications = async () => {
+  // Commented out auto-refresh to prevent constant page reloading
+  // useEffect(() => {
+  //   let intervalId;
+  //   
+  //   if (campaign?.status === 'APPROVED') {
+  //     // Refresh every 30 seconds
+  //     intervalId = setInterval(() => {
+  //       console.log('Auto-refreshing student list...');
+  //       fetchEligibleStudents(campaign);
+  //     }, 30000);
+  //   }
+  //   
+  //   return () => {
+  //     if (intervalId) {
+  //       clearInterval(intervalId);
+  //     }
+  //   };
+  // }, [campaign, fetchEligibleStudents]);
+
+  const executeSendNotifications = async (customMessage = null) => {
     setSendingNotification(true);
     try {
       console.log('Sending notifications for campaign:', campaignId);
-      const response = await healthCheckApi.sendNotificationsToParents(campaignId);
-      console.log('Notification response:', response);
-      message.success(`Đã gửi thông báo thành công đến ${response.notificationsSent} phụ huynh`);
+      
+      // Step 1: Generate forms for eligible students
+      console.log('Step 1: Generating health check forms...');
+      message.loading('Đang tạo phiếu khám sức khỏe...', 0);
+      
+      const formsResponse = await healthCheckApi.generateForms(campaignId);
+      console.log('Forms generated:', formsResponse);
+      
+      message.destroy();
+      message.success(`Đã tạo ${formsResponse.formsGenerated || eligibleStudents.length} phiếu khám sức khỏe`);
+      
+      // Step 2: Send notifications to parents
+      console.log('Step 2: Sending notifications to parents...');
+      message.loading('Đang gửi thông báo đến phụ huynh...', 0);
+      
+      const notificationResponse = await healthCheckApi.sendNotificationsToParents(campaignId, customMessage);
+      console.log('Notification response:', notificationResponse);
+      
+      message.destroy();
+      
+      // Show success message
+      message.success(`Đã gửi thông báo thành công đến ${notificationResponse.notificationsSent || eligibleStudents.length} phụ huynh`);
+      
+      // Mark notification as sent and save to localStorage
       setNotificationSent(true);
-      // Refresh the eligible students list to update any changes
-      fetchEligibleStudents();
+      localStorage.setItem(`campaign_${campaignId}_notification_sent`, 'true');
+      
+      // Refresh student data to get updated form statuses from backend
+      // This will show the correct notification sent status and form statuses
+      await fetchEligibleStudents();
+      
+      // Don't manually update eligibleStudents state here anymore,
+      // rely on the backend data from fetchEligibleStudents()
+      
     } catch (error) {
+      message.destroy();
       console.error('Error sending notifications:', error);
-      message.error('Không thể gửi thông báo đến phụ huynh');
+      
+      if (error.response?.status === 401) {
+        message.error('Không có quyền thực hiện thao tác này');
+      } else if (error.response?.data?.message) {
+        message.error(error.response.data.message);
+      } else {
+        message.error('Không thể gửi thông báo đến phụ huynh');
+      }
     } finally {
       setSendingNotification(false);
     }
+  };
+
+  // Notification modal handlers
+  const handleNotificationModalCancel = () => {
+    setNotificationModal({ visible: false });
+  };
+
+  const handleNotificationModalConfirm = async (customMessage) => {
+    setNotificationModal({ visible: false });
+    await executeSendNotifications(customMessage);
   };
 
   const getActionButtons = () => {
@@ -293,8 +389,8 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
         break;
     }
     
-    // Add cancel button for certain statuses
-    if (['PENDING', 'APPROVED'].includes(campaign.status)) {
+    // Add cancel button for certain statuses (note: backend doesn't support cancel yet)
+    if (['PENDING'].includes(campaign.status)) {
       buttons.push(
         <Button 
           key="cancel" 
@@ -303,7 +399,7 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
           onClick={() => showConfirmModal(
             'cancel', 
             'Xác nhận hủy', 
-            'Bạn có chắc chắn muốn hủy đợt khám này?'
+            'Bạn có chắc chắn muốn hủy đợt khám này? (Chức năng này chưa được hỗ trợ)'
           )}
         >
           Hủy
@@ -315,19 +411,22 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
   };
 
   const getStatusTag = (status) => {
+    const label = CAMPAIGN_STATUS_LABELS[status] || status;
     switch(status) {
       case 'PENDING':
-        return <Tag color="orange">Chưa duyệt</Tag>;
+        return <Tag color="orange">{label}</Tag>;
       case 'APPROVED':
-        return <Tag color="green">Đã duyệt</Tag>;
+        return <Tag color="green">{label}</Tag>;
+      case 'REJECTED':
+        return <Tag color="red">{label}</Tag>;
       case 'IN_PROGRESS':
-        return <Tag color="processing">Đang diễn ra</Tag>;
+        return <Tag color="processing">{label}</Tag>;
       case 'COMPLETED':
-        return <Tag color="success">Đã hoàn thành</Tag>;
-      case 'CANCELED':
-        return <Tag color="red">Đã hủy</Tag>;
+        return <Tag color="success">{label}</Tag>;
+      case 'SCHEDULED':
+        return <Tag color="blue">{label}</Tag>;
       default:
-        return <Tag color="default">{status}</Tag>;
+        return <Tag color="default">{label}</Tag>;
     }
   };
 
@@ -348,9 +447,10 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
 
   const resultColumns = [
     {
-      title: 'Mã học sinh',
-      dataIndex: 'studentId',
-      key: 'studentId',
+      title: 'STT',
+      key: 'stt',
+      width: 60,
+      render: (_, __, index) => index + 1,
     },
     {
       title: 'Tên học sinh',
@@ -384,47 +484,107 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
 
   const eligibleStudentsColumns = [
     {
-      title: 'Mã học sinh',
-      dataIndex: 'studentCode',
-      key: 'studentCode',
-      width: 120,
+      title: 'STT',
+      key: 'stt',
+      width: 60,
+      render: (_, __, index) => index + 1,
     },
     {
       title: 'Họ và tên',
       dataIndex: 'fullName',
       key: 'fullName',
       width: 200,
+      sorter: (a, b) => a.fullName.localeCompare(b.fullName),
     },
     {
       title: 'Lớp',
       dataIndex: 'className',
       key: 'className',
       width: 100,
+      filters: [
+        { text: '1A', value: '1A' },
+        { text: '1B', value: '1B' },
+        { text: '1C', value: '1C' },
+        { text: '2A', value: '2A' },
+        { text: '2B', value: '2B' },
+        { text: '2C', value: '2C' },
+        { text: '3A', value: '3A' },
+        { text: '3B', value: '3B' },
+        { text: '3C', value: '3C' },
+        { text: '4A', value: '4A' },
+        { text: '4B', value: '4B' },
+        { text: '4C', value: '4C' },
+        { text: '5A', value: '5A' },
+        { text: '5B', value: '5B' },
+        { text: '5C', value: '5C' },
+      ],
+      onFilter: (value, record) => record.className === value,
     },
     {
       title: 'Tuổi',
-      dataIndex: 'ageDisplay',
-      key: 'ageDisplay',
-      width: 150,
+      dataIndex: 'age',
+      key: 'age',
+      width: 100,
+      sorter: (a, b) => {
+        const ageA = a.age || 0;
+        const ageB = b.age || 0;
+        return ageA - ageB;
+      },
+      render: (age, record) => {
+        // Display age in years, similar to vaccination campaign's age in months
+        if (age !== null && age !== undefined && age > 0) {
+          return `${age} tuổi`;
+        }
+        // Fallback to calculate from dob if available
+        if (record.dob) {
+          const birthDate = dayjs(record.dob);
+          const currentAge = dayjs().diff(birthDate, 'year');
+          return `${currentAge} tuổi`;
+        }
+        return 'N/A';
+      },
     },
     {
       title: 'Trạng thái',
       dataIndex: 'statusDisplay',
       key: 'statusDisplay',
       width: 150,
+      filters: [
+        { text: 'Đã xác nhận khám', value: 'CONFIRMED' },
+        { text: 'Từ chối khám', value: 'DECLINED' },
+        { text: 'Chờ phản hồi', value: 'PENDING' },
+        { text: 'Chưa gửi thông báo', value: 'NO_FORM' },
+        { text: 'Chưa phản hồi', value: 'NO_RESPONSE' },
+      ],
+      onFilter: (value, record) => record.status === value,
       render: (statusDisplay, record) => {
         const { status } = record;
         let color = 'default';
-        if (status === 'CONFIRMED') {
-          color = 'green';
-        } else if (status === 'DECLINED') {
-          color = 'red';
-        } else if (status === 'PENDING') {
-          color = 'orange';
-        } else {
-          color = 'orange'; // Default to orange for "Chưa phản hồi"
+        let text = statusDisplay;
+        
+        switch (status) {
+          case 'CONFIRMED':
+            color = 'green';
+            text = 'Đã xác nhận khám';
+            break;
+          case 'DECLINED':
+            color = 'red';
+            text = 'Từ chối khám';
+            break;
+          case 'PENDING':
+            color = 'orange';
+            text = 'Chờ phản hồi';
+            break;
+          case 'NO_FORM':
+            color = 'default';
+            text = 'Chưa gửi thông báo';
+            break;
+          default:
+            color = 'default';
+            text = 'Chưa gửi thông báo';
         }
-        return <Tag color={color}>{statusDisplay}</Tag>;
+        
+        return <Tag color={color}>{text}</Tag>;
       },
     },
   ];
@@ -533,11 +693,7 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
                           <div>
                             {campaign.categories?.map((category) => (
                               <Tag key={category} color="blue" style={{ marginBottom: 4 }}>
-                                {category === 'VISION' && 'Khám mắt'}
-                                {category === 'HEARING' && 'Khám tai'}
-                                {category === 'ORAL' && 'Khám răng miệng'}
-                                {category === 'SKIN' && 'Khám da liễu'}
-                                {category === 'RESPIRATORY' && 'Khám hô hấp'}
+                                {HEALTH_CHECK_CATEGORY_LABELS[category] || category}
                               </Tag>
                             ))}
                           </div>
@@ -618,7 +774,9 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
                           <Col span={6}>
                             <Statistic 
                               title="Chưa phản hồi" 
-                              value={eligibleStudents.filter(s => s.status === 'PENDING' || s.status === 'NO_FORM').length} 
+                              value={eligibleStudents.filter(s => 
+                                s.status === 'PENDING' || s.status === 'NO_FORM'
+                              ).length} 
                               prefix={<UsergroupAddOutlined />} 
                               valueStyle={{ color: '#faad14' }}
                             />
@@ -648,7 +806,6 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
                             <div style={{ marginTop: 8, fontSize: '12px', color: '#666' }}>
                               <Text type="secondary">
                                 Cập nhật lần cuối: {dayjs(lastRefresh).format('DD/MM/YYYY HH:mm:ss')}
-                                {' • Tự động làm mới mỗi 30 giây'}
                               </Text>
                             </div>
                           )}
@@ -701,6 +858,15 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
       >
         <p>{confirmModal.message}</p>
       </Modal>
+
+      <NotificationModal
+        visible={notificationModal.visible}
+        onCancel={handleNotificationModalCancel}
+        onConfirm={handleNotificationModalConfirm}
+        loading={sendingNotification}
+        studentCount={eligibleStudents.length}
+        campaignName={campaign?.name || ''}
+      />
     </>
   );
 };

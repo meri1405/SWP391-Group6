@@ -124,16 +124,6 @@ public interface INotificationService {
             String scheduledDate,
             VaccinationForm vaccinationForm);
 
-    /**
-     * Create health check form notification
-     */
-    NotificationDTO createHealthCheckFormNotification(
-            User recipient,
-            String studentName,
-            String campaignName,
-            String appointmentDate,
-            String location,
-            HealthCheckForm healthCheckForm);
 
     /**
      * Create a general notification
@@ -170,64 +160,6 @@ public interface INotificationService {
      */
     NotificationDTO convertToDTO(Notification notification);
     
-
-    /***
-     * HEALTH CHECK CAMPAIGN NOTIFICATIONS
-     * */
-    /**
-     * Notify managers about a campaign pending approval
-     */
-    void notifyManagersAboutCampaignApproval(HealthCheckCampaign campaign);
-
-    /**
-     * Notify nurse about campaign approval
-     */
-    void notifyNurseAboutCampaignApproval(HealthCheckCampaign campaign);
-
-    /**
-     * Notify nurse about campaign rejection
-     */
-    void notifyNurseAboutCampaignRejection(HealthCheckCampaign campaign, String notes);
-
-    /**
-     * Notify manager about campaign scheduling
-     */
-    void notifyManagerAboutCampaignSchedule(HealthCheckCampaign campaign);
-
-    /**
-     * Notify manager about campaign completion
-     */
-    void notifyManagerAboutCampaignCompletion(HealthCheckCampaign campaign);
-
-    /**
-     * Notify parent about health check
-     */
-    void notifyParentAboutHealthCheck(HealthCheckForm form);
-
-    /**
-     * Notify nurse about parent confirmation
-     */
-    void notifyNurseAboutParentConfirmation(HealthCheckForm form);
-
-    /**
-     * Notify parent about abnormal health check result
-     */
-    void notifyParentAboutAbnormalResult(HealthCheckResult result);
-
-    /**
-     * Notify manager about abnormal health check result
-     */
-    void notifyManagerAboutAbnormalResult(HealthCheckResult result);
-
-    /**
-     * Notify parent about appointment scheduling
-     */
-    void notifyParentAboutAppointment(HealthCheckForm form);
-    
-    /**
-     * RESTOCK REQUEST NOTIFICATIONS
-     */
-    
     /**
      * Notify managers about a new restock request
      */
@@ -246,49 +178,100 @@ public interface INotificationService {
     /**
      * Create abnormal health check result notification
      */
-    NotificationDTO createAbnormalHealthResultNotification(
-            User recipient,
-            String studentName,
-            String category,
-            HealthCheckForm healthCheckForm);
-
+    
     /**
-     * Create health check appointment notification
+     * HEALTH CHECK CAMPAIGN NOTIFICATIONS
      */
-    NotificationDTO createHealthCheckAppointmentNotification(
-            User recipient,
+    
+    /**
+     * Notify managers about new health check campaign pending approval
+     */
+    void notifyManagersAboutHealthCheckCampaignApproval(HealthCheckCampaign campaign, int estimatedStudentCount);
+    
+    /**
+     * Notify nurse about health check campaign approval
+     */
+    void notifyNurseAboutHealthCheckCampaignApproval(HealthCheckCampaign campaign, User approver);
+    
+    /**
+     * Notify nurse about health check campaign rejection
+     */
+    void notifyNurseAboutHealthCheckCampaignRejection(HealthCheckCampaign campaign, User rejector, String reason);
+    
+    /**
+     * Notify manager about health check campaign scheduling
+     */
+    void notifyManagerAboutHealthCheckCampaignScheduling(HealthCheckCampaign campaign, int scheduledStudentCount);
+    
+    /**
+     * Notify manager about health check campaign completion
+     */
+    void notifyManagerAboutHealthCheckCampaignCompletion(HealthCheckCampaign campaign, int completedStudentCount);
+    
+    /**
+     * Send health check campaign invitation to parents (with customizable content)
+     */
+    NotificationDTO sendHealthCheckCampaignInvitationToParent(
+            User parent,
+            HealthCheckCampaign campaign,
+            String studentName,
+            String customMessage,
+            HealthCheckForm healthCheckForm);
+    
+    /**
+     * Send health check campaign parent confirmation/decline notification
+     */
+    void sendHealthCheckCampaignParentConfirmation(
+            HealthCheckCampaign campaign,
+            User parent,
+            Student student,
+            String message);
+    
+    /**
+     * Send health check form confirmation/decline notification with form reference
+     * Also notifies the school nurse about parent's response
+     */
+    void sendHealthCheckFormConfirmation(
+            HealthCheckForm form,
+            User parent,
+            Student student,
+            String message,
+            boolean isConfirmed);
+    
+    /**
+     * Send health check campaign parent invitation
+     */
+    void sendHealthCheckCampaignParentInvitation(
+            HealthCheckCampaign campaign,
+            User parent,
+            Student student,
+            String message,
+            HealthCheckForm form);
+    
+    /**
+     * Send health check appointment details to parent
+     */
+    NotificationDTO sendHealthCheckAppointmentToParent(
+            User parent,
             String studentName,
             String appointmentDate,
             String appointmentTime,
             String location,
-            HealthCheckForm healthCheckForm);
-
-    /**
-     * ENHANCED HEALTH CHECK NOTIFICATIONS (In-App Only)
-     */
+            int queueNumber,
+            HealthCheckCampaign campaign);
     
     /**
-     * Send reminder notification for pending health check forms
+     * Send abnormal health check result notification to parent
      */
-    void sendHealthCheckFormReminderNotification(HealthCheckForm form);
+    NotificationDTO sendAbnormalHealthCheckResultToParent(
+            User parent,
+            String studentName,
+            String abnormalFindings,
+            String recommendations,
+            HealthCheckCampaign campaign);
     
     /**
-     * Notify nurse about deadline approaching for health check campaign
+     * Send completion reminder to nurse
      */
-    void notifyNurseAboutCampaignDeadline(HealthCheckCampaign campaign, int daysRemaining);
-    
-    /**
-     * Notify manager about campaign progress
-     */
-    void notifyManagerAboutCampaignProgress(HealthCheckCampaign campaign, int confirmedCount, int totalCount);
-    
-    /**
-     * Send bulk notifications to parents for health check forms
-     */
-    int sendBulkHealthCheckNotifications(List<HealthCheckForm> forms);
-    
-    /**
-     * Notify parent about health check result sync with health profile
-     */
-    void notifyParentAboutHealthProfileUpdate(HealthCheckResult result);
+    void sendHealthCheckCampaignCompletionReminder(HealthCheckCampaign campaign);
 }

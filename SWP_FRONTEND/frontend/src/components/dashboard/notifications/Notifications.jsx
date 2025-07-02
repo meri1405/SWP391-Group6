@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "../../../contexts/AuthContext";
 import { parentApi } from "../../../api/parentApi";
 import { nurseApi } from "../../../api/nurseApi";
@@ -7,6 +7,7 @@ import webSocketService from "../../../services/webSocketService";
 import { VaccinationFormModal } from "../vaccinations";
 import "../../../styles/Notifications.css";
 import { HealthCheckFormModal } from "../health";
+
 const Notifications = ({ role = "parent" }) => {
   const [filter, setFilter] = useState("all");
   const [notifications, setNotifications] = useState([]);
@@ -19,6 +20,11 @@ const Notifications = ({ role = "parent" }) => {
   const [selectedHealthCheckFormId, setSelectedHealthCheckFormId] =
     useState(null);
   const { getToken } = useAuth();
+
+  // Use a ref to track if the component is mounted
+  const isMounted = useRef(true);
+  // Use a ref to prevent duplicate API calls
+  const isLoadingRef = useRef(false);
 
   // Use appropriate API based on role
   const api = role === "schoolnurse" ? nurseApi : role === "manager" ? managerApi : parentApi;
@@ -202,63 +208,73 @@ const Notifications = ({ role = "parent" }) => {
 
   // Load notifications on component mount
   const loadNotifications = useCallback(async () => {
+    // Prevent duplicate API calls
+    if (isLoadingRef.current) return;
+    
     const token = getToken();
     if (!token) return;
 
     try {
+      isLoadingRef.current = true;
       setLoading(true);
       setError(null);
       const data = await api.getAllNotifications(token);
 
-      // Transform backend notification data to frontend format
-      const transformedNotifications = data.map((notification) => {
-        // Translate notification title if it's in English
-        let translatedTitle = notification.title;
-        if (translatedTitle === "Campaign Approved") {
-          translatedTitle = "Chiến dịch được phê duyệt";
-        } else if (translatedTitle === "Campaign Rejected") {
-          translatedTitle = "Chiến dịch bị từ chối";
-        } else if (translatedTitle === "Campaign Scheduled") {
-          translatedTitle = "Chiến dịch đã lên lịch";
-        } else if (translatedTitle === "Campaign Completed") {
-          translatedTitle = "Chiến dịch hoàn thành";
-        } else if (translatedTitle === "Health Check Approved") {
-          translatedTitle = "Đợt khám sức khỏe được phê duyệt";
-        } else if (translatedTitle === "Health Check Rejected") {
-          translatedTitle = "Đợt khám sức khỏe bị từ chối";
-        } else if (translatedTitle === "Medication Request Approved") {
-          translatedTitle = "Yêu cầu thuốc được phê duyệt";
-        } else if (translatedTitle === "Medication Request Rejected") {
-          translatedTitle = "Yêu cầu thuốc bị từ chối";
-        }
+      // Only update state if component is still mounted
+      if (isMounted.current) {
+        // Transform backend notification data to frontend format
+        const transformedNotifications = data.map((notification) => {
+          // Translate notification title if it's in English
+          let translatedTitle = notification.title;
+          if (translatedTitle === "Campaign Approved") {
+            translatedTitle = "Chiến dịch được phê duyệt";
+          } else if (translatedTitle === "Campaign Rejected") {
+            translatedTitle = "Chiến dịch bị từ chối";
+          } else if (translatedTitle === "Campaign Scheduled") {
+            translatedTitle = "Chiến dịch đã lên lịch";
+          } else if (translatedTitle === "Campaign Completed") {
+            translatedTitle = "Chiến dịch hoàn thành";
+          } else if (translatedTitle === "Health Check Approved") {
+            translatedTitle = "Đợt khám sức khỏe được phê duyệt";
+          } else if (translatedTitle === "Health Check Rejected") {
+            translatedTitle = "Đợt khám sức khỏe bị từ chối";
+          } else if (translatedTitle === "Medication Request Approved") {
+            translatedTitle = "Yêu cầu thuốc được phê duyệt";
+          } else if (translatedTitle === "Medication Request Rejected") {
+            translatedTitle = "Yêu cầu thuốc bị từ chối";
+          }
 
-        return {
-          id: notification.id,
-          type: getNotificationType(notification),
-          title: translatedTitle,
-          message: formatNotificationMessage(notification.message),
-          time: formatTimeAgo(notification.createdAt),
-          date: notification.createdAt,
-          read: notification.read,
-          priority: determinePriority(notification),
-          actionRequired: determineActionRequired(notification),
-          medicationRequest: notification.medicationRequest,
-          medicationSchedule: notification.medicationSchedule,
-          vaccinationFormId: notification.vaccinationFormId,
-          healthCheckFormId: notification.healthCheckFormId,
-        };
+          return {
+            id: notification.id,
+            type: getNotificationType(notification),
+            title: translatedTitle,
+            message: formatNotificationMessage(notification.message),
+            time: formatTimeAgo(notification.createdAt),
+            date: notification.createdAt,
+            read: notification.read,
+            priority: determinePriority(notification),
+            actionRequired: determineActionRequired(notification),
+            medicationRequest: notification.medicationRequest,
+            medicationSchedule: notification.medicationSchedule,
+            vaccinationFormId: notification.vaccinationFormId,
+            healthCheckFormId: notification.healthCheckFormId,
+          };
+        });
 
-        
-      });
-
-      setNotifications(transformedNotifications);
+        setNotifications(transformedNotifications);
+      }
     } catch (error) {
       console.error("Error loading notifications:", error);
-      setError("Không thể tải thông báo. Vui lòng thử lại.");
+      if (isMounted.current) {
+        setError("Không thể tải thông báo. Vui lòng thử lại.");
+      }
     } finally {
-      setLoading(false);
+      isLoadingRef.current = false;
+      if (isMounted.current) {
+        setLoading(false);
+      }
     }
-  }, [getToken, formatNotificationMessage]);
+  }, [getToken, formatNotificationMessage, api]);
 
   const setupWebSocketConnection = useCallback(async () => {
     const token = getToken();
@@ -268,7 +284,9 @@ const Notifications = ({ role = "parent" }) => {
       // Connect to WebSocket
       await webSocketService.connect(token);
       // Add message handler for real-time notifications
-      webSocketService.addMessageHandler("notifications", (newNotification) => {
+      webSocketService.addMessageHandler("/queue/notifications", (newNotification) => {
+        if (!isMounted.current) return;
+        
         // Translate notification title if it's in English
         let translatedTitle = newNotification.title;
         if (translatedTitle === "Campaign Approved") {
@@ -315,14 +333,21 @@ const Notifications = ({ role = "parent" }) => {
   }, [getToken, formatNotificationMessage]);
 
   useEffect(() => {
+    // Set isMounted ref to true when component mounts
+    isMounted.current = true;
+    
+    // Load data only once when component mounts
     loadNotifications();
     setupWebSocketConnection();
 
     return () => {
+      // Set isMounted ref to false when component unmounts
+      isMounted.current = false;
+      
       // Cleanup WebSocket connection when component unmounts
-      webSocketService.removeMessageHandler("notifications");
+      webSocketService.removeMessageHandler("/queue/notifications");
     };
-  }, [loadNotifications, setupWebSocketConnection, api]);
+  }, [loadNotifications, setupWebSocketConnection]);
 
   // Helper functions for formatting
   const formatVietnameseDate = useCallback((dateString) => {
@@ -365,13 +390,15 @@ const Notifications = ({ role = "parent" }) => {
 
     try {
       await api.markNotificationAsRead(id, token);
-      setNotifications((prev) =>
-        prev.map((notification) =>
-          notification.id === id
-            ? { ...notification, read: true }
-            : notification
-        )
-      );
+      if (isMounted.current) {
+        setNotifications((prev) =>
+          prev.map((notification) =>
+            notification.id === id
+              ? { ...notification, read: true }
+              : notification
+          )
+        );
+      }
     } catch (error) {
       console.error("Error marking notification as read:", error);
     }
@@ -396,7 +423,6 @@ const Notifications = ({ role = "parent" }) => {
       setShowVaccinationModal(true);
     } else if (notification.healthCheckFormId) {
       // Open health check form modal
-      console.log(notification.healthCheckFormId);
       console.log("Opening health check form modal for ID:", notification.healthCheckFormId);
       setSelectedHealthCheckFormId(notification.healthCheckFormId);
       setShowHealthCheckModal(true);
@@ -410,12 +436,16 @@ const Notifications = ({ role = "parent" }) => {
 
   const handleVaccinationFormUpdated = () => {
     // Refresh notifications when vaccination form is updated
-    loadNotifications();
+    setTimeout(() => {
+      loadNotifications();
+    }, 500);
   };
 
   const handleHealthCheckFormUpdated = () => {
     // Refresh notifications when health check form is updated
-    loadNotifications();
+    setTimeout(() => {
+      loadNotifications();
+    }, 500);
   };
 
   const getTypeIcon = (type) => {

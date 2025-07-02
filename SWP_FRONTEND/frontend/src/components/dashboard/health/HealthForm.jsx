@@ -68,7 +68,10 @@ const HealthCheckFormModal = ({
 
     try {
       setSubmitting(true);
+      setError(null);
       let response;
+
+      console.log('Submitting form with action:', confirmAction, 'and notes:', notes);
 
       if (confirmAction === "confirm") {
         response = await parentApi.confirmHealthCheckForm(
@@ -84,20 +87,38 @@ const HealthCheckFormModal = ({
         );
       }
 
-      // Backend returns { message: "...", form: {...} }
-      if (response.form) {
-        setForm(response.form);
+      console.log('Form submission response:', response);
+
+      // Handle both possible response formats
+      const formData = response?.form || response;
+      
+      if (formData && (formData.id || formData.form?.id)) {
+        // Update form state with the correct data structure
+        const updatedForm = formData.form || formData;
+        setForm(updatedForm);
+        
+        // Then close dialog and clear notes
         setShowConfirmDialog(false);
         setNotes("");
+        
+        // Finally notify parent component
         if (onFormUpdated) {
-          onFormUpdated(response.form);
+          onFormUpdated(updatedForm);
         }
       } else {
-        setError(response.message || "Không thể xử lý yêu cầu");
+        console.error('Invalid response format:', response);
+        setError("Không thể xử lý yêu cầu - phản hồi không hợp lệ");
       }
     } catch (error) {
       console.error("Error submitting form:", error);
-      setError("Không thể xử lý yêu cầu. Vui lòng thử lại.");
+      let errorMessage = "Không thể xử lý yêu cầu. Vui lòng thử lại.";
+      
+      // Extract error message from response if available
+      if (error.response && error.response.data) {
+        errorMessage = error.response.data.message || errorMessage;
+      }
+      
+      setError(errorMessage);
     } finally {
       setSubmitting(false);
     }

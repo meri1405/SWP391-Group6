@@ -1,37 +1,47 @@
 package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl;
 
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.CreateHealthCheckCampaignRequest;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.HealthCheckCampaignDTO;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.HealthCheckFormDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.StudentDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.HealthCheckCampaign;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.HealthCheckForm;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.Notification;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.Student;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.CampaignStatus;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.HealthCheckCategory;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.FormStatus;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.HealthCheckCampaignRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.HealthCheckFormRepository;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.NotificationRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.StudentRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IHealthCheckCampaignService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IHealthCheckFormService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.INotificationService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IStudentService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class HealthCheckCampaignService implements IHealthCheckCampaignService {
 
     private final HealthCheckCampaignRepository campaignRepository;
-    private final HealthCheckFormRepository healthCheckFormRepository;
     private final INotificationService notificationService;
     private final IStudentService studentService;
+    private final IHealthCheckFormService healthCheckFormService;
     private final StudentRepository studentRepository;
+    private final HealthCheckFormRepository healthCheckFormRepository;
+    private final NotificationRepository notificationRepository;
 
     @Transactional
     public HealthCheckCampaign createCampaign(String name, String description, LocalDate startDate,
@@ -53,16 +63,26 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
         campaign.setCreatedAt(LocalDateTime.now());
         campaign.setUpdatedAt(LocalDateTime.now());
 
-        // Automatically calculate target count when creating campaign
-        if (minAge != null && maxAge != null) {
-            int targetCount = calculateTargetCountInternal(minAge, maxAge, targetClasses);
-            campaign.setTargetCount(targetCount);
-        }
+        // Always calculate target count when creating campaign
+        System.out.println("=== CAMPAIGN CREATION DEBUG ===");
+        System.out.println("Campaign name: " + name);
+        System.out.println("Min age: " + minAge + ", Max age: " + maxAge);
+        System.out.println("Target classes: " + targetClasses);
+        System.out.println("Calculating target count...");
+        int targetCount = calculateTargetCountInternal(minAge, maxAge, targetClasses);
+        System.out.println("Calculated target count: " + targetCount);
+        campaign.setTargetCount(targetCount);
+
+        HealthCheckCampaign savedCampaign = campaignRepository.save(campaign);
+        System.out.println("Saved campaign with target count: " + savedCampaign.getTargetCount());
 
         // Notify managers about a new campaign pending approval
-        notificationService.notifyManagersAboutCampaignApproval(campaign);
+        int estimatedCount = savedCampaign.getTargetCount();
+        System.out.println("Notifying managers with estimated count: " + estimatedCount);
+        System.out.println("=== END CAMPAIGN CREATION DEBUG ===");
+        notificationService.notifyManagersAboutHealthCheckCampaignApproval(savedCampaign, estimatedCount);
 
-        return campaignRepository.save(campaign);
+        return savedCampaign;
     }
 
     @Transactional
@@ -93,11 +113,9 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
         campaign.setTargetClasses(targetClasses != null ? targetClasses : new HashSet<>());
         campaign.setUpdatedAt(LocalDateTime.now());
 
-        // Recalculate target count when updating campaign
-        if (minAge != null && maxAge != null) {
-            int targetCount = calculateTargetCountInternal(minAge, maxAge, targetClasses);
-            campaign.setTargetCount(targetCount);
-        }
+        // Always recalculate target count when updating campaign
+        int targetCount = calculateTargetCountInternal(minAge, maxAge, targetClasses);
+        campaign.setTargetCount(targetCount);
 
         return campaignRepository.save(campaign);
     }
@@ -116,7 +134,8 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
         campaign.setUpdatedAt(LocalDateTime.now());
 
         // Notify managers about a campaign pending approval
-        notificationService.notifyManagersAboutCampaignApproval(campaign);
+        int estimatedCount = campaign.getTargetCount();
+        notificationService.notifyManagersAboutHealthCheckCampaignApproval(campaign, estimatedCount);
 
         return campaignRepository.save(campaign);
     }
@@ -140,10 +159,12 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
         campaign.setApprovedAt(LocalDateTime.now());
         campaign.setUpdatedAt(LocalDateTime.now());
 
-        // Notify the nurse who created the campaign about the approval
-        notificationService.notifyNurseAboutCampaignApproval(campaign);
+        HealthCheckCampaign savedCampaign = campaignRepository.save(campaign);
 
-        return campaignRepository.save(campaign);
+        // Notify the nurse who created the campaign about the approval
+        notificationService.notifyNurseAboutHealthCheckCampaignApproval(savedCampaign, manager);
+
+        return savedCampaign;
     }
 
     @Transactional
@@ -164,13 +185,14 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
         campaign.setNotes(notes);
         campaign.setUpdatedAt(LocalDateTime.now());
 
-        // Notify the nurse who created the campaign about the rejection
-        notificationService.notifyNurseAboutCampaignRejection(campaign, notes);
+        HealthCheckCampaign savedCampaign = campaignRepository.save(campaign);
 
-        return campaignRepository.save(campaign);
+        // Notify the nurse who created the campaign about the rejection
+        notificationService.notifyNurseAboutHealthCheckCampaignRejection(savedCampaign, manager, notes);
+
+        return savedCampaign;
     }
 
-    @Override
     @Transactional
     public HealthCheckCampaign scheduleCampaign(Long id, int targetCount) {
         Optional<HealthCheckCampaign> optionalCampaign = campaignRepository.findById(id);
@@ -190,32 +212,12 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
         campaign.setTargetCount(targetCount);
         campaign.setUpdatedAt(LocalDateTime.now());
 
+        HealthCheckCampaign savedCampaign = campaignRepository.save(campaign);
+
         // Notify manager about campaign scheduling and target count
-        notificationService.notifyManagerAboutCampaignSchedule(campaign);
+        notificationService.notifyManagerAboutHealthCheckCampaignScheduling(savedCampaign, targetCount);
 
-        return campaignRepository.save(campaign);
-    }
-
-    @Override
-    @Transactional
-    public HealthCheckCampaign updateTargetCount(Long id, int targetCount) {
-        Optional<HealthCheckCampaign> optionalCampaign = campaignRepository.findById(id);
-        if (optionalCampaign.isEmpty()) {
-            throw new RuntimeException("Campaign not found with id: " + id);
-        }
-
-        HealthCheckCampaign campaign = optionalCampaign.get();
-
-        // Only allow updating if the campaign is in APPROVED status
-        if (campaign.getStatus() != CampaignStatus.APPROVED) {
-            throw new RuntimeException("Cannot update target count for campaign that is not in APPROVED status");
-        }
-
-        // Update the target count without sending notification
-        campaign.setTargetCount(targetCount);
-        campaign.setUpdatedAt(LocalDateTime.now());
-
-        return campaignRepository.save(campaign);
+        return savedCampaign;
     }
 
     @Transactional
@@ -235,7 +237,47 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
         campaign.setStatus(CampaignStatus.IN_PROGRESS);
         campaign.setUpdatedAt(LocalDateTime.now());
 
-        return campaignRepository.save(campaign);
+        HealthCheckCampaign savedCampaign = campaignRepository.save(campaign);
+        
+        // Send forms to eligible parents when campaign starts
+        sendFormsToEligibleParents(savedCampaign);
+
+        return savedCampaign;
+    }
+
+    @Transactional
+    public void sendFormsToEligibleParents(HealthCheckCampaign campaign) {
+        // Get eligible students for this campaign
+        List<StudentDTO> eligibleStudents = getEligibleStudents(campaign);
+        
+        int formsCreated = 0;
+        int formsSent = 0;
+        
+        for (StudentDTO studentDTO : eligibleStudents) {
+            try {
+                Optional<Student> studentOpt = studentRepository.findById(studentDTO.getStudentID());
+                if (studentOpt.isPresent()) {
+                    Student student = studentOpt.get();
+                    User parent = student.getParent();
+                    
+                    if (parent != null) {
+                        // Create the health check form
+                        HealthCheckForm form = healthCheckFormService.createHealthCheckForm(campaign, student, parent);
+                        formsCreated++;
+                        
+                        // Send the form to the parent
+                        healthCheckFormService.sendFormToParent(form);
+                        formsSent++;
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("Error creating/sending form for student ID " + studentDTO.getStudentID() + ": " + e.getMessage());
+            }
+        }
+        
+        System.out.println("Health check forms sent - Campaign: " + campaign.getName() + 
+                         ", Forms created: " + formsCreated + 
+                         ", Forms sent: " + formsSent);
     }
 
     @Transactional
@@ -255,10 +297,14 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
         campaign.setStatus(CampaignStatus.COMPLETED);
         campaign.setUpdatedAt(LocalDateTime.now());
 
-        // Notify manager about campaign completion
-        notificationService.notifyManagerAboutCampaignCompletion(campaign);
+        HealthCheckCampaign savedCampaign = campaignRepository.save(campaign);
 
-        return campaignRepository.save(campaign);
+        // Notify manager about campaign completion
+        // Count completed students based on confirmed forms or other logic
+        int completedStudentCount = savedCampaign.getConfirmedCount(); // Adjust this based on your business logic
+        notificationService.notifyManagerAboutHealthCheckCampaignCompletion(savedCampaign, completedStudentCount);
+
+        return savedCampaign;
     }
 
     @Transactional
@@ -282,10 +328,242 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
         return campaignRepository.save(campaign);
     }
 
-    public HealthCheckCampaign getCampaignById(Long id) {
-        Optional<HealthCheckCampaign> campaign = campaignRepository.findById(id);
-        return campaign.orElseThrow(() -> new RuntimeException("Campaign not found with id: " + id));
+    @Override
+    public List<StudentDTO> getEligibleStudents(HealthCheckCampaign campaign) {
+        if (campaign == null) {
+            throw new IllegalArgumentException("Campaign cannot be null");
+        }
+        
+        Set<String> targetClasses = campaign.getTargetClasses();
+        Integer minAge = campaign.getMinAge();
+        Integer maxAge = campaign.getMaxAge();
+        
+        if (targetClasses != null && !targetClasses.isEmpty()) {
+            // If specific classes are targeted, get students from those classes with age filter
+            return studentService.getEligibleStudentsForClasses(targetClasses, minAge, maxAge);
+        } else if (minAge != null || maxAge != null) {
+            // If only age criteria is specified, get all students within age range
+            return studentService.getStudentsByAgeRange(minAge, maxAge);
+        } else {
+            // If no specific criteria, get all students
+            return studentService.getAllStudents();
+        }
     }
+
+    @Override
+    public List<StudentDTO> getEligibleStudents(Long campaignId) {
+        System.out.println("=== DEBUG GET ELIGIBLE STUDENTS BY ID ===");
+        System.out.println("Campaign ID: " + campaignId);
+        
+        HealthCheckCampaign campaign = campaignRepository.findById(campaignId)
+                .orElseThrow(() -> new RuntimeException("Campaign not found with id: " + campaignId));
+        
+        System.out.println("Found campaign: " + campaign.getName());
+        System.out.println("Target classes: " + campaign.getTargetClasses());
+        System.out.println("Age range: " + campaign.getMinAge() + " - " + campaign.getMaxAge());
+        
+        return getEligibleStudents(campaign);
+    }
+
+    /**
+     * Get eligible students with their health check form status
+     */
+    @Override
+    public List<Map<String, Object>> getEligibleStudentsWithFormStatus(Long campaignId) {
+        System.out.println("=== DEBUG GET ELIGIBLE STUDENTS WITH FORM STATUS ===");
+        System.out.println("Campaign ID: " + campaignId);
+        
+        HealthCheckCampaign campaign = campaignRepository.findById(campaignId)
+                .orElseThrow(() -> new RuntimeException("Campaign not found with id: " + campaignId));
+        
+        // Get base eligible students
+        List<StudentDTO> eligibleStudents = getEligibleStudents(campaign);
+        
+        // Get all forms for this campaign
+        List<HealthCheckFormDTO> campaignForms = healthCheckFormService.getFormsByCampaign(campaign);
+        
+        // Create map of studentId -> form data
+        Map<Long, HealthCheckFormDTO> studentFormMap = campaignForms.stream()
+                .collect(Collectors.toMap(
+                    form -> form.getStudentId(),
+                    form -> form,
+                    (existing, replacement) -> existing // Keep first if duplicate
+                ));
+        
+        // Convert to Map objects with form status and notification info
+        List<Map<String, Object>> studentsWithStatus = new ArrayList<>();
+        for (StudentDTO student : eligibleStudents) {
+            Map<String, Object> studentData = new HashMap<>();
+            studentData.put("studentID", student.getStudentID());
+            studentData.put("fullName", student.getFullName());
+            studentData.put("className", student.getClassName());
+            studentData.put("age", student.getAge());
+            studentData.put("gender", student.getGender());
+            studentData.put("parentName", student.getParentName());
+            studentData.put("parentEmail", student.getParentEmail());
+            studentData.put("parentPhone", student.getParentPhone());
+            
+            HealthCheckFormDTO form = studentFormMap.get(student.getStudentID());
+            if (form != null) {
+                studentData.put("status", form.getStatus().toString());
+                studentData.put("formId", form.getId());
+                studentData.put("sentAt", form.getSentAt());
+                studentData.put("respondedAt", form.getRespondedAt());
+                studentData.put("notificationSent", form.getSentAt() != null);
+            } else {
+                studentData.put("status", "NO_FORM");
+                studentData.put("formId", null);
+                studentData.put("sentAt", null);
+                studentData.put("respondedAt", null);
+                studentData.put("notificationSent", false);
+            }
+            
+            studentsWithStatus.add(studentData);
+        }
+        
+        System.out.println("Students with form status: " + studentsWithStatus.size());
+        System.out.println("Forms found: " + campaignForms.size());
+        
+        return studentsWithStatus;
+    }
+
+    public HealthCheckCampaignDTO createCampaign(User nurse, CreateHealthCheckCampaignRequest request) {
+        HealthCheckCampaign campaign = createCampaign(
+                request.getName(),
+                request.getDescription(),
+                request.getStartDate(),
+                request.getEndDate(),
+                request.getLocation(),
+                request.getCategories(),
+                nurse,
+                request.getMinAge(),
+                request.getMaxAge(),
+                request.getTargetClasses()
+        );
+        return convertToDTO(campaign);
+    }
+
+    public HealthCheckCampaignDTO getCampaignById(Long id) {
+        Optional<HealthCheckCampaign> campaign = campaignRepository.findById(id);
+        if (campaign.isEmpty()) {
+            throw new IllegalArgumentException("Campaign not found with id: " + id);
+        }
+        return convertToDTO(campaign.get());
+    }
+
+    public HealthCheckCampaign getCampaignModelById(Long id) {
+        Optional<HealthCheckCampaign> campaign = campaignRepository.findById(id);
+        if (campaign.isEmpty()) {
+            throw new IllegalArgumentException("Campaign not found with id: " + id);
+        }
+        return campaign.get();
+    }
+
+    public Page<HealthCheckCampaignDTO> getCampaignsByNurse(User nurse, Pageable pageable) {
+        Page<HealthCheckCampaign> campaigns = campaignRepository.findByCreatedByOrderByCreatedAtDesc(nurse, pageable);
+        return campaigns.map(this::convertToDTO);
+    }
+
+    public Page<HealthCheckCampaignDTO> getCampaignsByStatus(CampaignStatus status, Pageable pageable) {
+        Page<HealthCheckCampaign> campaigns = campaignRepository.findByStatusOrderByCreatedAtDesc(status, pageable);
+        return campaigns.map(this::convertToDTO);
+    }
+
+    public HealthCheckCampaignDTO updateCampaign(Long id, User nurse, CreateHealthCheckCampaignRequest request) {
+        Optional<HealthCheckCampaign> optionalCampaign = campaignRepository.findById(id);
+        if (optionalCampaign.isEmpty()) {
+            throw new IllegalArgumentException("Campaign not found with id: " + id);
+        }
+
+        HealthCheckCampaign campaign = optionalCampaign.get();
+
+        // Verify the nurse is the creator
+        if (!campaign.getCreatedBy().getId().equals(nurse.getId())) {
+            throw new IllegalArgumentException("Not authorized to update this campaign");
+        }
+
+        // Only allow updates if campaign is in PENDING status
+        if (campaign.getStatus() != CampaignStatus.PENDING) {
+            throw new IllegalStateException("Can only update campaigns in PENDING status");
+        }
+
+        // Update campaign fields
+        campaign.setName(request.getName());
+        campaign.setDescription(request.getDescription());
+        campaign.setStartDate(request.getStartDate());
+        campaign.setEndDate(request.getEndDate());
+        campaign.setLocation(request.getLocation());
+        campaign.setCategories(request.getCategories());
+        campaign.setMinAge(request.getMinAge());
+        campaign.setMaxAge(request.getMaxAge());
+        campaign.setTargetClasses(request.getTargetClasses() != null ? request.getTargetClasses() : new HashSet<>());
+        campaign.setUpdatedAt(LocalDateTime.now());
+
+        HealthCheckCampaign savedCampaign = campaignRepository.save(campaign);
+        return convertToDTO(savedCampaign);
+    }
+
+    public HealthCheckCampaignDTO approveCampaignDTO(Long id, User manager) {
+        HealthCheckCampaign campaign = approveCampaign(id, manager);
+        return convertToDTO(campaign);
+    }
+
+    public HealthCheckCampaignDTO rejectCampaignDTO(Long id, User manager, String notes) {
+        HealthCheckCampaign campaign = rejectCampaign(id, manager, notes);
+        return convertToDTO(campaign);
+    }
+
+    public HealthCheckCampaignDTO scheduleCampaignDTO(Long id, int targetCount) {
+        HealthCheckCampaign campaign = scheduleCampaign(id, targetCount);
+        return convertToDTO(campaign);
+    }
+
+    public HealthCheckCampaignDTO startCampaignDTO(Long id) {
+        HealthCheckCampaign campaign = startCampaign(id);
+        return convertToDTO(campaign);
+    }
+
+    public HealthCheckCampaignDTO completeCampaignDTO(Long id) {
+        HealthCheckCampaign campaign = completeCampaign(id);
+        return convertToDTO(campaign);
+    }
+
+    public HealthCheckCampaignDTO convertToDTO(HealthCheckCampaign campaign) {
+        HealthCheckCampaignDTO dto = new HealthCheckCampaignDTO();
+        
+        dto.setId(campaign.getId());
+        dto.setName(campaign.getName());
+        dto.setDescription(campaign.getDescription());
+        dto.setStartDate(campaign.getStartDate());
+        dto.setEndDate(campaign.getEndDate());
+        dto.setLocation(campaign.getLocation());
+        dto.setCategories(campaign.getCategories());
+        dto.setStatus(campaign.getStatus());
+        dto.setNotes(campaign.getNotes());
+        dto.setTargetCount(campaign.getTargetCount());
+        dto.setMinAge(campaign.getMinAge());
+        dto.setMaxAge(campaign.getMaxAge());
+        dto.setTargetClasses(campaign.getTargetClasses());
+        dto.setCreatedAt(campaign.getCreatedAt());
+        dto.setUpdatedAt(campaign.getUpdatedAt());
+        dto.setApprovedAt(campaign.getApprovedAt());
+
+        // Creator information
+        if (campaign.getCreatedBy() != null) {
+            dto.setCreatedById(campaign.getCreatedBy().getId());
+            dto.setCreatedByName(campaign.getCreatedBy().getFullName());
+        }
+
+        // Approver information
+        if (campaign.getApprovedBy() != null) {
+            dto.setApprovedById(campaign.getApprovedBy().getId());
+            dto.setApprovedByName(campaign.getApprovedBy().getFullName());
+        }
+
+        return dto;
+    }
+
+    // ...existing code...
 
     public List<HealthCheckCampaign> getCampaignsByNurse(User nurse) {
         return campaignRepository.findByCreatedBy(nurse);
@@ -295,10 +573,8 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
         return campaignRepository.findByStatus(status);
     }
 
-    public List<HealthCheckCampaign> getAllCampaigns() {
-        return campaignRepository.findAll();
-    }
-
+    /*
+    // TODO: Add these repository methods when needed
     public List<HealthCheckCampaign> getUpcomingCampaigns() {
         return campaignRepository.findUpcomingCampaigns(CampaignStatus.APPROVED, LocalDate.now());
     }
@@ -310,18 +586,31 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
     public List<HealthCheckCampaign> getActiveCampaignsByClass(String className) {
         return campaignRepository.findActiveByClass(className);
     }
+    */
 
     /**
      * Calculate target count based on age range and target classes
      */
     private int calculateTargetCountInternal(Integer minAge, Integer maxAge, Set<String> targetClasses) {
         try {
-            List<group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.StudentDTO> eligibleStudents = 
+            System.out.println("=== DEBUG TARGET COUNT CALCULATION ===");
+            System.out.println("Target classes: " + targetClasses);
+            System.out.println("Min age: " + minAge + ", Max age: " + maxAge);
+            
+            List<StudentDTO> eligibleStudents = 
                 studentService.getEligibleStudentsForClasses(targetClasses, minAge, maxAge);
+            
+            System.out.println("Found " + eligibleStudents.size() + " eligible students");
+            for (StudentDTO student : eligibleStudents) {
+                System.out.println("- Student: " + student.getFullName() + " (Class: " + student.getClassName() + ", Disabled: " + student.isDisabled() + ")");
+            }
+            System.out.println("=== END DEBUG ===");
+            
             return eligibleStudents.size();
         } catch (Exception e) {
             // If there's an error calculating, return 0 and log the error
             System.err.println("Error calculating target count: " + e.getMessage());
+            e.printStackTrace();
             return 0;
         }
     }
@@ -335,15 +624,20 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
     }
 
     /**
-     * Send notifications to parents of eligible students for a health check campaign
+     * Generate health check forms for eligible students
      */
     @Override
     @Transactional
-    public Map<String, Object> sendNotificationsToParents(Long campaignId) {
+    public Map<String, Object> generateHealthCheckForms(Long campaignId) {
         // Get the campaign and validate it's approved
-        HealthCheckCampaign campaign = getCampaignById(campaignId);
+        Optional<HealthCheckCampaign> optionalCampaign = campaignRepository.findById(campaignId);
+        if (optionalCampaign.isEmpty()) {
+            throw new RuntimeException("Campaign not found with id: " + campaignId);
+        }
+        
+        HealthCheckCampaign campaign = optionalCampaign.get();
         if (campaign.getStatus() != CampaignStatus.APPROVED) {
-            throw new RuntimeException("Campaign must be APPROVED before sending notifications to parents");
+            throw new RuntimeException("Campaign must be APPROVED before generating forms");
         }
 
         // Get eligible students for this campaign
@@ -353,74 +647,227 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
             campaign.getMaxAge()
         );
 
-        // Get parents who have active accounts and eligible for notifications
-        List<User> eligibleParents = new ArrayList<>();
-        List<StudentDTO> studentsWithParents = new ArrayList<>();
-        
+        System.out.println("=== DEBUG GENERATE HEALTH CHECK FORMS ===");
+        System.out.println("Campaign ID: " + campaignId);
+        System.out.println("Eligible students count: " + eligibleStudents.size());
+
+        int formsGenerated = 0;
+        int studentsWithValidParents = 0;
+        int studentsWithoutParents = 0;
+        int studentsWithInactiveParents = 0;
+        List<Long> createdFormIds = new ArrayList<>();
+        List<String> studentsWithoutValidParents = new ArrayList<>();
+
+        // Create actual health check forms for each eligible student
         for (StudentDTO studentDTO : eligibleStudents) {
-            // Find the student entity to get parent relationship
             try {
-                // Convert StudentDTO to actual student entity to get parent information
-                List<User> parents = findParentsForStudent(studentDTO);
-                for (User parent : parents) {
-                    if (parent != null && parent.isEnabled() && parent.getRole().getRoleName().equals("PARENT")) {
-                        eligibleParents.add(parent);
-                        studentsWithParents.add(studentDTO);
-                        
-                        // Note: Health check forms will be generated separately by the nurse
-                        // This avoids circular dependency issues
+                // Find the actual student entity
+                Optional<Student> studentOpt = studentRepository.findById(studentDTO.getStudentID());
+                if (studentOpt.isPresent()) {
+                    Student student = studentOpt.get();
+                    User parent = student.getParent();
+                    
+                    if (parent == null) {
+                        studentsWithoutParents++;
+                        studentsWithoutValidParents.add("Student " + student.getStudentID() + " - No parent assigned");
+                        System.out.println("SKIP: Student " + student.getStudentID() + " - No parent assigned");
+                    } else if (!parent.isEnabled()) {
+                        studentsWithInactiveParents++;
+                        studentsWithoutValidParents.add("Student " + student.getStudentID() + " - Parent " + parent.getId() + " disabled");
+                        System.out.println("SKIP: Student " + student.getStudentID() + " - Parent " + parent.getId() + " is disabled");
+                    } else if (!parent.getRole().getRoleName().equals("PARENT")) {
+                        studentsWithInactiveParents++;
+                        studentsWithoutValidParents.add("Student " + student.getStudentID() + " - User " + parent.getId() + " not parent role");
+                        System.out.println("SKIP: Student " + student.getStudentID() + " - User " + parent.getId() + " role: " + parent.getRole().getRoleName());
+                    } else {
+                        // Valid parent found - create form
+                        studentsWithValidParents++;
+                        HealthCheckForm form = healthCheckFormService.createHealthCheckForm(campaign, student, parent);
+                        createdFormIds.add(form.getId());
+                        formsGenerated++;
+                        System.out.println("SUCCESS: Created form ID " + form.getId() + " for student " + student.getStudentID() + " and parent " + parent.getId() + " (" + parent.getFirstName() + " " + parent.getLastName() + ")");
                     }
+                } else {
+                    studentsWithoutParents++;
+                    studentsWithoutValidParents.add("Student " + studentDTO.getStudentID() + " - Student entity not found");
+                    System.out.println("ERROR: Student entity not found for ID " + studentDTO.getStudentID());
                 }
             } catch (Exception e) {
-                System.err.println("Error finding parents for student " + studentDTO.getStudentID() + ": " + e.getMessage());
+                studentsWithoutParents++;
+                String error = "Error creating form for student " + studentDTO.getStudentID() + ": " + e.getMessage();
+                studentsWithoutValidParents.add(error);
+                System.err.println("ERROR: " + error);
             }
         }
 
-        // Send notifications to eligible parents with health check forms
-        int notificationsSent = 0;
-        String notificationTitle = "Thông báo khám sức khỏe";
-        String notificationMessage = "Trường đang tổ chức đợt khám sức khỏe cho học sinh. " +
-                                   "Vui lòng xác nhận đồng ý hoặc từ chối khám cho con em mình.";
+        System.out.println("=== FORM GENERATION SUMMARY ===");
+        System.out.println("Total eligible students: " + eligibleStudents.size());
+        System.out.println("Students with valid parents: " + studentsWithValidParents);
+        System.out.println("Students without parents: " + studentsWithoutParents);
+        System.out.println("Students with inactive parents: " + studentsWithInactiveParents);
+        System.out.println("Forms successfully generated: " + formsGenerated);
+        System.out.println("Students without valid parents details:");
+        for (String detail : studentsWithoutValidParents) {
+            System.out.println("  - " + detail);
+        }
 
-        Set<Long> notifiedParents = new HashSet<>(); // Avoid duplicate notifications
+        Map<String, Object> response = new HashMap<>();
+        response.put("formsGenerated", formsGenerated);
+        response.put("campaignId", campaignId);
+        response.put("message", "Health check forms generated successfully");
+        response.put("createdFormIds", createdFormIds);
+        response.put("totalEligibleStudents", eligibleStudents.size());
+        response.put("studentsWithValidParents", studentsWithValidParents);
+        response.put("studentsWithoutParents", studentsWithoutParents);
+        response.put("studentsWithInactiveParents", studentsWithInactiveParents);
+        response.put("studentsWithoutValidParents", studentsWithoutValidParents);
+        response.put("message", "Health check forms generated successfully");
+        response.put("createdFormIds", createdFormIds);
+
+        System.out.println("Forms generated: " + formsGenerated);
+        return response;
+    }
+
+    /**
+     * Send notifications to parents of eligible students for a health check campaign
+     */
+    @Override
+    @Transactional
+    public Map<String, Object> sendNotificationsToParents(Long campaignId) {
+        // Delegate to the overloaded method with null custom message
+        return sendNotificationsToParents(campaignId, null);
+    }
+
+    /**
+     * Send notifications to parents of eligible students for a health check campaign
+     */
+    @Override
+    @Transactional
+    public Map<String, Object> sendNotificationsToParents(Long campaignId, String customMessage) {
+        // Get the campaign and validate it's approved
+        Optional<HealthCheckCampaign> optionalCampaign = campaignRepository.findById(campaignId);
+        if (optionalCampaign.isEmpty()) {
+            throw new RuntimeException("Campaign not found with id: " + campaignId);
+        }
         
-        for (int i = 0; i < eligibleParents.size(); i++) {
-            User parent = eligibleParents.get(i);
-            StudentDTO studentDTO = studentsWithParents.get(i);
-            
-            if (!notifiedParents.contains(parent.getId())) {
-                try {
-                    // First, create a health check form for this student and campaign
-                    HealthCheckForm healthCheckForm = createHealthCheckFormForStudent(studentDTO, campaign, parent);
+        HealthCheckCampaign campaign = optionalCampaign.get();
+        if (campaign.getStatus() != CampaignStatus.APPROVED) {
+            throw new RuntimeException("Campaign must be APPROVED before sending notifications to parents");
+        }
+
+        System.out.println("=== DEBUG SEND NOTIFICATIONS ===");
+        System.out.println("Campaign ID: " + campaignId);
+        System.out.println("Custom message provided: " + (customMessage != null && !customMessage.trim().isEmpty()));
+
+        // Get all existing forms for this campaign instead of eligible students
+        List<HealthCheckFormDTO> campaignForms = healthCheckFormService.getFormsByCampaign(campaign);
+        
+        System.out.println("Total forms for this campaign: " + campaignForms.size());
+
+        int notificationsSent = 0;
+        int formsProcessed = 0;
+        List<String> errors = new ArrayList<>();
+        Map<Long, Integer> parentNotificationCount = new HashMap<>();
+
+        // Send ONE NOTIFICATION PER FORM (per student), even if same parent has multiple children
+        for (HealthCheckFormDTO formDTO : campaignForms) {
+            try {
+                formsProcessed++;
+                
+                // Find the actual HealthCheckForm entity by ID
+                HealthCheckForm actualForm = healthCheckFormRepository.findById(formDTO.getId())
+                    .orElse(null);
                     
-                    // Then create a notification with the form attached
-                    String studentName = studentDTO.getLastName() + " " + studentDTO.getFirstName();
-                    notificationService.createHealthCheckFormNotification(
-                        parent,
-                        studentName,
-                        campaign.getName(),
-                        campaign.getStartDate() != null ? campaign.getStartDate().toString() : null,
-                        campaign.getLocation(),
-                        healthCheckForm
-                    );
+                if (actualForm != null) {
+                    Student student = actualForm.getStudent();
+                    User parent = actualForm.getParent();
                     
-                    notifiedParents.add(parent.getId());
-                    notificationsSent++;
-                } catch (Exception e) {
-                    System.err.println("Error sending notification to parent " + parent.getId() + ": " + e.getMessage());
+                    if (parent != null && parent.isEnabled() && parent.getRole().getRoleName().equals("PARENT")) {
+                        // Create specific notification message for this student
+                        String studentName = student.getFirstName() + " " + student.getLastName();
+                        String customNotificationMessage;
+                        
+                        if (customMessage != null && !customMessage.trim().isEmpty()) {
+                            customNotificationMessage = customMessage.trim() + 
+                                "\n\n--- Thông tin học sinh ---\n" +
+                                "Tên: " + studentName + "\n" +
+                                "Lớp: " + (student.getClassName() != null ? student.getClassName() : "Chưa có thông tin");
+                        } else {
+                            customNotificationMessage = String.format(
+                                "Thân gửi Quý phụ huynh,\n\n" +
+                                "Nhà trường thông báo về đợt khám sức khỏe \"%s\" sắp diễn ra.\n\n" +
+                                "Kính đề nghị Quý phụ huynh xem xét và cho phép con em %s (lớp %s) tham gia đợt khám sức khỏe này để đảm bảo sức khỏe tốt nhất cho các em.\n\n" +
+                                "Vui lòng phản hồi qua hệ thống để xác nhận việc tham gia.\n\n" +
+                                "Trân trọng,\nBan Giám hiệu", 
+                                campaign.getName(), 
+                                studentName,
+                                student.getClassName() != null ? student.getClassName() : "Chưa có thông tin"
+                            );
+                        }
+
+                        // Create notification with proper form and campaign linking
+                        Notification notification = new Notification();
+                        notification.setTitle("Thông báo khám sức khỏe - " + studentName);
+                        notification.setMessage(customNotificationMessage);
+                        notification.setNotificationType("HEALTH_CHECK_CAMPAIGN");
+                        notification.setRecipient(parent);
+                        notification.setHealthCheckCampaign(campaign);
+                        notification.setHealthCheckForm(actualForm);
+                        
+                        // Save notification directly using repository
+                        notificationRepository.save(notification);
+                        
+                        notificationsSent++;
+                        
+                        // Track notifications per parent for statistics
+                        parentNotificationCount.put(parent.getId(), 
+                            parentNotificationCount.getOrDefault(parent.getId(), 0) + 1);
+                        
+                        System.out.println("SUCCESS: Sent notification to parent " + parent.getId() + 
+                            " (" + parent.getFirstName() + " " + parent.getLastName() + ")" +
+                            " for student " + student.getStudentID() + " (" + studentName + ")" +
+                            " with form " + formDTO.getId());
+                    } else {
+                        String error = "Invalid parent for form " + formDTO.getId() + " - student " + student.getStudentID();
+                        errors.add(error);
+                        System.out.println("SKIP: " + error);
+                    }
+                } else {
+                    String error = "Form entity not found for form ID " + formDTO.getId();
+                    errors.add(error);
+                    System.out.println("ERROR: " + error);
                 }
+            } catch (Exception e) {
+                String error = "Error sending notification for form " + formDTO.getId() + ": " + e.getMessage();
+                errors.add(error);
+                System.err.println("ERROR: " + error);
+                e.printStackTrace();
             }
         }
 
-        return Map.of(
-            "message", "Notifications sent successfully",
-            "campaignId", campaignId,
-            "campaignName", campaign.getName(),
-            "totalEligibleStudents", eligibleStudents.size(),
-            "studentsWithParents", studentsWithParents.size(),
-            "notificationsSent", notificationsSent,
-            "eligibleParents", eligibleParents.size()
-        );
+        System.out.println("=== NOTIFICATION RESULTS ===");
+        System.out.println("Total forms processed: " + formsProcessed);
+        System.out.println("Notifications sent: " + notificationsSent);
+        System.out.println("Unique parents: " + parentNotificationCount.size());
+        System.out.println("Errors: " + errors.size());
+        
+        // Log parent notification breakdown
+        for (Map.Entry<Long, Integer> entry : parentNotificationCount.entrySet()) {
+            System.out.println("Parent " + entry.getKey() + " received " + entry.getValue() + " notifications");
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Notifications sent successfully");
+        response.put("campaignId", campaignId);
+        response.put("campaignName", campaign.getName());
+        response.put("totalForms", formsProcessed);
+        response.put("notificationsSent", notificationsSent);
+        response.put("uniqueParents", parentNotificationCount.size());
+        response.put("parentNotificationBreakdown", parentNotificationCount);
+        response.put("errors", errors);
+        response.put("customMessage", (customMessage != null && !customMessage.trim().isEmpty()));
+        
+        return response;
     }
 
     /**
@@ -429,63 +876,17 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
     private List<User> findParentsForStudent(StudentDTO studentDTO) {
         List<User> parents = new ArrayList<>();
         try {
-            // Get the student entity with parent relationships
-            Optional<Student> studentOpt = studentRepository.findByIdWithParents(studentDTO.getStudentID());
+            // Find the actual student entity from the DTO
+            Optional<Student> studentOpt = studentRepository.findById(studentDTO.getStudentID());
             if (studentOpt.isPresent()) {
                 Student student = studentOpt.get();
-                
-                // Add mother if exists and is enabled
-                if (student.getMother() != null && student.getMother().isEnabled()) {
-                    parents.add(student.getMother());
-                }
-                
-                // Add father if exists and is enabled
-                if (student.getFather() != null && student.getFather().isEnabled()) {
-                    parents.add(student.getFather());
+                if (student.getParent() != null) {
+                    parents.add(student.getParent());
                 }
             }
-            
-            return parents;
         } catch (Exception e) {
-            System.err.println("Error finding parents for student: " + e.getMessage());
-            return parents;
+            System.err.println("Error finding parents for student ID " + studentDTO.getStudentID() + ": " + e.getMessage());
         }
-    }
-
-    /**
-     * Helper method to create a health check form for a student and campaign
-     */
-    private HealthCheckForm createHealthCheckFormForStudent(StudentDTO studentDTO, HealthCheckCampaign campaign, User parent) {
-        try {
-            // Check if a form already exists for this student and campaign
-            Optional<Student> studentOpt = studentRepository.findById(studentDTO.getStudentID());
-            if (!studentOpt.isPresent()) {
-                throw new RuntimeException("Student not found with ID: " + studentDTO.getStudentID());
-            }
-            
-            Student student = studentOpt.get();
-            
-            // Check if form already exists to avoid duplicates
-            HealthCheckForm existingForm = healthCheckFormRepository
-                .findByCampaignAndStudent(campaign, student);
-            
-            if (existingForm != null) {
-                return existingForm;
-            }
-            
-            // Create new health check form
-            HealthCheckForm healthCheckForm = new HealthCheckForm();
-            healthCheckForm.setStudent(student);
-            healthCheckForm.setCampaign(campaign);
-            healthCheckForm.setParent(parent);
-            healthCheckForm.setStatus(FormStatus.PENDING);
-            // sentAt is automatically set to LocalDateTime.now() by default
-            
-            return healthCheckFormRepository.save(healthCheckForm);
-            
-        } catch (Exception e) {
-            System.err.println("Error creating health check form for student " + studentDTO.getStudentID() + ": " + e.getMessage());
-            throw new RuntimeException("Failed to create health check form", e);
-        }
+        return parents;
     }
 }

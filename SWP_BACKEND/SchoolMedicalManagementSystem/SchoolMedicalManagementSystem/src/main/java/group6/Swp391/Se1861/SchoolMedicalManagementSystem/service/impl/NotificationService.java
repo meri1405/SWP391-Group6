@@ -11,6 +11,8 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -354,238 +356,6 @@ public class NotificationService implements INotificationService {
 
         return notificationDTO;
     }
-    /**
-     * Notify managers about a campaign pending approval
-     */
-    @Transactional
-    @Override
-    public void notifyManagersAboutCampaignApproval(HealthCheckCampaign campaign) {
-        // Find all manager users
-        List<User> managers = userRepository.findByRole_RoleName("ROLE_MANAGER");
-
-        for (User manager : managers) {
-            Notification notification = new Notification();
-            notification.setTitle("CHIẾN DỊCH KHÁM SỨC KHỎE ĐANG CHỜ PHÊ DUYỆT");
-            notification.setMessage("Một chiến dịch kiểm tra sức khỏe mới '" + campaign.getName() + "' đang chờ phê duyệt.");
-            notification.setNotificationType("CAMPAIGN_PENDING_APPROVAL");
-            notification.setRecipient(manager);
-            Notification savedNotification = notificationRepository.save(notification);
-
-            // Send WebSocket notification
-            sendWebSocketNotification(savedNotification);
-        }
-    }
-
-    /**
-     * Notify nurse about campaign approval
-     */
-    @Transactional
-    @Override
-    public void notifyNurseAboutCampaignApproval(HealthCheckCampaign campaign) {
-        User nurse = campaign.getCreatedBy();
-
-        Notification notification = new Notification();
-        notification.setTitle("CHIẾN DỊCH KHÁM SỨC KHỎE ĐƯỢC CHẤP NHẬN");
-        notification.setMessage("Chiến dịch kiểm tra sức khỏe của bạn '" + campaign.getName() + "' đã được chấp nhận.");
-        notification.setNotificationType("CAMPAIGN_APPROVED");
-        notification.setRecipient(nurse);
-
-        Notification savedNotification = notificationRepository.save(notification);
-
-        // Send WebSocket notification
-        sendWebSocketNotification(savedNotification);
-    }
-
-    /**
-     * Notify nurse about campaign rejection
-     */
-    @Transactional
-    @Override
-    public void notifyNurseAboutCampaignRejection(HealthCheckCampaign campaign, String notes) {
-        User nurse = campaign.getCreatedBy();
-
-        Notification notification = new Notification();
-        notification.setTitle("CHIẾN DỊCH KHÁM SỨC KHỎE CẦN ĐƯỢC THAY ĐỔI");
-        notification.setMessage("Chiến dịch kiểm tra sức khỏe của bạn '" + campaign.getName() +
-                "' được yêu cầu thay đổi. Ghi chú: " + notes);
-        notification.setNotificationType("CAMPAIGN_REJECTED");
-        notification.setRecipient(nurse);
-
-        Notification savedNotification = notificationRepository.save(notification);
-
-        // Send WebSocket notification
-        sendWebSocketNotification(savedNotification);
-    }
-
-    /**
-     * Notify manager about campaign scheduling
-     */
-    @Transactional
-    @Override
-    public void notifyManagerAboutCampaignSchedule(HealthCheckCampaign campaign) {
-        User approver = campaign.getApprovedBy();
-        if (approver == null) {
-            return; // No approver to notify
-        }
-
-        Notification notification = new Notification();
-        notification.setTitle("CHIẾN DỊCH KHÁM SỨC KHỎE ĐÃ ĐƯỢC LÊN LỊCH");
-        notification.setMessage("Chiến dịch kiểm tra sức khỏe '" + campaign.getName() +
-                "' đã được lên lịch với số lượng học sinh là " + campaign.getTargetCount() + " .");
-        notification.setNotificationType("CAMPAIGN_SCHEDULED");
-        notification.setRecipient(approver);
-
-        Notification savedNotification = notificationRepository.save(notification);
-
-        // Send WebSocket notification
-        sendWebSocketNotification(savedNotification);
-    }
-
-    /**
-     * Notify manager about campaign completion
-     */
-    @Transactional
-    @Override
-    public void notifyManagerAboutCampaignCompletion(HealthCheckCampaign campaign) {
-        User approver = campaign.getApprovedBy();
-        if (approver == null) {
-            return; // No approver to notify
-        }
-
-        Notification notification = new Notification();
-        notification.setTitle("CHIẾN DỊCH KHÁM SỨC KHỎE ĐÃ HOÀN THÀNH");
-        notification.setMessage("Chiến dịch kiểm tra sức khỏe '" + campaign.getName() + "' đã được hoàn thành.");
-        notification.setNotificationType("CAMPAIGN_COMPLETED");
-        notification.setRecipient(approver);
-
-        Notification savedNotification = notificationRepository.save(notification);
-
-        // Send WebSocket notification
-        sendWebSocketNotification(savedNotification);
-    }
-
-    /**
-     * Notify parent about health check
-     */
-    @Transactional
-    @Override
-    public void notifyParentAboutHealthCheck(HealthCheckForm form) {
-        User parent = form.getParent();
-        Student student = form.getStudent();
-        HealthCheckCampaign campaign = form.getCampaign();
-        
-        // Format appointment date if available
-        String appointmentDate = null;
-        if (form.getAppointmentTime() != null) {
-            appointmentDate = form.getAppointmentTime().toString();
-        }
-        
-        // Get location if available
-        String location = form.getAppointmentLocation();
-        
-        // Use the new method to create and send notification
-        createHealthCheckFormNotification(
-            parent,
-            student.getFullName(),
-            campaign.getName(),
-            appointmentDate,
-            location,
-            form
-        );
-    }
-
-    /**
-     * Notify nurse about parent confirmation
-     */
-    @Transactional
-    @Override
-    public void notifyNurseAboutParentConfirmation(HealthCheckForm form) {
-        User nurse = form.getCampaign().getCreatedBy();
-        Student student = form.getStudent();
-
-        Notification notification = new Notification();
-        notification.setTitle("XÁC NHẬN ĐỒNG Ý KHÁM SỨC KHỎE");
-        notification.setMessage("Phụ huynh đã xác nhận kiểm tra sức khỏe cho học sinh: " + student.getFullName());
-        notification.setNotificationType("HEALTH_CHECK_CONFIRMED");
-        notification.setRecipient(nurse);
-        notification.setHealthCheckForm(form);
-        Notification savedNotification = notificationRepository.save(notification);
-
-        // Send WebSocket notification
-        sendWebSocketNotification(savedNotification);
-    }
-
-    /**
-     * Notify parent about abnormal health check result
-     */
-    @Transactional
-    @Override
-    public void notifyParentAboutAbnormalResult(HealthCheckResult result) {
-        User parent = result.getStudent().getParent();
-        if (parent == null) {
-            return; // No parent to notify
-        }
-
-        // Use the new method to create and send notification
-        createAbnormalHealthResultNotification(
-            parent,
-            result.getStudent().getFullName(),
-            result.getCategory().toString(),
-            result.getForm()
-        );
-    }
-
-    /**
-     * Notify manager about abnormal health check result
-     */
-    @Transactional
-    @Override
-    public void notifyManagerAboutAbnormalResult(HealthCheckResult result) {
-        User manager = result.getForm().getCampaign().getApprovedBy();
-        if (manager == null) {
-            return; // No manager to notify
-        }
-
-        // Use the new method to create and send notification
-        createAbnormalHealthResultNotification(
-            manager,
-            result.getStudent().getFullName(),
-            result.getCategory().toString(),
-            result.getForm()
-        );
-    }
-    
-    /**
-     * Notify parent about appointment scheduling
-     */
-    @Transactional
-    @Override
-    public void notifyParentAboutAppointment(HealthCheckForm form) {
-        User parent = form.getParent();
-        Student student = form.getStudent();
-
-        if (parent == null) {
-            return; // No parent to notify
-        }
-
-        String appointmentDate = null;
-        String appointmentTime = null;
-        
-        if (form.getAppointmentTime() != null) {
-            appointmentDate = form.getAppointmentTime().toLocalDate().toString();
-            appointmentTime = form.getAppointmentTime().toLocalTime().toString();
-        }
-        
-        // Use the new method to create and send notification
-        createHealthCheckAppointmentNotification(
-            parent,
-            student.getFullName(),
-            appointmentDate,
-            appointmentTime,
-            form.getAppointmentLocation(),
-            form
-        );
-    }
 
     /**
      * Helper method to send WebSocket notification
@@ -593,13 +363,16 @@ public class NotificationService implements INotificationService {
     private void sendWebSocketNotification(Notification notification) {
         try {
             NotificationDTO notificationDTO = convertToDTO(notification);
+            System.out.println("Sending WebSocket notification to user: " + notification.getRecipient().getUsername());
             messagingTemplate.convertAndSendToUser(
                     notification.getRecipient().getUsername(),
-                    "/topic/notifications",
+                    "/queue/notifications",
                     notificationDTO
             );
+            System.out.println("WebSocket notification sent successfully");
         } catch (Exception e) {
             System.err.println("Failed to send WebSocket notification: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -643,6 +416,10 @@ public class NotificationService implements INotificationService {
 
         if (notification.getHealthCheckForm() != null) {
             dto.setHealthCheckFormId(notification.getHealthCheckForm().getId());
+        }
+
+        if (notification.getHealthCheckCampaign() != null) {
+            dto.setHealthCheckCampaignId(notification.getHealthCheckCampaign().getId());
         }
 
         return dto;
@@ -1003,309 +780,611 @@ public class NotificationService implements INotificationService {
             System.err.println("Error sending WebSocket notification to nurse: " + e.getMessage());
         }
     }
-
+    
     /**
-     * Create health check form notification
+     * HEALTH CHECK CAMPAIGN NOTIFICATIONS
+     */
+    
+    /**
+     * Notify managers about new health check campaign pending approval
      */
     @Transactional
     @Override
-    public NotificationDTO createHealthCheckFormNotification(
-            User recipient,
-            String studentName,
-            String campaignName,
-            String appointmentDate,
-            String location,
-            HealthCheckForm healthCheckForm) {
-
-        String title = "THÔNG BÁO KHÁM SỨC KHỎE";
-        String message = "Học sinh " + studentName + " có lịch kiểm tra sức khỏe: '" +
-                campaignName + "'. Vui lòng xác nhận đồng ý hoặc từ chối.";
-                
-        if (location != null && !location.trim().isEmpty()) {
-            message += " Địa điểm: " + location;
+    public void notifyManagersAboutHealthCheckCampaignApproval(HealthCheckCampaign campaign, int estimatedStudentCount) {
+        // Find all managers
+        List<User> managers = userRepository.findByRole_RoleName("MANAGER");
+        
+        // If no managers found with ROLE_MANAGER, try with MANAGER
+        if (managers.isEmpty()) {
+            System.out.println("NotificationService: No managers found with MANAGER, trying with MANAGER");
+            managers = userRepository.findByRole_RoleName("MANAGER");
         }
         
-        if (appointmentDate != null && !appointmentDate.trim().isEmpty()) {
-            message += " Thời gian: " + appointmentDate;
+        System.out.println("NotificationService: Found " + managers.size() + " managers to notify about health check campaign ID: " + campaign.getId());
+        
+        if (managers.isEmpty()) {
+            System.out.println("Warning: No managers found to notify about health check campaign ID: " + campaign.getId());
+            return;
         }
         
-        String notificationType = "HEALTH_CHECK_NOTIFICATION";
+        String title = "Chiến dịch khám sức khỏe cần phê duyệt";
+        String message = "Chiến dịch khám sức khỏe mới '" + campaign.getName() + "' được tạo bởi " + 
+                (campaign.getCreatedBy() != null ? campaign.getCreatedBy().getFullName() : "Y tá trường") + 
+                " đang chờ phê duyệt. Số học sinh dự kiến: " + estimatedStudentCount + 
+                ". Thời gian: " + campaign.getStartDate() + " đến " + campaign.getEndDate();
+        
+        // Notify each manager
+        for (User manager : managers) {
+            Notification notification = new Notification();
+            notification.setTitle(title);
+            notification.setMessage(message);
+            notification.setNotificationType("HEALTH_CHECK_CAMPAIGN_APPROVAL_REQUEST");
+            notification.setRecipient(manager);
+            notification.setHealthCheckCampaign(campaign);
+            
+            Notification savedNotification = notificationRepository.save(notification);
+            NotificationDTO notificationDTO = convertToDTO(savedNotification);
+            
+            // Send real-time notification via WebSocket
+            try {
+                if (manager.getUsername() != null) {
+                    messagingTemplate.convertAndSendToUser(
+                            manager.getUsername(),
+                            "/queue/notifications",
+                            notificationDTO
+                    );
+                }
+            } catch (Exception e) {
+                System.err.println("Error sending WebSocket notification to manager: " + e.getMessage());
+            }
+        }
+    }
+    
+    /**
+     * Notify nurse about health check campaign approval
+     */
+    @Transactional
+    @Override
+    public void notifyNurseAboutHealthCheckCampaignApproval(HealthCheckCampaign campaign, User approver) {
+        User nurse = campaign.getCreatedBy();
+        if (nurse == null) {
+            System.out.println("Warning: Cannot find nurse who created health check campaign ID: " + campaign.getId());
+            return;
+        }
+        
+        String title = "Chiến dịch khám sức khỏe đã được phê duyệt";
+        String message = "Chiến dịch khám sức khỏe '" + campaign.getName() + "' của bạn đã được phê duyệt bởi " + 
+                (approver != null ? approver.getFullName() : "quản lý") + ". Bạn có thể bắt đầu mời phụ huynh tham gia.";
         
         Notification notification = new Notification();
         notification.setTitle(title);
         notification.setMessage(message);
-        notification.setNotificationType(notificationType);
-        notification.setRecipient(recipient);
-        notification.setConfirm(null); // Initially null, will be set to true/false when parent responds
+        notification.setNotificationType("HEALTH_CHECK_CAMPAIGN_APPROVED");
+        notification.setRecipient(nurse);
+        notification.setHealthCheckCampaign(campaign);
+        
+        Notification savedNotification = notificationRepository.save(notification);
+        NotificationDTO notificationDTO = convertToDTO(savedNotification);
+        
+        // Send real-time notification via WebSocket
+        try {
+            if (nurse.getUsername() != null) {
+                messagingTemplate.convertAndSendToUser(
+                        nurse.getUsername(),
+                        "/queue/notifications",
+                        notificationDTO
+                );
+            }
+        } catch (Exception e) {
+            System.err.println("Error sending WebSocket notification to nurse: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Notify nurse about health check campaign rejection
+     */
+    @Transactional
+    @Override
+    public void notifyNurseAboutHealthCheckCampaignRejection(HealthCheckCampaign campaign, User rejector, String reason) {
+        User nurse = campaign.getCreatedBy();
+        if (nurse == null) {
+            System.out.println("Warning: Cannot find nurse who created health check campaign ID: " + campaign.getId());
+            return;
+        }
+        
+        String title = "Chiến dịch khám sức khỏe bị từ chối";
+        String message = "Chiến dịch khám sức khỏe '" + campaign.getName() + "' của bạn đã bị từ chối bởi " + 
+                (rejector != null ? rejector.getFullName() : "quản lý");
+        
+        if (reason != null && !reason.trim().isEmpty()) {
+            message += ". Lý do: " + reason;
+        }
+        
+        Notification notification = new Notification();
+        notification.setTitle(title);
+        notification.setMessage(message);
+        notification.setNotificationType("HEALTH_CHECK_CAMPAIGN_REJECTED");
+        notification.setRecipient(nurse);
+        notification.setHealthCheckCampaign(campaign);
+        
+        Notification savedNotification = notificationRepository.save(notification);
+        NotificationDTO notificationDTO = convertToDTO(savedNotification);
+        
+        // Send real-time notification via WebSocket
+        try {
+            if (nurse.getUsername() != null) {
+                messagingTemplate.convertAndSendToUser(
+                        nurse.getUsername(),
+                        "/queue/notifications",
+                        notificationDTO
+                );
+            }
+        } catch (Exception e) {
+            System.err.println("Error sending WebSocket notification to nurse: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Notify manager about health check campaign scheduling
+     */
+    @Transactional
+    @Override
+    public void notifyManagerAboutHealthCheckCampaignScheduling(HealthCheckCampaign campaign, int scheduledStudentCount) {
+        // Find all managers
+        List<User> managers = userRepository.findByRole_RoleName("MANAGER");
+        
+        if (managers.isEmpty()) {
+            managers = userRepository.findByRole_RoleName("MANAGER");
+        }
+        
+        if (managers.isEmpty()) {
+            System.out.println("Warning: No managers found to notify about health check campaign scheduling");
+            return;
+        }
+        
+        String title = "Chiến dịch khám sức khỏe đã được lên lịch";
+        String message = "Chiến dịch khám sức khỏe '" + campaign.getName() + "' đã được lên lịch với " + 
+                scheduledStudentCount + " học sinh tham gia. Thời gian thực hiện: " + 
+                campaign.getStartDate() + " đến " + campaign.getEndDate();
+        
+        for (User manager : managers) {
+            Notification notification = new Notification();
+            notification.setTitle(title);
+            notification.setMessage(message);
+            notification.setNotificationType("HEALTH_CHECK_CAMPAIGN_SCHEDULED");
+            notification.setRecipient(manager);
+            notification.setHealthCheckCampaign(campaign);
+            
+            Notification savedNotification = notificationRepository.save(notification);
+            NotificationDTO notificationDTO = convertToDTO(savedNotification);
+            
+            // Send real-time notification via WebSocket
+            try {
+                if (manager.getUsername() != null) {
+                    messagingTemplate.convertAndSendToUser(
+                            manager.getUsername(),
+                            "/queue/notifications",
+                            notificationDTO
+                    );
+                }
+            } catch (Exception e) {
+                System.err.println("Error sending WebSocket notification to manager: " + e.getMessage());
+            }
+        }
+    }
+    
+    /**
+     * Notify manager about health check campaign completion
+     */
+    @Transactional
+    @Override
+    public void notifyManagerAboutHealthCheckCampaignCompletion(HealthCheckCampaign campaign, int completedStudentCount) {
+        // Find all managers
+        List<User> managers = userRepository.findByRole_RoleName("MANAGER");
+        
+        if (managers.isEmpty()) {
+            managers = userRepository.findByRole_RoleName("MANAGER");
+        }
+        
+        if (managers.isEmpty()) {
+            System.out.println("Warning: No managers found to notify about health check campaign completion");
+            return;
+        }
+        
+        String title = "Chiến dịch khám sức khỏe đã hoàn thành";
+        String message = "Chiến dịch khám sức khỏe '" + campaign.getName() + "' đã hoàn thành. " + 
+                "Tổng số học sinh đã khám: " + completedStudentCount + ". " +
+                "Vui lòng xem báo cáo chi tiết trong hệ thống.";
+        
+        for (User manager : managers) {
+            Notification notification = new Notification();
+            notification.setTitle(title);
+            notification.setMessage(message);
+            notification.setNotificationType("HEALTH_CHECK_CAMPAIGN_COMPLETED");
+            notification.setRecipient(manager);
+            notification.setHealthCheckCampaign(campaign);
+            
+            Notification savedNotification = notificationRepository.save(notification);
+            NotificationDTO notificationDTO = convertToDTO(savedNotification);
+            
+            // Send real-time notification via WebSocket
+            try {
+                if (manager.getUsername() != null) {
+                    messagingTemplate.convertAndSendToUser(
+                            manager.getUsername(),
+                            "/queue/notifications",
+                            notificationDTO
+                    );
+                }
+            } catch (Exception e) {
+                System.err.println("Error sending WebSocket notification to manager: " + e.getMessage());
+            }
+        }
+    }
+    
+    /**
+     * Send health check campaign invitation to parents (with customizable content)
+     */
+    @Transactional
+    @Override
+    public NotificationDTO sendHealthCheckCampaignInvitationToParent(
+            User parent,
+            HealthCheckCampaign campaign,
+            String studentName,
+            String customMessage,
+            HealthCheckForm healthCheckForm) {
+        
+        String title = "Mời tham gia khám sức khỏe định kỳ";
+        String message;
+        
+        if (customMessage != null && !customMessage.trim().isEmpty()) {
+            message = customMessage;
+        } else {
+            // Default message template
+            message = "Kính gửi phụ huynh,\n\n" +
+                     "Trường đang tổ chức chiến dịch khám sức khỏe định kỳ '" + campaign.getName() + "' " +
+                     "cho học sinh " + studentName + ".\n\n" +
+                     "Thời gian dự kiến: " + campaign.getStartDate() + " đến " + campaign.getEndDate() + "\n" +
+                     "Các hạng mục khám: " + String.join(", ", 
+                         campaign.getCategories().stream()
+                             .map(category -> translateHealthCategory(category.toString()))
+                             .toArray(String[]::new)) + "\n\n" +
+                     "Vui lòng xác nhận sự tham gia của con em trong vòng 3 ngày và ít nhất 5 ngày trước khi chiến dịch bắt đầu.\n\n" +
+                     "Trân trọng,\nY tá trường";
+        }
+        
+        Notification notification = new Notification();
+        notification.setTitle(title);
+        notification.setMessage(message);
+        notification.setNotificationType("HEALTH_CHECK_CAMPAIGN_INVITATION");
+        notification.setRecipient(parent);
+        notification.setConfirm(null); // Will be set to true/false when parent responds
+        notification.setHealthCheckCampaign(campaign);
         notification.setHealthCheckForm(healthCheckForm);
-
+        
         Notification savedNotification = notificationRepository.save(notification);
         NotificationDTO notificationDTO = convertToDTO(savedNotification);
-
+        
+        // Send real-time notification via WebSocket
         try {
-            if (recipient.getUsername() != null) {
+            if (parent.getUsername() != null) {
                 messagingTemplate.convertAndSendToUser(
-                        recipient.getUsername(),
+                        parent.getUsername(),
                         "/topic/notifications",
                         notificationDTO
                 );
             }
         } catch (Exception e) {
-            System.err.println("Error sending WebSocket notification: " + e.getMessage());
+            System.err.println("Error sending WebSocket notification to parent: " + e.getMessage());
         }
-
+        
         return notificationDTO;
     }
-
+    
     /**
-     * Create abnormal health check result notification
+     * Send health check appointment details to parent
      */
     @Transactional
     @Override
-    public NotificationDTO createAbnormalHealthResultNotification(
-            User recipient,
-            String studentName,
-            String category,
-            HealthCheckForm healthCheckForm) {
-
-        String title = "KẾT QUẢ KHÁM SỨC KHỎE";
-        String message = "Học sinh " + studentName + " có một số vấn đề về " + 
-                category.toLowerCase() + " trong kết quả khám sức khỏe.";
-        String notificationType = "ABNORMAL_HEALTH_RESULT";
-        
-        Notification notification = new Notification();
-        notification.setTitle(title);
-        notification.setMessage(message);
-        notification.setNotificationType(notificationType);
-        notification.setRecipient(recipient);
-        
-        // Set the health check form if available
-        if (healthCheckForm != null) {
-            notification.setHealthCheckForm(healthCheckForm);
-        }
-
-        Notification savedNotification = notificationRepository.save(notification);
-        NotificationDTO notificationDTO = convertToDTO(savedNotification);
-
-        try {
-            if (recipient.getUsername() != null) {
-                messagingTemplate.convertAndSendToUser(
-                        recipient.getUsername(),
-                        "/topic/notifications",
-                        notificationDTO
-                );
-            }
-        } catch (Exception e) {
-            System.err.println("Error sending WebSocket notification: " + e.getMessage());
-        }
-
-        return notificationDTO;
-    }
-
-    /**
-     * Create health check appointment notification
-     */
-    @Transactional
-    @Override
-    public NotificationDTO createHealthCheckAppointmentNotification(
-            User recipient,
+    public NotificationDTO sendHealthCheckAppointmentToParent(
+            User parent,
             String studentName,
             String appointmentDate,
             String appointmentTime,
             String location,
-            HealthCheckForm healthCheckForm) {
-
-        String title = "ĐÃ LÊN LỊCH HẸN KHÁM SỨC KHỎE";
-        String message = "Một cuộc hẹn khám sức khỏe đã được lên lịch cho " + studentName;
+            int queueNumber,
+            HealthCheckCampaign campaign) {
         
-        if (appointmentDate != null && !appointmentDate.trim().isEmpty()) {
-            message += " vào " + appointmentDate;
-        }
-        
-        if (appointmentTime != null && !appointmentTime.trim().isEmpty()) {
-            message += " lúc " + appointmentTime;
-        }
-        
-        if (location != null && !location.trim().isEmpty()) {
-            message += ". Địa điểm: " + location;
-        }
-        
-        String notificationType = "APPOINTMENT_SCHEDULED";
+        String title = "Lịch hẹn khám sức khỏe";
+        String message = "Kính gửi phụ huynh,\n\n" +
+                        "Lịch hẹn khám sức khỏe cho học sinh " + studentName + " đã được xác định:\n\n" +
+                        "Ngày khám: " + appointmentDate + "\n" +
+                        "Thời gian: " + appointmentTime + "\n" +
+                        "Địa điểm: " + (location != null ? location : "Phòng y tế trường") + "\n" +
+                        "Số thứ tự: " + queueNumber + "\n\n" +
+                        "Vui lòng đưa con đến đúng giờ để được khám sức khỏe.\n\n" +
+                        "Trân trọng,\nY tá trường";
         
         Notification notification = new Notification();
         notification.setTitle(title);
         notification.setMessage(message);
-        notification.setNotificationType(notificationType);
-        notification.setRecipient(recipient);
-        notification.setHealthCheckForm(healthCheckForm);
-
+        notification.setNotificationType("HEALTH_CHECK_APPOINTMENT");
+        notification.setRecipient(parent);
+        notification.setHealthCheckCampaign(campaign);
+        
         Notification savedNotification = notificationRepository.save(notification);
         NotificationDTO notificationDTO = convertToDTO(savedNotification);
-
+        
+        // Send real-time notification via WebSocket
         try {
-            if (recipient.getUsername() != null) {
+            if (parent.getUsername() != null) {
                 messagingTemplate.convertAndSendToUser(
-                        recipient.getUsername(),
+                        parent.getUsername(),
                         "/topic/notifications",
                         notificationDTO
                 );
             }
         } catch (Exception e) {
-            System.err.println("Error sending WebSocket notification: " + e.getMessage());
+            System.err.println("Error sending WebSocket notification to parent: " + e.getMessage());
         }
-
+        
         return notificationDTO;
     }
-
-    /**
-     * ENHANCED HEALTH CHECK NOTIFICATION METHODS (In-App Only)
-     */
     
     /**
-     * Send reminder notification for pending health check forms
+     * Send abnormal health check result notification to parent
      */
     @Transactional
     @Override
-    public void sendHealthCheckFormReminderNotification(HealthCheckForm form) {
-        User parent = form.getParent();
-        Student student = form.getStudent();
-        HealthCheckCampaign campaign = form.getCampaign();
+    public NotificationDTO sendAbnormalHealthCheckResultToParent(
+            User parent,
+            String studentName,
+            String abnormalFindings,
+            String recommendations,
+            HealthCheckCampaign campaign) {
         
-        String title = "NHẮC NHỞ KHÁM SỨC KHỎE";
-        String message = String.format(
-            "Quý phụ huynh chưa phản hồi về việc cho con em %s tham gia đợt khám sức khỏe '%s'. " +
-            "Vui lòng xác nhận trong thời gian sớm nhất để trường có thể sắp xếp phù hợp.",
-            student.getFullName(),
-            campaign.getName()
-        );
+        String title = "KẾT QUẢ KHÁM SỨC KHỎE CẦN QUAN TÂM";
+        String message = "Kính gửi phụ huynh,\n\n" +
+                        "Kết quả khám sức khỏe của học sinh " + studentName + " trong chiến dịch '" + 
+                        campaign.getName() + "' có một số dấu hiệu cần quan tâm:\n\n" +
+                        "Phát hiện: " + abnormalFindings + "\n\n";
+        
+        if (recommendations != null && !recommendations.trim().isEmpty()) {
+            message += "Khuyến nghị: " + recommendations + "\n\n";
+        }
+        
+        message += "Vui lòng liên hệ với y tá trường hoặc đưa con đến cơ sở y tế để được tư vấn và kiểm tra thêm.\n\n" +
+                  "Trân trọng,\nY tá trường";
         
         Notification notification = new Notification();
         notification.setTitle(title);
         notification.setMessage(message);
-        notification.setNotificationType("HEALTH_CHECK_REMINDER");
+        notification.setNotificationType("HEALTH_CHECK_ABNORMAL_RESULT");
         notification.setRecipient(parent);
+        notification.setHealthCheckCampaign(campaign);
+        
+        Notification savedNotification = notificationRepository.save(notification);
+        NotificationDTO notificationDTO = convertToDTO(savedNotification);
+        
+        // Send real-time notification via WebSocket with high priority
+        try {
+            if (parent.getUsername() != null) {
+                messagingTemplate.convertAndSendToUser(
+                        parent.getUsername(),
+                        "/topic/notifications",
+                        notificationDTO
+                );
+            }
+        } catch (Exception e) {
+            System.err.println("Error sending WebSocket notification to parent: " + e.getMessage());
+        }
+        
+        return notificationDTO;
+    }
+    
+    /**
+     * Send completion reminder to nurse
+     */
+    @Transactional
+    @Override
+    public void sendHealthCheckCampaignCompletionReminder(HealthCheckCampaign campaign) {
+        User nurse = campaign.getCreatedBy();
+        if (nurse == null) {
+            System.out.println("Warning: Cannot find nurse for health check campaign completion reminder ID: " + campaign.getId());
+            return;
+        }
+        
+        String title = "Nhắc nhở hoàn thành chiến dịch khám sức khỏe";
+        String message = "Chiến dịch khám sức khỏe '" + campaign.getName() + "' đã kết thúc từ " + 
+                        campaign.getEndDate() + ". Vui lòng xác nhận hoàn thành chiến dịch trong hệ thống " +
+                        "để cập nhật trạng thái và tạo báo cáo tổng kết.";
+        
+        Notification notification = new Notification();
+        notification.setTitle(title);
+        notification.setMessage(message);
+        notification.setNotificationType("HEALTH_CHECK_CAMPAIGN_COMPLETION_REMINDER");
+        notification.setRecipient(nurse);
+        notification.setHealthCheckCampaign(campaign);
+        
+        Notification savedNotification = notificationRepository.save(notification);
+        NotificationDTO notificationDTO = convertToDTO(savedNotification);
+        
+        // Send real-time notification via WebSocket
+        try {
+            if (nurse.getUsername() != null) {
+                messagingTemplate.convertAndSendToUser(
+                        nurse.getUsername(),
+                        "/queue/notifications",
+                        notificationDTO
+                );
+            }
+        } catch (Exception e) {
+            System.err.println("Error sending WebSocket notification to nurse: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Helper method to translate health categories to Vietnamese
+     */
+    private String translateHealthCategory(String category) {
+        switch (category.toUpperCase()) {
+            case "VISION": return "Khám mắt";
+            case "HEARING": return "Khám tai mũi họng";
+            case "ORAL": return "Khám răng miệng";
+            case "SKIN": return "Khám da liễu";
+            case "RESPIRATORY": return "Khám hô hấp";
+            default: return category;
+        }
+    }
+
+    @Override
+    public void sendHealthCheckCampaignParentConfirmation(
+            HealthCheckCampaign campaign,
+            User parent,
+            Student student,
+            String message) {
+        
+        String title = "Health Check Campaign - Confirmation";
+        
+        // Create and save notification entity
+        Notification notification = new Notification();
+        notification.setTitle(title);
+        notification.setMessage(message);
+        notification.setNotificationType("HEALTH_CHECK_CAMPAIGN_CONFIRMATION");
+        notification.setRecipient(parent);
+        notification.setHealthCheckCampaign(campaign);
+        
+        Notification savedNotification = notificationRepository.save(notification);
+        NotificationDTO notificationDTO = convertToDTO(savedNotification);
+        
+        // Send real-time notification via WebSocket
+        try {
+            if (parent.getUsername() != null) {
+                messagingTemplate.convertAndSendToUser(
+                        parent.getUsername(),
+                        "/queue/notifications",
+                        notificationDTO
+                );
+            }
+        } catch (Exception e) {
+            System.err.println("Error sending WebSocket notification to parent: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public void sendHealthCheckFormConfirmation(
+            HealthCheckForm form,
+            User parent,
+            Student student,
+            String message,
+            boolean isConfirmed) {
+        
+        HealthCheckCampaign campaign = form.getCampaign();
+        String actionText = isConfirmed ? "confirmed" : "declined";
+        String parentTitle = "Health Check Campaign - " + (isConfirmed ? "Confirmation" : "Decline");
+        String nurseTitle = "Parent Response: Health Check Form " + (isConfirmed ? "Confirmed" : "Declined");
+        
+        // 1. Send notification to parent with form and campaign reference
+        Notification parentNotification = new Notification();
+        parentNotification.setTitle(parentTitle);
+        parentNotification.setMessage(message);
+        parentNotification.setNotificationType("HEALTH_CHECK_FORM_" + (isConfirmed ? "CONFIRMATION" : "DECLINE"));
+        parentNotification.setRecipient(parent);
+        parentNotification.setHealthCheckCampaign(campaign);
+        parentNotification.setHealthCheckForm(form);
+        
+        Notification savedParentNotification = notificationRepository.save(parentNotification);
+        NotificationDTO parentNotificationDTO = convertToDTO(savedParentNotification);
+        
+        // Send real-time notification to parent
+        try {
+            if (parent.getUsername() != null) {
+                messagingTemplate.convertAndSendToUser(
+                        parent.getUsername(),
+                        "/queue/notifications",
+                        parentNotificationDTO
+                );
+            }
+        } catch (Exception e) {
+            System.err.println("Error sending WebSocket notification to parent: " + e.getMessage());
+        }
+
+        // 2. Send notification to school nurse about parent's response
+        User nurse = campaign.getCreatedBy(); // The nurse who created the campaign
+        if (nurse != null) {
+            String nurseMessage = String.format(
+                "Parent %s %s has %s the health check form for student %s %s (Class: %s).\n\n" +
+                "Campaign: %s\n" +
+                "Form ID: %d\n" +
+                "Response Date: %s",
+                parent.getFirstName(), parent.getLastName(),
+                actionText,
+                student.getFirstName(), student.getLastName(),
+                student.getClassName() != null ? student.getClassName() : "N/A",
+                campaign.getName(),
+                form.getId(),
+                LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+            );
+            
+            Notification nurseNotification = new Notification();
+            nurseNotification.setTitle(nurseTitle);
+            nurseNotification.setMessage(nurseMessage);
+            nurseNotification.setNotificationType("HEALTH_CHECK_FORM_PARENT_RESPONSE");
+            nurseNotification.setRecipient(nurse);
+            nurseNotification.setHealthCheckCampaign(campaign);
+            nurseNotification.setHealthCheckForm(form);
+            
+            Notification savedNurseNotification = notificationRepository.save(nurseNotification);
+            NotificationDTO nurseNotificationDTO = convertToDTO(savedNurseNotification);
+            
+            // Send real-time notification to nurse
+            try {
+                if (nurse.getUsername() != null) {
+                    messagingTemplate.convertAndSendToUser(
+                            nurse.getUsername(),
+                            "/queue/notifications",
+                            nurseNotificationDTO
+                    );
+                }
+            } catch (Exception e) {
+                System.err.println("Error sending WebSocket notification to nurse: " + e.getMessage());
+            }
+        }
+    }
+
+    @Override
+    public void sendHealthCheckCampaignParentInvitation(
+            HealthCheckCampaign campaign,
+            User parent,
+            Student student,
+            String message,
+            HealthCheckForm form) {
+        
+        String title = "Health Check Campaign - Invitation";
+        
+        // Create and save notification entity with form and campaign reference
+        Notification notification = new Notification();
+        notification.setTitle(title);
+        notification.setMessage(message);
+        notification.setNotificationType("HEALTH_CHECK_CAMPAIGN_INVITATION");
+        notification.setRecipient(parent);
+        notification.setHealthCheckCampaign(campaign);
         notification.setHealthCheckForm(form);
         
         Notification savedNotification = notificationRepository.save(notification);
-        sendWebSocketNotification(savedNotification);
+        NotificationDTO notificationDTO = convertToDTO(savedNotification);
         
-        // Mark reminder as sent
-        form.setReminderSent(true);
-    }
-    
-    /**
-     * Notify nurse about deadline approaching for health check campaign
-     */
-    @Transactional
-    @Override
-    public void notifyNurseAboutCampaignDeadline(HealthCheckCampaign campaign, int daysRemaining) {
-        User nurse = campaign.getCreatedBy();
-        
-        String title = "THÔNG BÁO HẠN CHÓT CHIẾN DỊCH";
-        String message = String.format(
-            "Chiến dịch khám sức khỏe '%s' sẽ kết thúc trong %d ngày (%s). " +
-            "Hiện tại đã có %d/%d học sinh xác nhận tham gia. " +
-            "Vui lòng kiểm tra và chuẩn bị cho việc thực hiện khám sức khỏe.",
-            campaign.getName(),
-            daysRemaining,
-            campaign.getEndDate(),
-            campaign.getConfirmedCount(),
-            campaign.getTargetCount()
-        );
-        
-        Notification notification = new Notification();
-        notification.setTitle(title);
-        notification.setMessage(message);
-        notification.setNotificationType("CAMPAIGN_DEADLINE_REMINDER");
-        notification.setRecipient(nurse);
-        
-        Notification savedNotification = notificationRepository.save(notification);
-        sendWebSocketNotification(savedNotification);
-    }
-    
-    /**
-     * Notify manager about campaign progress
-     */
-    @Transactional
-    @Override
-    public void notifyManagerAboutCampaignProgress(HealthCheckCampaign campaign, int confirmedCount, int totalCount) {
-        User manager = campaign.getApprovedBy();
-        if (manager == null) return;
-        
-        double progressPercentage = totalCount > 0 ? (double) confirmedCount / totalCount * 100 : 0;
-        
-        String title = "BÁO CÁO TIẾN ĐỘ CHIẾN DỊCH KHÁM SỨC KHỎE";
-        String message = String.format(
-            "Chiến dịch '%s' đã có %d/%d học sinh xác nhận (%.1f%%). " +
-            "Thời gian thực hiện: %s - %s.",
-            campaign.getName(),
-            confirmedCount,
-            totalCount,
-            progressPercentage,
-            campaign.getStartDate(),
-            campaign.getEndDate()
-        );
-        
-        Notification notification = new Notification();
-        notification.setTitle(title);
-        notification.setMessage(message);
-        notification.setNotificationType("CAMPAIGN_PROGRESS_REPORT");
-        notification.setRecipient(manager);
-        
-        Notification savedNotification = notificationRepository.save(notification);
-        sendWebSocketNotification(savedNotification);
-    }
-    
-    /**
-     * Send bulk notifications to parents for health check forms
-     */
-    @Transactional
-    @Override
-    public int sendBulkHealthCheckNotifications(List<HealthCheckForm> forms) {
-        int successCount = 0;
-        
-        for (HealthCheckForm form : forms) {
-            try {
-                notifyParentAboutHealthCheck(form);
-                successCount++;
-            } catch (Exception e) {
-                System.err.println("Error sending notification for form ID: " + form.getId() + " - " + e.getMessage());
+        // Send real-time notification via WebSocket
+        try {
+            if (parent.getUsername() != null) {
+                messagingTemplate.convertAndSendToUser(
+                        parent.getUsername(),
+                        "/queue/notifications",
+                        notificationDTO
+                );
             }
+        } catch (Exception e) {
+            System.err.println("Error sending WebSocket notification to parent: " + e.getMessage());
         }
-        
-        return successCount;
-    }
-    
-    /**
-     * Notify parent about health check result sync with health profile
-     */
-    @Transactional
-    @Override
-    public void notifyParentAboutHealthProfileUpdate(HealthCheckResult result) {
-        User parent = result.getStudent().getParent();
-        if (parent == null) return;
-        
-        String title = "CẬP NHẬT HỒ SƠ SỨC KHỎE";
-        String message = String.format(
-            "Kết quả khám sức khỏe của học sinh %s đã được cập nhật vào hồ sơ sức khỏe. " +
-            "Loại khám: %s. Vui lòng kiểm tra chi tiết trong hệ thống.",
-            result.getStudent().getFullName(),
-            result.getCategory().toString()
-        );
-        
-        if (result.isAbnormal()) {
-            message += " Lưu ý: Có một số vấn đề cần theo dõi, vui lòng liên hệ y tế trường để được tư vấn.";
-        }
-        
-        Notification notification = new Notification();
-        notification.setTitle(title);
-        notification.setMessage(message);
-        notification.setNotificationType("HEALTH_PROFILE_UPDATED");
-        notification.setRecipient(parent);
-        notification.setHealthCheckForm(result.getForm());
-        
-        Notification savedNotification = notificationRepository.save(notification);
-        sendWebSocketNotification(savedNotification);
     }
 }
-

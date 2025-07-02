@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios from "axios";
 
 const API_BASE_URL = "http://localhost:8080/api";
 
@@ -7,14 +7,14 @@ const healthCheckApiClient = axios.create({
   baseURL: API_BASE_URL,
   timeout: 10000,
   headers: {
-    'Content-Type': 'application/json',
-  }
+    "Content-Type": "application/json",
+  },
 });
 
 // Add request interceptor to include auth token
 healthCheckApiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -25,581 +25,495 @@ healthCheckApiClient.interceptors.request.use(
   }
 );
 
+// Add response interceptor to handle authentication errors
+healthCheckApiClient.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  (error) => {
+    if (error.response?.status === 401) {
+      console.warn('Authentication failed, redirecting to login...');
+      // Clear token and redirect to login
+      localStorage.removeItem("token");
+      localStorage.removeItem("userRole");
+      localStorage.removeItem("user");
+      // Redirect to login page
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
+// Health Check Categories enum mapping
+export const HEALTH_CHECK_CATEGORIES = {
+  VISION: 'VISION',
+  HEARING: 'HEARING', 
+  ORAL: 'ORAL',
+  SKIN: 'SKIN',
+  RESPIRATORY: 'RESPIRATORY'
+};
+
+export const HEALTH_CHECK_CATEGORY_LABELS = {
+  VISION: 'Khám mắt',
+  HEARING: 'Khám tai',
+  ORAL: 'Khám răng miệng',
+  SKIN: 'Khám da liễu',
+  RESPIRATORY: 'Khám hô hấp'
+};
+
+export const CAMPAIGN_STATUS = {
+  PENDING: 'PENDING',
+  APPROVED: 'APPROVED',
+  IN_PROGRESS: 'IN_PROGRESS',
+  COMPLETED: 'COMPLETED',
+  CANCELED: 'CANCELED'
+};
+
+export const CAMPAIGN_STATUS_LABELS = {
+  PENDING: 'Chờ duyệt',
+  APPROVED: 'Đã duyệt',
+  IN_PROGRESS: 'Đang tiến hành',
+  COMPLETED: 'Hoàn thành',
+  CANCELED: 'Đã hủy'
+};
+
 export const healthCheckApi = {
-  // Get all health check campaigns with pagination
-  getAllCampaigns: async (page = 0, size = 10) => {
+  // ==================== NURSE ENDPOINTS ====================
+  
+  /**
+   * Create a new health check campaign
+   * @param {Object} campaignData - Campaign data matching CreateHealthCheckCampaignRequest
+   * @returns {Promise} Campaign DTO
+   */
+  createCampaign: async (campaignData) => {
     try {
-      const response = await healthCheckApiClient.get(`/health-check/campaigns?page=${page}&size=${size}`);
+      // Transform frontend data to match backend DTO structure
+      const payload = {
+        name: campaignData.name,
+        description: campaignData.description,
+        startDate: campaignData.startDate, // Already in ISO format from form
+        endDate: campaignData.endDate, // Already in ISO format from form
+        location: campaignData.location,
+        categories: campaignData.categories, // Array of HealthCheckCategory enums
+        minAge: campaignData.minAge,
+        maxAge: campaignData.maxAge,
+        targetClasses: campaignData.targetClasses // Array of class names
+      };
+
+      const response = await healthCheckApiClient.post(
+        "/nurse/health-check-campaigns",
+        payload
+      );
       return response.data;
     } catch (error) {
-      console.error('Error fetching health check campaigns:', error);
+      console.error("Error creating health check campaign:", error);
       throw error;
     }
   },
-  
-  // Get all campaigns (without pagination, for when you need all data)
-  getAllCampaignsNoPagination: async () => {
+
+  /**
+   * Get campaigns created by the authenticated nurse
+   * @param {number} page - Page number (0-based)
+   * @param {number} size - Page size
+   * @returns {Promise} Paginated campaign list
+   */
+  getMyCampaigns: async (page = 0, size = 10) => {
     try {
-      const response = await healthCheckApiClient.get('/health-check/campaigns');
+      const response = await healthCheckApiClient.get(
+        `/nurse/health-check-campaigns/my-campaigns?page=${page}&size=${size}`
+      );
       return response.data;
     } catch (error) {
-      console.error('Error fetching all health check campaigns:', error);
+      console.error("Error fetching my health check campaigns:", error);
       throw error;
     }
   },
-  
-  // Get campaigns created by current nurse with pagination
-  getNurseCampaigns: async (page = 0, size = 10) => {
-    try {
-      const response = await healthCheckApiClient.get(`/health-check/campaigns/nurse?page=${page}&size=${size}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching nurse health check campaigns:', error);
-      throw error;
-    }
-  },
-  
-  // Get all campaigns created by current nurse (no pagination)
+
+  /**
+   * Get all campaigns created by current nurse (no pagination)
+   * @returns {Promise} Array of campaigns
+   */
   getAllNurseCampaigns: async () => {
     try {
-      const response = await healthCheckApiClient.get('/health-check/campaigns/nurse');
-      return response.data;
+      // Get a large page to simulate getting all campaigns
+      const response = await healthCheckApiClient.get(
+        `/nurse/health-check-campaigns/my-campaigns?page=0&size=1000`
+      );
+      return response.data.content || response.data;
     } catch (error) {
-      console.error('Error fetching all nurse health check campaigns:', error);
+      console.error("Error fetching all nurse health check campaigns:", error);
       throw error;
     }
   },
-  
-  // Get campaign by ID
+
+  /**
+   * Get campaign by ID
+   * @param {number} id - Campaign ID
+   * @returns {Promise} Campaign DTO
+   */
   getCampaignById: async (id) => {
     try {
-      const response = await healthCheckApiClient.get(`/health-check/campaigns/${id}`);
+      const response = await healthCheckApiClient.get(
+        `/nurse/health-check-campaigns/${id}`
+      );
       return response.data;
     } catch (error) {
       console.error(`Error fetching health check campaign ${id}:`, error);
       throw error;
     }
   },
-  
-  // Create new campaign
-  createCampaign: async (campaignData) => {
-    try {
-      const response = await healthCheckApiClient.post('/health-check/campaigns', campaignData);
-      return response.data;
-    } catch (error) {
-      console.error('Error creating health check campaign:', error);
-      throw error;
-    }
-  },
-  
-  // Update campaign
+
+  /**
+   * Update a campaign (only if status is PENDING)
+   * @param {number} id - Campaign ID
+   * @param {Object} campaignData - Updated campaign data
+   * @returns {Promise} Updated campaign DTO
+   */
   updateCampaign: async (id, campaignData) => {
     try {
-      const response = await healthCheckApiClient.put(`/health-check/campaigns/${id}`, campaignData);
+      // Transform frontend data to match backend DTO structure
+      const payload = {
+        name: campaignData.name,
+        description: campaignData.description,
+        startDate: campaignData.startDate,
+        endDate: campaignData.endDate,
+        location: campaignData.location,
+        categories: campaignData.categories,
+        minAge: campaignData.minAge,
+        maxAge: campaignData.maxAge,
+        targetClasses: campaignData.targetClasses
+      };
+
+      const response = await healthCheckApiClient.put(
+        `/nurse/health-check-campaigns/${id}`,
+        payload
+      );
       return response.data;
     } catch (error) {
       console.error(`Error updating health check campaign ${id}:`, error);
       throw error;
     }
   },
-  
-  // Submit campaign for approval
-  submitCampaignForApproval: async (id) => {
-    try {
-      const response = await healthCheckApiClient.post(`/health-check/campaigns/${id}/submit`);
-      return response.data;
-    } catch (error) {
-      console.error(`Error submitting campaign ${id} for approval:`, error);
-      throw error;
-    }
-  },
-  
-  // Schedule campaign
-  scheduleCampaign: async (id, targetCount) => {
-    try {
-      const response = await healthCheckApiClient.post(`/health-check/campaigns/${id}/schedule?targetCount=${targetCount}`);
-      return response.data;
-    } catch (error) {
-      console.error(`Error scheduling campaign ${id}:`, error);
-      throw error;
-    }
-  },
-  
-  // Start campaign
+
+  /**
+   * Start a campaign (change status to IN_PROGRESS)
+   * @param {number} id - Campaign ID
+   * @returns {Promise} Updated campaign DTO
+   */
   startCampaign: async (id) => {
     try {
-      const response = await healthCheckApiClient.post(`/health-check/campaigns/${id}/start`);
+      const response = await healthCheckApiClient.post(
+        `/nurse/health-check-campaigns/${id}/start`
+      );
       return response.data;
     } catch (error) {
-      console.error(`Error starting campaign ${id}:`, error);
+      console.error(`Error starting health check campaign ${id}:`, error);
       throw error;
     }
   },
-  
-  // Complete campaign
+
+  /**
+   * Complete a campaign
+   * @param {number} id - Campaign ID
+   * @returns {Promise} Updated campaign DTO
+   */
   completeCampaign: async (id) => {
     try {
-      const response = await healthCheckApiClient.post(`/health-check/campaigns/${id}/complete`);
+      const response = await healthCheckApiClient.post(
+        `/nurse/health-check-campaigns/${id}/complete`
+      );
       return response.data;
     } catch (error) {
-      console.error(`Error completing campaign ${id}:`, error);
-      throw error;
-    }
-  },
-  
-  // Cancel campaign
-  cancelCampaign: async (id, notes) => {
-    try {
-      const response = await healthCheckApiClient.post(`/health-check/campaigns/${id}/cancel?notes=${encodeURIComponent(notes)}`);
-      return response.data;
-    } catch (error) {
-      console.error(`Error canceling campaign ${id}:`, error);
-      throw error;
-    }
-  },
-  
-  // Get campaigns by status
-  getCampaignsByStatus: async (status) => {
-    try {
-      const response = await healthCheckApiClient.get(`/health-check/campaigns/status/${status}`);
-      return response.data;
-    } catch (error) {
-      console.error(`Error fetching campaigns with status ${status}:`, error);
-      throw error;
-    }
-  },
-  
-  // Get upcoming campaigns
-  getUpcomingCampaigns: async () => {
-    try {
-      const response = await healthCheckApiClient.get('/health-check/campaigns/upcoming');
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching upcoming campaigns:', error);
-      throw error;
-    }
-  },
-  
-  // Get completed campaigns
-  getCompletedCampaigns: async () => {
-    try {
-      const response = await healthCheckApiClient.get('/health-check/campaigns/completed');
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching completed campaigns:', error);
-      throw error;
-    }
-  },
-  
-  // Get available health check categories
-  getAvailableCategories: async () => {
-    try {
-      const response = await healthCheckApiClient.get('/health-check/campaigns/categories');
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching health check categories:', error);
-      throw error;
-    }
-  },
-  
-  // Get health check results by campaign
-  getResultsByCampaign: async (campaignId) => {
-    try {
-      const response = await healthCheckApiClient.get(`/health-check/results/campaign/${campaignId}`);
-      return response.data;
-    } catch (error) {
-      console.error(`Error fetching results for campaign ${campaignId}:`, error);
-      throw error;
-    }
-  },
-  
-  // Record health check result
-  recordResult: async (resultData) => {
-    try {
-      const response = await healthCheckApiClient.post('/health-check/results', resultData);
-      return response.data;
-    } catch (error) {
-      console.error('Error recording health check result:', error);
+      console.error(`Error completing health check campaign ${id}:`, error);
       throw error;
     }
   },
 
-  // Get eligible students with flexible filtering (supports single/multiple classes, with/without age range)
-  getEligibleStudentsWithFilters: async (campaignId, filters = {}) => {
+  /**
+   * Get eligible students for a campaign
+   * @param {number} id - Campaign ID
+   * @returns {Promise} Array of student DTOs
+   */
+  getEligibleStudents: async (id) => {
     try {
-      const params = new URLSearchParams();
-      
-      if (filters.minAge !== undefined && filters.minAge !== null) {
-        params.append('minAge', filters.minAge);
-      }
-      if (filters.maxAge !== undefined && filters.maxAge !== null) {
-        params.append('maxAge', filters.maxAge);
-      }
-      
-      // Support both single className and multiple classNames
-      if (filters.className) {
-        params.append('classNames', filters.className);
-      }
-      if (filters.classNames && filters.classNames.length > 0) {
-        filters.classNames.forEach(className => {
-          params.append('classNames', className);
-        });
-      }
-      
-      const queryString = params.toString();
-      const url = `/health-check/forms/campaign/${campaignId}/eligible-students${queryString ? `?${queryString}` : ''}`;
-      
-      const response = await healthCheckApiClient.get(url);
+      const response = await healthCheckApiClient.get(
+        `/nurse/health-check-campaigns/${id}/eligible-students`
+      );
       return response.data;
     } catch (error) {
-      console.error(`Error fetching eligible students with filters for campaign ${campaignId}:`, error);
+      console.error(`Error fetching eligible students for campaign ${id}:`, error);
       throw error;
     }
   },
 
-  // Generate forms for eligible students based on filters
-  generateFormsForEligibleStudents: async (campaignId, filters = {}) => {
+  /**
+   * Get eligible students with form status for a campaign
+   * @param {number} id - Campaign ID
+   * @returns {Promise} Array of student data with form status
+   */
+  getEligibleStudentsWithFormStatus: async (id) => {
     try {
-      // First get eligible students using the unified filter API
-      const eligibleResponse = await healthCheckApi.getEligibleStudentsWithFilters(campaignId, filters);
-      const studentIds = eligibleResponse.students.map(student => student.studentID);
-      
-      // Then generate forms for these students
-      const response = await healthCheckApiClient.post(`/health-check/forms/campaign/${campaignId}/students`, studentIds);
+      const response = await healthCheckApiClient.get(
+        `/nurse/health-check-campaigns/${id}/eligible-students-with-status`
+      );
       return response.data;
     } catch (error) {
-      console.error(`Error generating forms for eligible students in campaign ${campaignId}:`, error);
+      console.error(`Error fetching eligible students with form status for campaign ${id}:`, error);
       throw error;
     }
   },
 
-  // Manager-specific APIs
+  // ==================== MANAGER ENDPOINTS ====================
+
+  /**
+   * Get campaigns by status for manager review
+   * @param {string} status - Campaign status (PENDING, APPROVED, etc.)
+   * @param {number} page - Page number (0-based)
+   * @param {number} size - Page size
+   * @returns {Promise} Paginated campaign list
+   */
+  getCampaignsByStatus: async (status = 'PENDING', page = 0, size = 10) => {
+    try {
+      const response = await healthCheckApiClient.get(
+        `/manager/health-check-campaigns?status=${status}&page=${page}&size=${size}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching campaigns by status ${status}:`, error);
+      throw error;
+    }
+  },
   
-  // Approve campaign (Manager only)
+  /**
+   * Get campaign details by ID for manager
+   * This uses the status filter API to get a specific campaign by ID
+   * @param {number} id - Campaign ID
+   * @returns {Promise} Campaign DTO
+   */
+  getCampaignByIdForManager: async (id) => {
+    try {
+      // First, try to find it in pending campaigns
+      let campaigns = await healthCheckApi.getAllCampaignsByStatus('PENDING');
+      let campaign = campaigns.find(c => c.id === id);
+      
+      // If not found, check approved campaigns
+      if (!campaign) {
+        campaigns = await healthCheckApi.getAllCampaignsByStatus('APPROVED');
+        campaign = campaigns.find(c => c.id === id);
+      }
+      
+      // If not found, check in-progress campaigns
+      if (!campaign) {
+        campaigns = await healthCheckApi.getAllCampaignsByStatus('IN_PROGRESS');
+        campaign = campaigns.find(c => c.id === id);
+      }
+      
+      // If not found, check completed campaigns
+      if (!campaign) {
+        campaigns = await healthCheckApi.getAllCampaignsByStatus('COMPLETED');
+        campaign = campaigns.find(c => c.id === id);
+      }
+      
+      // If not found, check canceled campaigns
+      if (!campaign) {
+        campaigns = await healthCheckApi.getAllCampaignsByStatus('CANCELED');
+        campaign = campaigns.find(c => c.id === id);
+      }
+      
+      if (!campaign) {
+        throw new Error(`Campaign with id ${id} not found`);
+      }
+      
+      return campaign;
+    } catch (error) {
+      console.error(`Error fetching health check campaign ${id} for manager:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get all campaigns by status (no pagination)
+   * @param {string} status - Campaign status
+   * @returns {Promise} Array of campaigns
+   */
+  getAllCampaignsByStatus: async (status) => {
+    try {
+      const response = await healthCheckApiClient.get(
+        `/manager/health-check-campaigns?status=${status}&page=0&size=1000`
+      );
+      return response.data.content || response.data;
+    } catch (error) {
+      console.error(`Error fetching all campaigns by status ${status}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Approve a campaign
+   * @param {number} id - Campaign ID
+   * @returns {Promise} Updated campaign DTO
+   */
   approveCampaign: async (id) => {
     try {
-      const response = await healthCheckApiClient.post(`/health-check/campaigns/${id}/approve`);
+      const response = await healthCheckApiClient.post(
+        `/manager/health-check-campaigns/${id}/approve`
+      );
       return response.data;
     } catch (error) {
-      console.error(`Error approving campaign ${id}:`, error);
+      console.error(`Error approving health check campaign ${id}:`, error);
       throw error;
     }
   },
-  
-  // Reject campaign (Manager only)
+
+  /**
+   * Reject a campaign
+   * @param {number} id - Campaign ID
+   * @param {string} notes - Rejection notes
+   * @returns {Promise} Updated campaign DTO
+   */
   rejectCampaign: async (id, notes) => {
     try {
-      const response = await healthCheckApiClient.post(`/health-check/campaigns/${id}/reject?notes=${encodeURIComponent(notes)}`);
+      const response = await healthCheckApiClient.post(
+        `/manager/health-check-campaigns/${id}/reject`,
+        { notes }
+      );
       return response.data;
     } catch (error) {
-      console.error(`Error rejecting campaign ${id}:`, error);
+      console.error(`Error rejecting health check campaign ${id}:`, error);
       throw error;
     }
   },
 
-  // Health Check Forms APIs for Manager
+  /**
+   * Schedule a campaign with target count
+   * @param {number} id - Campaign ID
+   * @param {number} targetCount - Target number of students
+   * @returns {Promise} Updated campaign DTO
+   */
+  scheduleCampaign: async (id, targetCount) => {
+    try {
+      const response = await healthCheckApiClient.post(
+        `/manager/health-check-campaigns/${id}/schedule`,
+        { targetCount }
+      );
+      return response.data;
+    } catch (error) {
+      console.error(`Error scheduling health check campaign ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // ==================== UTILITY FUNCTIONS ====================
+
+  /**
+   * Get available health check categories
+   * @returns {Promise} Array of category strings
+   */
+  getAvailableCategories: async () => {
+    try {
+      // Return the predefined categories since they're static enums
+      return Object.values(HEALTH_CHECK_CATEGORIES);
+    } catch (error) {
+      console.error("Error fetching health check categories:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Calculate target count based on age and class criteria
+   * @param {number} minAge - Minimum age
+   * @param {number} maxAge - Maximum age  
+   * @param {Array} targetClasses - Array of target class names
+   * @returns {Promise} Object with targetCount
+   */
+  calculateTargetCount: async (minAge, maxAge, targetClasses = []) => {
+    try {
+      const payload = {
+        minAge,
+        maxAge,
+        targetClasses
+      };
+
+      const response = await healthCheckApiClient.post(
+        "/nurse/health-check-campaigns/calculate-target-count",
+        payload
+      );
+      
+      return response.data;
+    } catch (error) {
+      console.error("Error calculating target count:", error);
+      return { targetCount: 0 };
+    }
+  },
+
+  /**
+   * Get all campaigns without pagination (fallback method)
+   * @returns {Promise} Array of campaigns
+   */
+  getAllCampaignsNoPagination: async () => {
+    try {
+      // Try to get campaigns from multiple sources
+      const nurseCampaigns = await healthCheckApi.getAllNurseCampaigns();
+      return nurseCampaigns;
+    } catch (error) {
+      console.error("Error fetching all campaigns:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Generate health check forms for eligible students
+   * @param {number} campaignId - Campaign ID
+   * @returns {Promise} Response with generated forms count
+   */
+  generateForms: async (campaignId) => {
+    try {
+      const response = await healthCheckApiClient.post(
+        `/nurse/health-check-campaigns/${campaignId}/generate-forms`
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error generating health check forms:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Send notifications to parents for health check campaign
+   * @param {number} campaignId - Campaign ID
+   * @param {string} customMessage - Optional custom notification message
+   * @returns {Promise} Response with notification status
+   */
+  sendNotificationsToParents: async (campaignId, customMessage = null) => {
+    try {
+      const payload = customMessage ? { message: customMessage } : {};
+      const response = await healthCheckApiClient.post(
+        `/nurse/health-check-campaigns/${campaignId}/send-notifications`,
+        payload
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error sending notifications to parents:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get all health check forms for a specific campaign
+   * @param {number} campaignId - Campaign ID
+   * @returns {Promise} Response with forms data
+   */
   getFormsByCampaign: async (campaignId) => {
     try {
-      const response = await healthCheckApiClient.get(`/health-check/forms/campaign/${campaignId}`);
+      const response = await healthCheckApiClient.get(
+        `/nurse/health-check-campaigns/${campaignId}/forms`
+      );
       return response.data;
     } catch (error) {
-      console.error(`Error fetching forms for campaign ${campaignId}:`, error);
+      console.error("Error fetching forms by campaign:", error);
       throw error;
     }
-  },
-
-  getFormsByCampaignAndStatus: async (campaignId, status) => {
-    try {
-      const response = await healthCheckApiClient.get(`/health-check/forms/campaign/${campaignId}/status/${status}`);
-      return response.data;
-    } catch (error) {
-      console.error(`Error fetching forms for campaign ${campaignId} with status ${status}:`, error);
-      throw error;
-    }
-  },
-
-  getFormById: async (formId) => {
-    try {
-      const response = await healthCheckApiClient.get(`/health-check/forms/${formId}`);
-      return response.data;
-    } catch (error) {
-      console.error(`Error fetching form ${formId}:`, error);
-      throw error;
-    }
-  },
-
-  getConfirmedCountByCampaign: async (campaignId) => {
-    try {
-      const response = await healthCheckApiClient.get(`/health-check/forms/campaign/${campaignId}/count/confirmed`);
-      return response.data;
-    } catch (error) {
-      console.error(`Error fetching confirmed count for campaign ${campaignId}:`, error);
-      throw error;
-    }
-  },
-
-  getPendingCountByCampaign: async (campaignId) => {
-    try {
-      const response = await healthCheckApiClient.get(`/health-check/forms/campaign/${campaignId}/count/pending`);
-      return response.data;
-    } catch (error) {
-      console.error(`Error fetching pending count for campaign ${campaignId}:`, error);
-      throw error;
-    }
-  },
-
-  // Health Check Results APIs for Manager
-  getResultsByStudent: async (studentId) => {
-    try {
-      const response = await healthCheckApiClient.get(`/health-check/results/student/${studentId}`);
-      return response.data;
-    } catch (error) {
-      console.error(`Error fetching results for student ${studentId}:`, error);
-      throw error;
-    }
-  },
-
-  getResultsByCategory: async (category) => {
-    try {
-      const response = await healthCheckApiClient.get(`/health-check/results/category/${category}`);
-      return response.data;
-    } catch (error) {
-      console.error(`Error fetching results for category ${category}:`, error);
-      throw error;
-    }
-  },
-
-  getAbnormalResults: async () => {
-    try {
-      const response = await healthCheckApiClient.get('/health-check/results/abnormal');
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching abnormal results:', error);
-      throw error;
-    }
-  },
-
-  getResultsByStatus: async (status) => {
-    try {
-      const response = await healthCheckApiClient.get(`/health-check/results/status/${status}`);
-      return response.data;
-    } catch (error) {
-      console.error(`Error fetching results with status ${status}:`, error);
-      throw error;
-    }
-  },
-
-  getResultsByCampaignAndCategory: async (campaignId, category) => {
-    try {
-      const response = await healthCheckApiClient.get(`/health-check/results/campaign/${campaignId}/category/${category}`);
-      return response.data;
-    } catch (error) {
-      console.error(`Error fetching results for campaign ${campaignId} and category ${category}:`, error);
-      throw error;
-    }
-  },
-
-  countAbnormalResultsByCampaign: async (campaignId) => {
-    try {
-      const response = await healthCheckApiClient.get(`/health-check/results/campaign/${campaignId}/abnormal/count`);
-      return response.data;
-    } catch (error) {
-      console.error(`Error counting abnormal results for campaign ${campaignId}:`, error);
-      throw error;
-    }
-  },
-
-  getResultById: async (resultId) => {
-    try {
-      const response = await healthCheckApiClient.get(`/health-check/results/${resultId}`);
-      return response.data;
-    } catch (error) {
-      console.error(`Error fetching result ${resultId}:`, error);
-      throw error;
-    }
-  },
-
-  getActiveCampaignsByClass: async (className) => {
-    try {
-      const response = await healthCheckApiClient.get(`/health-check/campaigns/class/${className}`);
-      return response.data;
-    } catch (error) {
-      console.error(`Error fetching active campaigns for class ${className}:`, error);
-      throw error;
-    }
-  },
-
-  // Calculate target count for campaign
-  calculateTargetCount: async (minAge, maxAge, targetClasses) => {
-    try {
-      const params = new URLSearchParams();
-      if (minAge !== null && minAge !== undefined) {
-        params.append('minAge', minAge);
-      }
-      if (maxAge !== null && maxAge !== undefined) {
-        params.append('maxAge', maxAge);
-      }
-      if (targetClasses && targetClasses.length > 0) {
-        targetClasses.forEach(cls => params.append('targetClasses', cls));
-      }
-      
-      const response = await healthCheckApiClient.get(`/health-check/campaigns/calculate-target-count?${params.toString()}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error calculating target count:', error);
-      throw error;
-    }
-  },
-
-  // Get eligible students with their form status for a campaign
-  getEligibleStudentsWithStatus: async (campaignId, campaignData = null) => {
-    try {
-      // Get all forms for the campaign to determine status
-      const formsResponse = await healthCheckApiClient.get(`/health-check/forms/campaign/${campaignId}`);
-      const forms = Array.isArray(formsResponse.data) ? formsResponse.data : 
-                   (formsResponse.data && Array.isArray(formsResponse.data.forms) ? formsResponse.data.forms : []);
-      
-      console.log('Forms response structure:', {
-        isArray: Array.isArray(formsResponse.data),
-        dataKeys: formsResponse.data ? Object.keys(formsResponse.data) : 'null',
-        formsLength: forms.length
-      });
-      
-      // Get eligible students using campaign criteria if provided
-      let studentsResponse;
-      if (campaignData && (campaignData.minAge || campaignData.maxAge || campaignData.targetClasses)) {
-        // Build query parameters for the filtered API
-        const params = new URLSearchParams();
-        
-        if (campaignData.minAge !== undefined && campaignData.minAge !== null) {
-          params.append('minAge', campaignData.minAge);
-        }
-        if (campaignData.maxAge !== undefined && campaignData.maxAge !== null) {
-          params.append('maxAge', campaignData.maxAge);
-        }
-        
-        // Handle targetClasses - it might be a Set or Array
-        if (campaignData.targetClasses && campaignData.targetClasses.length > 0) {
-          const classArray = Array.isArray(campaignData.targetClasses) 
-            ? campaignData.targetClasses 
-            : Array.from(campaignData.targetClasses);
-          
-          classArray.forEach(className => {
-            if (className && className.trim()) {
-              params.append('classNames', className.trim());
-            }
-          });
-        }
-        
-        const queryString = params.toString();
-        const url = `/health-check/forms/campaign/${campaignId}/eligible-students${queryString ? `?${queryString}` : ''}`;
-        
-        console.log('Fetching eligible students with filters:', {
-          campaignId,
-          minAge: campaignData.minAge,
-          maxAge: campaignData.maxAge,
-          targetClasses: campaignData.targetClasses,
-          url
-        });
-        
-        studentsResponse = await healthCheckApiClient.get(url);
-      } else {
-        // Fallback to basic API without filters
-        console.log('Fetching eligible students without filters for campaign:', campaignId);
-        studentsResponse = await healthCheckApiClient.get(`/health-check/forms/campaign/${campaignId}/eligible-students`);
-      }
-      
-      // Handle different response structures
-      const eligibleStudents = studentsResponse.data.students || studentsResponse.data;
-      
-      console.log('Eligible students response:', {
-        totalStudents: Array.isArray(eligibleStudents) ? eligibleStudents.length : 0,
-        sampleStudent: Array.isArray(eligibleStudents) && eligibleStudents.length > 0 ? eligibleStudents[0] : null
-      });
-      
-      // Create a map of student ID to form status
-      const formStatusMap = {};
-      if (Array.isArray(forms)) {
-        forms.forEach(form => {
-          if (form.student && form.student.studentID) {
-            formStatusMap[form.student.studentID] = {
-              status: form.status,
-              statusDisplay: form.status === 'CONFIRMED' ? 'Đã xác nhận khám' : 
-                           form.status === 'DECLINED' ? 'Từ chối khám' : 
-                           form.status === 'PENDING' ? 'Chưa phản hồi' : 'Chưa phản hồi'
-            };
-          }
-        });
-      } else {
-        console.warn('Forms is not an array:', forms);
-      }
-      
-      // Helper function to calculate age from date of birth
-      const calculateAge = (dob) => {
-        if (!dob) return { years: 0, months: 0, totalMonths: 0 };
-        
-        const today = new Date();
-        const birthDate = new Date(dob);
-        let years = today.getFullYear() - birthDate.getFullYear();
-        let months = today.getMonth() - birthDate.getMonth();
-        
-        if (months < 0) {
-          years--;
-          months += 12;
-        }
-        
-        const totalMonths = years * 12 + months;
-        return {
-          years,
-          months,
-          totalMonths
-        };
-      };
-      
-      // Ensure eligibleStudents is an array
-      const studentsArray = Array.isArray(eligibleStudents) ? eligibleStudents : [];
-      
-      // Combine student data with status information
-      const studentsWithStatus = studentsArray.map(student => {
-        const statusInfo = formStatusMap[student.studentID] || { 
-          status: 'PENDFING', 
-          statusDisplay: 'Chưa phản hồi' 
-        };
-        
-        // Calculate age from date of birth
-        const ageInfo = calculateAge(student.dob);
-        const ageDisplay = `${ageInfo.years} tuổi ${ageInfo.months} tháng (${ageInfo.totalMonths} tháng)`;
-        
-        return {
-          ...student,
-          studentCode: student.studentID, // Map studentID to studentCode for table display
-          fullName: student.lastName + ' ' + student.firstName,
-          status: statusInfo.status,
-          statusDisplay: statusInfo.statusDisplay,
-          ageDisplay: ageDisplay
-        };
-      });
-      
-      console.log('Students with status:', {
-        totalProcessed: studentsWithStatus.length,
-        sampleProcessed: studentsWithStatus.length > 0 ? studentsWithStatus[0] : null
-      });
-      
-      return studentsWithStatus;
-    } catch (error) {
-      console.error(`Error fetching eligible students with status for campaign ${campaignId}:`, error);
-      throw error;
-    }
-  },
-
-  // Send notifications to parents for eligible students in a campaign
-  sendNotificationsToParents: async (campaignId) => {
-    try {
-      const response = await healthCheckApiClient.post(`/health-check/campaigns/${campaignId}/send-notifications`);
-      return response.data;
-    } catch (error) {
-      console.error(`Error sending notifications to parents for campaign ${campaignId}:`, error);
-      throw error;
-    }
-  },
+  }
 };
+
+export default healthCheckApi;

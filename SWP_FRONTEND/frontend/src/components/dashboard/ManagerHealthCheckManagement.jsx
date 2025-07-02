@@ -31,7 +31,7 @@ import {
   AlertOutlined,
   HeartOutlined
 } from '@ant-design/icons';
-import { healthCheckApi } from '../../api/healthCheckApi';
+import { healthCheckApi, CAMPAIGN_STATUS_LABELS, HEALTH_CHECK_CATEGORY_LABELS } from '../../api/healthCheckApi';
 import '../../styles/ManagerHealthCheck.css';
 
 const { TextArea } = Input;
@@ -59,11 +59,11 @@ const ManagerHealthCheckManagement = () => {
   const fetchStatistics = async () => {
     try {
       const [pendingCampaigns, approvedCampaigns, canceledCampaigns, inProgressCampaigns, completedCampaigns] = await Promise.all([
-        healthCheckApi.getCampaignsByStatus('PENDING'),
-        healthCheckApi.getCampaignsByStatus('APPROVED'),
-        healthCheckApi.getCampaignsByStatus('CANCELED'),
-        healthCheckApi.getCampaignsByStatus('IN_PROGRESS'),
-        healthCheckApi.getCompletedCampaigns()
+        healthCheckApi.getAllCampaignsByStatus('PENDING'),
+        healthCheckApi.getAllCampaignsByStatus('APPROVED'),
+        healthCheckApi.getAllCampaignsByStatus('CANCELED'),
+        healthCheckApi.getAllCampaignsByStatus('IN_PROGRESS'),
+        healthCheckApi.getAllCampaignsByStatus('COMPLETED')
       ]);
 
       setStatistics({
@@ -84,19 +84,19 @@ const ManagerHealthCheckManagement = () => {
       let response;
       switch (status) {
         case 'pending':
-          response = await healthCheckApi.getCampaignsByStatus('PENDING');
+          response = await healthCheckApi.getAllCampaignsByStatus('PENDING');
           break;
         case 'approved':
-          response = await healthCheckApi.getCampaignsByStatus('APPROVED');
+          response = await healthCheckApi.getAllCampaignsByStatus('APPROVED');
           break;
         case 'canceled':
-          response = await healthCheckApi.getCampaignsByStatus('CANCELED');
+          response = await healthCheckApi.getAllCampaignsByStatus('CANCELED');
           break;
         case 'ongoing':
-          response = await healthCheckApi.getCampaignsByStatus('IN_PROGRESS');
+          response = await healthCheckApi.getAllCampaignsByStatus('IN_PROGRESS');
           break;
         case 'completed':
-          response = await healthCheckApi.getCompletedCampaigns();
+          response = await healthCheckApi.getAllCampaignsByStatus('COMPLETED');
           break;
         default:
           response = await healthCheckApi.getCampaignsByStatus('PENDING');
@@ -113,8 +113,14 @@ const ManagerHealthCheckManagement = () => {
   const handleApproveCampaign = async (campaignId) => {
     setLoading(true);
     try {
-      await healthCheckApi.approveCampaign(campaignId);
+      const updatedCampaign = await healthCheckApi.approveCampaign(campaignId);
       message.success('Phê duyệt chiến dịch khám sức khỏe thành công!');
+      
+      // If the modal is open and showing this campaign, update it
+      if (detailModalVisible && selectedCampaign && selectedCampaign.id === campaignId) {
+        setSelectedCampaign(updatedCampaign);
+      }
+      
       fetchStatistics();
       fetchCampaignsByStatus(activeTab);
     } catch (error) {
@@ -128,10 +134,16 @@ const ManagerHealthCheckManagement = () => {
   const handleRejectCampaign = async (campaignId, notes) => {
     setLoading(true);
     try {
-      await healthCheckApi.rejectCampaign(campaignId, notes);
+      const updatedCampaign = await healthCheckApi.rejectCampaign(campaignId, notes);
       message.success('Từ chối chiến dịch khám sức khỏe thành công!');
       setRejectModalVisible(false);
       form.resetFields();
+      
+      // If the modal is open and showing this campaign, update it
+      if (detailModalVisible && selectedCampaign && selectedCampaign.id === campaignId) {
+        setSelectedCampaign(updatedCampaign);
+      }
+      
       fetchStatistics();
       fetchCampaignsByStatus(activeTab);
     } catch (error) {
@@ -142,48 +154,64 @@ const ManagerHealthCheckManagement = () => {
     }
   };
 
+  const handleScheduleCampaign = async (campaignId, targetCount) => {
+    setLoading(true);
+    try {
+      await healthCheckApi.scheduleCampaign(campaignId, targetCount);
+      message.success('Lên lịch chiến dịch khám sức khỏe thành công!');
+      fetchStatistics();
+      fetchCampaignsByStatus(activeTab);
+    } catch (error) {
+      message.error('Lỗi khi lên lịch chiến dịch');
+      console.error('Error scheduling campaign:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const showCampaignDetail = async (campaign) => {
-    setSelectedCampaign(campaign);
+    setSelectedCampaign(campaign); // Set initial value from table
     setDetailModalVisible(true);
     
     try {
-      // Fetch additional details for the campaign
-      const [campaignForms, campaignResults] = await Promise.all([
-        healthCheckApi.getFormsByCampaign(campaign.id),
-        healthCheckApi.getResultsByCampaign(campaign.id)
-      ]);
-      setForms(campaignForms);
-      setResults(campaignResults);
+      // Fetch the latest campaign data using the manager endpoint
+      const updatedCampaign = await healthCheckApi.getCampaignByIdForManager(campaign.id);
+      setSelectedCampaign(updatedCampaign);
+      
+      // Note: These endpoints don't exist in the backend yet
+      // For now, we'll just use empty arrays
+      // TODO: Implement when backend supports these endpoints
+      // const [campaignForms, campaignResults] = await Promise.all([
+      //   healthCheckApi.getFormsByCampaign(campaign.id),
+      //   healthCheckApi.getResultsByCampaign(campaign.id)
+      // ]);
+      setForms([]);
+      setResults([]);
     } catch (error) {
       console.error('Error fetching campaign details:', error);
+      // We already set the campaign from the table above, so no need to do it again
+      message.error('Không thể tải chi tiết chiến dịch. Vui lòng thử lại sau.');
     }
   };
 
   const getStatusBadge = (status) => {
+    const label = CAMPAIGN_STATUS_LABELS[status] || status;
     const statusConfig = {
-      PENDING: { color: 'orange', text: 'Chờ phê duyệt' },
-      APPROVED: { color: 'green', text: 'Đã phê duyệt' },
-      IN_PROGRESS: { color: 'blue', text: 'Đang thực hiện' },
-      COMPLETED: { color: 'purple', text: 'Hoàn thành' },
-      CANCELED: { color: 'red', text: 'Đã hủy' }
+      PENDING: { color: 'orange', text: label },
+      APPROVED: { color: 'green', text: label },
+      CANCELED: { color: 'red', text: label },
+      IN_PROGRESS: { color: 'blue', text: label },
+      COMPLETED: { color: 'purple', text: label }
     };
     
-    const config = statusConfig[status] || { color: 'default', text: status };
+    const config = statusConfig[status] || { color: 'default', text: label };
     return <Badge color={config.color} text={config.text} />;
   };
 
   const formatCategories = (categories) => {
     if (!categories || categories.length === 0) return 'Không có';
     
-    const categoryNames = {
-      'VISION': 'Thị lực',
-      'HEARING': 'Thính giác', 
-      'ORAL': 'Răng miệng',
-      'SKIN': 'Da liễu',
-      'RESPIRATORY': 'Hô hấp'
-    };
-    
-    return categories.map(cat => categoryNames[cat] || cat).join(', ');
+    return categories.map(cat => HEALTH_CHECK_CATEGORY_LABELS[cat] || cat).join(', ');
   };
 
   const columns = [
@@ -303,10 +331,10 @@ const ManagerHealthCheckManagement = () => {
         <Col xs={24} sm={12} md={6} lg={4}>
           <Card>
             <Statistic
-              title="Đã hủy"
-              value={statistics.CANCELED || 0}
-              prefix={<FileTextOutlined style={{ color: '#faad14' }} />}
-              valueStyle={{ color: '#faad14' }}
+              title="Bị hủy"
+              value={statistics.canceled || 0}
+              prefix={<FileTextOutlined style={{ color: '#ff4d4f' }} />}
+              valueStyle={{ color: '#ff4d4f' }}
             />
           </Card>
         </Col>
@@ -337,7 +365,7 @@ const ManagerHealthCheckManagement = () => {
         <Tabs activeKey={activeTab} onChange={setActiveTab}>
           <TabPane tab="Chờ duyệt" key="pending" />
           <TabPane tab="Đã duyệt" key="approved" />
-          <TabPane tab="Đã hủy" key="canceled" />
+          <TabPane tab="Bị hủy" key="canceled" />
           <TabPane tab="Đang tiến hành" key="ongoing" />
           <TabPane tab="Hoàn thành" key="completed" />
         </Tabs>
@@ -407,6 +435,49 @@ const ManagerHealthCheckManagement = () => {
                 Phê duyệt
               </Button>
             </Popconfirm>
+          ),
+          selectedCampaign?.status === 'APPROVED' && (
+            <Button
+              key="schedule"
+              type="default"
+              onClick={() => {
+                setDetailModalVisible(false);
+                Modal.confirm({
+                  title: 'Lên lịch chiến dịch',
+                  content: (
+                    <Form
+                      layout="vertical"
+                      onFinish={(values) => {
+                        handleScheduleCampaign(selectedCampaign.id, values.targetCount);
+                      }}
+                    >
+                      <Form.Item
+                        name="targetCount"
+                        label="Số lượng mục tiêu"
+                        rules={[
+                          { required: true, message: 'Vui lòng nhập số lượng mục tiêu' },
+                          { type: 'number', min: 1, message: 'Số lượng mục tiêu phải lớn hơn 0' }
+                        ]}
+                      >
+                        <Input
+                          type="number"
+                          placeholder="Nhập số lượng mục tiêu cho chiến dịch"
+                          style={{ borderRadius: 6 }}
+                        />
+                      </Form.Item>
+                    </Form>
+                  ),
+                  onOk: () => {},
+                  onCancel: () => {},
+                  okText: 'Lên lịch',
+                  cancelText: 'Hủy',
+                  width: 400,
+                });
+              }}
+              style={{ borderRadius: 6 }}
+            >
+              Lên lịch
+            </Button>
           ),
         ]}
         width={1000}
@@ -525,8 +596,8 @@ const ManagerHealthCheckManagement = () => {
                     </div>
                   </Descriptions.Item>
                 )}
-                {selectedCampaign.rejectNotes && (
-                  <Descriptions.Item label="Lý do từ chối" span={2}>
+                {selectedCampaign.rejectNotes && selectedCampaign.status === 'CANCELED' && (
+                  <Descriptions.Item label="Lý do hủy" span={2}>
                     <div style={{ 
                       padding: '8px', 
                       backgroundColor: '#fff2f0', 

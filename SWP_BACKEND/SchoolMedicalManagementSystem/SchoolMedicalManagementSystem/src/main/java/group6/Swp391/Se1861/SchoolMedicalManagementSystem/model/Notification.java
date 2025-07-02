@@ -67,4 +67,8 @@ public class Notification {
     @ManyToOne
     @JoinColumn(name = "healthCheckFormId")
     private HealthCheckForm healthCheckForm;
+
+    @ManyToOne
+    @JoinColumn(name = "healthCheckCampaignId")
+    private HealthCheckCampaign healthCheckCampaign;
 }
