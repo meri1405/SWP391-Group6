@@ -3,6 +3,7 @@ package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.*;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IExcelService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IStudentService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.utils.PhoneValidator;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -82,6 +83,11 @@ public class ExcelService implements IExcelService {
                     String fatherPhone = null;
                     if (father != null && father.getPhone() != null) {
                         fatherPhone = father.getPhone();
+                        // Check if this phone already exists with different name
+                        if (uniqueFathers.containsKey(fatherPhone)) {
+                            ParentCreationDTO existingFather = uniqueFathers.get(fatherPhone);
+                            validateParentNameConsistency(existingFather, father, "cha", rowIndex);
+                        }
                         uniqueFathers.put(fatherPhone, father);
                     }
                     
@@ -90,6 +96,11 @@ public class ExcelService implements IExcelService {
                     String motherPhone = null;
                     if (mother != null && mother.getPhone() != null) {
                         motherPhone = mother.getPhone();
+                        // Check if this phone already exists with different name
+                        if (uniqueMothers.containsKey(motherPhone)) {
+                            ParentCreationDTO existingMother = uniqueMothers.get(motherPhone);
+                            validateParentNameConsistency(existingMother, mother, "mẹ", rowIndex);
+                        }
                         uniqueMothers.put(motherPhone, mother);
                     }
                     
@@ -465,14 +476,31 @@ public class ExcelService implements IExcelService {
             throw new IllegalArgumentException("Số điện thoại cha là bắt buộc khi có thông tin cha");
         }
         
+        // Validate name is provided when phone is provided
+        if (isEmpty(firstName) || isEmpty(lastName)) {
+            throw new IllegalArgumentException("Họ và tên cha là bắt buộc khi có số điện thoại cha");
+        }
+        
+        // Validate phone number format
+        String phoneError = PhoneValidator.validatePhone(phone);
+        if (phoneError != null) {
+            throw new IllegalArgumentException(phoneError + " (Dòng " + (rowIndex + 1) + ")");
+        }
+        
         ParentCreationDTO father = new ParentCreationDTO();
-        father.setFirstName(firstName != null ? firstName : "");
-        father.setLastName(lastName != null ? lastName : "");
+        father.setFirstName(firstName);
+        father.setLastName(lastName);
         father.setPhone(phone);
         father.setGender(getStringValue(row, COL_FATHER_GENDER, "M"));
         father.setJobTitle(getStringValue(row, COL_FATHER_JOB_TITLE));
         father.setAddress(getStringValue(row, COL_FATHER_ADDRESS));
         father.setDob(getDateValue(row, COL_FATHER_DOB));
+        
+        // Validate parent age if DOB is provided
+        if (father.getDob() != null) {
+            validateParentAge(father.getDob());
+        }
+        
         // Enable will be set later in importStudentsFromExcel for validation
         father.setEnabled(null);
         
@@ -494,14 +522,31 @@ public class ExcelService implements IExcelService {
             throw new IllegalArgumentException("Số điện thoại mẹ là bắt buộc khi có thông tin mẹ");
         }
         
+        // Validate name is provided when phone is provided
+        if (isEmpty(firstName) || isEmpty(lastName)) {
+            throw new IllegalArgumentException("Họ và tên mẹ là bắt buộc khi có số điện thoại mẹ");
+        }
+        
+        // Validate phone number format
+        String phoneError = PhoneValidator.validatePhone(phone);
+        if (phoneError != null) {
+            throw new IllegalArgumentException(phoneError + " (Dòng " + (rowIndex + 1) + ")");
+        }
+        
         ParentCreationDTO mother = new ParentCreationDTO();
-        mother.setFirstName(firstName != null ? firstName : "");
-        mother.setLastName(lastName != null ? lastName : "");
+        mother.setFirstName(firstName);
+        mother.setLastName(lastName);
         mother.setPhone(phone);
         mother.setGender(getStringValue(row, COL_MOTHER_GENDER, "F"));
         mother.setJobTitle(getStringValue(row, COL_MOTHER_JOB_TITLE));
         mother.setAddress(getStringValue(row, COL_MOTHER_ADDRESS));
         mother.setDob(getDateValue(row, COL_MOTHER_DOB));
+        
+        // Validate parent age if DOB is provided
+        if (mother.getDob() != null) {
+            validateParentAge(mother.getDob());
+        }
+        
         // Enable will be set later in importStudentsFromExcel for validation
         mother.setEnabled(null);
         
@@ -619,11 +664,6 @@ public class ExcelService implements IExcelService {
         LocalDate currentDate = LocalDate.now();
         int age = currentDate.getYear() - dateOfBirth.getYear();
         
-        // Check if birthday has passed this year
-        if (dateOfBirth.plusYears(age).isAfter(currentDate)) {
-            age--;
-        }
-        
         if (age > 12) {
             throw new IllegalArgumentException("Học sinh phải dưới hoặc bằng 12 tuổi. Tuổi hiện tại: " + age);
         }
@@ -632,10 +672,47 @@ public class ExcelService implements IExcelService {
         if (age < 2) {
             throw new IllegalArgumentException("Học sinh phải ít nhất 2 tuổi. Tuổi hiện tại: " + age);
         }
+    }
+    
+    /**
+     * Validate parent age - must be at least 18 years old
+     * Age calculation is based on year only, not specific birth date
+     */
+    private void validateParentAge(LocalDate dateOfBirth) {
+        if (dateOfBirth == null) {
+            return; // DOB is optional for parents
+        }
+        
+        LocalDate currentDate = LocalDate.now();
+        int age = currentDate.getYear() - dateOfBirth.getYear();
+        
+        if (age < 18) {
+            throw new IllegalArgumentException("Phụ huynh phải ít nhất 18 tuổi. Tuổi hiện tại: " + age);
+        }
+        
+        if (age > 100) {
+            throw new IllegalArgumentException("Tuổi phụ huynh không hợp lệ. Tuổi hiện tại: " + age);
+        }
+    }
+    
+    /**
+     * Validate that parent with same phone number has consistent name
+     */
+    private void validateParentNameConsistency(ParentCreationDTO existing, ParentCreationDTO current, String parentType, int rowIndex) {
+        String existingFullName = (existing.getLastName() + " " + existing.getFirstName()).trim();
+        String currentFullName = (current.getLastName() + " " + current.getFirstName()).trim();
+        
+        if (!existingFullName.equalsIgnoreCase(currentFullName)) {
+            throw new IllegalArgumentException("Số điện thoại " + current.getPhone() + 
+                " của " + parentType + " ở dòng " + (rowIndex + 1) + 
+                " đã được sử dụng bởi phụ huynh khác với tên: " + existingFullName + 
+                ". Vui lòng kiểm tra lại thông tin họ tên phụ huynh.");
+        }
     }    /**
      * Auto-set className based on student's age
      * 2-5 years old: "Mầm non"
      * 6-12 years old: Keep existing className unchanged
+     * Age calculation is based on year only, not specific birth date
      */
     private void autoSetClassNameForAge(StudentCreationDTO student) {
         if (student.getDob() == null) {
@@ -644,11 +721,6 @@ public class ExcelService implements IExcelService {
         
         LocalDate currentDate = LocalDate.now();
         int age = currentDate.getYear() - student.getDob().getYear();
-        
-        // Check if birthday has passed this year
-        if (student.getDob().plusYears(age).isAfter(currentDate)) {
-            age--;
-        }
         
         if (age >= 2 && age <= 5) {
             // For kindergarten age (2-5), always set to "Mầm non"
