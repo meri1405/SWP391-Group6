@@ -9,12 +9,19 @@ import java.time.LocalDate;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class HearingDTO {
+public class RespiratoryDTO {
     private Long id;
-    private int leftEar;
-    private int rightEar;
+    private int breathingRate;
+    private String breathingSound;
+    private boolean wheezing;
+    private boolean cough;
+    private boolean breathingDifficulty;
+    private Integer oxygenSaturation;
+    private String treatment;
     private String description;
     private String doctorName;
     private LocalDate dateOfExamination;
+    private LocalDate followUpDate;
+    private boolean isAbnormal;
     private Long healthProfileId;
 }

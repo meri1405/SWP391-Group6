@@ -364,7 +364,7 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
   };
 
   const handleScheduleModalCancel = () => {
-    setScheduleModal({ visible: true });
+    setScheduleModal({ visible: false });
   };
 
   const handleScheduleModalConfirm = async (scheduleData) => {

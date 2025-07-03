@@ -36,6 +36,9 @@ public class Skin {
     @Column(name = "dateOfExamination", nullable = false)
     private LocalDate dateOfExamination;
 
+    @Column(name = "doctorName", nullable = true)
+    private String doctorName;
+
     @Column(name = "isAbnormal", nullable = false)
     private boolean isAbnormal;
 

@@ -16,6 +16,7 @@ public class VisionDTO {
     private int visionLeftWithGlass;
     private int visionRightWithGlass;
     private String visionDescription;
+    private String doctorName;
     private LocalDate dateOfExamination;
     private Long healthProfileId;
 }

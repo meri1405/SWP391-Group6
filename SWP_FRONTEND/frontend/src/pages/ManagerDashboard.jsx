@@ -16,6 +16,7 @@ import { MedicalEventManagement } from "../components/dashboard/events";
 import InventorySection from "../components/dashboard/InventorySection";
 import { Notifications } from "../components/dashboard/notifications";
 import StudentsSection from "../components/dashboard/StudentsSection";
+import managerApi from "../api/managerApi";
 import "../styles/AdminDashboard.css";
 import { useAuth } from "../contexts/AuthContext";
 import { restockRequestApi } from "../api/restockRequestApi";
@@ -33,29 +34,18 @@ const ManagerDashboard = () => {
   const { user } = useAuth();
 
   // Function to update notification count
-  const updateNotificationCount = useCallback(() => {
+  const updateNotificationCount = useCallback(async () => {
     if (!user) return;
 
-    // Fetch unread notification count from the API
-    fetch(`/api/notifications/unread-count?userId=${user.id}`, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
-      },
-    })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Failed to fetch notification count");
-        }
-        return response.json();
-      })
-      .then((data) => {
-        setNotificationCount(data.count || 0);
-      })
-      .catch((error) => {
-        console.error("Failed to fetch notification count:", error);
-        // Default to 0 on error
-        setNotificationCount(0);
-      });
+    try {
+      // Use the manager API to fetch unread notification count
+      const data = await managerApi.getUnreadNotificationCount();
+      setNotificationCount(data.count || 0);
+    } catch (error) {
+      console.error("Failed to fetch notification count:", error);
+      // Default to 0 on error
+      setNotificationCount(0);
+    }
   }, [user]);
 
   // Subscribe to restock request notifications

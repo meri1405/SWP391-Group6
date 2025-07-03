@@ -10,6 +10,7 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.*;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.CampaignStatus;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.FormStatus;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.HealthCheckCategory;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.ResultStatus;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.TimeSlot;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.*;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IHealthCheckCampaignService;
@@ -38,6 +39,7 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
     private final IHealthCheckFormService healthCheckFormService;
     private final StudentRepository studentRepository;
     private final HealthCheckFormRepository healthCheckFormRepository;
+    private final HealthCheckResultRepository healthCheckResultRepository;
     private final NotificationRepository notificationRepository;
     private final VisionRepository visionRepository;
     private final HearingRepository hearingRepository;
@@ -219,6 +221,11 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
 
         // Notify manager about campaign scheduling and target count
         notificationService.notifyManagerAboutHealthCheckCampaignScheduling(savedCampaign, targetCount);
+        
+        // Send detailed schedule notifications to parents
+        notificationService.notifyParentsAboutHealthCheckSchedule(savedCampaign);
+
+        notificationService.notifyNurseAboutHealthCheckCampaignScheduling(savedCampaign);
 
         return savedCampaign;
     }
@@ -553,6 +560,20 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
             dto.setApprovedByName(campaign.getApprovedBy().getFullName());
         }
 
+        // Schedule information
+        dto.setTimeSlot(campaign.getTimeSlot());
+        dto.setScheduleNotes(campaign.getScheduleNotes());
+        
+        // Calculate confirmed count from health check forms
+        if (campaign.getForms() != null) {
+            long confirmedCount = campaign.getForms().stream()
+                    .filter(form -> form.getStatus() == FormStatus.CONFIRMED)
+                    .count();
+            dto.setConfirmedCount((int) confirmedCount);
+        } else {
+            dto.setConfirmedCount(0);
+        }
+
         return dto;
     }
 
@@ -859,6 +880,11 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
         Student student = studentRepository.findById(request.getStudentId())
             .orElseThrow(() -> new RuntimeException("Student not found with ID: " + request.getStudentId()));
         
+        // Find the health check form for this student and campaign
+        HealthCheckForm form = healthCheckFormRepository
+            .findByCampaignAndStudent(campaign, student)
+            .orElseThrow(() -> new RuntimeException("Health check form not found for student ID: " + student.getStudentID() + " and campaign ID: " + campaign.getId()));
+        
         // Get the student's health profile
         Set<HealthProfile> healthProfiles = student.getHealthProfiles();
         if (healthProfiles == null || healthProfiles.isEmpty()) {
@@ -866,117 +892,210 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
         }
         HealthProfile healthProfile = healthProfiles.iterator().next();
         
-        // Get detailed results from request
+        // Get basic measurements from detailed results (fallback to 0 if not provided)
         Map<String, Object> detailedResults = request.getDetailedResults();
         if (detailedResults == null) {
             throw new RuntimeException("Detailed results are required");
         }
         
+        double weight = getDoubleValue(detailedResults, "weight");
+        double height = getDoubleValue(detailedResults, "height");
+        Double bmi = null;
+        if (weight > 0 && height > 0) {
+            bmi = weight / Math.pow(height / 100, 2); // height in cm, convert to meters
+        }
+        
+        // Get nurse information (for now, use campaign creator as nurse)
+        User nurse = campaign.getCreatedBy();
+        
         LocalDate examinationDate = LocalDate.now();
         
         // Process each category result
         for (RecordHealthCheckResultRequest.CategoryResult categoryResult : request.getCategories()) {
-            String category = categoryResult.getCategory();
+            String categoryStr = categoryResult.getCategory();
+            HealthCheckCategory category = HealthCheckCategory.valueOf(categoryStr);
             
             // Get the detailed data for this category
             @SuppressWarnings("unchecked")
-            Map<String, Object> categoryData = (Map<String, Object>) detailedResults.get(category);
+            Map<String, Object> categoryData = (Map<String, Object>) detailedResults.get(categoryStr);
             if (categoryData == null) {
-                System.out.println("WARNING: No detailed data found for category: " + category);
+                System.out.println("WARNING: No detailed data found for category: " + categoryStr);
                 continue;
             }
             
-            // Save data to appropriate table based on category
-            switch (category) {
-                case "VISION":
-                    Vision vision = new Vision();
-                    vision.setHealthProfile(healthProfile);
-                    vision.setVisionLeft(getIntValue(categoryData, "visionLeft"));
-                    vision.setVisionRight(getIntValue(categoryData, "visionRight"));
-                    vision.setVisionLeftWithGlass(getIntValue(categoryData, "visionLeftWithGlass"));
-                    vision.setVisionRightWithGlass(getIntValue(categoryData, "visionRightWithGlass"));
-                    vision.setVisionDescription(getStringValue(categoryData, "visionDescription"));
-                    vision.setDateOfExamination(examinationDate);
-                    visionRepository.save(vision);
-                    System.out.println("DEBUG: Saved vision result for student " + student.getStudentID());
-                    break;
-                    
-                case "HEARING":
-                    Hearing hearing = new Hearing();
-                    hearing.setHealthProfile(healthProfile);
-                    hearing.setLeftEar(getIntValue(categoryData, "leftEar"));
-                    hearing.setRightEar(getIntValue(categoryData, "rightEar"));
-                    hearing.setDescription(getStringValue(categoryData, "description"));
-                    hearing.setDateOfExamination(examinationDate);
-                    hearingRepository.save(hearing);
-                    System.out.println("DEBUG: Saved hearing result for student " + student.getStudentID());
-                    break;
-                    
-                case "ORAL":
-                    Oral oral = new Oral();
-                    oral.setHealthProfile(healthProfile);
-                    oral.setTeethCondition(getStringValue(categoryData, "teethCondition"));
-                    oral.setGumsCondition(getStringValue(categoryData, "gumsCondition"));
-                    oral.setTongueCondition(getStringValue(categoryData, "tongueCondition"));
-                    oral.setDescription(getStringValue(categoryData, "description"));
-                    oral.setAbnormal(getBooleanValue(categoryData, "isAbnormal"));
-                    oral.setDateOfExamination(examinationDate);
-                    oralRepository.save(oral);
-                    System.out.println("DEBUG: Saved oral result for student " + student.getStudentID());
-                    break;
-                    
-                case "SKIN":
-                    Skin skin = new Skin();
-                    skin.setHealthProfile(healthProfile);
-                    skin.setSkinColor(getStringValue(categoryData, "skinColor"));
-                    skin.setRashes(getBooleanValue(categoryData, "rashes"));
-                    skin.setLesions(getBooleanValue(categoryData, "lesions"));
-                    skin.setDryness(getBooleanValue(categoryData, "dryness"));
-                    skin.setEczema(getBooleanValue(categoryData, "eczema"));
-                    skin.setPsoriasis(getBooleanValue(categoryData, "psoriasis"));
-                    skin.setSkinInfection(getBooleanValue(categoryData, "skinInfection"));
-                    skin.setAllergies(getBooleanValue(categoryData, "allergies"));
-                    skin.setDescription(getStringValue(categoryData, "description"));
-                    skin.setTreatment(getStringValue(categoryData, "treatment"));
-                    skin.setAbnormal(getBooleanValue(categoryData, "isAbnormal"));
-                    skin.setDateOfExamination(examinationDate);
-                    String followUpDateStr = getStringValue(categoryData, "followUpDate");
-                    if (followUpDateStr != null && !followUpDateStr.isEmpty()) {
-                        skin.setFollowUpDate(LocalDate.parse(followUpDateStr));
-                    }
-                    skinRepository.save(skin);
-                    System.out.println("DEBUG: Saved skin result for student " + student.getStudentID());
-                    break;
-                    
-                case "RESPIRATORY":
-                    Respiratory respiratory = new Respiratory();
-                    respiratory.setHealthProfile(healthProfile);
-                    respiratory.setBreathingRate(getIntValue(categoryData, "breathingRate"));
-                    respiratory.setBreathingSound(getStringValue(categoryData, "breathingSound"));
-                    respiratory.setWheezing(getBooleanValue(categoryData, "wheezing"));
-                    respiratory.setCough(getBooleanValue(categoryData, "cough"));
-                    respiratory.setBreathingDifficulty(getBooleanValue(categoryData, "breathingDifficulty"));
-                    Integer oxygenSat = getIntegerValue(categoryData, "oxygenSaturation");
-                    respiratory.setOxygenSaturation(oxygenSat);
-                    respiratory.setTreatment(getStringValue(categoryData, "treatment"));
-                    respiratory.setDescription(getStringValue(categoryData, "description"));
-                    respiratory.setAbnormal(getBooleanValue(categoryData, "isAbnormal"));
-                    respiratory.setDateOfExamination(examinationDate);
-                    String followUpDateStr2 = getStringValue(categoryData, "followUpDate");
-                    if (followUpDateStr2 != null && !followUpDateStr2.isEmpty()) {
-                        respiratory.setFollowUpDate(LocalDate.parse(followUpDateStr2));
-                    }
-                    respiratoryRepository.save(respiratory);
-                    System.out.println("DEBUG: Saved respiratory result for student " + student.getStudentID());
-                    break;
-                    
-                default:
-                    System.out.println("WARNING: Unknown category: " + category);
-                    break;
+            // Create HealthCheckResult record
+            HealthCheckResult healthCheckResult = new HealthCheckResult();
+            healthCheckResult.setForm(form);
+            healthCheckResult.setStudent(student);
+            healthCheckResult.setHealthProfile(healthProfile);
+            healthCheckResult.setNurse(nurse);
+            healthCheckResult.setCategory(category);
+            healthCheckResult.setWeight(weight);
+            healthCheckResult.setHeight(height);
+            healthCheckResult.setBmi(bmi);
+            healthCheckResult.setPerformedAt(LocalDateTime.now());
+            
+            // Determine if abnormal and set status/notes
+            boolean isAbnormal = getBooleanValue(categoryData, "isAbnormal");
+            healthCheckResult.setAbnormal(isAbnormal);
+            
+            // Set result status based on abnormality and specific conditions
+            ResultStatus status = determineResultStatus(categoryData, isAbnormal);
+            healthCheckResult.setStatus(status);
+            
+            // Set notes and recommendations
+            String notes = getStringValue(categoryData, "description");
+            String recommendations = getStringValue(categoryData, "treatment");
+            if (recommendations == null || recommendations.isEmpty()) {
+                recommendations = getStringValue(categoryData, "recommendations");
             }
+            healthCheckResult.setResultNotes(notes);
+            healthCheckResult.setRecommendations(recommendations);
+            
+            // Save to category-specific table and get the ID
+            Long categoryResultId = saveCategorySpecificResult(category, categoryData, healthProfile, examinationDate);
+            healthCheckResult.setCategoryResultId(categoryResultId);
+            
+            // Save the main health check result
+            HealthCheckResult savedResult = healthCheckResultRepository.save(healthCheckResult);
+            
+            System.out.println("DEBUG: Saved health check result for student " + student.getStudentID() + ", category: " + category + ", ID: " + savedResult.getId());
         }
         
-        System.out.println("DEBUG: Successfully recorded health check results for student " + student.getStudentID());
+        System.out.println("DEBUG: Successfully recorded all health check results for student " + student.getStudentID());
+    }
+    
+    private ResultStatus determineResultStatus(Map<String, Object> categoryData, boolean isAbnormal) {
+        if (!isAbnormal) {
+            return ResultStatus.NORMAL;
+        }
+        
+        // Check for urgent conditions
+        boolean hasUrgentCondition = getBooleanValue(categoryData, "urgent") || 
+                                   getBooleanValue(categoryData, "severeAbnormal") ||
+                                   getBooleanValue(categoryData, "requiresImmediateAttention");
+        
+        if (hasUrgentCondition) {
+            return ResultStatus.URGENT;
+        }
+        
+        // Check for follow-up requirements
+        String followUpDate = getStringValue(categoryData, "followUpDate");
+        boolean needsFollowUp = (followUpDate != null && !followUpDate.isEmpty()) ||
+                              getBooleanValue(categoryData, "needsFollowUp") ||
+                              getBooleanValue(categoryData, "requiresFollowUp");
+        
+        if (needsFollowUp) {
+            return ResultStatus.REQUIRES_FOLLOWUP;
+        }
+        
+        // Check for treatment requirements
+        String treatment = getStringValue(categoryData, "treatment");
+        boolean needsTreatment = (treatment != null && !treatment.isEmpty()) ||
+                               getBooleanValue(categoryData, "needsTreatment");
+        
+        if (needsTreatment) {
+            return ResultStatus.NEEDS_ATTENTION;
+        }
+        
+        // Default to minor concern for abnormal but not urgent conditions
+        return ResultStatus.MINOR_CONCERN;
+    }
+    
+    private Long saveCategorySpecificResult(HealthCheckCategory category, Map<String, Object> categoryData, 
+                                          HealthProfile healthProfile, LocalDate examinationDate) {
+        switch (category) {
+            case VISION:
+                Vision vision = new Vision();
+                // Don't link to health profile for health check results
+                vision.setVisionLeft(getIntValue(categoryData, "visionLeft"));
+                vision.setVisionRight(getIntValue(categoryData, "visionRight"));
+                vision.setVisionLeftWithGlass(getIntValue(categoryData, "visionLeftWithGlass"));
+                vision.setVisionRightWithGlass(getIntValue(categoryData, "visionRightWithGlass"));
+                vision.setVisionDescription(getStringValue(categoryData, "visionDescription"));
+                vision.setDoctorName(getStringValue(categoryData, "doctorName"));
+                vision.setDateOfExamination(examinationDate);
+                Vision savedVision = visionRepository.save(vision);
+                System.out.println("DEBUG: Saved vision result with ID " + savedVision.getId());
+                return savedVision.getId();
+                
+            case HEARING:
+                Hearing hearing = new Hearing();
+                // Don't link to health profile for health check results
+                hearing.setLeftEar(getIntValue(categoryData, "leftEar"));
+                hearing.setRightEar(getIntValue(categoryData, "rightEar"));
+                hearing.setDescription(getStringValue(categoryData, "description"));
+                hearing.setDoctorName(getStringValue(categoryData, "doctorName"));
+                hearing.setDateOfExamination(examinationDate);
+                Hearing savedHearing = hearingRepository.save(hearing);
+                System.out.println("DEBUG: Saved hearing result with ID " + savedHearing.getId());
+                return savedHearing.getId();
+                
+            case ORAL:
+                Oral oral = new Oral();
+                // Don't link to health profile for health check results
+                oral.setTeethCondition(getStringValue(categoryData, "teethCondition"));
+                oral.setGumsCondition(getStringValue(categoryData, "gumsCondition"));
+                oral.setTongueCondition(getStringValue(categoryData, "tongueCondition"));
+                oral.setDescription(getStringValue(categoryData, "description"));
+                oral.setDoctorName(getStringValue(categoryData, "doctorName"));
+                oral.setAbnormal(getBooleanValue(categoryData, "isAbnormal"));
+                oral.setDateOfExamination(examinationDate);
+                Oral savedOral = oralRepository.save(oral);
+                System.out.println("DEBUG: Saved oral result with ID " + savedOral.getId());
+                return savedOral.getId();
+                
+            case SKIN:
+                Skin skin = new Skin();
+                // Don't link to health profile for health check results
+                skin.setSkinColor(getStringValue(categoryData, "skinColor"));
+                skin.setRashes(getBooleanValue(categoryData, "rashes"));
+                skin.setLesions(getBooleanValue(categoryData, "lesions"));
+                skin.setDryness(getBooleanValue(categoryData, "dryness"));
+                skin.setEczema(getBooleanValue(categoryData, "eczema"));
+                skin.setPsoriasis(getBooleanValue(categoryData, "psoriasis"));
+                skin.setSkinInfection(getBooleanValue(categoryData, "skinInfection"));
+                skin.setAllergies(getBooleanValue(categoryData, "allergies"));
+                skin.setDescription(getStringValue(categoryData, "description"));
+                skin.setTreatment(getStringValue(categoryData, "treatment"));
+                skin.setAbnormal(getBooleanValue(categoryData, "isAbnormal"));
+                skin.setDoctorName(getStringValue(categoryData, "doctorName"));
+                skin.setDateOfExamination(examinationDate);
+                String followUpDateStr = getStringValue(categoryData, "followUpDate");
+                if (followUpDateStr != null && !followUpDateStr.isEmpty()) {
+                    skin.setFollowUpDate(LocalDate.parse(followUpDateStr));
+                }
+                Skin savedSkin = skinRepository.save(skin);
+                System.out.println("DEBUG: Saved skin result with ID " + savedSkin.getId());
+                return savedSkin.getId();
+                
+            case RESPIRATORY:
+                Respiratory respiratory = new Respiratory();
+                // Don't link to health profile for health check results
+                respiratory.setBreathingRate(getIntValue(categoryData, "breathingRate"));
+                respiratory.setBreathingSound(getStringValue(categoryData, "breathingSound"));
+                respiratory.setWheezing(getBooleanValue(categoryData, "wheezing"));
+                respiratory.setCough(getBooleanValue(categoryData, "cough"));
+                respiratory.setBreathingDifficulty(getBooleanValue(categoryData, "breathingDifficulty"));
+                Integer oxygenSat = getIntegerValue(categoryData, "oxygenSaturation");
+                respiratory.setOxygenSaturation(oxygenSat);
+                respiratory.setTreatment(getStringValue(categoryData, "treatment"));
+                respiratory.setDescription(getStringValue(categoryData, "description"));
+                respiratory.setAbnormal(getBooleanValue(categoryData, "isAbnormal"));
+                respiratory.setDoctorName(getStringValue(categoryData, "doctorName"));
+                respiratory.setDateOfExamination(examinationDate);
+                String followUpDateStr2 = getStringValue(categoryData, "followUpDate");
+                if (followUpDateStr2 != null && !followUpDateStr2.isEmpty()) {
+                    respiratory.setFollowUpDate(LocalDate.parse(followUpDateStr2));
+                }
+                Respiratory savedRespiratory = respiratoryRepository.save(respiratory);
+                System.out.println("DEBUG: Saved respiratory result with ID " + savedRespiratory.getId());
+                return savedRespiratory.getId();
+                
+            default:
+                System.out.println("WARNING: Unknown category: " + category);
+                return null;
+        }
     }
     
     // Helper methods for data extraction
@@ -1002,6 +1121,18 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
             return Integer.parseInt(value.toString());
         } catch (Exception e) {
             return 0;
+        }
+    }
+    
+    private double getDoubleValue(Map<String, Object> data, String key) {
+        Object value = data.get(key);
+        if (value instanceof Number) {
+            return ((Number) value).doubleValue();
+        }
+        try {
+            return Double.parseDouble(value.toString());
+        } catch (Exception e) {
+            return 0.0;
         }
     }
     
@@ -1068,122 +1199,162 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
             Map<String, Object> studentResult = new HashMap<>();
             Student student = form.getStudent();
             
-            // Get the student's health profile (assume one per student, get the first one)
-            Set<HealthProfile> healthProfiles = student.getHealthProfiles();
-            if (healthProfiles == null || healthProfiles.isEmpty()) {
-                System.out.println("WARNING: No health profile found for student ID: " + student.getStudentID());
-                continue; // Skip this student if no health profile
-            }
-            HealthProfile healthProfile = healthProfiles.iterator().next();
-            
             studentResult.put("studentID", student.getStudentID());
             studentResult.put("fullName", student.getFullName());
             studentResult.put("className", student.getClassName());
             studentResult.put("formId", form.getId());
             studentResult.put("respondedAt", form.getRespondedAt());
             
-            // Get results for each category in the campaign
-            Map<String, Object> categoryResults = new HashMap<>();
+            // Get health check results from HealthCheckResult table
+            List<HealthCheckResult> healthCheckResults = healthCheckResultRepository.findByForm(form);
+            System.out.println("DEBUG: Found " + healthCheckResults.size() + " health check results for form " + form.getId());
             
-            for (HealthCheckCategory category : campaign.getCategories()) {
-                switch (category) {
-                    case VISION:
-                        List<Vision> visionResults = visionRepository.findByHealthProfile(healthProfile);
-                        if (!visionResults.isEmpty()) {
-                            Vision latestVision = visionResults.get(visionResults.size() - 1);
-                            Map<String, Object> visionData = new HashMap<>();
-                            visionData.put("id", latestVision.getId());
-                            visionData.put("visionLeft", latestVision.getVisionLeft());
-                            visionData.put("visionRight", latestVision.getVisionRight());
-                            visionData.put("visionLeftWithGlass", latestVision.getVisionLeftWithGlass());
-                            visionData.put("visionRightWithGlass", latestVision.getVisionRightWithGlass());
-                            visionData.put("description", latestVision.getVisionDescription());
-                            visionData.put("dateOfExamination", latestVision.getDateOfExamination());
-                            categoryResults.put("VISION", visionData);
-                        }
-                        break;
-                        
-                    case HEARING:
-                        List<Hearing> hearingResults = hearingRepository.findByHealthProfile(healthProfile);
-                        if (!hearingResults.isEmpty()) {
-                            Hearing latestHearing = hearingResults.get(hearingResults.size() - 1);
-                            Map<String, Object> hearingData = new HashMap<>();
-                            hearingData.put("id", latestHearing.getId());
-                            hearingData.put("leftEar", latestHearing.getLeftEar());
-                            hearingData.put("rightEar", latestHearing.getRightEar());
-                            hearingData.put("description", latestHearing.getDescription());
-                            hearingData.put("dateOfExamination", latestHearing.getDateOfExamination());
-                            categoryResults.put("HEARING", hearingData);
-                        }
-                        break;
-                        
-                    case ORAL:
-                        List<Oral> oralResults = oralRepository.findByHealthProfile(healthProfile);
-                        if (!oralResults.isEmpty()) {
-                            Oral latestOral = oralResults.get(oralResults.size() - 1);
-                            Map<String, Object> oralData = new HashMap<>();
-                            oralData.put("id", latestOral.getId());
-                            oralData.put("teethCondition", latestOral.getTeethCondition());
-                            oralData.put("gumsCondition", latestOral.getGumsCondition());
-                            oralData.put("tongueCondition", latestOral.getTongueCondition());
-                            oralData.put("description", latestOral.getDescription());
-                            oralData.put("isAbnormal", latestOral.isAbnormal());
-                            oralData.put("dateOfExamination", latestOral.getDateOfExamination());
-                            categoryResults.put("ORAL", oralData);
-                        }
-                        break;
-                        
-                    case SKIN:
-                        List<Skin> skinResults = skinRepository.findByHealthProfile(healthProfile);
-                        if (!skinResults.isEmpty()) {
-                            Skin latestSkin = skinResults.get(skinResults.size() - 1);
-                            Map<String, Object> skinData = new HashMap<>();
-                            skinData.put("id", latestSkin.getId());
-                            skinData.put("skinColor", latestSkin.getSkinColor());
-                            skinData.put("rashes", latestSkin.isRashes());
-                            skinData.put("lesions", latestSkin.isLesions());
-                            skinData.put("dryness", latestSkin.isDryness());
-                            skinData.put("eczema", latestSkin.isEczema());
-                            skinData.put("psoriasis", latestSkin.isPsoriasis());
-                            skinData.put("skinInfection", latestSkin.isSkinInfection());
-                            skinData.put("allergies", latestSkin.isAllergies());
-                            skinData.put("description", latestSkin.getDescription());
-                            skinData.put("treatment", latestSkin.getTreatment());
-                            skinData.put("isAbnormal", latestSkin.isAbnormal());
-                            skinData.put("dateOfExamination", latestSkin.getDateOfExamination());
-                            skinData.put("followUpDate", latestSkin.getFollowUpDate());
-                            categoryResults.put("SKIN", skinData);
-                        }
-                        break;
-                        
-                    case RESPIRATORY:
-                        List<Respiratory> respiratoryResults = respiratoryRepository.findByHealthProfile(healthProfile);
-                        if (!respiratoryResults.isEmpty()) {
-                            Respiratory latestRespiratory = respiratoryResults.get(respiratoryResults.size() - 1);
-                            Map<String, Object> respiratoryData = new HashMap<>();
-                            respiratoryData.put("id", latestRespiratory.getId());
-                            respiratoryData.put("breathingRate", latestRespiratory.getBreathingRate());
-                            respiratoryData.put("breathingSound", latestRespiratory.getBreathingSound());
-                            respiratoryData.put("wheezing", latestRespiratory.isWheezing());
-                            respiratoryData.put("cough", latestRespiratory.isCough());
-                            respiratoryData.put("breathingDifficulty", latestRespiratory.isBreathingDifficulty());
-                            respiratoryData.put("oxygenSaturation", latestRespiratory.getOxygenSaturation());
-                            respiratoryData.put("treatment", latestRespiratory.getTreatment());
-                            respiratoryData.put("description", latestRespiratory.getDescription());
-                            respiratoryData.put("isAbnormal", latestRespiratory.isAbnormal());
-                            respiratoryData.put("dateOfExamination", latestRespiratory.getDateOfExamination());
-                            respiratoryData.put("followUpDate", latestRespiratory.getFollowUpDate());
-                            categoryResults.put("RESPIRATORY", respiratoryData);
-                        }
-                        break;
+            Map<String, Object> categoryResults = new HashMap<>();
+            Map<String, Object> overallResults = new HashMap<>();
+            
+            // Process each health check result
+            for (HealthCheckResult result : healthCheckResults) {
+                HealthCheckCategory category = result.getCategory();
+                
+                // Create category-specific result data
+                Map<String, Object> categoryData = getCategorySpecificData(result);
+                
+                // Add common fields from HealthCheckResult
+                categoryData.put("healthCheckResultId", result.getId());
+                categoryData.put("weight", result.getWeight());
+                categoryData.put("height", result.getHeight());
+                categoryData.put("bmi", result.getBmi());
+                categoryData.put("status", result.getStatus());
+                categoryData.put("isAbnormal", result.isAbnormal());
+                categoryData.put("resultNotes", result.getResultNotes());
+                categoryData.put("recommendations", result.getRecommendations());
+                categoryData.put("performedAt", result.getPerformedAt());
+                categoryData.put("nurseId", result.getNurse() != null ? result.getNurse().getId() : null);
+                categoryData.put("nurseName", result.getNurse() != null ? result.getNurse().getFullName() : null);
+                
+                categoryResults.put(category.toString(), categoryData);
+                
+                // Store overall results (weight, height, BMI) - use the first one found
+                if (overallResults.isEmpty()) {
+                    overallResults.put("weight", result.getWeight());
+                    overallResults.put("height", result.getHeight());
+                    overallResults.put("bmi", result.getBmi());
+                    overallResults.put("performedAt", result.getPerformedAt());
+                    overallResults.put("nurseId", result.getNurse() != null ? result.getNurse().getId() : null);
+                    overallResults.put("nurseName", result.getNurse() != null ? result.getNurse().getFullName() : null);
                 }
             }
             
             studentResult.put("results", categoryResults);
+            studentResult.put("overallResults", overallResults);
             results.add(studentResult);
         }
         
         System.out.println("DEBUG: Returning " + results.size() + " student results");
         return results;
+    }
+    
+    private Map<String, Object> getCategorySpecificData(HealthCheckResult result) {
+        Map<String, Object> categoryData = new HashMap<>();
+        
+        if (result.getCategoryResultId() == null) {
+            System.out.println("WARNING: No category result ID found for result " + result.getId());
+            return categoryData;
+        }
+        
+        Long categoryResultId = result.getCategoryResultId();
+        HealthCheckCategory category = result.getCategory();
+        
+        try {
+            switch (category) {
+                case VISION:
+                    Optional<Vision> visionOpt = visionRepository.findById(categoryResultId);
+                    if (visionOpt.isPresent()) {
+                        Vision vision = visionOpt.get();
+                        categoryData.put("id", vision.getId());
+                        categoryData.put("visionLeft", vision.getVisionLeft());
+                        categoryData.put("visionRight", vision.getVisionRight());
+                        categoryData.put("visionLeftWithGlass", vision.getVisionLeftWithGlass());
+                        categoryData.put("visionRightWithGlass", vision.getVisionRightWithGlass());
+                        categoryData.put("description", vision.getVisionDescription());
+                        categoryData.put("dateOfExamination", vision.getDateOfExamination());
+                    }
+                    break;
+                    
+                case HEARING:
+                    Optional<Hearing> hearingOpt = hearingRepository.findById(categoryResultId);
+                    if (hearingOpt.isPresent()) {
+                        Hearing hearing = hearingOpt.get();
+                        categoryData.put("id", hearing.getId());
+                        categoryData.put("leftEar", hearing.getLeftEar());
+                        categoryData.put("rightEar", hearing.getRightEar());
+                        categoryData.put("description", hearing.getDescription());
+                        categoryData.put("dateOfExamination", hearing.getDateOfExamination());
+                    }
+                    break;
+                    
+                case ORAL:
+                    Optional<Oral> oralOpt = oralRepository.findById(categoryResultId);
+                    if (oralOpt.isPresent()) {
+                        Oral oral = oralOpt.get();
+                        categoryData.put("id", oral.getId());
+                        categoryData.put("teethCondition", oral.getTeethCondition());
+                        categoryData.put("gumsCondition", oral.getGumsCondition());
+                        categoryData.put("tongueCondition", oral.getTongueCondition());
+                        categoryData.put("description", oral.getDescription());
+                        categoryData.put("categoryIsAbnormal", oral.isAbnormal());
+                        categoryData.put("dateOfExamination", oral.getDateOfExamination());
+                    }
+                    break;
+                    
+                case SKIN:
+                    Optional<Skin> skinOpt = skinRepository.findById(categoryResultId);
+                    if (skinOpt.isPresent()) {
+                        Skin skin = skinOpt.get();
+                        categoryData.put("id", skin.getId());
+                        categoryData.put("skinColor", skin.getSkinColor());
+                        categoryData.put("rashes", skin.isRashes());
+                        categoryData.put("lesions", skin.isLesions());
+                        categoryData.put("dryness", skin.isDryness());
+                        categoryData.put("eczema", skin.isEczema());
+                        categoryData.put("psoriasis", skin.isPsoriasis());
+                        categoryData.put("skinInfection", skin.isSkinInfection());
+                        categoryData.put("allergies", skin.isAllergies());
+                        categoryData.put("description", skin.getDescription());
+                        categoryData.put("treatment", skin.getTreatment());
+                        categoryData.put("categoryIsAbnormal", skin.isAbnormal());
+                        categoryData.put("dateOfExamination", skin.getDateOfExamination());
+                        categoryData.put("followUpDate", skin.getFollowUpDate());
+                    }
+                    break;
+                    
+                case RESPIRATORY:
+                    Optional<Respiratory> respiratoryOpt = respiratoryRepository.findById(categoryResultId);
+                    if (respiratoryOpt.isPresent()) {
+                        Respiratory respiratory = respiratoryOpt.get();
+                        categoryData.put("id", respiratory.getId());
+                        categoryData.put("breathingRate", respiratory.getBreathingRate());
+                        categoryData.put("breathingSound", respiratory.getBreathingSound());
+                        categoryData.put("wheezing", respiratory.isWheezing());
+                        categoryData.put("cough", respiratory.isCough());
+                        categoryData.put("breathingDifficulty", respiratory.isBreathingDifficulty());
+                        categoryData.put("oxygenSaturation", respiratory.getOxygenSaturation());
+                        categoryData.put("treatment", respiratory.getTreatment());
+                        categoryData.put("description", respiratory.getDescription());
+                        categoryData.put("categoryIsAbnormal", respiratory.isAbnormal());
+                        categoryData.put("dateOfExamination", respiratory.getDateOfExamination());
+                        categoryData.put("followUpDate", respiratory.getFollowUpDate());
+                    }
+                    break;
+                    
+                default:
+                    System.out.println("WARNING: Unknown category: " + category);
+                    break;
+            }
+        } catch (Exception e) {
+            System.err.println("ERROR: Failed to fetch category-specific data for " + category + " with ID " + categoryResultId + ": " + e.getMessage());
+        }
+        
+        return categoryData;
     }
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Modal } from "antd";
 import { useAuth } from "../../../contexts/AuthContext";
 import { parentApi } from "../../../api/parentApi";
@@ -479,6 +479,9 @@ const Notifications = ({ role = "parent" }) => {
       }
       // Transform backend notification data to frontend format
       const transformedNotifications = data.map((notification) => {
+        // Debug log to see what we're receiving from backend
+        console.log("Raw notification from backend:", notification);
+        
         // Translate notification title if it's in English
         let translatedTitle = notification.title;
         if (translatedTitle === "Campaign Approved") {
@@ -512,6 +515,7 @@ const Notifications = ({ role = "parent" }) => {
           medicationRequest: notification.medicationRequest,
           medicationSchedule: notification.medicationSchedule,
           vaccinationFormId: notification.vaccinationFormId,
+          healthCheckFormId: notification.healthCheckFormId,
           campaignCompletionRequestId: notification.campaignCompletionRequestId,
         };
       });
@@ -660,8 +664,14 @@ const Notifications = ({ role = "parent" }) => {
     }
   };
   const confirmAction = (notification) => {
+    // Debug log to see the notification object structure
+    console.log("confirmAction called with notification:", notification);
+    console.log("healthCheckFormId:", notification.healthCheckFormId);
+    console.log("vaccinationFormId:", notification.vaccinationFormId);
+    
     // Handle different types of confirmations based on notification type
     const type = getNotificationType(notification);
+    console.log("Notification type determined as:", type);
 
     if (type === "completion-request") {
       // Open completion request modal

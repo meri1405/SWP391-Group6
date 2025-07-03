@@ -20,7 +20,7 @@ export default defineConfig({
     
     // Fix WebSocket connection issues
     hmr: {
-      port: 5174,
+      port: 5173,
     },
     watch: {
       usePolling: true,
