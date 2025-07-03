@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Modal, Form, Input, Button, Typography, message } from 'antd';
 import { SendOutlined } from '@ant-design/icons';
-
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 
@@ -18,15 +17,13 @@ const NotificationModal = ({
 
   // Default notification message
   const defaultMessage = `Thân gửi Quý phụ huynh,
-
-Nhà trường thông báo về đợt khám sức khỏe "${campaignName}" sắp diễn ra.
-
-Kính đề nghị Quý phụ huynh xem xét và cho phép con em tham gia đợt khám sức khỏe này để đảm bảo sức khỏe tốt nhất cho các em.
-
-Vui lòng phản hồi qua hệ thống để xác nhận việc tham gia.
-
-Trân trọng,
-Ban Giám hiệu`;
+  Nhà trường thông báo về đợt khám sức khỏe "${campaignName}" sắp diễn ra.
+  Đợt khám sẽ được tổ chức tại trường. Đây là cơ hội để các em học sinh được kiểm tra sức khỏe định kỳ, phát hiện sớm các vấn đề sức khỏe và nhận tư vấn từ các chuyên gia y tế.
+  Kính đề nghị Quý phụ huynh xem xét và cho phép con em tham gia đợt khám sức khỏe này để đảm bảo sức khỏe tốt nhất cho các em.
+  Vui lòng phản hồi qua hệ thống để xác nhận việc tham gia.
+  Nếu có bất kỳ câu hỏi nào, Quý phụ huynh có thể liên hệ với nhà trường qua số điện thoại hoặc email đã cung cấp.
+  Trân trọng,
+  Ban Giám hiệu`;
 
   const handleSubmit = () => {
     form.validateFields().then(values => {

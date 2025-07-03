@@ -29,7 +29,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -351,16 +350,9 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
     }
 
     @Override
-    public List<StudentDTO> getEligibleStudents(Long campaignId) {
-        System.out.println("=== DEBUG GET ELIGIBLE STUDENTS BY ID ===");
-        System.out.println("Campaign ID: " + campaignId);
-        
+    public List<StudentDTO> getEligibleStudents(Long campaignId) {        
         HealthCheckCampaign campaign = campaignRepository.findById(campaignId)
                 .orElseThrow(() -> new RuntimeException("Campaign not found with id: " + campaignId));
-        
-        System.out.println("Found campaign: " + campaign.getName());
-        System.out.println("Target classes: " + campaign.getTargetClasses());
-        System.out.println("Age range: " + campaign.getMinAge() + " - " + campaign.getMaxAge());
         
         return getEligibleStudents(campaign);
     }
@@ -370,8 +362,6 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
      */
     @Override
     public List<Map<String, Object>> getEligibleStudentsWithFormStatus(Long campaignId) {
-        System.out.println("=== DEBUG GET ELIGIBLE STUDENTS WITH FORM STATUS ===");
-        System.out.println("Campaign ID: " + campaignId);
         
         HealthCheckCampaign campaign = campaignRepository.findById(campaignId)
                 .orElseThrow(() -> new RuntimeException("Campaign not found with id: " + campaignId));
@@ -400,7 +390,6 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
             studentData.put("age", student.getAge());
             studentData.put("gender", student.getGender());
             studentData.put("parentName", student.getParentName());
-            studentData.put("parentEmail", student.getParentEmail());
             studentData.put("parentPhone", student.getParentPhone());
             
             HealthCheckFormDTO form = studentFormMap.get(student.getStudentID());
@@ -593,18 +582,12 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
      */
     private int calculateTargetCountInternal(Integer minAge, Integer maxAge, Set<String> targetClasses) {
         try {
-            System.out.println("=== DEBUG TARGET COUNT CALCULATION ===");
-            System.out.println("Target classes: " + targetClasses);
-            System.out.println("Min age: " + minAge + ", Max age: " + maxAge);
-            
             List<StudentDTO> eligibleStudents = 
                 studentService.getEligibleStudentsForClasses(targetClasses, minAge, maxAge);
             
-            System.out.println("Found " + eligibleStudents.size() + " eligible students");
             for (StudentDTO student : eligibleStudents) {
                 System.out.println("- Student: " + student.getFullName() + " (Class: " + student.getClassName() + ", Disabled: " + student.isDisabled() + ")");
             }
-            System.out.println("=== END DEBUG ===");
             
             return eligibleStudents.size();
         } catch (Exception e) {
@@ -647,10 +630,6 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
             campaign.getMaxAge()
         );
 
-        System.out.println("=== DEBUG GENERATE HEALTH CHECK FORMS ===");
-        System.out.println("Campaign ID: " + campaignId);
-        System.out.println("Eligible students count: " + eligibleStudents.size());
-
         int formsGenerated = 0;
         int studentsWithValidParents = 0;
         int studentsWithoutParents = 0;
@@ -670,22 +649,18 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
                     if (parent == null) {
                         studentsWithoutParents++;
                         studentsWithoutValidParents.add("Student " + student.getStudentID() + " - No parent assigned");
-                        System.out.println("SKIP: Student " + student.getStudentID() + " - No parent assigned");
                     } else if (!parent.isEnabled()) {
                         studentsWithInactiveParents++;
                         studentsWithoutValidParents.add("Student " + student.getStudentID() + " - Parent " + parent.getId() + " disabled");
-                        System.out.println("SKIP: Student " + student.getStudentID() + " - Parent " + parent.getId() + " is disabled");
                     } else if (!parent.getRole().getRoleName().equals("PARENT")) {
                         studentsWithInactiveParents++;
                         studentsWithoutValidParents.add("Student " + student.getStudentID() + " - User " + parent.getId() + " not parent role");
-                        System.out.println("SKIP: Student " + student.getStudentID() + " - User " + parent.getId() + " role: " + parent.getRole().getRoleName());
                     } else {
                         // Valid parent found - create form
                         studentsWithValidParents++;
                         HealthCheckForm form = healthCheckFormService.createHealthCheckForm(campaign, student, parent);
                         createdFormIds.add(form.getId());
                         formsGenerated++;
-                        System.out.println("SUCCESS: Created form ID " + form.getId() + " for student " + student.getStudentID() + " and parent " + parent.getId() + " (" + parent.getFirstName() + " " + parent.getLastName() + ")");
                     }
                 } else {
                     studentsWithoutParents++;
@@ -693,20 +668,13 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
                     System.out.println("ERROR: Student entity not found for ID " + studentDTO.getStudentID());
                 }
             } catch (Exception e) {
+                String errorMessage = "Error for student ID " + studentDTO.getStudentID() + ": " + e.getMessage();
                 studentsWithoutParents++;
-                String error = "Error creating form for student " + studentDTO.getStudentID() + ": " + e.getMessage();
-                studentsWithoutValidParents.add(error);
-                System.err.println("ERROR: " + error);
+                studentsWithoutValidParents.add(errorMessage);
+                System.err.println("ERROR: " + errorMessage);
             }
         }
 
-        System.out.println("=== FORM GENERATION SUMMARY ===");
-        System.out.println("Total eligible students: " + eligibleStudents.size());
-        System.out.println("Students with valid parents: " + studentsWithValidParents);
-        System.out.println("Students without parents: " + studentsWithoutParents);
-        System.out.println("Students with inactive parents: " + studentsWithInactiveParents);
-        System.out.println("Forms successfully generated: " + formsGenerated);
-        System.out.println("Students without valid parents details:");
         for (String detail : studentsWithoutValidParents) {
             System.out.println("  - " + detail);
         }
@@ -755,10 +723,6 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
             throw new RuntimeException("Campaign must be APPROVED before sending notifications to parents");
         }
 
-        System.out.println("=== DEBUG SEND NOTIFICATIONS ===");
-        System.out.println("Campaign ID: " + campaignId);
-        System.out.println("Custom message provided: " + (customMessage != null && !customMessage.trim().isEmpty()));
-
         // Get all existing forms for this campaign instead of eligible students
         List<HealthCheckFormDTO> campaignForms = healthCheckFormService.getFormsByCampaign(campaign);
         
@@ -788,16 +752,14 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
                         String customNotificationMessage;
                         
                         if (customMessage != null && !customMessage.trim().isEmpty()) {
-                            customNotificationMessage = customMessage.trim() + 
-                                "\n\n--- Thông tin học sinh ---\n" +
-                                "Tên: " + studentName + "\n" +
-                                "Lớp: " + (student.getClassName() != null ? student.getClassName() : "Chưa có thông tin");
+                            customNotificationMessage = customMessage.trim();
                         } else {
                             customNotificationMessage = String.format(
-                                "Thân gửi Quý phụ huynh,\n\n" +
-                                "Nhà trường thông báo về đợt khám sức khỏe \"%s\" sắp diễn ra.\n\n" +
-                                "Kính đề nghị Quý phụ huynh xem xét và cho phép con em %s (lớp %s) tham gia đợt khám sức khỏe này để đảm bảo sức khỏe tốt nhất cho các em.\n\n" +
-                                "Vui lòng phản hồi qua hệ thống để xác nhận việc tham gia.\n\n" +
+                                "Thân gửi Quý phụ huynh,\n" +
+                                "Nhà trường thông báo về đợt khám sức khỏe \"%s\" sắp diễn ra.\n" +
+                                "Đợt khám sẽ được tổ chức tại trường. Đây là cơ hội để các em học sinh được kiểm tra sức khỏe định kỳ, phát hiện sớm các vấn đề sức khỏe và nhận tư vấn từ các chuyên gia y tế." + 
+                                "Kính đề nghị Quý phụ huynh xem xét và cho phép con em %s (lớp %s) tham gia đợt khám sức khỏe này để đảm bảo sức khỏe tốt nhất cho các em.\n" +
+                                "Vui lòng phản hồi qua hệ thống để xác nhận việc tham gia.\n" +
                                 "Trân trọng,\nBan Giám hiệu", 
                                 campaign.getName(), 
                                 studentName,
@@ -807,7 +769,7 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
 
                         // Create notification with proper form and campaign linking
                         Notification notification = new Notification();
-                        notification.setTitle("Thông báo khám sức khỏe - " + studentName);
+                        notification.setTitle("THÔNG BÁO KHÁM SỨC KHỎE  - " + studentName.toUpperCase());
                         notification.setMessage(customNotificationMessage);
                         notification.setNotificationType("HEALTH_CHECK_CAMPAIGN");
                         notification.setRecipient(parent);
@@ -822,11 +784,6 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
                         // Track notifications per parent for statistics
                         parentNotificationCount.put(parent.getId(), 
                             parentNotificationCount.getOrDefault(parent.getId(), 0) + 1);
-                        
-                        System.out.println("SUCCESS: Sent notification to parent " + parent.getId() + 
-                            " (" + parent.getFirstName() + " " + parent.getLastName() + ")" +
-                            " for student " + student.getStudentID() + " (" + studentName + ")" +
-                            " with form " + formDTO.getId());
                     } else {
                         String error = "Invalid parent for form " + formDTO.getId() + " - student " + student.getStudentID();
                         errors.add(error);
@@ -844,12 +801,6 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
                 e.printStackTrace();
             }
         }
-
-        System.out.println("=== NOTIFICATION RESULTS ===");
-        System.out.println("Total forms processed: " + formsProcessed);
-        System.out.println("Notifications sent: " + notificationsSent);
-        System.out.println("Unique parents: " + parentNotificationCount.size());
-        System.out.println("Errors: " + errors.size());
         
         // Log parent notification breakdown
         for (Map.Entry<Long, Integer> entry : parentNotificationCount.entrySet()) {
@@ -857,7 +808,7 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
         }
 
         Map<String, Object> response = new HashMap<>();
-        response.put("message", "Notifications sent successfully");
+        response.put("message", "Thông báo đã được gửi đến phụ huynh thành công");
         response.put("campaignId", campaignId);
         response.put("campaignName", campaign.getName());
         response.put("totalForms", formsProcessed);

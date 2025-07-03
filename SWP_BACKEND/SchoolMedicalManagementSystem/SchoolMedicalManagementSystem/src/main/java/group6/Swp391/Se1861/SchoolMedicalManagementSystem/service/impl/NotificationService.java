@@ -618,13 +618,7 @@ public class NotificationService implements INotificationService {
     @Override
     public void notifyManagersAboutRestockRequest(RestockRequest restockRequest) {
         // Find all managers - try with both "ROLE_MANAGER" and "MANAGER" role names
-        List<User> managers = userRepository.findByRole_RoleName("ROLE_MANAGER");
-        
-        // If no managers found with ROLE_MANAGER, try with MANAGER
-        if (managers.isEmpty()) {
-            System.out.println("NotificationService: No managers found with ROLE_MANAGER, trying with MANAGER");
-            managers = userRepository.findByRole_RoleName("MANAGER");
-        }
+        List<User> managers = userRepository.findByRole_RoleName("MANAGER");
         
         System.out.println("NotificationService: Found " + managers.size() + " managers to notify about restock request ID: " + restockRequest.getId());
         
@@ -650,7 +644,7 @@ public class NotificationService implements INotificationService {
             System.out.println("NotificationService: Creating notification for manager ID: " + manager.getId() + ", username: " + manager.getUsername());
             
             Notification notification = new Notification();
-            notification.setTitle(title);
+            notification.setTitle(title.trim().toUpperCase());
             notification.setMessage(message);
             notification.setNotificationType("RESTOCK_REQUEST_NEW");
             notification.setRecipient(manager);
@@ -707,7 +701,7 @@ public class NotificationService implements INotificationService {
         }
         
         Notification notification = new Notification();
-        notification.setTitle(title);
+        notification.setTitle(title.trim().toUpperCase());
         notification.setMessage(message);
         notification.setNotificationType("RESTOCK_REQUEST_APPROVED");
         notification.setRecipient(nurse);
@@ -758,7 +752,7 @@ public class NotificationService implements INotificationService {
         }
         
         Notification notification = new Notification();
-        notification.setTitle(title);
+        notification.setTitle(title.trim().toUpperCase());
         notification.setMessage(message);
         notification.setNotificationType("RESTOCK_REQUEST_REJECTED");
         notification.setRecipient(nurse);
@@ -816,7 +810,7 @@ public class NotificationService implements INotificationService {
         // Notify each manager
         for (User manager : managers) {
             Notification notification = new Notification();
-            notification.setTitle(title);
+            notification.setTitle(title.trim().toUpperCase());
             notification.setMessage(message);
             notification.setNotificationType("HEALTH_CHECK_CAMPAIGN_APPROVAL_REQUEST");
             notification.setRecipient(manager);
@@ -1041,15 +1035,15 @@ public class NotificationService implements INotificationService {
             message = customMessage;
         } else {
             // Default message template
-            message = "Kính gửi phụ huynh,\n\n" +
+            message = "Kính gửi phụ huynh,\n" +
                      "Trường đang tổ chức chiến dịch khám sức khỏe định kỳ '" + campaign.getName() + "' " +
-                     "cho học sinh " + studentName + ".\n\n" +
+                     "cho học sinh " + studentName + ".\n" +
                      "Thời gian dự kiến: " + campaign.getStartDate() + " đến " + campaign.getEndDate() + "\n" +
                      "Các hạng mục khám: " + String.join(", ", 
                          campaign.getCategories().stream()
                              .map(category -> translateHealthCategory(category.toString()))
-                             .toArray(String[]::new)) + "\n\n" +
-                     "Vui lòng xác nhận sự tham gia của con em trong vòng 3 ngày và ít nhất 5 ngày trước khi chiến dịch bắt đầu.\n\n" +
+                             .toArray(String[]::new)) + "\n" +
+                     "Vui lòng xác nhận sự tham gia của con em trong vòng 3 ngày và ít nhất 5 ngày trước khi chiến dịch bắt đầu.\n" +
                      "Trân trọng,\nY tá trường";
         }
         
@@ -1097,12 +1091,12 @@ public class NotificationService implements INotificationService {
         
         String title = "Lịch hẹn khám sức khỏe";
         String message = "Kính gửi phụ huynh,\n\n" +
-                        "Lịch hẹn khám sức khỏe cho học sinh " + studentName + " đã được xác định:\n\n" +
+                        "Lịch hẹn khám sức khỏe cho học sinh " + studentName + " đã được xác định:\n" +
                         "Ngày khám: " + appointmentDate + "\n" +
                         "Thời gian: " + appointmentTime + "\n" +
                         "Địa điểm: " + (location != null ? location : "Phòng y tế trường") + "\n" +
                         "Số thứ tự: " + queueNumber + "\n\n" +
-                        "Vui lòng đưa con đến đúng giờ để được khám sức khỏe.\n\n" +
+                        "Vui lòng đưa con đến đúng giờ để được khám sức khỏe.\n" +
                         "Trân trọng,\nY tá trường";
         
         Notification notification = new Notification();
@@ -1144,16 +1138,16 @@ public class NotificationService implements INotificationService {
             HealthCheckCampaign campaign) {
         
         String title = "KẾT QUẢ KHÁM SỨC KHỎE CẦN QUAN TÂM";
-        String message = "Kính gửi phụ huynh,\n\n" +
+        String message = "Kính gửi phụ huynh,\n" +
                         "Kết quả khám sức khỏe của học sinh " + studentName + " trong chiến dịch '" + 
                         campaign.getName() + "' có một số dấu hiệu cần quan tâm:\n\n" +
-                        "Phát hiện: " + abnormalFindings + "\n\n";
+                        "Phát hiện: " + abnormalFindings + "\n";
         
         if (recommendations != null && !recommendations.trim().isEmpty()) {
-            message += "Khuyến nghị: " + recommendations + "\n\n";
+            message += "Khuyến nghị: " + recommendations + "\n";
         }
         
-        message += "Vui lòng liên hệ với y tá trường hoặc đưa con đến cơ sở y tế để được tư vấn và kiểm tra thêm.\n\n" +
+        message += "Vui lòng liên hệ với y tá trường hoặc đưa con đến cơ sở y tế để được tư vấn và kiểm tra thêm.\n" +
                   "Trân trọng,\nY tá trường";
         
         Notification notification = new Notification();
@@ -1200,7 +1194,7 @@ public class NotificationService implements INotificationService {
                         "để cập nhật trạng thái và tạo báo cáo tổng kết.";
         
         Notification notification = new Notification();
-        notification.setTitle(title);
+        notification.setTitle(title.trim().toUpperCase());
         notification.setMessage(message);
         notification.setNotificationType("HEALTH_CHECK_CAMPAIGN_COMPLETION_REMINDER");
         notification.setRecipient(nurse);
@@ -1281,9 +1275,9 @@ public class NotificationService implements INotificationService {
         
         HealthCheckCampaign campaign = form.getCampaign();
         String actionText = isConfirmed ? "confirmed" : "declined";
-        String parentTitle = "Health Check Campaign - " + (isConfirmed ? "Confirmation" : "Decline");
-        String nurseTitle = "Parent Response: Health Check Form " + (isConfirmed ? "Confirmed" : "Declined");
-        
+        String parentTitle = "Chiến dịch kiểm tra sức khỏe - " + (isConfirmed ? "Xác nhận" : "Từ chối");
+        String nurseTitle = "Phản hồi của phụ huynh: Mẫu kiểm tra sức khỏe " + (isConfirmed ? "đã xác nhận" : "đã từ chối");
+
         // 1. Send notification to parent with form and campaign reference
         Notification parentNotification = new Notification();
         parentNotification.setTitle(parentTitle);
@@ -1313,7 +1307,7 @@ public class NotificationService implements INotificationService {
         User nurse = campaign.getCreatedBy(); // The nurse who created the campaign
         if (nurse != null) {
             String nurseMessage = String.format(
-                "Parent %s %s has %s the health check form for student %s %s (Class: %s).\n\n" +
+                "Parent %s %s has %s the health check form for student %s %s (Class: %s).\n" +
                 "Campaign: %s\n" +
                 "Form ID: %d\n" +
                 "Response Date: %s",

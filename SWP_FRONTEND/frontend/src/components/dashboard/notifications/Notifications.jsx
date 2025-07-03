@@ -20,6 +20,36 @@ const Notifications = ({ role = "parent" }) => {
   const [selectedHealthCheckFormId, setSelectedHealthCheckFormId] =
     useState(null);
   const { getToken } = useAuth();
+  
+  // Styles for health check notifications
+  const healthCheckMessageStyles = {
+    healthCheckMessage: {
+      lineHeight: "1.6",
+      whiteSpace: "pre-line",
+      fontFamily: "Arial, sans-serif",
+    },
+    messageHeader: {
+      fontWeight: "bold",
+      marginBottom: "10px",
+    },
+    messageBody: {
+      margin: "8px 0",
+    },
+    messageFooter: {
+      marginTop: "10px",
+      fontStyle: "italic",
+    },
+    messageSection: {
+      marginTop: "15px",
+      marginBottom: "5px",
+      fontWeight: "bold",
+      borderTop: "1px solid #eee",
+      paddingTop: "10px",
+    },
+    messageSpacer: {
+      height: "10px",
+    }
+  };
 
   // Use a ref to track if the component is mounted
   const isMounted = useRef(true);
@@ -178,7 +208,29 @@ const Notifications = ({ role = "parent" }) => {
       .replace(/has been processed/gi, "đã được xử lý")
       .replace(/needs attention/gi, "cần được chú ý")
       .replace(/requires review/gi, "cần được xem xét");
+    
+    // Format the message with proper line breaks for health check notifications
+    if (translatedMessage.includes("đợt khám sức khỏe") || 
+        translatedMessage.includes("Đợt khám sức khỏe") ||
+        translatedMessage.includes("Thân gửi Quý phụ huynh")) {
+      
+      // Format health check notifications with proper paragraph breaks
+      translatedMessage = translatedMessage
+        // First, normalize line breaks (remove duplicates, etc)
+        .replace(/\n\s*\n/g, '\n')
+        // Add proper spacing around key phrases
+        .replace(/Thân gửi Quý phụ huynh,/g, 'Thân gửi Quý phụ huynh, ')
+        .replace(/Nhà trường thông báo/g, 'Nhà trường thông báo')
+        .replace(/Kính đề nghị/g, 'Kính đề nghị')
+        .replace(/Vui lòng phản hồi/g, 'Vui lòng phản hồi')
+        .replace(/Trân trọng,/g, 'Trân trọng,')
+        .replace(/Ban Giám hiệu/g, 'Ban Giám hiệu')
+        .replace(/--- Thông tin học sinh ---/g, '--- Thông tin học sinh ---')
+        .replace(/Tên:/g, 'Tên:')
+        .replace(/Lớp:/g, 'Lớp:');
+    }
 
+    // Replace ISO dates with Vietnamese format
     return translatedMessage.replace(isoDateRegex, (match) => {
       try {
         const date = new Date(match);
@@ -422,10 +474,15 @@ const Notifications = ({ role = "parent" }) => {
       setSelectedVaccinationFormId(notification.vaccinationFormId);
       setShowVaccinationModal(true);
     } else if (notification.healthCheckFormId) {
-      // Open health check form modal
-      console.log("Opening health check form modal for ID:", notification.healthCheckFormId);
-      setSelectedHealthCheckFormId(notification.healthCheckFormId);
-      setShowHealthCheckModal(true);
+      // Open health check form modal only for parent role
+      // Skip opening modal for schoolnurse and manager roles
+      if (role !== "schoolnurse" && role !== "manager") {
+        console.log("Opening health check form modal for ID:", notification.healthCheckFormId);
+        setSelectedHealthCheckFormId(notification.healthCheckFormId);
+        setShowHealthCheckModal(true);
+      } else {
+        console.log("Health check form modal disabled for role:", role);
+      }
     } 
 
     // Mark as read when action is taken
@@ -562,7 +619,25 @@ const Notifications = ({ role = "parent" }) => {
                 {!notification.read && <div className="unread-dot"></div>}
               </div>{" "}
               <div className="notification-body">
-                <p>{notification.message}</p>
+                {notification.type === "health" ? (
+                  <div style={healthCheckMessageStyles.healthCheckMessage}>
+                    {notification.message.split('\n').map((line, i) => {
+                      if (!line.trim()) {
+                        return <div key={i} style={healthCheckMessageStyles.messageSpacer}></div>;
+                      } else if (line.includes("Thân gửi")) {
+                        return <div key={i} style={healthCheckMessageStyles.messageHeader}>{line}</div>;
+                      } else if (line.includes("Trân trọng") || line.includes("Ban Giám hiệu")) {
+                        return <div key={i} style={healthCheckMessageStyles.messageFooter}>{line}</div>;
+                      } else if (line.includes("--- Thông tin học sinh ---")) {
+                        return <div key={i} style={healthCheckMessageStyles.messageSection}>{line}</div>;
+                      } else {
+                        return <div key={i} style={healthCheckMessageStyles.messageBody}>{line}</div>;
+                      }
+                    })}
+                  </div>
+                ) : (
+                  <p>{notification.message}</p>
+                )}
 
                 {/* Additional details based on notification type */}
                 {notification.medicationRequest && (
@@ -618,7 +693,9 @@ const Notifications = ({ role = "parent" }) => {
                     Đánh dấu đã đọc
                   </button>
                 )}
-                {notification.actionRequired && (
+                {notification.actionRequired && 
+                  // Hide "Xem chi tiết" button for health check notifications when user is schoolnurse or manager
+                  !(notification.healthCheckFormId && (role === "schoolnurse" || role === "manager")) && (
                   <button
                     className="action-btn primary"
                     onClick={() => confirmAction(notification)}

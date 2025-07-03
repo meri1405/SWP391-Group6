@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../../../contexts/AuthContext";
 import { parentApi } from "../../../api/parentApi";
+import { HEALTH_CHECK_CATEGORY_LABELS } from "../../../api/healthCheckApi";
 import "../../../styles/VaccinationFormModal.css";
 
 const HealthCheckFormModal = ({
@@ -191,20 +192,7 @@ const HealthCheckFormModal = ({
   };
 
   const getHealthCheckTypeText = (type) => {
-    switch (type) {
-      case "VISION":
-        return "Khám mắt";
-      case "HEARING":
-        return "Khám tai mũi họng";
-      case "ORAL":
-        return "Khám răng miệng";
-      case "SKIN":
-        return "Khám da liễu";
-      case "RESPIRATORY":
-        return "Khám hô hấp";
-      default:
-        return type || "Không xác định";
-    }
+    return HEALTH_CHECK_CATEGORY_LABELS[type] || type || "Không xác định";
   };
 
 
@@ -240,18 +228,12 @@ const HealthCheckFormModal = ({
               {console.log("Form data for rendering:", form)}
               <div className="form-header">
                 <div className="student-info">
-                  <h3>{form.studentFirstName} {form.studentLastName}</h3>
+                  <h3>{form.studentFullName}</h3>
                   <div className="student-details">
-                    {form.studentDob && (
+                    {form.studentDateOfBirth && (
                       <p>
                         <i className="fas fa-birthday-cake"></i> Ngày sinh:{" "}
-                        {formatDate(form.studentDob)}
-                      </p>
-                    )}
-                    {form.studentGender && (
-                      <p>
-                        <i className="fas fa-user"></i> Giới tính:{" "}
-                        {form.studentGender === 'M' ? 'Nam' : form.studentGender === 'F' ? 'Nữ' : form.studentGender}
+                        {formatDate(form.studentDateOfBirth)}
                       </p>
                     )}
                     {form.studentClassName && (
@@ -272,34 +254,24 @@ const HealthCheckFormModal = ({
                 </div>
               </div>
               <div className="form-content">
-                <div className="info-section">
-                  <h4>Thông tin khám sức khỏe</h4>
+                {form.appointmentLocation && (
                   <div className="info-grid">
-                    <div className="info-item">
-                      <label>Loại khám:</label>
-                      <span>
-                        {form.campaignCategories && form.campaignCategories.length > 0 
-                          ? form.campaignCategories.map(cat => getHealthCheckTypeText(cat)).join(', ')
-                          : 'Chưa có thông tin'
-                        }
-                      </span>
-                    </div>
-                    <div className="info-item">
-                      <label>Địa điểm chiến dịch:</label>
-                      <span>{form.campaignLocation || 'Chưa có thông tin'}</span>
-                    </div>
-                    <div className="info-item">
-                      <label>Thời gian hẹn:</label>
+                    {
+                      form.appointmentTime && (
+                      <div className="info-item">
+                        <label>Thời gian hẹn:</label>
                       <span>{formatDateTime(form.appointmentTime)}</span>
-                    </div>
-                    <div className="info-item">
-                      <label>Địa điểm khám:</label>
-                      <span>{form.appointmentLocation || 'Chưa có thông tin'}</span>
-                    </div>
-                    <div className="info-item">
-                      <label>Ngày gửi phiếu:</label>
-                      <span>{formatDateTime(form.sentAt)}</span>
-                    </div>
+                    </div>)
+                    }
+                    {
+                      form.appointmentLocation && (
+                        <div className="info-item">
+                          <label>Địa điểm khám:</label>
+                          <span>{form.appointmentLocation || 'Chưa có thông tin'}</span>
+                        </div>
+                      )
+                    }
+                    
                     {form.checkedIn && (
                       <div className="info-item">
                         <label>Đã check-in:</label>
@@ -317,8 +289,9 @@ const HealthCheckFormModal = ({
                         </span>
                       </div>
                     )}
-                  </div>
                 </div>
+                )}
+                
 
                 {form.campaignDescription && (
                   <div className="info-section">
@@ -349,20 +322,21 @@ const HealthCheckFormModal = ({
                       <span>{formatDate(form.campaignEndDate)}</span>
                     </div>
                     <div className="info-item">
-                      <label>Tạo bởi:</label>
-                      <span>{form.campaignCreatedBy || 'Chưa có thông tin'}</span>
+                      <label>Loại khám:</label>
+                      <span>
+                        {form.categories && form.categories.length > 0 
+                          ? form.categories.map(cat => getHealthCheckTypeText(cat)).join(', ')
+                          : 'Chưa có thông tin'
+                        }
+                      </span>
+                    </div>
+                    <div className="info-item">
+                      <label>Địa điểm chiến dịch:</label>
+                      <span>{form.location || 'Chưa có thông tin'}</span>
                     </div>
                     <div className="info-item">
                       <label>Ngày tạo:</label>
-                      <span>{formatDateTime(form.campaignCreatedAt)}</span>
-                    </div>
-                    <div className="info-item">
-                      <label>Phê duyệt bởi:</label>
-                      <span>{form.campaignApprovedBy || 'Chưa có thông tin'}</span>
-                    </div>
-                    <div className="info-item">
-                      <label>Ngày phê duyệt:</label>
-                      <span>{formatDateTime(form.campaignApprovedAt)}</span>
+                      <span>{formatDateTime(form.createdAt)}</span>
                     </div>
                     {form.campaignNotes && (
                       <div className="info-item full-width">
@@ -379,8 +353,8 @@ const HealthCheckFormModal = ({
                     <div className="info-item">
                       <label>Họ tên:</label>
                       <span>
-                        {form.parentFirstName && form.parentLastName 
-                          ? `${form.parentFirstName} ${form.parentLastName}`
+                        {form.parentFullName 
+                          ? `${form.parentFullName}`
                           : 'Chưa có thông tin'
                         }
                       </span>
@@ -388,10 +362,6 @@ const HealthCheckFormModal = ({
                     <div className="info-item">
                       <label>Số điện thoại:</label>
                       <span>{form.parentPhone || 'Chưa có thông tin'}</span>
-                    </div>
-                    <div className="info-item">
-                      <label>Email:</label>
-                      <span>{form.parentEmail || 'Chưa có thông tin'}</span>
                     </div>
                   </div>
                 </div>

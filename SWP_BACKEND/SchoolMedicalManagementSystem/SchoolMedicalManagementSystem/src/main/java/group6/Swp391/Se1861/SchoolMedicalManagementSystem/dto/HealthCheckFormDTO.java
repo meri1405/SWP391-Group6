@@ -6,6 +6,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 @Data
 @AllArgsConstructor
@@ -30,17 +32,17 @@ public class HealthCheckFormDTO {
     private LocalDateTime campaignStartDate;
     private LocalDateTime campaignEndDate;
     private String campaignStatus;
+    private String location;
+    private Set<String> categories; // Health check categories
     
     // Student info
     private Long studentId;
     private String studentFullName;
-    private String studentCode;
     private String studentClassName;
     private String studentDateOfBirth;
     
     // Parent info
     private Long parentId;
     private String parentFullName;
-    private String parentEmail;
     private String parentPhone;
 }

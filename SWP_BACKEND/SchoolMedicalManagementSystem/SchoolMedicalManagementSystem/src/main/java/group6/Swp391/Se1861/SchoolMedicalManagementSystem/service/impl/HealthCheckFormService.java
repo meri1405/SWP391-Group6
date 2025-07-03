@@ -1,5 +1,6 @@
 package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl;
 
+
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.HealthCheckFormDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.*;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.FormStatus;
@@ -11,7 +12,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -77,7 +80,9 @@ public class HealthCheckFormService implements IHealthCheckFormService {
                 savedForm,
                 parent,
                 savedForm.getStudent(),
-                "Your child's health check has been confirmed.",
+                "Cảm ơn quý phụ huynh đã đồng ý cho con em tham gia đợt khám sức khỏe tại trường. \n" +
+                "Thời gian cụ thể của buổi khám sẽ được nhà trường thông báo sau.\n" +
+                "Trân trọng!",
                 true
         );
 
@@ -111,7 +116,10 @@ public class HealthCheckFormService implements IHealthCheckFormService {
                 savedForm,
                 parent,
                 savedForm.getStudent(),
-                "You have declined the health check for your child.",
+                "Cảm ơn quý phụ huynh đã phản hồi về việc tham gia khám sức khỏe cho con em. \n" + 
+                "Chúng tôi ghi nhận rằng quý phụ huynh đã từ chối cho con tham gia đợt khám sức khỏe tại trường. " +"\n" +
+                "Nếu có bất kỳ thay đổi hoặc thắc mắc nào, xin vui lòng liên hệ với nhà trường. \n" +
+                "Trân trọng!",
                 false
         );
 
@@ -156,7 +164,9 @@ public class HealthCheckFormService implements IHealthCheckFormService {
                     form.getCampaign(),
                     form.getParent(),
                     form.getStudent(),
-                    "The health check form for your child has been automatically declined due to no response within the deadline."
+                    "Phiếu khám sức khỏe của con em quý phụ huynh đã bị từ chối tự động do không có phản hồi trong thời gian quy định. \n" +
+                    "Nếu quý phụ huynh vẫn có nhu cầu cho con tham gia, xin vui lòng liên hệ với nhà trường để được hỗ trợ. \n" +
+                    "Trân trọng!"
             );
 
             System.out.println("Auto-declined health check form ID: " + form.getId() + 
@@ -207,7 +217,8 @@ public class HealthCheckFormService implements IHealthCheckFormService {
                     form.getCampaign(),
                     form.getParent(),
                     form.getStudent(),
-                    "Reminder: Please respond to the health check invitation for your child.",
+                    "Nhắc nhở: Quý phụ huynh vui lòng phản hồi lời mời tham gia đợt khám sức khỏe tại trường dành cho con em. Việc phản hồi đúng hạn sẽ giúp nhà trường sắp xếp và tổ chức khám sức khỏe hiệu quả hơn.\n" +
+                    "Trân trọng cảm ơn!",
                     form
             );
 
@@ -246,7 +257,16 @@ public class HealthCheckFormService implements IHealthCheckFormService {
             dto.setCampaignDescription(campaign.getDescription());
             dto.setCampaignStartDate(campaign.getStartDate().atStartOfDay());
             dto.setCampaignEndDate(campaign.getEndDate().atTime(23, 59, 59));
+            dto.setLocation(campaign.getLocation()); // Use getLocation instead of getCampaignLocation
             dto.setCampaignStatus(campaign.getStatus().toString());
+            
+            // Add categories to the DTO
+            Set<String> categoriesAsStrings = new HashSet<>();
+            if (campaign.getCategories() != null) {
+                campaign.getCategories().forEach(category -> 
+                    categoriesAsStrings.add(category.name()));
+            }
+            dto.setCategories(categoriesAsStrings);
         }
 
         // Student information
@@ -254,7 +274,6 @@ public class HealthCheckFormService implements IHealthCheckFormService {
             Student student = form.getStudent();
             dto.setStudentId(student.getStudentID()); // Use getStudentID instead of getId
             dto.setStudentFullName(student.getFullName());
-            dto.setStudentCode(student.getStudentID().toString()); // Use studentID as code
             dto.setStudentClassName(student.getClassName());
             if (student.getDob() != null) {
                 dto.setStudentDateOfBirth(student.getDob().toString()); // Use getDob instead of getDateOfBirth
@@ -266,7 +285,6 @@ public class HealthCheckFormService implements IHealthCheckFormService {
             User parent = form.getParent();
             dto.setParentId(parent.getId());
             dto.setParentFullName(parent.getFullName());
-            dto.setParentEmail(parent.getEmail());
             dto.setParentPhone(parent.getPhone()); // Use getPhone instead of getPhoneNumber
         }
 

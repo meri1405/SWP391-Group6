@@ -27,7 +27,6 @@ public class StudentDTO {
     
     // Parent information
     private String parentName;
-    private String parentEmail;
     private String parentPhone;
     
     // Additional fields for frontend compatibility
