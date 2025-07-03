@@ -181,8 +181,7 @@ public interface INotificationService {
     /**
      * Notify nurse about restock request rejection
      */
-    void 
-      (RestockRequest restockRequest, String notes);
+    void notifyNurseAboutRestockRequestRejection(RestockRequest restockRequest, String notes);
 
     /**
      * Create abnormal health check result notification
@@ -283,8 +282,6 @@ public interface INotificationService {
      * Send completion reminder to nurse
      */
     void sendHealthCheckCampaignCompletionReminder(HealthCheckCampaign campaign);
-
-    void notifyNurseAboutRestockRequestRejection(RestockRequest restockRequest, String notes);
     
     /**
      * CAMPAIGN COMPLETION REQUEST NOTIFICATIONS
