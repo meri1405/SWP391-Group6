@@ -63,7 +63,7 @@ public class Notification {
     @ManyToOne
     @JoinColumn(name = "restockRequestId")
     private RestockRequest restockRequest;
-
+  
     @ManyToOne
     @JoinColumn(name = "healthCheckFormId")
     private HealthCheckForm healthCheckForm;
@@ -71,4 +71,9 @@ public class Notification {
     @ManyToOne
     @JoinColumn(name = "healthCheckCampaignId")
     private HealthCheckCampaign healthCheckCampaign;
+  
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "campaign_completion_request_id")
+    private CampaignCompletionRequest campaignCompletionRequest;
+
 }

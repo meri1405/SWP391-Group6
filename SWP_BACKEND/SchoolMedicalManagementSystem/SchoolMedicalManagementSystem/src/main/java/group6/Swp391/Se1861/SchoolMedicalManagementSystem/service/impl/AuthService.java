@@ -8,6 +8,7 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.UserReposit
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IAuthService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IOtpService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.util.JwtUtil;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.utils.PhoneValidator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -207,11 +208,10 @@ public class AuthService implements IAuthService {
             if (existingUserWithPhone.isPresent()) {
                 throw new IllegalArgumentException("Phone number is already in use");
             }
-        }// If role is PARENT or STUDENT, nullify username, password, and email
+        }// If role is PARENT, nullify username, password, and email
         if (user.getRole() != null && 
-            ("PARENT".equalsIgnoreCase(user.getRole().getRoleName()) || 
-             "STUDENT".equalsIgnoreCase(user.getRole().getRoleName()))) {
-            user.setUsername(user.getPhone()); // Use phone as username for PARENT and STUDENT
+            ("PARENT".equalsIgnoreCase(user.getRole().getRoleName()))) {
+            user.setUsername(user.getPhone()); // Use phone as username for PARENT
             user.setPassword(null);
             user.setEmail(null);
         } else {
@@ -283,17 +283,23 @@ public class AuthService implements IAuthService {
         // Common validations for all users
         // Phone number is required for all users except STUDENT
         if (!"STUDENT".equalsIgnoreCase(roleName) && (user.getPhone() == null || user.getPhone().trim().isEmpty())) {
-            throw new IllegalArgumentException("Phone number is required for " + roleName + " role");
+            throw new IllegalArgumentException("Số điện thoại là bắt buộc cho vai trò " + roleName);
         }
         
         // For STUDENT role, phone number is optional
-        if ("STUDENT".equalsIgnoreCase(roleName) && user.getPhone() != null && !user.getPhone().trim().isEmpty() && !user.getPhone().matches("\\d{10}")) {
-            throw new IllegalArgumentException("Phone number format is invalid for STUDENT");
+        if ("STUDENT".equalsIgnoreCase(roleName) && user.getPhone() != null && !user.getPhone().trim().isEmpty()) {
+            String phoneError = PhoneValidator.validatePhone(user.getPhone());
+            if (phoneError != null) {
+                throw new IllegalArgumentException(phoneError + " (học sinh)");
+            }
         }
         
         // For non-STUDENT roles, validate phone format if provided
-        if (!"STUDENT".equalsIgnoreCase(roleName) && user.getPhone() != null && !user.getPhone().trim().isEmpty() && !user.getPhone().matches("\\d{10}")) {
-            throw new IllegalArgumentException("Phone number format is invalid for " + roleName + " role");
+        if (!"STUDENT".equalsIgnoreCase(roleName) && user.getPhone() != null && !user.getPhone().trim().isEmpty()) {
+            String phoneError = PhoneValidator.validatePhone(user.getPhone());
+            if (phoneError != null) {
+                throw new IllegalArgumentException(phoneError + " (" + roleName + ")");
+            }
         }
 
         if (user.getFirstName() == null || user.getFirstName().trim().isEmpty()) {

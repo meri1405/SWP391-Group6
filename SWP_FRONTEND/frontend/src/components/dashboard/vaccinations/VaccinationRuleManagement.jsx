@@ -34,6 +34,7 @@ const VaccinationRuleManagement = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingRule, setEditingRule] = useState(null);
   const [form] = Form.useForm();
+  const [currentDoseNumber, setCurrentDoseNumber] = useState(null);
 
   // Helper function to format age
   const formatAge = (months) => {
@@ -49,6 +50,19 @@ const VaccinationRuleManagement = () => {
       }
     }
   };
+
+  // Handle dose number change
+  const handleDoseNumberChange = (value) => {
+    setCurrentDoseNumber(value);
+    if (value === 1) {
+      // Auto set intervalDays to 0 for first dose and disable field
+      form.setFieldsValue({ intervalDays: 0 });
+    } else if (value > 1) {
+      // Clear intervalDays for subsequent doses to let user input
+      form.setFieldsValue({ intervalDays: undefined });
+    }
+  };
+
   // Load vaccination rules
   const loadVaccinationRules = async () => {
     try {
@@ -91,6 +105,7 @@ const VaccinationRuleManagement = () => {
       }
       setModalVisible(false);
       setEditingRule(null);
+      setCurrentDoseNumber(null);
       form.resetFields();
       // Explicitly clear all field values
       form.setFieldsValue({
@@ -128,6 +143,7 @@ const VaccinationRuleManagement = () => {
   // Handle edit
   const handleEdit = (rule) => {
     setEditingRule(rule);
+    setCurrentDoseNumber(rule.doesNumber);
     form.setFieldsValue({
       name: rule.name,
       description: rule.description,
@@ -142,6 +158,7 @@ const VaccinationRuleManagement = () => {
   // Handle add new
   const handleAddNew = () => {
     setEditingRule(null);
+    setCurrentDoseNumber(null);
     form.resetFields();
     // Explicitly clear all field values to prevent auto-fill
     form.setFieldsValue({
@@ -349,6 +366,7 @@ const VaccinationRuleManagement = () => {
         onCancel={() => {
           setModalVisible(false);
           setEditingRule(null);
+          setCurrentDoseNumber(null);
           form.resetFields();
           // Explicitly clear all field values
           form.setFieldsValue({
@@ -417,6 +435,7 @@ const VaccinationRuleManagement = () => {
                   style={{ width: "100%" }}
                   placeholder=""
                   addonBefore="Mũi"
+                  onChange={handleDoseNumberChange}
                 />
               </Form.Item>
             </Col>
@@ -426,7 +445,7 @@ const VaccinationRuleManagement = () => {
                 label="Số ngày tối thiểu sau mũi trước đó"
                 rules={[
                   {
-                    required: true,
+                    required: currentDoseNumber !== 1,
                     message: "Vui lòng nhập số ngày tối thiểu",
                   },
                   {
@@ -436,14 +455,14 @@ const VaccinationRuleManagement = () => {
                     message: "Số ngày phải từ 0-365 ngày",
                   },
                 ]}
-                extra="Mũi 1 có thể là 0 ngày. Các mũi tiếp theo phải chờ ít nhất số ngày này sau mũi trước."
               >
                 <InputNumber
                   min={0}
                   max={365}
                   style={{ width: "100%" }}
-                  placeholder=""
+                  placeholder={currentDoseNumber === 1 ? "0" : ""}
                   addonAfter="ngày"
+                  disabled={currentDoseNumber === 1}
                 />
               </Form.Item>
             </Col>
@@ -510,6 +529,7 @@ const VaccinationRuleManagement = () => {
                 onClick={() => {
                   setModalVisible(false);
                   setEditingRule(null);
+                  setCurrentDoseNumber(null);
                   form.resetFields();
                   // Explicitly clear all field values
                   form.setFieldsValue({

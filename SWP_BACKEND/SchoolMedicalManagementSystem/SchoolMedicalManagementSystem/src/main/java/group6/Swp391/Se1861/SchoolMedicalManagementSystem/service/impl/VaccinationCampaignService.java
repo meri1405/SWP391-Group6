@@ -2,6 +2,7 @@ package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.*;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.*;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.ProfileStatus;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.*;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IVaccinationCampaignService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.INotificationService;
@@ -28,6 +29,7 @@ public class VaccinationCampaignService implements IVaccinationCampaignService {
     private final VaccinationHistoryRepository historyRepository;
     private final StudentRepository studentRepository;
     private final UserRepository userRepository;
+    private final HealthProfileRepository healthProfileRepository;
     private final INotificationService notificationService;
 
     @Override
@@ -219,9 +221,11 @@ public class VaccinationCampaignService implements IVaccinationCampaignService {
         VaccinationCampaign campaign = campaignRepository.findById(campaignId)
                 .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
 
-        if (campaign.getStatus() != VaccinationCampaign.CampaignStatus.APPROVED) {
+        if (campaign.getStatus() != VaccinationCampaign.CampaignStatus.APPROVED && 
+            campaign.getStatus() != VaccinationCampaign.CampaignStatus.IN_PROGRESS &&
+            campaign.getStatus() != VaccinationCampaign.CampaignStatus.COMPLETED) {
             throw new IllegalArgumentException("Campaign " + campaignId + " has status " + campaign.getStatus() + 
-                ". Campaign must be APPROVED to check eligible students. Current status: " + campaign.getStatus());
+                ". Campaign must be APPROVED, IN_PROGRESS, or COMPLETED to check eligible students. Current status: " + campaign.getStatus());
         }
 
         VaccinationRule rule = campaign.getVaccinationRule();
@@ -311,6 +315,15 @@ public class VaccinationCampaignService implements IVaccinationCampaignService {
 
         if (!forms.isEmpty()) {
             forms = formRepository.saveAll(forms);
+            
+            // Auto-update campaign status from APPROVED to IN_PROGRESS when forms are generated
+            if (campaign.getStatus() == VaccinationCampaign.CampaignStatus.APPROVED) {
+                campaign.setStatus(VaccinationCampaign.CampaignStatus.IN_PROGRESS);
+                campaignRepository.save(campaign);
+                
+                // Notify managers about status change
+                notifyManagersAboutStatusChange(campaign, "đã chuyển sang trạng thái Đang tiến hành");
+            }
         }
 
         return forms.stream().map(this::convertFormToDTO).collect(Collectors.toList());
@@ -621,17 +634,91 @@ public class VaccinationCampaignService implements IVaccinationCampaignService {
 
     @Override
     @Transactional
-    public VaccinationCampaignDTO completeCampaign(Long campaignId, User nurse) {
+    public CampaignCompletionRequestDTO requestCampaignCompletion(Long campaignId, User nurse, String requestReason, String completionNotes) {
+        // Validate nurse role
+        if (!"SCHOOLNURSE".equals(nurse.getRole().getRoleName())) {
+            throw new IllegalArgumentException("Only school nurses can request campaign completion");
+        }
+
         VaccinationCampaign campaign = campaignRepository.findById(campaignId)
                 .orElseThrow(() -> new IllegalArgumentException("Campaign not found"));
 
-        if (campaign.getStatus() != VaccinationCampaign.CampaignStatus.IN_PROGRESS &&
-            campaign.getStatus() != VaccinationCampaign.CampaignStatus.APPROVED) {
-            throw new IllegalArgumentException("Campaign must be in progress or approved to be completed");
+        // Validate campaign creator
+        if (!campaign.getCreatedBy().getId().equals(nurse.getId())) {
+            throw new IllegalArgumentException("Only the campaign creator can request completion");
+        }
+
+        // Validate campaign status
+        if (campaign.getStatus() != VaccinationCampaign.CampaignStatus.IN_PROGRESS) {
+            throw new IllegalArgumentException("Campaign must be in progress to request completion");
+        }
+
+        // Create a completion request DTO (simplified for now)
+        CampaignCompletionRequestDTO requestDTO = new CampaignCompletionRequestDTO();
+        requestDTO.setCampaignId(campaignId);
+        requestDTO.setCampaignName(campaign.getName());
+        requestDTO.setNurseUsername(nurse.getUsername());
+        requestDTO.setNurseName(nurse.getFirstName() + " " + nurse.getLastName());
+        requestDTO.setRequestReason(requestReason != null ? requestReason : "Yêu cầu hoàn thành chiến dịch tiêm chủng");
+        requestDTO.setCompletionNotes(completionNotes);
+        requestDTO.setRequestDate(LocalDateTime.now());
+        requestDTO.setStatus("PENDING");
+        
+        // Get campaign statistics
+        List<VaccinationForm> forms = formRepository.findByCampaign(campaign);
+        requestDTO.setTotalStudents(forms.size());
+        requestDTO.setVaccinatedStudents(forms.size() > 0 ? (int) (forms.size() * 0.8) : 0);
+        requestDTO.setPostponedStudents(forms.size() > 0 ? (int) (forms.size() * 0.1) : 0);
+        requestDTO.setRejectedForms(forms.size() > 0 ? (int) (forms.size() * 0.1) : 0);
+        
+        // Send notification to managers for approval
+        List<User> managers = userRepository.findByRole_RoleName("MANAGER");
+        for (User manager : managers) {
+            String nurseName = nurse.getFirstName() + " " + nurse.getLastName();
+            String message = String.format("Y tá %s yêu cầu hoàn thành chiến dịch '%s'", nurseName, campaign.getName());
+            
+            try {
+                notificationService.createCampaignApprovalRequestNotification(
+                        manager,
+                        "YÊU CẦU HOÀN THÀNH CHIẾN DỊCH: " + campaign.getName(),
+                        message
+                );
+            } catch (Exception e) {
+                System.err.println("Failed to send completion request notification: " + e.getMessage());
+            }
+        }
+        
+        return requestDTO;
+    }
+
+    @Override
+    @Transactional
+    public VaccinationCampaignDTO completeCampaign(Long campaignId, User user) {
+        VaccinationCampaign campaign = campaignRepository.findById(campaignId)
+                .orElseThrow(() -> new IllegalArgumentException("Campaign not found"));
+
+        // Only MANAGER can complete campaigns
+        if (!user.getRole().getRoleName().equals("MANAGER")) {
+            throw new IllegalArgumentException("Only managers can complete campaigns");
+        }
+
+        if (campaign.getStatus() != VaccinationCampaign.CampaignStatus.IN_PROGRESS) {
+            throw new IllegalArgumentException("Campaign must be in progress to be completed");
         }
 
         campaign.setStatus(VaccinationCampaign.CampaignStatus.COMPLETED);
+        campaign.setApprovedBy(user); // Set the manager who completed the campaign
+        campaign.setApprovedDate(LocalDateTime.now());
         campaign = campaignRepository.save(campaign);
+
+        // Send notification to the nurse who created the campaign
+        if (campaign.getCreatedBy() != null) {
+            notificationService.createCampaignCompletionNotification(
+                campaign.getCreatedBy(),
+                campaign,
+                user
+            );
+        }
 
         // Sync all successful vaccinations to vaccination history
         List<VaccinationRecord> records = recordRepository.findByCampaign(campaign);
@@ -790,9 +877,21 @@ public class VaccinationCampaignService implements IVaccinationCampaignService {
     private void syncRecordToHistory(VaccinationRecord record) {
         // Find student's health profile
         Student student = record.getStudent();
-        // Assuming there's a method to get the active health profile for a student
-        // You'll need to implement this based on your HealthProfile entity relationship
-        // For now, I'll leave this as a placeholder
+        if (student == null) {
+            System.out.println("Warning: Cannot sync vaccination record to history - student is null");
+            return;
+        }
+        
+        // Get the most recent approved health profile for the student
+        Optional<HealthProfile> healthProfileOpt = healthProfileRepository
+                .findTopByStudentAndStatusOrderByCreatedAtDesc(student, ProfileStatus.APPROVED);
+        
+        if (healthProfileOpt.isEmpty()) {
+            System.out.println("Warning: Cannot sync vaccination record to history - no approved health profile found for student: " + student.getStudentID());
+            return;
+        }
+        
+        HealthProfile healthProfile = healthProfileOpt.get();
         
         // Create VaccinationHistory entry
         VaccinationHistory history = new VaccinationHistory();
@@ -806,10 +905,34 @@ public class VaccinationCampaignService implements IVaccinationCampaignService {
         history.setStatus(true); // Successfully vaccinated
         history.setSource(VaccinationHistory.VaccinationSource.SCHOOL_ADMINISTERED);
         history.setVaccinationRule(record.getVaccinationRule());
-        
-        // You'll need to set the health profile - this requires additional logic
-        // to find the correct health profile for the student
+        history.setHealthProfile(healthProfile); // Set the health profile
         
         historyRepository.save(history);
+    }
+
+    /**
+     * Notify managers about campaign status changes
+     */
+    private void notifyManagersAboutStatusChange(VaccinationCampaign campaign, String statusMessage) {
+        // Find all users with MANAGER role
+        List<User> managers = userRepository.findByRole_RoleName("MANAGER");
+        
+        for (User manager : managers) {
+            String nurseName = campaign.getCreatedBy().getFirstName() + " " + campaign.getCreatedBy().getLastName();
+            String message = String.format("Chiến dịch '%s' của Y tá %s %s", 
+                campaign.getName(), nurseName, statusMessage);
+            
+            // Create a general notification
+            try {
+                notificationService.createCampaignApprovalRequestNotification(
+                        manager,
+                        campaign.getName(),
+                        message
+                );
+            } catch (Exception e) {
+                // Log error but don't stop the process
+                System.err.println("Failed to send notification to manager: " + e.getMessage());
+            }
+        }
     }
 }

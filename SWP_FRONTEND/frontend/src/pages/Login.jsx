@@ -650,7 +650,7 @@ const Login = () => {
       // Build absolute URL for OAuth
       const oauthUrl = API_ENDPOINTS.auth.googleOAuth.startsWith("http")
         ? API_ENDPOINTS.auth.googleOAuth
-        : `http://localhost:8080${API_ENDPOINTS.auth.googleOAuth}`;
+        : `http://localhost:8081${API_ENDPOINTS.auth.googleOAuth}`;
 
       console.log("Final OAuth URL:", oauthUrl);
 

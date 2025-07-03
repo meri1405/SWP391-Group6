@@ -28,14 +28,28 @@ public class VaccinationCampaignController {
      * Create a new vaccination campaign
      */
     @PostMapping
-    public ResponseEntity<VaccinationCampaignDTO> createCampaign(
+    public ResponseEntity<?> createCampaign(
             @AuthenticationPrincipal User nurse,
             @RequestBody CreateVaccinationCampaignRequest request) {
         try {
+            System.out.println("Creating vaccination campaign with request: " + request);
+            System.out.println("User: " + (nurse != null ? nurse.getUsername() : "null"));
             VaccinationCampaignDTO campaign = campaignService.createCampaign(nurse, request);
             return new ResponseEntity<>(campaign, HttpStatus.CREATED);
         } catch (IllegalArgumentException e) {
-            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+            System.err.println("Error creating vaccination campaign: " + e.getMessage());
+            e.printStackTrace();
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", e.getMessage());
+            errorResponse.put("message", "Failed to create vaccination campaign: " + e.getMessage());
+            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
+            System.err.println("Unexpected error creating vaccination campaign: " + e.getMessage());
+            e.printStackTrace();
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Internal server error");
+            errorResponse.put("message", "An unexpected error occurred: " + e.getMessage());
+            return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -69,15 +83,20 @@ public class VaccinationCampaignController {
      * Update a campaign (only if status is PENDING)
      */
     @PutMapping("/{id}")
-    public ResponseEntity<VaccinationCampaignDTO> updateCampaign(
+    public ResponseEntity<?> updateCampaign(
             @PathVariable Long id,
             @AuthenticationPrincipal User nurse,
             @RequestBody CreateVaccinationCampaignRequest request) {
         try {
+            System.out.println("Updating vaccination campaign " + id + " with request: " + request);
             VaccinationCampaignDTO campaign = campaignService.updateCampaign(id, nurse, request);
             return ResponseEntity.ok(campaign);
         } catch (IllegalArgumentException e) {
-            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+            System.err.println("Error updating vaccination campaign: " + e.getMessage());
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", e.getMessage());
+            errorResponse.put("message", "Failed to update vaccination campaign: " + e.getMessage());
+            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -102,12 +121,25 @@ public class VaccinationCampaignController {
     @GetMapping("/{id}/eligible-students")
     public ResponseEntity<Object> getEligibleStudents(@PathVariable Long id) {
         try {
+            System.out.println("Fetching eligible students for campaign ID: " + id);
             EligibleStudentsResponse response = campaignService.getEligibleStudents(id);
+            System.out.println("Successfully found " + (response.getEligibleStudents() != null ? response.getEligibleStudents().size() : 0) + " eligible students");
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
+            System.err.println("Error fetching eligible students for campaign " + id + ": " + e.getMessage());
+            e.printStackTrace();
             String errorMessage = e.getMessage();
-            MessageResponse errorResponse = new MessageResponse(errorMessage);
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", errorMessage);
+            errorResponse.put("message", "Failed to fetch eligible students: " + errorMessage);
             return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
+            System.err.println("Unexpected error fetching eligible students for campaign " + id + ": " + e.getMessage());
+            e.printStackTrace();
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Internal server error");
+            errorResponse.put("message", "An unexpected error occurred: " + e.getMessage());
+            return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -245,17 +277,31 @@ public class VaccinationCampaignController {
     }
 
     /**
-     * Complete a campaign
+     * Request campaign completion (sends request to manager for approval)
      */
-    @PostMapping("/{id}/complete")
-    public ResponseEntity<VaccinationCampaignDTO> completeCampaign(
+    @PostMapping("/{id}/request-completion")
+    public ResponseEntity<?> requestCampaignCompletion(
             @PathVariable Long id,
-            @AuthenticationPrincipal User nurse) {
+            @AuthenticationPrincipal User nurse,
+            @RequestBody(required = false) Map<String, String> requestBody) {
         try {
-            VaccinationCampaignDTO campaign = campaignService.completeCampaign(id, nurse);
-            return ResponseEntity.ok(campaign);
+            String requestReason = requestBody != null ? requestBody.get("requestReason") : null;
+            String completionNotes = requestBody != null ? requestBody.get("completionNotes") : null;
+            
+            CampaignCompletionRequestDTO request = campaignService.requestCampaignCompletion(id, nurse, requestReason, completionNotes);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Yêu cầu hoàn thành chiến dịch đã được gửi đến quản lý để duyệt");
+            response.put("request", request);
+            
+            return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
-            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("error", e.getMessage());
+            errorResponse.put("message", "Không thể tạo yêu cầu hoàn thành chiến dịch: " + e.getMessage());
+            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
         }
     }
 

@@ -24,4 +24,6 @@ public class NotificationDTO {
     private Long restockRequestId;
     private Long healthCheckFormId;
     private Long healthCheckCampaignId;
+    private Long campaignCompletionRequestId;
+
 }
