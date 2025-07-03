@@ -11,6 +11,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -237,9 +238,18 @@ public class NotificationService implements INotificationService {
      */
     @Override
     public List<NotificationDTO> getAllNotificationsForUser(User user) {
-        return notificationRepository.findByRecipientOrderByCreatedAtDesc(user)
-                .stream()
-                .map(this::convertToDTO)
+        List<Notification> notifications = notificationRepository.findByRecipientOrderByCreatedAtDesc(user);
+        return notifications.stream()
+                .map(notification -> {
+                    // Debug for specific notification type
+                    if ("CAMPAIGN_COMPLETION_REQUEST".equals(notification.getNotificationType())) {
+                        System.out.println("DEBUG: Processing CAMPAIGN_COMPLETION_REQUEST notification ID: " + notification.getId());
+                        System.out.println("DEBUG: notification.getCampaignCompletionRequest() = " + 
+                                         (notification.getCampaignCompletionRequest() != null ? 
+                                          notification.getCampaignCompletionRequest().getId() : "NULL"));
+                    }
+                    return convertToDTO(notification);
+                })
                 .collect(Collectors.toList());
     }
 
@@ -248,10 +258,19 @@ public class NotificationService implements INotificationService {
      */
     @Override
     public List<NotificationDTO> getAllNotificationsForUser(User user, int limit) {
-        return notificationRepository.findByRecipientOrderByCreatedAtDesc(user,
-                PageRequest.of(0, limit))
-                .stream()
-                .map(this::convertToDTO)
+        List<Notification> notifications = notificationRepository.findByRecipientOrderByCreatedAtDesc(user,
+                PageRequest.of(0, limit));
+        return notifications.stream()
+                .map(notification -> {
+                    // Debug for specific notification type
+                    if ("CAMPAIGN_COMPLETION_REQUEST".equals(notification.getNotificationType())) {
+                        System.out.println("DEBUG: Processing CAMPAIGN_COMPLETION_REQUEST notification ID: " + notification.getId());
+                        System.out.println("DEBUG: notification.getCampaignCompletionRequest() = " + 
+                                         (notification.getCampaignCompletionRequest() != null ? 
+                                          notification.getCampaignCompletionRequest().getId() : "NULL"));
+                    }
+                    return convertToDTO(notification);
+                })
                 .collect(Collectors.toList());
     }
 
@@ -262,7 +281,16 @@ public class NotificationService implements INotificationService {
     public List<NotificationDTO> getUnreadNotificationsForUser(User user) {
         return notificationRepository.findByRecipientAndIsReadFalse(user)
                 .stream()
-                .map(this::convertToDTO)
+                .map(notification -> {
+                    // Debug for specific notification type
+                    if ("CAMPAIGN_COMPLETION_REQUEST".equals(notification.getNotificationType())) {
+                        System.out.println("DEBUG: Processing UNREAD CAMPAIGN_COMPLETION_REQUEST notification ID: " + notification.getId());
+                        System.out.println("DEBUG: notification.getCampaignCompletionRequest() = " + 
+                                         (notification.getCampaignCompletionRequest() != null ? 
+                                          notification.getCampaignCompletionRequest().getId() : "NULL"));
+                    }
+                    return convertToDTO(notification);
+                })
                 .collect(Collectors.toList());
     }
 
@@ -272,7 +300,7 @@ public class NotificationService implements INotificationService {
     @Transactional
     @Override
     public NotificationDTO markNotificationAsRead(Long notificationId, User user) {
-        Notification notification = notificationRepository.findById(notificationId)
+        Notification notification = notificationRepository.findByIdWithAssociations(notificationId)
                 .orElseThrow(() -> new RuntimeException("Notification not found"));
 
         // Ensure the notification belongs to the requesting user
@@ -586,6 +614,24 @@ public class NotificationService implements INotificationService {
     }
 
     /**
+     * Create campaign completion notification
+     */
+    @Transactional
+    @Override
+    public NotificationDTO createCampaignCompletionNotification(
+            User recipient,
+            VaccinationCampaign campaign,
+            User completedBy) {
+        
+        String title = "CHIẾN DỊCH ĐÃ HOÀN THÀNH";
+        String message = "Chiến dịch tiêm chủng '" + campaign.getName() + "' đã được hoàn thành bởi " + 
+                        completedBy.getUsername() + " vào ngày " + new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm").format(new Date());
+        String notificationType = "CAMPAIGN_COMPLETED";
+        
+        return createGeneralNotification(recipient, title, message, notificationType);
+    }
+
+    /**
      * Helper method to send WebSocket notification
      */
     private void sendWebSocketNotification(Notification notification) {
@@ -637,6 +683,15 @@ public class NotificationService implements INotificationService {
         
         if (notification.getRestockRequest() != null) {
             dto.setRestockRequestId(notification.getRestockRequest().getId());
+        }
+        
+        if (notification.getCampaignCompletionRequest() != null) {
+            System.out.println("DEBUG: convertToDTO - notification.getCampaignCompletionRequest() is NOT null");
+            System.out.println("DEBUG: convertToDTO - notification.getCampaignCompletionRequest().getId() = " + notification.getCampaignCompletionRequest().getId());
+            dto.setCampaignCompletionRequestId(notification.getCampaignCompletionRequest().getId());
+            System.out.println("DEBUG: convertToDTO - dto.getCampaignCompletionRequestId() = " + dto.getCampaignCompletionRequestId());
+        } else {
+            System.out.println("DEBUG: convertToDTO - notification.getCampaignCompletionRequest() is NULL");
         }
 
         return dto;
@@ -995,6 +1050,194 @@ public class NotificationService implements INotificationService {
             }
         } catch (Exception e) {
             System.err.println("Error sending WebSocket notification to nurse: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * CAMPAIGN COMPLETION REQUEST NOTIFICATIONS
+     */
+    
+    /**
+     * Notify managers about a new campaign completion request
+     */
+    @Transactional
+    @Override
+    public void notifyManagersAboutCampaignCompletionRequest(CampaignCompletionRequest request) {
+        System.out.println("DEBUG: NotificationService - Creating notification for completion request ID: " + request.getId());
+        System.out.println("DEBUG: NotificationService - Campaign name: " + request.getCampaign().getName());
+        System.out.println("DEBUG: NotificationService - Request status: " + request.getStatus());
+        
+        // Ensure the request is properly managed within this transaction
+        System.out.println("DEBUG: NotificationService - Request object class: " + request.getClass().getSimpleName());
+        System.out.println("DEBUG: NotificationService - Request ID before notification creation: " + request.getId());
+        
+        // Find all manager users
+        List<User> managers = userRepository.findByRole_RoleName("ROLE_MANAGER");
+        System.out.println("DEBUG: NotificationService - Found " + managers.size() + " managers");
+        
+        for (User manager : managers) {
+            try {
+                // Create new notification with manual title and message that includes the notification type in title
+                String notificationTitle = "CHIẾN DỊCH CHỜ PHÊ DUYỆT";
+                String notificationMessage = "Một chiến dịch tiêm chủng mới 'YÊU CẦU HOÀN THÀNH CHIẾN DỊCH: " + 
+                                           request.getCampaign().getName() + "' được tạo bởi  Y tá " + 
+                                           request.getRequestedBy().getFullName() + " yêu cầu hoàn thành chiến dịch '" + 
+                                           request.getCampaign().getName() + "' đang chờ duyệt.";
+                
+                Notification notification = new Notification();
+                notification.setTitle(notificationTitle);
+                notification.setMessage(notificationMessage);
+                notification.setNotificationType("completion-request");
+                notification.setRecipient(manager);
+                
+                // Make sure to set the completion request reference properly
+                System.out.println("DEBUG: NotificationService - Setting campaignCompletionRequest with ID: " + request.getId());
+                notification.setCampaignCompletionRequest(request);
+                
+                System.out.println("DEBUG: NotificationService - Before save - notification.getCampaignCompletionRequest() = " + 
+                                 (notification.getCampaignCompletionRequest() != null ? 
+                                  notification.getCampaignCompletionRequest().getId() : "NULL"));
+                
+                Notification savedNotification = notificationRepository.saveAndFlush(notification);
+                
+                System.out.println("DEBUG: NotificationService - After saveAndFlush - notification ID: " + savedNotification.getId());
+                System.out.println("DEBUG: NotificationService - After saveAndFlush - linked completion request ID: " + 
+                                 (savedNotification.getCampaignCompletionRequest() != null ? 
+                                  savedNotification.getCampaignCompletionRequest().getId() : "NULL"));
+                
+                // Send WebSocket notification - directly create DTO with manual fields
+                NotificationDTO notificationDTO = new NotificationDTO();
+                notificationDTO.setId(savedNotification.getId());
+                notificationDTO.setTitle(savedNotification.getTitle());
+                notificationDTO.setMessage(savedNotification.getMessage());
+                notificationDTO.setCreatedAt(savedNotification.getCreatedAt());
+                notificationDTO.setRead(savedNotification.isRead());
+                notificationDTO.setNotificationType(savedNotification.getNotificationType());
+                notificationDTO.setConfirm(savedNotification.getConfirm());
+                notificationDTO.setRecipientId(savedNotification.getRecipient().getId());
+                
+                // Manually set the campaignCompletionRequestId to ensure it's not null
+                if (request != null && request.getId() != null) {
+                    notificationDTO.setCampaignCompletionRequestId(request.getId());
+                    System.out.println("DEBUG: NotificationService - Manually set DTO campaignCompletionRequestId: " + notificationDTO.getCampaignCompletionRequestId());
+                } else {
+                    System.out.println("DEBUG: NotificationService - WARNING - request or request.getId() is null!");
+                }
+                
+                if (manager.getUsername() != null) {
+                    messagingTemplate.convertAndSendToUser(
+                            manager.getUsername(),
+                            "/queue/notifications",
+                            notificationDTO
+                    );
+                    System.out.println("DEBUG: NotificationService - Sent WebSocket notification to manager: " + manager.getUsername());
+                }
+            } catch (Exception e) {
+                System.err.println("Error creating notification for manager " + manager.getId() + ": " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
+    }
+    
+    @Override
+    public void notifyNurseAboutCampaignCompletionApproval(CampaignCompletionRequest request, User manager) {
+        System.out.println("DEBUG: Creating approval notification for nurse ID: " + request.getRequestedBy().getId());
+        System.out.println("DEBUG: Campaign: " + request.getCampaign().getName());
+        System.out.println("DEBUG: Approved by manager: " + manager.getFullName());
+        
+        try {
+            User nurse = request.getRequestedBy();
+            
+            // Create notification for the nurse
+            String notificationTitle = "YÊU CẦU HOÀN THÀNH CHIẾN DỊCH ĐÃ ĐƯỢC PHÊ DUYỆT";
+            String notificationMessage = "Yêu cầu hoàn thành chiến dịch '" + request.getCampaign().getName() + 
+                                       "' của bạn đã được quản lý " + manager.getFullName() + 
+                                       " phê duyệt. Chiến dịch đã chuyển sang trạng thái hoàn thành.";
+            
+            Notification notification = new Notification();
+            notification.setTitle(notificationTitle);
+            notification.setMessage(notificationMessage);
+            notification.setNotificationType("campaign-completion-approved");
+            notification.setRecipient(nurse);
+            notification.setCampaignCompletionRequest(request);
+            
+            Notification savedNotification = notificationRepository.saveAndFlush(notification);
+            System.out.println("DEBUG: Saved approval notification ID: " + savedNotification.getId());
+            
+            // Send WebSocket notification - directly create DTO
+            NotificationDTO notificationDTO = new NotificationDTO();
+            notificationDTO.setId(savedNotification.getId());
+            notificationDTO.setTitle(savedNotification.getTitle());
+            notificationDTO.setMessage(savedNotification.getMessage());
+            notificationDTO.setCreatedAt(savedNotification.getCreatedAt());
+            notificationDTO.setRead(savedNotification.isRead());
+            notificationDTO.setNotificationType(savedNotification.getNotificationType());
+            notificationDTO.setConfirm(savedNotification.getConfirm());
+            notificationDTO.setRecipientId(savedNotification.getRecipient().getId());
+            notificationDTO.setCampaignCompletionRequestId(request.getId());
+            
+            if (nurse.getUsername() != null) {
+                messagingTemplate.convertAndSendToUser(
+                        nurse.getUsername(),
+                        "/queue/notifications",
+                        notificationDTO
+                );
+                System.out.println("DEBUG: Sent approval WebSocket notification to nurse: " + nurse.getUsername());
+            }
+        } catch (Exception e) {
+            System.err.println("Error creating approval notification for nurse: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    @Override
+    public void notifyNurseAboutCampaignCompletionRejection(CampaignCompletionRequest request, User manager) {
+        System.out.println("DEBUG: Creating rejection notification for nurse ID: " + request.getRequestedBy().getId());
+        System.out.println("DEBUG: Campaign: " + request.getCampaign().getName());
+        System.out.println("DEBUG: Rejected by manager: " + manager.getFullName());
+        
+        try {
+            User nurse = request.getRequestedBy();
+            
+            // Create notification for the nurse
+            String notificationTitle = "YÊU CẦU HOÀN THÀNH CHIẾN DỊCH BỊ TỪ CHỐI";
+            String notificationMessage = "Yêu cầu hoàn thành chiến dịch '" + request.getCampaign().getName() + 
+                                       "' của bạn đã bị quản lý " + manager.getFullName() + 
+                                       " từ chối. Lý do: " + request.getReviewNotes();
+            
+            Notification notification = new Notification();
+            notification.setTitle(notificationTitle);
+            notification.setMessage(notificationMessage);
+            notification.setNotificationType("campaign-completion-rejected");
+            notification.setRecipient(nurse);
+            notification.setCampaignCompletionRequest(request);
+            
+            Notification savedNotification = notificationRepository.saveAndFlush(notification);
+            System.out.println("DEBUG: Saved rejection notification ID: " + savedNotification.getId());
+            
+            // Send WebSocket notification - directly create DTO
+            NotificationDTO notificationDTO = new NotificationDTO();
+            notificationDTO.setId(savedNotification.getId());
+            notificationDTO.setTitle(savedNotification.getTitle());
+            notificationDTO.setMessage(savedNotification.getMessage());
+            notificationDTO.setCreatedAt(savedNotification.getCreatedAt());
+            notificationDTO.setRead(savedNotification.isRead());
+            notificationDTO.setNotificationType(savedNotification.getNotificationType());
+            notificationDTO.setConfirm(savedNotification.getConfirm());
+            notificationDTO.setRecipientId(savedNotification.getRecipient().getId());
+            notificationDTO.setCampaignCompletionRequestId(request.getId());
+            
+            if (nurse.getUsername() != null) {
+                messagingTemplate.convertAndSendToUser(
+                        nurse.getUsername(),
+                        "/queue/notifications",
+                        notificationDTO
+                );
+                System.out.println("DEBUG: Sent rejection WebSocket notification to nurse: " + nurse.getUsername());
+            }
+        } catch (Exception e) {
+            System.err.println("Error creating rejection notification for nurse: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 }

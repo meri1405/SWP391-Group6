@@ -78,18 +78,27 @@ const VaccinationCampaignDetail = ({ campaignId, onBack, onEdit }) => {
       setCampaign(campaignData);
 
       try {
-        // Fetch eligible students with separate try-catch để không bị fail toàn bộ quá trình nếu chỉ một API lỗi
-        const students = await vaccinationCampaignApi.getEligibleStudents(
-          campaignId
-        );
-        setEligibleStudents(students);
+        // Only fetch eligible students if campaign is approved, in progress, or completed
+        console.log(`Campaign ${campaignId} status: ${campaignData.status}`);
 
-        // Hiển thị thông báo nếu API trả về lỗi liên quan đến trạng thái campaign
         if (
-          students.error ||
-          (students.message && students.message.includes("chưa được phê duyệt"))
+          campaignData.status === "APPROVED" ||
+          campaignData.status === "IN_PROGRESS" ||
+          campaignData.status === "COMPLETED"
         ) {
-          message.warning(students.message);
+          console.log(
+            `Fetching eligible students for campaign ${campaignId} with status ${campaignData.status}`
+          );
+          const students = await vaccinationCampaignApi.getEligibleStudents(
+            campaignId
+          );
+          setEligibleStudents(students);
+        } else {
+          console.log(
+            `Campaign ${campaignId} has status ${campaignData.status}, not fetching eligible students`
+          );
+          // Set default empty values for pending/rejected/cancelled campaigns
+          setEligibleStudents({ eligibleStudents: [], ineligibleStudents: [] });
         }
       } catch (studentError) {
         console.error("Error fetching eligible students:", studentError);
@@ -132,6 +141,12 @@ const VaccinationCampaignDetail = ({ campaignId, onBack, onEdit }) => {
   };
 
   const handleGenerateForms = async () => {
+    // Additional safety check
+    if (campaign.status !== "APPROVED") {
+      message.error("Chỉ có thể tạo mẫu đơn cho chiến dịch đã được duyệt");
+      return;
+    }
+
     setFormGenerateLoading(true);
     try {
       await vaccinationCampaignApi.generateForms(campaignId);
@@ -146,6 +161,14 @@ const VaccinationCampaignDetail = ({ campaignId, onBack, onEdit }) => {
   };
 
   const handleSendForms = async () => {
+    // Additional safety check
+    if (campaign.status !== "APPROVED" && campaign.status !== "IN_PROGRESS") {
+      message.error(
+        "Chỉ có thể gửi mẫu đơn cho chiến dịch đã được duyệt hoặc đang thực hiện"
+      );
+      return;
+    }
+
     setFormSendLoading(true);
     try {
       await vaccinationCampaignApi.sendFormsToParents(campaignId);
@@ -160,15 +183,62 @@ const VaccinationCampaignDetail = ({ campaignId, onBack, onEdit }) => {
   };
 
   const handleCompleteCampaign = async () => {
+    // Additional safety check
+    if (campaign.status !== "IN_PROGRESS") {
+      message.error("Chỉ có thể hoàn thành chiến dịch đang thực hiện");
+      return;
+    }
+
     setCompleteCampaignLoading(true);
     try {
-      await vaccinationCampaignApi.completeCampaign(campaignId);
-      message.success("Đã hoàn thành chiến dịch tiêm chủng");
+      // Debug current user info
+      const token = localStorage.getItem("token");
+      const userInfo = localStorage.getItem("userInfo");
+      console.log("Current token exists:", !!token);
+      console.log("Current user info:", userInfo ? JSON.parse(userInfo) : null);
+
+      // Test authentication first
+      console.log("Testing nurse authentication...");
+      try {
+        const authTest = await vaccinationCampaignApi.testNurseAuth();
+        console.log("Auth test successful:", authTest);
+      } catch (authError) {
+        console.error("Auth test failed:", authError);
+        message.error(
+          "Lỗi xác thực: " +
+            (authError.response?.data?.message || "Không có quyền truy cập")
+        );
+        return;
+      }
+
+      const requestData = {
+        requestReason: "Yêu cầu hoàn thành chiến dịch tiêm chủng",
+        completionNotes: `Tổng số học sinh đã tiêm: ${completedRecords}. Số học sinh hoãn tiêm: ${postponedRecords}. Số mẫu đơn chưa xác nhận: ${pendingForms}.`,
+      };
+
+      console.log("Requesting campaign completion with data:", requestData);
+      const response = await vaccinationCampaignApi.requestCampaignCompletion(
+        campaignId,
+        requestData
+      );
+
+      if (response.success) {
+        message.success(
+          "Đã gửi yêu cầu hoàn thành chiến dịch đến quản lý để duyệt"
+        );
+      } else {
+        message.warning(response.message || "Yêu cầu hoàn thành đã được gửi");
+      }
+
       fetchCampaignData(); // Refresh data
       setConfirmCompleteModal(false);
     } catch (error) {
-      message.error("Không thể hoàn thành chiến dịch");
-      console.error("Error completing campaign:", error);
+      const errorMessage =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        "Không thể gửi yêu cầu hoàn thành chiến dịch";
+      message.error(errorMessage);
+      console.error("Error requesting campaign completion:", error);
     } finally {
       setCompleteCampaignLoading(false);
     }
@@ -186,6 +256,17 @@ const VaccinationCampaignDetail = ({ campaignId, onBack, onEdit }) => {
 
   const handleUpdateNotes = async (values) => {
     if (!selectedRecord) return;
+
+    // Additional safety check - notes can be updated in any valid status
+    if (
+      !campaign ||
+      !["APPROVED", "IN_PROGRESS", "COMPLETED"].includes(campaign.status)
+    ) {
+      message.error(
+        "Không thể cập nhật ghi chú cho chiến dịch với trạng thái hiện tại"
+      );
+      return;
+    }
 
     setUpdatingNotes(true);
     try {
@@ -207,6 +288,14 @@ const VaccinationCampaignDetail = ({ campaignId, onBack, onEdit }) => {
   const handleVaccinationResult = async (recordData) => {
     try {
       if (!selectedForm) return;
+
+      // Additional safety check - vaccination results can only be recorded for IN_PROGRESS campaigns
+      if (!campaign || campaign.status !== "IN_PROGRESS") {
+        message.error(
+          "Chỉ có thể ghi nhận kết quả tiêm chủng cho chiến dịch đang thực hiện"
+        );
+        return;
+      }
 
       await vaccinationCampaignApi.createVaccinationRecord(
         selectedForm.id,
@@ -373,6 +462,7 @@ const VaccinationCampaignDetail = ({ campaignId, onBack, onEdit }) => {
               size="small"
               onClick={() => openVaccinationForm(record)}
               icon={<MedicineBoxOutlined />}
+              disabled={isCampaignCompleted}
             >
               Tiêm chủng
             </Button>
@@ -468,12 +558,19 @@ const VaccinationCampaignDetail = ({ campaignId, onBack, onEdit }) => {
       key: "action",
       render: (_, record) => (
         <Space size="small">
-          <Tooltip title="Chỉnh sửa ghi chú">
+          <Tooltip
+            title={
+              isCampaignCompleted
+                ? "Chiến dịch đã hoàn thành, không thể chỉnh sửa"
+                : "Chỉnh sửa ghi chú"
+            }
+          >
             <Button
               type="default"
               size="small"
               icon={<EditOutlined />}
               onClick={() => openEditNotesModal(record)}
+              disabled={isCampaignCompleted}
             />
           </Tooltip>
         </Space>
@@ -618,10 +715,11 @@ const VaccinationCampaignDetail = ({ campaignId, onBack, onEdit }) => {
   const canEditCampaign = campaign.status === "PENDING";
   const canGenerateForms = campaign.status === "APPROVED" && forms.length === 0;
   const canSendForms =
-    campaign.status === "APPROVED" &&
+    (campaign.status === "APPROVED" || campaign.status === "IN_PROGRESS") &&
     forms.length > 0 &&
-    !forms.some((form) => form.sentDate);
-  const canCompleteCampaign = campaign.status === "APPROVED";
+    forms.some((form) => !form.sentDate);
+  const canCompleteCampaign = campaign.status === "IN_PROGRESS";
+  const isCampaignCompleted = campaign.status === "COMPLETED";
 
   return (
     <div className="vaccination-campaign-detail">
@@ -675,7 +773,9 @@ const VaccinationCampaignDetail = ({ campaignId, onBack, onEdit }) => {
                 loading={formSendLoading}
                 onClick={handleSendForms}
               >
-                Gửi đơn đến phụ huynh
+                {forms.some((form) => form.sentDate)
+                  ? "Gửi đơn còn lại đến phụ huynh"
+                  : "Gửi đơn đến phụ huynh"}
               </Button>
             )}
 
@@ -690,6 +790,17 @@ const VaccinationCampaignDetail = ({ campaignId, onBack, onEdit }) => {
             )}
           </Space>
         </div>
+
+        {/* Alert for PENDING status */}
+        {campaign.status === "PENDING" && (
+          <Alert
+            message="Chiến dịch đang chờ duyệt"
+            description="Danh sách học sinh đủ điều kiện và các tính năng khác chỉ khả dụng sau khi chiến dịch được quản lý duyệt."
+            type="info"
+            showIcon
+            style={{ marginBottom: 16 }}
+          />
+        )}
 
         <Descriptions title="Thông tin chiến dịch" bordered column={2}>
           <Descriptions.Item label="Tên chiến dịch">
@@ -817,26 +928,219 @@ const VaccinationCampaignDetail = ({ campaignId, onBack, onEdit }) => {
 
       {/* Complete Campaign Modal */}
       <Modal
-        title="Xác nhận hoàn thành chiến dịch"
+        title={
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              fontSize: "18px",
+              fontWeight: "600",
+              color: "#1890ff",
+            }}
+          >
+            Yêu cầu hoàn thành chiến dịch tiêm chủng
+          </div>
+        }
         open={confirmCompleteModal}
         onOk={handleCompleteCampaign}
         onCancel={() => setConfirmCompleteModal(false)}
         confirmLoading={completeCampaignLoading}
+        okText="Gửi yêu cầu hoàn thành"
+        cancelText="Hủy bỏ"
+        width={650}
+        className="completion-modal"
+        okButtonProps={{
+          size: "large",
+          style: {
+            background: "linear-gradient(135deg, #52c41a 0%, #389e0d 100%)",
+            border: "none",
+            borderRadius: "8px",
+            height: "45px",
+            fontWeight: "600",
+            fontSize: "16px",
+          },
+        }}
+        cancelButtonProps={{
+          size: "large",
+          style: {
+            borderRadius: "8px",
+            height: "45px",
+            fontWeight: "600",
+            fontSize: "16px",
+          },
+        }}
       >
-        <p>
-          Bạn có chắc chắn muốn hoàn thành chiến dịch tiêm chủng này? Hành động
-          này không thể hoàn tác.
-        </p>
-        <p>
-          Tổng số học sinh đã tiêm: <strong>{completedRecords}</strong>
-        </p>
-        <p>
-          Tổng số học sinh hoãn tiêm: <strong>{postponedRecords}</strong>
-        </p>
-        <p>
-          Tổng số mẫu đơn phụ huynh chưa xác nhận:{" "}
-          <strong>{pendingForms}</strong>
-        </p>
+        <div style={{ padding: "20px 0" }}>
+          {/* Main Question */}
+          <div
+            style={{
+              background: "linear-gradient(135deg, #e6f7ff 0%, #f0f9ff 100%)",
+              padding: "20px",
+              borderRadius: "12px",
+              border: "1px solid #91d5ff",
+              marginBottom: "24px",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+                marginBottom: "16px",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "16px",
+                  fontWeight: "600",
+                  color: "#262626",
+                }}
+              >
+                Xác nhận gửi yêu cầu hoàn thành chiến dịch
+              </span>
+            </div>
+            <p
+              style={{
+                margin: 0,
+                fontSize: "15px",
+                color: "#595959",
+                lineHeight: "1.6",
+              }}
+            >
+              Bạn có chắc chắn muốn gửi yêu cầu hoàn thành chiến dịch tiêm chủng{" "}
+              <strong>"{campaign?.name}"</strong> đến quản lý để phê duyệt? Sau
+              khi gửi, yêu cầu sẽ được chuyển đến quản lý để xem xét và quyết
+              định.
+            </p>
+          </div>
+
+          {/* Statistics Card */}
+          <div
+            style={{
+              background: "linear-gradient(135deg, #f6ffed 0%, #f9ffed 100%)",
+              padding: "20px",
+              borderRadius: "12px",
+              border: "1px solid #b7eb8f",
+              marginBottom: "24px",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+                marginBottom: "16px",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "16px",
+                  fontWeight: "600",
+                  color: "#262626",
+                }}
+              >
+                Thống kê chiến dịch hiện tại
+              </span>
+            </div>
+
+            <Row gutter={[16, 16]}>
+              <Col span={8}>
+                <div style={{ textAlign: "center" }}>
+                  <div
+                    style={{
+                      fontSize: "28px",
+                      fontWeight: "bold",
+                      color: "#52c41a",
+                      marginBottom: "4px",
+                    }}
+                  >
+                    {completedRecords}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "14px",
+                      color: "#595959",
+                    }}
+                  >
+                    Đã tiêm chủng
+                  </div>
+                </div>
+              </Col>
+              <Col span={8}>
+                <div style={{ textAlign: "center" }}>
+                  <div
+                    style={{
+                      fontSize: "28px",
+                      fontWeight: "bold",
+                      color: "#faad14",
+                      marginBottom: "4px",
+                    }}
+                  >
+                    {postponedRecords}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "14px",
+                      color: "#595959",
+                    }}
+                  >
+                    Hoãn tiêm
+                  </div>
+                </div>
+              </Col>
+              <Col span={8}>
+                <div style={{ textAlign: "center" }}>
+                  <div
+                    style={{
+                      fontSize: "28px",
+                      fontWeight: "bold",
+                      color: "#f5222d",
+                      marginBottom: "4px",
+                    }}
+                  >
+                    {pendingForms}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "14px",
+                      color: "#595959",
+                    }}
+                  >
+                    Chưa xác nhận
+                  </div>
+                </div>
+              </Col>
+            </Row>
+          </div>
+
+          {/* Important Note */}
+          <Alert
+            message="Lưu ý quan trọng"
+            description={
+              <div style={{ marginTop: "8px" }}>
+                <p style={{ margin: "0 0 8px 0" }}>
+                  Vui lòng kiểm tra kỹ thống tin và tình hình tiêm chủng trước
+                  khi gửi yêu cầu
+                </p>
+                <p style={{ margin: "0 0 8px 0" }}>
+                  Quản lý sẽ xem xét và phê duyệt yêu cầu hoàn thành chiến dịch
+                  này
+                </p>
+                <p style={{ margin: 0 }}>
+                  Sau khi được phê duyệt, chiến dịch sẽ chuyển sang trạng thái
+                  "Đã hoàn thành"
+                </p>
+              </div>
+            }
+            type="info"
+            showIcon
+            style={{
+              borderRadius: "8px",
+              border: "1px solid #91d5ff",
+            }}
+          />
+        </div>
       </Modal>
     </div>
   );
@@ -949,23 +1253,21 @@ const EditVaccinationNotesForm = ({ record, onSubmit, onCancel, loading }) => {
           />
         </Form.Item>
 
-        <Form.Item>
-          <Row justify="end" gutter={16}>
-            <Col>
-              <Button onClick={onCancel}>Hủy</Button>
-            </Col>
-            <Col>
-              <Button
-                type="primary"
-                htmlType="submit"
-                loading={loading}
-                icon={<SaveOutlined />}
-              >
-                Lưu thay đổi
-              </Button>
-            </Col>
-          </Row>
-        </Form.Item>
+        <Row justify="end" gutter={16} style={{ marginTop: 16 }}>
+          <Col>
+            <Button onClick={onCancel}>Hủy</Button>
+          </Col>
+          <Col>
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={loading}
+              icon={<SaveOutlined />}
+            >
+              Lưu thay đổi
+            </Button>
+          </Col>
+        </Row>
       </Form>
     </div>
   );

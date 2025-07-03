@@ -17,7 +17,6 @@ import {
   InfoCircleOutlined
 } from '@ant-design/icons';
 import { importStudentsFromExcel, downloadExcelTemplate } from '../../api/studentApi';
-import { VIETNAMESE_MOBILE_PREFIXES } from '../../utils/phoneValidator';
 import '../../styles/StudentManagement.css';
 
 const { Title, Text } = Typography;
@@ -119,8 +118,7 @@ const ImportStudentsModal = ({ visible, onCancel, onSuccess }) => {
     'Học sinh phải từ 2 đến 12 tuổi',
     'Giới tính: M (Nam) hoặc F (Nữ)',
     'Thông tin phụ huynh là tùy chọn nhưng nếu có phải điền đầy đủ họ tên và số điện thoại',
-    'Số điện thoại phụ huynh phải có 10 số và đúng đầu số Việt Nam',
-    `Các đầu số hợp lệ: Viettel (${VIETNAMESE_MOBILE_PREFIXES.slice(0,12).join(', ')}), Mobifone (${VIETNAMESE_MOBILE_PREFIXES.slice(12,18).join(', ')}), Vinaphone (${VIETNAMESE_MOBILE_PREFIXES.slice(18,24).join(', ')}), và các nhà mạng khác`
+    'Số điện thoại phụ huynh phải có 10 số'
   ];
 
   return (

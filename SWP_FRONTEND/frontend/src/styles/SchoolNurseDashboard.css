@@ -5,8 +5,112 @@
   margin: 90px 20px 30px 20px;
   background-color: #f4f6fb;
   border-radius: 16px;
-  box-shadow: 0 4px 20px 0 rgba(0,0,0,0.08);
+  box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.08);
   overflow: hidden;
+}
+
+/* Notification badge fix for sidebar menu items */
+.school-nurse-dashboard .ant-menu .ant-menu-item {
+  position: relative;
+  display: flex !important;
+  align-items: center;
+  height: 48px;
+  padding: 0 24px;
+  margin: 0;
+  border-radius: 0;
+  transition: all 0.2s ease;
+}
+
+.school-nurse-dashboard .ant-menu .ant-menu-item .ant-menu-item-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  font-size: 16px;
+  width: auto;
+  min-width: 24px;
+}
+
+.school-nurse-dashboard .ant-menu .ant-menu-item .ant-badge {
+  display: inline-flex;
+  align-items: center;
+  line-height: normal;
+}
+
+.school-nurse-dashboard .ant-menu .ant-menu-item .ant-badge .ant-badge-count {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  min-width: 16px;
+  height: 16px;
+  line-height: 14px;
+  font-size: 10px;
+  border: 1px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+  transform: translate(50%, -50%);
+}
+
+/* Specific styling for notification badge to be closer to bell icon */
+.school-nurse-dashboard .ant-menu .ant-menu-item .ant-badge {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  line-height: normal;
+}
+
+.school-nurse-dashboard .ant-menu .ant-menu-item .ant-badge .anticon {
+  font-size: 16px;
+}
+
+/* Adjust badge position specifically for notification item */
+.school-nurse-dashboard
+  .ant-menu
+  .ant-menu-item[data-menu-id="notifications"]
+  .ant-badge
+  .ant-badge-count {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  transform: translate(20%, -20%);
+  min-width: 16px;
+  height: 16px;
+  line-height: 14px;
+  font-size: 10px;
+  background-color: #ff4d4f;
+  border: 1px solid #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Ensure menu item text doesn't wrap or get cut off */
+.school-nurse-dashboard .ant-menu .ant-menu-item .ant-menu-title-content {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-left: 4px;
+}
+
+/* Prevent badge from interfering with menu item layout */
+.school-nurse-dashboard .ant-menu .ant-menu-item:hover,
+.school-nurse-dashboard .ant-menu .ant-menu-item-selected {
+  background-color: rgba(24, 144, 255, 0.06);
+}
+
+.school-nurse-dashboard .ant-menu .ant-menu-item-selected .ant-menu-item-icon {
+  color: #1890ff;
+}
+
+/* Fix for sidebar width to accommodate badges */
+.nurse-sidebar {
+  background: #fff;
+  border-right: 1px solid #f0f0f0;
+  z-index: 10;
+  padding-top: 24px;
+  position: relative;
+  width: 300px; /* Increased from 280px */
+  min-width: 300px;
+  overflow: visible; /* Allow badges to show outside bounds */
 }
 
 .nurse-sidebar {
@@ -58,7 +162,7 @@
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid #f0f0f0;
-  box-shadow: 0 2px 8px 0 rgba(0,0,0,0.05);
+  box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.05);
 }
 
 .nurse-header-title {
@@ -134,7 +238,7 @@
 }
 
 .nurse-stat-card::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
@@ -368,25 +472,25 @@
     grid-template-columns: 1fr;
     gap: 16px;
   }
-  
+
   .nurse-profile-form-grid {
     grid-template-columns: 1fr;
     gap: 16px;
   }
-  
+
   .nurse-profile-card-content {
     padding: 20px;
   }
-  
+
   .nurse-profile-card-header {
     padding: 16px 20px;
   }
-  
+
   .nurse-activity-item {
     flex-direction: column;
     gap: 12px;
   }
-  
+
   .nurse-activity-icon {
     align-self: flex-start;
   }
@@ -396,31 +500,31 @@
   .nurse-profile-content-grid {
     gap: 16px;
   }
-  
+
   .nurse-stat-card {
     padding: 20px;
   }
-  
+
   .nurse-stat-card-content {
     flex-direction: column;
     text-align: center;
     gap: 12px;
   }
-  
+
   .nurse-stat-icon {
     width: 50px;
     height: 50px;
     font-size: 20px;
   }
-  
+
   .nurse-stat-info h3 {
     font-size: 24px;
   }
-  
+
   .nurse-input {
     padding: 10px 14px;
   }
-  
+
   .nurse-form-value {
     padding: 10px 14px;
   }
@@ -459,10 +563,18 @@
   animation: slideUp 0.5s ease-out;
 }
 
-.nurse-profile-card:nth-child(1) { animation-delay: 0.1s; }
-.nurse-profile-card:nth-child(2) { animation-delay: 0.2s; }
-.nurse-profile-card:nth-child(3) { animation-delay: 0.3s; }
-.nurse-profile-card:nth-child(4) { animation-delay: 0.4s; }
+.nurse-profile-card:nth-child(1) {
+  animation-delay: 0.1s;
+}
+.nurse-profile-card:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.nurse-profile-card:nth-child(3) {
+  animation-delay: 0.3s;
+}
+.nurse-profile-card:nth-child(4) {
+  animation-delay: 0.4s;
+}
 
 /* Scrollbar styling */
 .nurse-activity-list::-webkit-scrollbar {
@@ -722,22 +834,22 @@
     gap: 30px;
     padding: 30px 20px;
   }
-  
+
   .nurse-profile-avatar-section {
     flex-direction: column;
     align-items: center;
     text-align: center;
   }
-  
+
   .nurse-profile-name {
     font-size: 24px;
   }
-  
+
   .nurse-profile-actions {
     align-items: center;
     width: 100%;
   }
-  
+
   .nurse-edit-actions,
   .nurse-view-actions {
     width: 100%;
@@ -749,25 +861,25 @@
   .nurse-profile-header {
     padding: 20px;
   }
-  
+
   .nurse-profile-name {
     font-size: 1.75rem;
   }
-  
+
   .nurse-profile-title {
     font-size: 1rem;
   }
-  
+
   .nurse-profile-avatar-large {
     width: 100px;
     height: 100px;
   }
-  
+
   .nurse-btn {
     width: 100%;
     justify-content: center;
   }
-  
+
   .nurse-profile-actions {
     flex-direction: column;
     gap: 8px;

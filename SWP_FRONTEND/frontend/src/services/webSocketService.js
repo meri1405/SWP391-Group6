@@ -13,51 +13,60 @@ class WebSocketService {
     this.reconnectDelay = 3000;
     this.currentToken = null; // Store current token for reconnection
     this.webSocketDisabled = false; // Added to track WebSocket state
-    
+
     // Add custom event system for restock requests
     this.restockRequestListeners = [];
   }
-  
+
   // Add methods for restock request notifications
   addRestockRequestListener(listener) {
-    if (typeof listener === 'function') {
-      console.log('[WebSocketService] Adding restock request listener');
+    if (typeof listener === "function") {
+      console.log("[WebSocketService] Adding restock request listener");
       this.restockRequestListeners.push(listener);
       return () => this.removeRestockRequestListener(listener);
     }
     return () => {};
   }
-  
+
   removeRestockRequestListener(listener) {
     const index = this.restockRequestListeners.indexOf(listener);
     if (index !== -1) {
-      console.log('[WebSocketService] Removing restock request listener');
+      console.log("[WebSocketService] Removing restock request listener");
       this.restockRequestListeners.splice(index, 1);
     }
   }
-  
+
   notifyRestockRequestListeners() {
-    console.log(`[WebSocketService] Notifying ${this.restockRequestListeners.length} restock request listeners`);
-    this.restockRequestListeners.forEach(listener => {
+    console.log(
+      `[WebSocketService] Notifying ${this.restockRequestListeners.length} restock request listeners`
+    );
+    this.restockRequestListeners.forEach((listener) => {
       try {
         listener();
       } catch (error) {
-        console.error('[WebSocketService] Error in restock request listener:', error);
+        console.error(
+          "[WebSocketService] Error in restock request listener:",
+          error
+        );
       }
     });
   }
-  
+
   // Initialize the service with restockRequestApi
   initialize() {
     // Subscribe to restock request notifications from the API
     restockRequestApi.subscribeToUpdates(() => {
-      console.log('[WebSocketService] Received restock request update from API');
+      console.log(
+        "[WebSocketService] Received restock request update from API"
+      );
       this.notifyRestockRequestListeners();
     });
-    
-    console.log('[WebSocketService] Initialized with restock request subscription');
+
+    console.log(
+      "[WebSocketService] Initialized with restock request subscription"
+    );
   }
-  
+
   connect(token) {
     return new Promise((resolve, reject) => {
       try {
@@ -73,10 +82,10 @@ class WebSocketService {
 
         // WebSocket connection is now enabled
         console.log("Attempting to establish WebSocket connection");
-        
+
         // Set WebSocket disabled flag to false
         this.webSocketDisabled = false;
-        
+
         if (!this.webSocketDisabled) {
           // Create SockJS connection with token in URL
           const wsUrl = `${
@@ -249,7 +258,7 @@ class WebSocketService {
     if (this.webSocketDisabled) {
       return false;
     }
-    
+
     // Return connection status
     return this.connected && this.client && this.client.connected;
   }

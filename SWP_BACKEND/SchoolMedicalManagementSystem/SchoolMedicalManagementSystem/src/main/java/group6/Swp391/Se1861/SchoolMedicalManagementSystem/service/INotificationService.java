@@ -114,6 +114,14 @@ public interface INotificationService {
             String creatorName);
 
     /**
+     * Create campaign completion notification
+     */
+    NotificationDTO createCampaignCompletionNotification(
+            User recipient,
+            VaccinationCampaign campaign,
+            User completedBy);
+
+    /**
      * Create vaccination consent form notification
      */
     NotificationDTO createVaccinationConsentFormNotification(
@@ -231,4 +239,23 @@ public interface INotificationService {
      * Notify nurse about restock request rejection
      */
     void notifyNurseAboutRestockRequestRejection(RestockRequest restockRequest, String notes);
+    
+    /**
+     * CAMPAIGN COMPLETION REQUEST NOTIFICATIONS
+     */
+    
+    /**
+     * Notify managers about a new campaign completion request
+     */
+    void notifyManagersAboutCampaignCompletionRequest(CampaignCompletionRequest request);
+    
+    /**
+     * Notify nurse about campaign completion request approval
+     */
+    void notifyNurseAboutCampaignCompletionApproval(CampaignCompletionRequest request, User manager);
+    
+    /**
+     * Notify nurse about campaign completion request rejection
+     */
+    void notifyNurseAboutCampaignCompletionRejection(CampaignCompletionRequest request, User manager);
 }

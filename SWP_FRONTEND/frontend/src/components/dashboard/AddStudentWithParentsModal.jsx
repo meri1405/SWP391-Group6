@@ -17,7 +17,6 @@ import {
 } from "antd";
 import { UserAddOutlined, TeamOutlined } from "@ant-design/icons";
 import { createStudentWithParents } from "../../api/studentApi";
-import { validatePhone, VIETNAMESE_MOBILE_PREFIXES } from "../../utils/phoneValidator";
 import moment from "moment";
 import "../../styles/StudentManagement.css";
 
@@ -77,53 +76,24 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
   // Custom validator cho thông tin phụ huynh
   const validateParentInfo = (parentType) => {
     return {
-      validator: async (rule) => {
+      validator: async (_, value) => {
         const values = form.getFieldsValue();
-        const phoneField = `${parentType}_phone`;
         const firstNameField = `${parentType}_firstName`;
         const lastNameField = `${parentType}_lastName`;
-        const dobField = `${parentType}_dob`;
-        const jobTitleField = `${parentType}_jobTitle`;
 
-        const phone = values[phoneField];
-        const firstName = values[firstNameField];
-        const lastName = values[lastNameField];
-        const dob = values[dobField];
-        const jobTitle = values[jobTitleField];
+        const hasFirstName = values[firstNameField];
+        const hasLastName = values[lastNameField];
 
-        const currentField = rule.field;
-
-        // Nếu có số điện thoại thì phải có tên và họ
-        if (phone && phone.trim()) {
-          if (currentField === firstNameField && (!firstName || !firstName.trim())) {
-            return Promise.reject(new Error('Tên là bắt buộc khi có số điện thoại'));
-          }
-          if (currentField === lastNameField && (!lastName || !lastName.trim())) {
-            return Promise.reject(new Error('Họ là bắt buộc khi có số điện thoại'));
-          }
-          if (currentField === dobField && !dob) {
-            return Promise.reject(new Error('Ngày sinh là bắt buộc khi có số điện thoại'));
-          }
-          if (currentField === jobTitleField && (!jobTitle || !jobTitle.trim())) {
-            return Promise.reject(new Error('Nghề nghiệp là bắt buộc khi có số điện thoại'));
-          }
-          
-          // Validate phone format
-          if (currentField === phoneField) {
-            const phoneError = validatePhone(phone);
-            if (phoneError) {
-              return Promise.reject(new Error(phoneError));
-            }
+        // Nếu có nhập họ hoặc tên thì các trường khác cũng bắt buộc
+        if (hasFirstName || hasLastName) {
+          if (!value) {
+            return Promise.reject(
+              `Trường này là bắt buộc khi nhập thông tin ${
+                parentType === "father" ? "cha" : "mẹ"
+              }`
+            );
           }
         }
-        
-        // Nếu có tên hoặc họ thì phải có số điện thoại
-        if ((firstName && firstName.trim()) || (lastName && lastName.trim())) {
-          if (currentField === phoneField && (!phone || !phone.trim())) {
-            return Promise.reject(new Error('Số điện thoại là bắt buộc khi có họ tên'));
-          }
-        }
-
         return Promise.resolve();
       },
     };
@@ -149,10 +119,12 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
     try {
       // Validation bổ sung trước khi gửi
       if (
-        !values.father_phone &&
-        !values.mother_phone
+        !values.father_firstName &&
+        !values.father_lastName &&
+        !values.mother_firstName &&
+        !values.mother_lastName
       ) {
-        message.error("Vui lòng nhập thông tin ít nhất một phụ huynh (số điện thoại)");
+        message.error("Vui lòng nhập thông tin ít nhất một phụ huynh");
         setLoading(false);
         return;
       }
@@ -174,19 +146,14 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
         ],
       };
 
-      // Thêm thông tin cha nếu có số điện thoại (và theo validation đã có họ tên)
-      if (values.father_phone && values.father_phone.trim()) {
+      if (values.father_firstName && values.father_lastName) {
         if (
-          !values.father_firstName ||
-          !values.father_firstName.trim() ||
-          !values.father_lastName ||
-          !values.father_lastName.trim() ||
+          !values.father_phone ||
           !values.father_jobTitle ||
-          !values.father_jobTitle.trim() ||
           !values.father_dob
         ) {
           message.error(
-            "Vui lòng nhập đầy đủ thông tin bắt buộc của cha: họ, tên, nghề nghiệp, ngày sinh"
+            "Vui lòng nhập đầy đủ thông tin bắt buộc của cha: số điện thoại, nghề nghiệp, ngày sinh"
           );
           setLoading(false);
           return;
@@ -203,19 +170,15 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
         };
       }
 
-      // Thêm thông tin mẹ nếu có số điện thoại (và theo validation đã có họ tên)
-      if (values.mother_phone && values.mother_phone.trim()) {
+      // Thêm thông tin mẹ nếu có đầy đủ thông tin bắt buộc
+      if (values.mother_firstName && values.mother_lastName) {
         if (
-          !values.mother_firstName ||
-          !values.mother_firstName.trim() ||
-          !values.mother_lastName ||
-          !values.mother_lastName.trim() ||
+          !values.mother_phone ||
           !values.mother_jobTitle ||
-          !values.mother_jobTitle.trim() ||
           !values.mother_dob
         ) {
           message.error(
-            "Vui lòng nhập đầy đủ thông tin bắt buộc của mẹ: họ, tên, nghề nghiệp, ngày sinh"
+            "Vui lòng nhập đầy đủ thông tin bắt buộc của mẹ: số điện thoại, nghề nghiệp, ngày sinh"
           );
           setLoading(false);
           return;
@@ -352,15 +315,15 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
                     if (!current) return false;
 
                     const today = moment();
-                    const currentYear = today.year();
-                    const selectedYear = current.year();
+                    // Tính ngày sinh tối thiểu (12 tuổi) và tối đa (2 tuổi)
+                    const minBirthDate = moment().subtract(12, "years"); // 12 tuổi trở xuống
+                    const maxBirthDate = moment().subtract(2, "years"); // 2 tuổi trở lên
 
                     // Disable các ngày trong tương lai và ngoài khoảng tuổi cho phép
-                    // Tuổi tối thiểu 2 năm, tối đa 12 năm (tính theo năm)
                     return (
                       current > today ||
-                      selectedYear < currentYear - 12 ||
-                      selectedYear > currentYear - 2
+                      current < minBirthDate ||
+                      current > maxBirthDate
                     );
                   }}
                   format="DD/MM/YYYY"
@@ -440,20 +403,12 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
         >
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item 
-                name="father_firstName" 
-                label="Tên"
-                rules={[validateParentInfo("father")]}
-              >
+              <Form.Item name="father_firstName" label="Tên">
                 <Input placeholder="Nhập tên cha" />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item 
-                name="father_lastName" 
-                label="Họ"
-                rules={[validateParentInfo("father")]}
-              >
+              <Form.Item name="father_lastName" label="Họ">
                 <Input placeholder="Nhập họ cha" />
               </Form.Item>
             </Col>
@@ -467,15 +422,8 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
                 rules={[
                   validateParentInfo("father"),
                   {
-                    validator: (_, value) => {
-                      if (value && value.trim()) {
-                        const phoneError = validatePhone(value);
-                        if (phoneError) {
-                          return Promise.reject(new Error(phoneError));
-                        }
-                      }
-                      return Promise.resolve();
-                    },
+                    pattern: /^[0-9]{10}$/,
+                    message: "Số điện thoại phải có đúng 10 chữ số",
                   },
                 ]}
               >
@@ -496,15 +444,11 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
                     if (!current) return false;
 
                     const today = moment();
-                    const currentYear = today.year();
-                    const selectedYear = current.year();
+                    const minDate = moment().subtract(100, "years"); // Tối đa 100 tuổi
+                    const maxDate = moment().subtract(18, "years"); // Ít nhất 18 tuổi
 
-                    // Disable các ngày trong tương lai và ngoài khoảng tuổi cho phép  
-                    // Tuổi tối thiểu 18 năm, tối đa 100 năm (tính theo năm)
                     return (
-                      current > today || 
-                      selectedYear < currentYear - 100 || 
-                      selectedYear > currentYear - 18
+                      current > today || current < minDate || current > maxDate
                     );
                   }}
                   format="DD/MM/YYYY"
@@ -559,20 +503,12 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
         >
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item 
-                name="mother_firstName" 
-                label="Tên"
-                rules={[validateParentInfo("mother")]}
-              >
+              <Form.Item name="mother_firstName" label="Tên">
                 <Input placeholder="Nhập tên mẹ" />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item 
-                name="mother_lastName" 
-                label="Họ"
-                rules={[validateParentInfo("mother")]}
-              >
+              <Form.Item name="mother_lastName" label="Họ">
                 <Input placeholder="Nhập họ mẹ" />
               </Form.Item>
             </Col>
@@ -586,15 +522,8 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
                 rules={[
                   validateParentInfo("mother"),
                   {
-                    validator: (_, value) => {
-                      if (value && value.trim()) {
-                        const phoneError = validatePhone(value);
-                        if (phoneError) {
-                          return Promise.reject(new Error(phoneError));
-                        }
-                      }
-                      return Promise.resolve();
-                    },
+                    pattern: /^[0-9]{10}$/,
+                    message: "Số điện thoại phải có đúng 10 chữ số",
                   },
                 ]}
               >
@@ -615,15 +544,11 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
                     if (!current) return false;
 
                     const today = moment();
-                    const currentYear = today.year();
-                    const selectedYear = current.year();
+                    const minDate = moment().subtract(100, "years"); // Tối đa 100 tuổi
+                    const maxDate = moment().subtract(18, "years"); // Ít nhất 18 tuổi
 
-                    // Disable các ngày trong tương lai và ngoài khoảng tuổi cho phép  
-                    // Tuổi tối thiểu 18 năm, tối đa 100 năm (tính theo năm)
                     return (
-                      current > today || 
-                      selectedYear < currentYear - 100 || 
-                      selectedYear > currentYear - 18
+                      current > today || current < minDate || current > maxDate
                     );
                   }}
                   format="DD/MM/YYYY"

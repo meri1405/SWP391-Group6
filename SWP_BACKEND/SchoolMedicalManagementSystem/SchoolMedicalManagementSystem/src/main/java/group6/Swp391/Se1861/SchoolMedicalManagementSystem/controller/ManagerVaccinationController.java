@@ -123,6 +123,28 @@ public class ManagerVaccinationController {
     }
 
     /**
+     * Complete a vaccination campaign
+     */
+    @PostMapping("/{id}/complete")
+    public ResponseEntity<Map<String, Object>> completeCampaign(
+            @PathVariable Long id,
+            @AuthenticationPrincipal User manager) {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            VaccinationCampaignDTO campaign = campaignService.completeCampaign(id, manager);
+            response.put("success", true);
+            response.put("message", "Campaign completed successfully");
+            response.put("campaign", campaign);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    /**
      * Get campaign statistics
      */
     @GetMapping("/statistics")

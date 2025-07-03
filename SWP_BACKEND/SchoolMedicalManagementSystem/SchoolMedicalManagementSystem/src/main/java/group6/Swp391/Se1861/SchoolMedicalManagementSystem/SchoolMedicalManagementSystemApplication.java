@@ -1,6 +1,5 @@
 package group6.Swp391.Se1861.SchoolMedicalManagementSystem;
 
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.utils.PhoneValidator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -100,13 +99,6 @@ public class SchoolMedicalManagementSystemApplication {
 
 				if (count == null || count == 0) {
 					// Thêm admin mới với mật khẩu đã mã hóa (bcrypt) - mật khẩu: admin123
-					String phone = "0962356789"; // Đầu số Viettel
-					String errorMsg = PhoneValidator.validatePhone(phone);
-					if (errorMsg != null) {
-						System.err.println("Lỗi số điện thoại admin: " + errorMsg);
-						phone = "0981234567"; // Thử với đầu số Viettel khác
-					}
-					
 					jdbcTemplate.update(
 						"INSERT INTO users (username, password, first_name, last_name, dob, gender, phone, email, address, job_title, created_date, last_modified_date, enabled, roleid) " +
 						"VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), ?, ?)",
@@ -116,7 +108,7 @@ public class SchoolMedicalManagementSystemApplication {
 						"Administrator",
 						"1990-01-01", // Ngày sinh mặc định
 							"M",
-							phone,
+							"+84123456789",
 							"admin@school.edu",
 							"123 Main St, City, Country",
 							"System Admin",

@@ -26,11 +26,10 @@ export * from "./restockRequestApi";
 export * from "./userApi";
 
 // Health Check APIs
-export * from './healthCheckApi';
+export * from "./healthCheckApi";
 
 // Student APIs
 export * from "./studentApi";
-
 
 // ==================== LEGACY SUPPORT ====================
 // Provide legacy imports to ensure backward compatibility

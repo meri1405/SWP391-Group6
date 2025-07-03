@@ -128,6 +128,234 @@ const managerApi = {
       throw error;
     }
   },
+
+  // Vaccination Campaign Management APIs
+  getVaccinationCampaignsByStatus: async (
+    status,
+    page = 0,
+    size = 10,
+    token = getTokenFromStorage()
+  ) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.get(
+        `/api/manager/vaccination-campaigns/status/${status}?page=${page}&size=${size}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error(
+        `Error fetching vaccination campaigns with status ${status}:`,
+        error
+      );
+      throw error;
+    }
+  },
+
+  getPendingVaccinationCampaigns: async (
+    page = 0,
+    size = 10,
+    token = getTokenFromStorage()
+  ) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.get(
+        `/api/manager/vaccination-campaigns/pending?page=${page}&size=${size}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching pending vaccination campaigns:", error);
+      throw error;
+    }
+  },
+
+  getVaccinationCampaignById: async (id, token = getTokenFromStorage()) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.get(
+        `/api/manager/vaccination-campaigns/${id}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching vaccination campaign ${id}:`, error);
+      throw error;
+    }
+  },
+
+  approveVaccinationCampaign: async (id, token = getTokenFromStorage()) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.post(
+        `/api/manager/vaccination-campaigns/${id}/approve`
+      );
+      return response.data;
+    } catch (error) {
+      console.error(`Error approving vaccination campaign ${id}:`, error);
+      throw error;
+    }
+  },
+
+  rejectVaccinationCampaign: async (
+    id,
+    reason,
+    token = getTokenFromStorage()
+  ) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.post(
+        `/api/manager/vaccination-campaigns/${id}/reject`,
+        { reason }
+      );
+      return response.data;
+    } catch (error) {
+      console.error(`Error rejecting vaccination campaign ${id}:`, error);
+      throw error;
+    }
+  },
+
+  completeCampaign: async (id, token = getTokenFromStorage()) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.post(
+        `/api/manager/vaccination-campaigns/${id}/complete`
+      );
+      return response.data;
+    } catch (error) {
+      console.error(`Error completing vaccination campaign ${id}:`, error);
+      throw error;
+    }
+  },
+
+  getVaccinationCampaignStatistics: async (token = getTokenFromStorage()) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.get(
+        "/api/manager/vaccination-campaigns/statistics"
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching vaccination campaign statistics:", error);
+      throw error;
+    }
+  },
+
+  // Debug endpoint to test authentication
+  testManagerAuth: async (token = getTokenFromStorage()) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      // Use simple test auth endpoint
+      const response = await authAxios.get(
+        "/api/manager/campaign-completion/test-auth"
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Manager auth test failed:", error);
+      throw error;
+    }
+  },
+
+  // Campaign Completion Request Management APIs
+  approveCompletionRequest: async (
+    requestId,
+    reason = "",
+    token = getTokenFromStorage()
+  ) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.post(
+        `/api/manager/campaign-completion/${requestId}/approve`,
+        { reviewNotes: reason }
+      );
+      return response.data;
+    } catch (error) {
+      console.error(`Error approving completion request ${requestId}:`, error);
+      throw error;
+    }
+  },
+
+  rejectCompletionRequest: async (
+    requestId,
+    reason,
+    token = getTokenFromStorage()
+  ) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.post(
+        `/api/manager/campaign-completion/${requestId}/reject`,
+        { reviewNotes: reason }
+      );
+      return response.data;
+    } catch (error) {
+      console.error(`Error rejecting completion request ${requestId}:`, error);
+      throw error;
+    }
+  },
+
+  getAllCompletionRequests: async (token = getTokenFromStorage()) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.get("/api/manager/campaign-completion");
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching completion requests:", error);
+      throw error;
+    }
+  },
+
+  getPendingCompletionRequests: async (token = getTokenFromStorage()) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.get(
+        "/api/manager/campaign-completion/pending"
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching pending completion requests:", error);
+      throw error;
+    }
+  },
+
+  // Find completion request by campaign name or create new one
+  findOrCreateCompletionRequest: async (
+    campaignName,
+    token = getTokenFromStorage()
+  ) => {
+    try {
+      const authAxios = createAuthAxios(token);
+
+      // First try to get all pending completion requests
+      const response = await authAxios.get(
+        "/api/manager/campaign-completion/pending"
+      );
+      const pendingRequests = response.data;
+
+      // Find request for this campaign
+      const existingRequest = pendingRequests.find(
+        (request) =>
+          request.campaignName === campaignName ||
+          request.campaign?.name === campaignName ||
+          request.vaccinationCampaign?.name === campaignName
+      );
+
+      if (existingRequest) {
+        console.log("Found existing completion request:", existingRequest);
+        return existingRequest;
+      }
+
+      // If no existing request found, log available requests for debugging
+      console.log("No completion request found for campaign:", campaignName);
+      console.log("Available pending requests:", pendingRequests);
+
+      throw new Error(
+        `No completion request found for campaign: ${campaignName}`
+      );
+    } catch (error) {
+      console.error(
+        `Error finding completion request for campaign ${campaignName}:`,
+        error
+      );
+      throw error;
+    }
+  },
 };
 
 export default managerApi;

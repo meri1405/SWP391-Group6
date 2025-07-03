@@ -53,8 +53,11 @@ public interface IVaccinationCampaignService {
     
     VaccinationRecordDTO updateVaccinationRecord(Long recordId, VaccinationRecordDTO recordDTO, User nurse);
     
-    // Campaign completion
-    VaccinationCampaignDTO completeCampaign(Long campaignId, User nurse);
+    // Campaign completion workflow
+    CampaignCompletionRequestDTO requestCampaignCompletion(Long campaignId, User nurse, String requestReason, String completionNotes);
+    
+    // Only MANAGER can complete campaigns
+    VaccinationCampaignDTO completeCampaign(Long campaignId, User manager);
     
     // Utility methods
     VaccinationCampaignDTO convertToDTO(VaccinationCampaign campaign);

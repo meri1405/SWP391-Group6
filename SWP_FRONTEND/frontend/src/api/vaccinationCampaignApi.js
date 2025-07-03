@@ -257,15 +257,39 @@ export const vaccinationCampaignApi = {
     }
   },
 
-  // Complete a campaign
-  completeCampaign: async (campaignId) => {
+  // Request campaign completion (sends request to manager for approval)
+  requestCampaignCompletion: async (campaignId, requestData = {}) => {
     try {
+      console.log("Requesting campaign completion for campaign:", campaignId);
+      console.log("Request data:", requestData);
+      console.log(
+        "Auth token:",
+        localStorage.getItem("token") ? "Present" : "Missing"
+      );
+
       const response = await vaccinationApiClient.post(
-        `/nurse/vaccination-campaigns/${campaignId}/complete`
+        `/nurse/campaign-completion/campaigns/${campaignId}/request-completion`,
+        requestData
       );
       return response.data;
     } catch (error) {
-      console.error(`Error completing campaign ${campaignId}:`, error);
+      console.error(
+        `Error requesting completion for campaign ${campaignId}:`,
+        error
+      );
+      throw error;
+    }
+  },
+
+  // Test nurse authentication
+  testNurseAuth: async () => {
+    try {
+      const response = await vaccinationApiClient.get(
+        `/nurse/campaign-completion/test-auth`
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error testing nurse auth:", error);
       throw error;
     }
   },
@@ -350,6 +374,75 @@ export const managerVaccinationApi = {
       return response.data;
     } catch (error) {
       console.error("Error fetching campaign statistics:", error);
+      throw error;
+    }
+  },
+
+  // Campaign Completion Request Management
+
+  // Get pending completion requests
+  getPendingCompletionRequests: async () => {
+    try {
+      const response = await vaccinationApiClient.get(
+        "/manager/campaign-completion/pending"
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching pending completion requests:", error);
+      throw error;
+    }
+  },
+
+  // Get completion request by ID
+  getCompletionRequestById: async (requestId) => {
+    try {
+      const response = await vaccinationApiClient.get(
+        `/manager/campaign-completion/${requestId}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching completion request ${requestId}:`, error);
+      throw error;
+    }
+  },
+
+  // Approve completion request
+  approveCompletionRequest: async (requestId, reviewNotes = null) => {
+    try {
+      const response = await vaccinationApiClient.post(
+        `/manager/campaign-completion/${requestId}/approve`,
+        reviewNotes ? { reviewNotes } : {}
+      );
+      return response.data;
+    } catch (error) {
+      console.error(`Error approving completion request ${requestId}:`, error);
+      throw error;
+    }
+  },
+
+  // Reject completion request
+  rejectCompletionRequest: async (requestId, reviewNotes) => {
+    try {
+      const response = await vaccinationApiClient.post(
+        `/manager/campaign-completion/${requestId}/reject`,
+        { reviewNotes }
+      );
+      return response.data;
+    } catch (error) {
+      console.error(`Error rejecting completion request ${requestId}:`, error);
+      throw error;
+    }
+  },
+
+  // Get count of pending completion requests
+  getPendingCompletionRequestsCount: async () => {
+    try {
+      const response = await vaccinationApiClient.get(
+        "/manager/campaign-completion/pending/count"
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching pending completion requests count:", error);
       throw error;
     }
   },

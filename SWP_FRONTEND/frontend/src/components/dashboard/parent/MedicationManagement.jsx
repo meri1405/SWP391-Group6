@@ -1143,11 +1143,13 @@ const MedicationManagement = () => {
         footer={null}
         width={800}
         centered
-        bodyStyle={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          padding: "20px",
+        styles={{
+          body: {
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            padding: "20px",
+          },
         }}
       >
         {previewImageUrl && (

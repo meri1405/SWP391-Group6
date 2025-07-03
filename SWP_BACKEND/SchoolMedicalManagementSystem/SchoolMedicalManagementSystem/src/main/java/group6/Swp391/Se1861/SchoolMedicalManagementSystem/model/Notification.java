@@ -63,4 +63,9 @@ public class Notification {
     @ManyToOne
     @JoinColumn(name = "restockRequestId")
     private RestockRequest restockRequest;
+
+    // Optional reference to related campaign completion request
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "campaign_completion_request_id")
+    private CampaignCompletionRequest campaignCompletionRequest;
 }

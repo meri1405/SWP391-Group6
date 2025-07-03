@@ -84,7 +84,7 @@ const SchoolNurseDashboard = () => {
   // Function to update notification count from API
   const updateNotificationCount = useCallback(async () => {
     if (!user) return;
-    
+
     try {
       // Refresh session before fetching notifications
       const refreshResult = await refreshSession();
@@ -92,7 +92,7 @@ const SchoolNurseDashboard = () => {
         // Handle silently if session refresh fails
         return;
       }
-      
+
       // Use nurseApi instead of direct fetch
       const data = await nurseApi.getUnreadNotificationCount();
       setNotificationCount(data.count || 0);
@@ -106,12 +106,12 @@ const SchoolNurseDashboard = () => {
       setNotificationCount(0);
     }
   }, [user, refreshSession]);
-  
+
   // Subscribe to restock request notifications
   useEffect(() => {
     // Initial notification count
     updateNotificationCount();
-    
+
     // Connect to WebSocket if necessary
     const connectWebSocket = async () => {
       const token = localStorage.getItem("token");
@@ -121,21 +121,28 @@ const SchoolNurseDashboard = () => {
           if (!webSocketService.isConnected()) {
             console.log("[SchoolNurseDashboard] Connecting to WebSocket...");
             await webSocketService.connect(token);
-            console.log("[SchoolNurseDashboard] WebSocket connected successfully");
+            console.log(
+              "[SchoolNurseDashboard] WebSocket connected successfully"
+            );
           } else {
             console.log("[SchoolNurseDashboard] WebSocket already connected");
           }
         } catch (error) {
-          console.error("[SchoolNurseDashboard] Failed to connect to WebSocket:", error);
+          console.error(
+            "[SchoolNurseDashboard] Failed to connect to WebSocket:",
+            error
+          );
         }
       }
     };
-    
+
     // Connect to WebSocket
     connectWebSocket();
-    
+
     // Subscribe to restock request updates
-    console.log("[SchoolNurseDashboard] Subscribing to restock request updates");
+    console.log(
+      "[SchoolNurseDashboard] Subscribing to restock request updates"
+    );
     const unsubscribe = restockRequestApi.subscribeToUpdates(async () => {
       // Update notification count
       console.log("[SchoolNurseDashboard] Received restock request update");
@@ -143,50 +150,66 @@ const SchoolNurseDashboard = () => {
         await refreshSession();
         await updateNotificationCount();
       } catch (error) {
-        console.error("[SchoolNurseDashboard] Error handling restock request update:", error);
+        console.error(
+          "[SchoolNurseDashboard] Error handling restock request update:",
+          error
+        );
       }
     });
-    
+
     // Subscribe to WebSocket notifications if available
     if (user && webSocketService) {
       console.log("[SchoolNurseDashboard] Adding WebSocket message handler");
-      webSocketService.addMessageHandler('nurseNotifications', async (notification) => {
-        console.log("[SchoolNurseDashboard] Received WebSocket notification:", notification);
-        
-        if (notification.notificationType === 'RESTOCK_REQUEST_APPROVED' || 
-            notification.notificationType === 'RESTOCK_REQUEST_REJECTED') {
-          
-          // Determine message based on notification type
-          const title = notification.notificationType === 'RESTOCK_REQUEST_APPROVED' ? 
-            'Yêu cầu nhập kho được duyệt' : 
-            'Yêu cầu nhập kho bị từ chối';
-            
-          api.info({
-            message: notification.title || title,
-            description: notification.message || 'Kiểm tra thông tin chi tiết trong mục thông báo',
-            placement: 'topRight',
-            onClick: () => {
-              setActiveSection('notifications');
-              navigate('/school-nurse-dashboard?tab=notifications');
-            },
-          });
-          
-          // Update notification count
-          try {
-            await refreshSession();
-            await updateNotificationCount();
-          } catch (error) {
-            console.error("[SchoolNurseDashboard] Error updating notification count:", error);
+      webSocketService.addMessageHandler(
+        "nurseNotifications",
+        async (notification) => {
+          console.log(
+            "[SchoolNurseDashboard] Received WebSocket notification:",
+            notification
+          );
+
+          if (
+            notification.notificationType === "RESTOCK_REQUEST_APPROVED" ||
+            notification.notificationType === "RESTOCK_REQUEST_REJECTED"
+          ) {
+            // Determine message based on notification type
+            const title =
+              notification.notificationType === "RESTOCK_REQUEST_APPROVED"
+                ? "Yêu cầu nhập kho được duyệt"
+                : "Yêu cầu nhập kho bị từ chối";
+
+            api.info({
+              message: notification.title || title,
+              description:
+                notification.message ||
+                "Kiểm tra thông tin chi tiết trong mục thông báo",
+              placement: "topRight",
+              onClick: () => {
+                setActiveSection("notifications");
+                navigate("/school-nurse-dashboard?tab=notifications");
+              },
+            });
+
+            // Update notification count
+            try {
+              await refreshSession();
+              await updateNotificationCount();
+            } catch (error) {
+              console.error(
+                "[SchoolNurseDashboard] Error updating notification count:",
+                error
+              );
+            }
           }
         }
-      });
+      );
     }
-    
+
     // Cleanup subscriptions on unmount
     return () => {
       unsubscribe && unsubscribe();
       if (webSocketService) {
-        webSocketService.removeMessageHandler('nurseNotifications');
+        webSocketService.removeMessageHandler("nurseNotifications");
       }
     };
   }, [api, navigate, updateNotificationCount, user, refreshSession]);
@@ -208,9 +231,20 @@ const SchoolNurseDashboard = () => {
     },
     {
       key: "notifications",
-      icon: <Badge count={notificationCount} offset={[10, 0]}>
-              <BellOutlined />
-            </Badge>,
+      icon:
+        notificationCount > 0 ? (
+          <Badge
+            count={notificationCount}
+            size="small"
+            style={{
+              backgroundColor: "#ff4d4f",
+            }}
+          >
+            <BellOutlined />
+          </Badge>
+        ) : (
+          <BellOutlined />
+        ),
       label: "Thông báo",
     },
     {

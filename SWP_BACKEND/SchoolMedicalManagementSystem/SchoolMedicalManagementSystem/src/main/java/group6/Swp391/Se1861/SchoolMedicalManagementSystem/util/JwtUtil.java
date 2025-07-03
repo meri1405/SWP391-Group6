@@ -14,6 +14,7 @@ import java.security.Key;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Component
 public class JwtUtil {
@@ -67,6 +68,17 @@ public class JwtUtil {
     // Generate token from UserDetails
     public String generateToken(UserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>();
+        
+        // Add roles/authorities to JWT claims
+        List<String> roles = userDetails.getAuthorities().stream()
+                .map(authority -> authority.getAuthority())
+                .collect(Collectors.toList());
+        
+        claims.put("roles", roles);
+        claims.put("authorities", roles); // For compatibility
+        
+        logger.info("Generating JWT token for user: {} with roles: {}", userDetails.getUsername(), roles);
+        
         return createToken(claims, userDetails.getUsername());
     }
 

@@ -34,9 +34,6 @@ import {
   AlertOutlined,
   NumberOutlined,
   EditOutlined,
-  ToolOutlined,
-  BugOutlined,
-  ReloadOutlined,
 } from "@ant-design/icons";
 import "../../styles/NurseMedicationComponents.css";
 import "../../styles/NurseMedicationCards.css";
@@ -61,11 +58,6 @@ const NurseMedicationSchedules = () => {
   const [editNoteModalVisible, setEditNoteModalVisible] = useState(false);
   const [currentNote, setCurrentNote] = useState("");
   const [editingScheduleId, setEditingScheduleId] = useState(null);
-
-  // Debug tools state
-  const [debugInfo, setDebugInfo] = useState(null);
-  const [autoUpdateResult, setAutoUpdateResult] = useState(null);
-  const [debugLoading, setDebugLoading] = useState(false);
 
   // Function to check if schedule can be updated based on current time
   const canUpdateSchedule = (scheduledDate, scheduledTime) => {
@@ -655,202 +647,6 @@ const NurseMedicationSchedules = () => {
     );
   };
 
-  // Debug functions for testing auto-update functionality
-  const triggerAutoUpdate = async () => {
-    try {
-      setDebugLoading(true);
-      const token = localStorage.getItem("token");
-
-      const response = await fetch(
-        "/api/admin/medication/schedules/auto-update",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      const data = await response.json();
-      setAutoUpdateResult(data);
-
-      if (data.success) {
-        message.success(
-          `Auto-update hoàn thành! Đã cập nhật ${data.updatedSchedules} lịch uống thuốc`
-        );
-        // Reload schedules to see the changes
-        loadSchedules();
-      } else {
-        message.error(`Auto-update thất bại: ${data.message}`);
-      }
-    } catch (error) {
-      console.error("Error triggering auto-update:", error);
-      message.error("Lỗi khi thực hiện auto-update");
-    } finally {
-      setDebugLoading(false);
-    }
-  };
-
-  const getSystemTime = async () => {
-    try {
-      const token = localStorage.getItem("token");
-
-      const response = await fetch("/api/admin/medication/system/time", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const data = await response.json();
-      setDebugInfo(data);
-    } catch (error) {
-      console.error("Error getting system time:", error);
-      message.error("Lỗi khi lấy thời gian hệ thống");
-    }
-  };
-
-  // Generate debug collapse items
-  const getDebugCollapseItems = () => [
-    {
-      key: "debug",
-      label: (
-        <span style={{ color: "#1890ff", fontWeight: 500 }}>
-          <ToolOutlined style={{ marginRight: 8 }} />
-          Công cụ Debug Auto-Update
-        </span>
-      ),
-      children: (
-        <div>
-          <Alert
-            message="Công cụ kiểm tra hệ thống tự động"
-            description="Sử dụng các công cụ này để kiểm tra và test chức năng tự động đánh dấu lịch uống thuốc bị bỏ lỡ."
-            type="info"
-            style={{ marginBottom: 16 }}
-          />
-
-          <Space size="middle" wrap>
-            <Button
-              icon={<BugOutlined />}
-              onClick={getSystemTime}
-              type="default"
-            >
-              Kiểm tra thời gian hệ thống
-            </Button>
-
-            <Button
-              icon={<ReloadOutlined />}
-              onClick={triggerAutoUpdate}
-              loading={debugLoading}
-              type="primary"
-              danger
-            >
-              Thực hiện Auto-Update thủ công
-            </Button>
-          </Space>
-
-          {debugInfo && (
-            <div
-              style={{
-                marginTop: 16,
-                padding: 12,
-                background: "#f6ffed",
-                border: "1px solid #b7eb8f",
-                borderRadius: 6,
-              }}
-            >
-              <Title
-                level={5}
-                style={{ color: "#389e0d", margin: "0 0 12px 0" }}
-              >
-                Thông tin hệ thống:
-              </Title>
-              <Row gutter={[16, 8]}>
-                <Col span={12}>
-                  <Text strong>Thời gian hiện tại:</Text>
-                  <br />
-                  <Text code>{debugInfo.currentTime}</Text>
-                </Col>
-                <Col span={12}>
-                  <Text strong>Ngày:</Text>
-                  <br />
-                  <Text code>{debugInfo.currentDate}</Text>
-                </Col>
-                <Col span={12}>
-                  <Text strong>Giờ:</Text>
-                  <br />
-                  <Text code>{debugInfo.currentTimeOnly}</Text>
-                </Col>
-                <Col span={12}>
-                  <Text strong>Timezone:</Text>
-                  <br />
-                  <Text code>{debugInfo.timezone}</Text>
-                </Col>
-              </Row>
-            </div>
-          )}
-
-          {autoUpdateResult && (
-            <div
-              style={{
-                marginTop: 16,
-                padding: 12,
-                background: autoUpdateResult.success ? "#f6ffed" : "#fff2e8",
-                border: `1px solid ${
-                  autoUpdateResult.success ? "#b7eb8f" : "#ffbb96"
-                }`,
-                borderRadius: 6,
-              }}
-            >
-              <Title
-                level={5}
-                style={{
-                  color: autoUpdateResult.success ? "#389e0d" : "#d4380d",
-                  margin: "0 0 12px 0",
-                }}
-              >
-                Kết quả Auto-Update:
-              </Title>
-              <Row gutter={[16, 8]}>
-                <Col span={24}>
-                  <Text strong>Trạng thái:</Text>
-                  <Tag
-                    color={autoUpdateResult.success ? "success" : "error"}
-                    style={{ marginLeft: 8 }}
-                  >
-                    {autoUpdateResult.success ? "✅ Thành công" : "❌ Thất bại"}
-                  </Tag>
-                </Col>
-                <Col span={24}>
-                  <Text strong>Thông báo:</Text>
-                  <br />
-                  <Text>{autoUpdateResult.message}</Text>
-                </Col>
-                {autoUpdateResult.updatedSchedules !== undefined && (
-                  <Col span={12}>
-                    <Text strong>Số lịch đã cập nhật:</Text>
-                    <br />
-                    <Text
-                      code
-                      style={{ background: "#fff1b8", padding: "2px 6px" }}
-                    >
-                      {autoUpdateResult.updatedSchedules}
-                    </Text>
-                  </Col>
-                )}
-                <Col span={12}>
-                  <Text strong>Thời gian thực hiện:</Text>
-                  <br />
-                  <Text code>{autoUpdateResult.timestamp}</Text>
-                </Col>
-              </Row>
-            </div>
-          )}
-        </div>
-      ),
-    },
-  ];
-
   return (
     <div className="nurse-medication-container">
       <Card className="nurse-medication-card">
@@ -862,12 +658,6 @@ const NurseMedicationSchedules = () => {
             Quản lý lịch uống thuốc
           </h2>
         </div>
-        {/* Debug Tools Section */}
-        <Collapse
-          ghost
-          style={{ marginBottom: "16px" }}
-          items={getDebugCollapseItems()}
-        />
         {/* Filters */}
         <div className="filter-container">
           <div className="filter-item">

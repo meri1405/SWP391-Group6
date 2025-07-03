@@ -8,7 +8,6 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.RoleReposit
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.StudentRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.UserRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IStudentService;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.utils.PhoneValidator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -252,9 +251,6 @@ public class StudentService implements IStudentService {
                 throw new IllegalArgumentException("Số điện thoại " + parentDto.getPhone() + " đã được sử dụng bởi tài khoản khác");
             }
             
-            // Validate that name matches if parent exists
-            validateExistingParentName(parent, parentDto);
-            
             // Update parent information if needed (optional)
             updateParentIfNeeded(parent, parentDto);
             
@@ -262,20 +258,6 @@ public class StudentService implements IStudentService {
         } else {
             // Create new parent
             return createParentUser(parentDto, parentRole);
-        }
-    }
-    
-    /**
-     * Validate that existing parent has matching name
-     */
-    private void validateExistingParentName(User existingParent, ParentCreationDTO parentDto) {
-        String existingFullName = (existingParent.getLastName() + " " + existingParent.getFirstName()).trim();
-        String newFullName = (parentDto.getLastName() + " " + parentDto.getFirstName()).trim();
-        
-        if (!existingFullName.equalsIgnoreCase(newFullName)) {
-            throw new IllegalArgumentException("Số điện thoại " + parentDto.getPhone() + 
-                " đã được sử dụng bởi phụ huynh khác với tên: " + existingFullName + 
-                ". Vui lòng kiểm tra lại thông tin họ tên phụ huynh.");
         }
     }
     
@@ -509,7 +491,6 @@ public class StudentService implements IStudentService {
     }
       /**
      * Validate student age - must be between 2 and 12 years old
-     * Age calculation is based on year only, not specific birth date
      */
     private void validateStudentAge(java.time.LocalDate dateOfBirth) {
         if (dateOfBirth == null) {
@@ -519,13 +500,19 @@ public class StudentService implements IStudentService {
         java.time.LocalDate currentDate = java.time.LocalDate.now();
         int age = currentDate.getYear() - dateOfBirth.getYear();
         
+        // Check if birthday has passed this year
+        if (dateOfBirth.plusYears(age).isAfter(currentDate)) {
+            age--;
+        }
+        
         if (age > 12) {
             throw new IllegalArgumentException("Học sinh phải dưới hoặc bằng 12 tuổi. Tuổi hiện tại: " + age);
         }
-        // Check for minimum age (at least 2 years old for kindergarten)
+          // Check for minimum age (at least 2 years old for kindergarten)
         if (age < 2) {
             throw new IllegalArgumentException("Học sinh phải ít nhất 2 tuổi. Tuổi hiện tại: " + age);
         }
+
     }
     
     /**
@@ -541,25 +528,10 @@ public class StudentService implements IStudentService {
             throw new IllegalArgumentException("Số điện thoại phụ huynh là bắt buộc khi có thông tin phụ huynh");
         }
         
-        // Name is required when phone is provided
-        if (parentDto.getFirstName() == null || parentDto.getFirstName().trim().isEmpty()) {
-            throw new IllegalArgumentException("Tên phụ huynh là bắt buộc khi có số điện thoại phụ huynh");
-        }
-        
-        if (parentDto.getLastName() == null || parentDto.getLastName().trim().isEmpty()) {
-            throw new IllegalArgumentException("Họ phụ huynh là bắt buộc khi có số điện thoại phụ huynh");
-        }
-        
-        // Validate phone number format (10 digits with valid Vietnamese prefix)
+        // Validate phone number format (10-11 digits)
         String phone = parentDto.getPhone().trim();
-        String phoneError = PhoneValidator.validatePhone(phone);
-        if (phoneError != null) {
-            throw new IllegalArgumentException(phoneError);
-        }
-        
-        // Validate parent age if DOB is provided - must be at least 18 years old
-        if (parentDto.getDob() != null) {
-            validateParentAge(parentDto.getDob());
+        if (!phone.matches("^0\\d{9,10}$")) {
+            throw new IllegalArgumentException("Số điện thoại phụ huynh không đúng định dạng (phải có 10-11 số và bắt đầu bằng 0)");
         }
         
         // Validate gender if provided
@@ -567,27 +539,6 @@ public class StudentService implements IStudentService {
             if (!parentDto.getGender().equals("M") && !parentDto.getGender().equals("F")) {
                 throw new IllegalArgumentException("Giới tính phụ huynh phải là 'M' hoặc 'F'");
             }
-        }
-    }
-    
-    /**
-     * Validate parent age - must be at least 18 years old
-     * Age calculation is based on year only, not specific birth date
-     */
-    private void validateParentAge(java.time.LocalDate dateOfBirth) {
-        if (dateOfBirth == null) {
-            return; // DOB is optional for parents
-        }
-        
-        java.time.LocalDate currentDate = java.time.LocalDate.now();
-        int age = currentDate.getYear() - dateOfBirth.getYear();
-        
-        if (age < 18) {
-            throw new IllegalArgumentException("Phụ huynh phải ít nhất 18 tuổi. Tuổi hiện tại: " + age);
-        }
-        
-        if (age > 100) {
-            throw new IllegalArgumentException("Tuổi phụ huynh không hợp lệ. Tuổi hiện tại: " + age);
         }
     }
 
