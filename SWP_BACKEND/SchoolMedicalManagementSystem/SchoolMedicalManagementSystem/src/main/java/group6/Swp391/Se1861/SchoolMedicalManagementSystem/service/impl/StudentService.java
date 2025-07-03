@@ -51,7 +51,7 @@ public class StudentService implements IStudentService {
      */
     @Override
     public List<StudentDTO> getAllStudents() {
-        List<Student> students = studentRepository.findAllWithParents();
+        List<Student> students = studentRepository.findAllActiveWithParents();
         return students.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -124,6 +124,15 @@ public class StudentService implements IStudentService {
         dto.setAddress(student.getAddress());
         dto.setCitizenship(student.getCitizenship());
         dto.setDisabled(student.isDisabled()); // Include disabled status
+
+        // Calculate age from date of birth
+        if (student.getDob() != null) {
+            java.time.LocalDate now = java.time.LocalDate.now();
+            int age = java.time.Period.between(student.getDob(), now).getYears();
+            dto.setAge(age);
+        } else {
+            dto.setAge(0);
+        }
 
         // Set father and mother IDs
         if (student.getFather() != null) {
@@ -597,7 +606,7 @@ public class StudentService implements IStudentService {
         java.time.LocalDate minDob = now.minusYears(maxAge);  // Older students (smaller date)
         java.time.LocalDate maxDob = now.minusYears(minAge);  // Younger students (larger date)
         
-        List<Student> students = studentRepository.findByDobBetween(minDob, maxDob);
+        List<Student> students = studentRepository.findByDobBetweenAndIsDisabledFalse(minDob, maxDob);
         return students.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -605,7 +614,7 @@ public class StudentService implements IStudentService {
     
     @Override
     public List<StudentDTO> getStudentsByClassName(String className) {
-        List<Student> students = studentRepository.findByClassName(className);
+        List<Student> students = studentRepository.findByClassNameAndIsDisabledFalse(className);
         return students.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -617,7 +626,7 @@ public class StudentService implements IStudentService {
         java.time.LocalDate minDob = now.minusYears(maxAge);  // Older students (smaller date)
         java.time.LocalDate maxDob = now.minusYears(minAge);  // Younger students (larger date)
         
-        List<Student> students = studentRepository.findByDobBetweenAndClassName(minDob, maxDob, className);
+        List<Student> students = studentRepository.findByDobBetweenAndClassNameAndIsDisabledFalse(minDob, maxDob, className);
         return students.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -625,8 +634,13 @@ public class StudentService implements IStudentService {
 
     @Override
     public List<StudentDTO> getEligibleStudentsForClasses(Set<String> classNames, Integer minAge, Integer maxAge) {
+        System.out.println("=== DEBUG STUDENT SERVICE ===");
+        System.out.println("Input classNames: " + classNames);
+        System.out.println("Input minAge: " + minAge + ", maxAge: " + maxAge);
+        
         // Handle null or empty classNames
         if (classNames == null || classNames.isEmpty()) {
+            System.out.println("Class names is null or empty, returning empty list");
             return new ArrayList<>();
         }
 
@@ -637,24 +651,29 @@ public class StudentService implements IStudentService {
                                      "all".equalsIgnoreCase(className));
         
         boolean hasAgeRange = minAge != null && maxAge != null;
+        
+        System.out.println("isAllSchool: " + isAllSchool + ", hasAgeRange: " + hasAgeRange);
 
         // Logic 1: Toàn trường + có độ tuổi → lọc theo độ tuổi
         if (isAllSchool && hasAgeRange) {
+            System.out.println("Using Logic 1: All school + age range");
             return getStudentsByAgeRange(minAge, maxAge);
         }
         
         // Logic 2: Toàn trường + không có độ tuổi → lấy tất cả
         if (isAllSchool && !hasAgeRange) {
+            System.out.println("Using Logic 2: All school + no age range");
             return getAllStudents();
         }
         
         // Logic 3: Lớp cụ thể + có độ tuổi → lọc theo các lớp và độ tuổi
         if (!isAllSchool && hasAgeRange) {
+            System.out.println("Using Logic 3: Specific classes + age range");
             java.time.LocalDate now = java.time.LocalDate.now();
             java.time.LocalDate minDob = now.minusYears(maxAge);
             java.time.LocalDate maxDob = now.minusYears(minAge);
             
-            List<Student> students = studentRepository.findByDobBetweenAndClassNameIn(minDob, maxDob, classNames);
+            List<Student> students = studentRepository.findByDobBetweenAndClassNameInAndIsDisabledFalse(minDob, maxDob, classNames);
             return students.stream()
                     .map(this::convertToDTO)
                     .collect(Collectors.toList());
@@ -662,13 +681,22 @@ public class StudentService implements IStudentService {
         
         // Logic 4: Lớp cụ thể + không có độ tuổi → lọc theo các lớp
         if (!isAllSchool && !hasAgeRange) {
-            List<Student> students = studentRepository.findByClassNameIn(classNames);
-            return students.stream()
+            System.out.println("Using Logic 4: Specific classes + no age range");
+            System.out.println("Calling studentRepository.findByClassNameInAndIsDisabledFalse with: " + classNames);
+            List<Student> students = studentRepository.findByClassNameInAndIsDisabledFalse(classNames);
+            System.out.println("Repository returned " + students.size() + " students");
+            for (Student student : students) {
+                System.out.println("- Found student: " + student.getFullName() + " (Class: " + student.getClassName() + ", Disabled: " + student.isDisabled() + ")");
+            }
+            List<StudentDTO> result = students.stream()
                     .map(this::convertToDTO)
                     .collect(Collectors.toList());
+            System.out.println("Converted to " + result.size() + " DTOs");
+            return result;
         }
 
         // Fallback - trả về danh sách rỗng
+        System.out.println("No logic matched, returning empty list");
         return new ArrayList<>();
     }
 }

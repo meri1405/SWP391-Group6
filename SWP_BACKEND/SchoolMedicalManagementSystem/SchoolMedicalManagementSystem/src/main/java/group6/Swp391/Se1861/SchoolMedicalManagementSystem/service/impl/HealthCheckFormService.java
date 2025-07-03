@@ -1,225 +1,298 @@
 package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl;
 
+
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.HealthCheckFormDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.*;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.FormStatus;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.HealthCheckFormRepository;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.StudentRepository;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IHealthCheckCampaignService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IHealthCheckFormService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.INotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class HealthCheckFormService implements IHealthCheckFormService {
 
     private final HealthCheckFormRepository formRepository;
-    private final StudentRepository studentRepository;
     private final INotificationService notificationService;
-    private final IHealthCheckCampaignService campaignService;
 
-    @Transactional
     @Override
-    public List<HealthCheckForm> generateFormsForCampaign(Long campaignId, List<Long> studentIds) {
-        HealthCheckCampaign campaign = campaignService.getCampaignById(campaignId);
-
-        // Only allow form generation if campaign is in APPROVED status
-        if (campaign.getStatus() != group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.CampaignStatus.APPROVED) {
-            throw new RuntimeException("Cannot generate forms for a campaign that is not in APPROVED status");
-        }
-
-        List<HealthCheckForm> forms = new ArrayList<>();
-
-        for (Long studentId : studentIds) {
-            Optional<Student> optionalStudent = studentRepository.findById(studentId);
-            if (optionalStudent.isEmpty()) {
-                continue; // Skip invalid student IDs
-            }
-
-            Student student = optionalStudent.get();
-            User parent = student.getParent();
-
-            if (parent == null) {
-                continue; // Skip students without a parent
-            }
-
-            // Check if a form already exists for this student and campaign
-            HealthCheckForm existingForm = formRepository.findByCampaignAndStudent(campaign, student);
-            if (existingForm != null) {
-                continue; // Skip duplicate forms
-            }
-
-            HealthCheckForm form = new HealthCheckForm();
-            form.setCampaign(campaign);
-            form.setStudent(student);
-            form.setParent(parent);
-            form.setStatus(FormStatus.PENDING);
-            form.setSentAt(LocalDateTime.now());
-
-            forms.add(formRepository.save(form));
-
-            // Send notification to parent
-            notificationService.notifyParentAboutHealthCheck(form);
-        }
-
-        // Update the target count in the campaign
-        campaign.setTargetCount(campaign.getTargetCount() + forms.size());
-        campaignService.scheduleCampaign(campaignId, campaign.getTargetCount());
-
-        return forms;
+    public HealthCheckFormDTO getFormById(Long id) {
+        HealthCheckForm form = formRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Health check form not found"));
+        return convertToDTO(form);
     }
 
-    @Transactional
     @Override
-    public List<HealthCheckForm> generateFormsByAgeRange(Long campaignId, int minAge, int maxAge) {
-        HealthCheckCampaign campaign = campaignService.getCampaignById(campaignId);
-
-        // Calculate date ranges for age filtering
-        LocalDate now = LocalDate.now();
-        LocalDate minDob = now.minusYears(maxAge);  // Older students (smaller date)
-        LocalDate maxDob = now.minusYears(minAge);  // Younger students (larger date)
-
-        // Get all students within the age range
-        List<Student> students = studentRepository.findByDobBetween(minDob, maxDob);
-
-        List<Long> studentIds = students.stream()
-                .map(Student::getStudentID)
-                .toList();
-
-        return generateFormsForCampaign(campaignId, studentIds);
+    public List<HealthCheckFormDTO> getFormsByParent(User parent) {
+        return formRepository.findByParent(parent).stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
     }
 
-    @Transactional
     @Override
-    public List<HealthCheckForm> generateFormsByClass(Long campaignId, String className) {
-        HealthCheckCampaign campaign = campaignService.getCampaignById(campaignId);
-
-        // Get all students in the specified class
-        List<Student> students = studentRepository.findByClassName(className);
-
-        List<Long> studentIds = students.stream()
-                .map(Student::getStudentID)
-                .toList();
-
-        return generateFormsForCampaign(campaignId, studentIds);
+    public List<HealthCheckFormDTO> getPendingFormsByParent(User parent) {
+        return formRepository.findByParentAndStatus(parent, FormStatus.PENDING)
+                .stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
     }
 
-    @Transactional
     @Override
-    public HealthCheckForm updateFormStatus(Long formId, FormStatus status, String parentNote) {
-        Optional<HealthCheckForm> optionalForm = formRepository.findById(formId);
-        if (optionalForm.isEmpty()) {
-            throw new RuntimeException("Form not found with id: " + formId);
+    public List<HealthCheckFormDTO> getFormsByCampaign(HealthCheckCampaign campaign) {
+        return formRepository.findByCampaign(campaign).stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public HealthCheckFormDTO confirmForm(Long formId, User parent, String parentNote) {
+        HealthCheckForm form = formRepository.findById(formId)
+                .orElseThrow(() -> new IllegalArgumentException("Health check form not found"));
+
+        // Verify the parent is the owner of this form
+        if (!form.getParent().getId().equals(parent.getId())) {
+            throw new IllegalArgumentException("Not authorized to confirm this form");
         }
 
-        HealthCheckForm form = optionalForm.get();
-        form.setStatus(status);
+        if (form.getStatus() != FormStatus.PENDING) {
+            throw new IllegalStateException("Form has already been responded to");
+        }
+
+        // Update form status
+        form.setStatus(FormStatus.CONFIRMED);
         form.setRespondedAt(LocalDateTime.now());
+        form.setParentNote(parentNote);
 
-        if (parentNote != null) {
-            form.setParentNote(parentNote);
-        }
+        HealthCheckForm savedForm = formRepository.save(form);
 
-        HealthCheckForm updatedForm = formRepository.save(form);
+        // Send confirmation notification to parent AND nurse with proper form reference
+        notificationService.sendHealthCheckFormConfirmation(
+                savedForm,
+                parent,
+                savedForm.getStudent(),
+                "Cảm ơn quý phụ huynh đã đồng ý cho con em tham gia đợt khám sức khỏe tại trường. \n" +
+                "Thời gian cụ thể của buổi khám sẽ được nhà trường thông báo sau.\n" +
+                "Trân trọng!",
+                true
+        );
 
-        // If the form is confirmed, update the confirmed count in the campaign
-        if (status == FormStatus.CONFIRMED) {
-            HealthCheckCampaign campaign = form.getCampaign();
-            campaign.setConfirmedCount(campaign.getConfirmedCount() + 1);
-            campaignService.getCampaignById(campaign.getId());
-
-            // Notify the nurse about the confirmation
-            notificationService.notifyNurseAboutParentConfirmation(form);
-        }
-
-        return updatedForm;
+        return convertToDTO(savedForm);
     }
 
-    @Transactional
     @Override
-    public HealthCheckForm scheduleAppointment(Long formId, LocalDateTime appointmentTime, String appointmentLocation) {
-        Optional<HealthCheckForm> optionalForm = formRepository.findById(formId);
-        if (optionalForm.isEmpty()) {
-            throw new RuntimeException("Form not found with id: " + formId);
+    @Transactional
+    public HealthCheckFormDTO declineForm(Long formId, User parent, String parentNote) {
+        HealthCheckForm form = formRepository.findById(formId)
+                .orElseThrow(() -> new IllegalArgumentException("Health check form not found"));
+
+        // Verify the parent is the owner of this form
+        if (!form.getParent().getId().equals(parent.getId())) {
+            throw new IllegalArgumentException("Not authorized to decline this form");
         }
 
-        HealthCheckForm form = optionalForm.get();
-        form.setAppointmentTime(appointmentTime);
-        form.setAppointmentLocation(appointmentLocation);
+        if (form.getStatus() != FormStatus.PENDING) {
+            throw new IllegalStateException("Form has already been responded to");
+        }
 
-        HealthCheckForm updatedForm = formRepository.save(form);
+        // Update form status
+        form.setStatus(FormStatus.DECLINED);
+        form.setRespondedAt(LocalDateTime.now());
+        form.setParentNote(parentNote);
 
-        // Notify the parent about the appointment details
-        notificationService.notifyParentAboutAppointment(form);
+        HealthCheckForm savedForm = formRepository.save(form);
 
-        return updatedForm;
+        // Send decline notification to parent AND nurse with proper form reference
+        notificationService.sendHealthCheckFormConfirmation(
+                savedForm,
+                parent,
+                savedForm.getStudent(),
+                "Cảm ơn quý phụ huynh đã phản hồi về việc tham gia khám sức khỏe cho con em. \n" + 
+                "Chúng tôi ghi nhận rằng quý phụ huynh đã từ chối cho con tham gia đợt khám sức khỏe tại trường. " +"\n" +
+                "Nếu có bất kỳ thay đổi hoặc thắc mắc nào, xin vui lòng liên hệ với nhà trường. \n" +
+                "Trân trọng!",
+                false
+        );
+
+        return convertToDTO(savedForm);
     }
 
-    @Transactional
     @Override
-    public HealthCheckForm checkInStudent(Long formId) {
-        Optional<HealthCheckForm> optionalForm = formRepository.findById(formId);
-        if (optionalForm.isEmpty()) {
-            throw new RuntimeException("Form not found with id: " + formId);
-        }
+    public List<HealthCheckFormDTO> getExpiredForms() {
+        LocalDateTime threeDaysAgo = LocalDateTime.now().minusDays(3);
+        LocalDateTime fiveDaysFromNow = LocalDateTime.now().plusDays(5);
+        
+        return formRepository.findExpiredFormsForAutoDecline(
+                FormStatus.PENDING,
+                threeDaysAgo,
+                fiveDaysFromNow
+        ).stream()
+        .map(this::convertToDTO)
+        .collect(Collectors.toList());
+    }
 
-        HealthCheckForm form = optionalForm.get();
-        form.setCheckedIn(true);
-        form.setCheckedInAt(LocalDateTime.now());
+    @Override
+    @Transactional
+    public void autoDeclineExpiredForms() {
+        LocalDateTime threeDaysAgo = LocalDateTime.now().minusDays(3);
+        LocalDateTime fiveDaysFromNow = LocalDateTime.now().plusDays(5);
+        
+        List<HealthCheckForm> expiredForms = formRepository.findExpiredFormsForAutoDecline(
+                FormStatus.PENDING,
+                threeDaysAgo,
+                fiveDaysFromNow
+        );
+
+        for (HealthCheckForm form : expiredForms) {
+            form.setStatus(FormStatus.DECLINED);
+            form.setRespondedAt(LocalDateTime.now());
+            form.setParentNote("Auto-declined due to no response within deadline");
+
+            formRepository.save(form);
+
+            // Send auto-decline notification to parent
+            notificationService.sendHealthCheckCampaignParentConfirmation(
+                    form.getCampaign(),
+                    form.getParent(),
+                    form.getStudent(),
+                    "Phiếu khám sức khỏe của con em quý phụ huynh đã bị từ chối tự động do không có phản hồi trong thời gian quy định. \n" +
+                    "Nếu quý phụ huynh vẫn có nhu cầu cho con tham gia, xin vui lòng liên hệ với nhà trường để được hỗ trợ. \n" +
+                    "Trân trọng!"
+            );
+
+            System.out.println("Auto-declined health check form ID: " + form.getId() + 
+                             " for student: " + form.getStudent().getFullName());
+        }
+    }
+
+    @Override
+    @Transactional
+    public HealthCheckForm createHealthCheckForm(HealthCheckCampaign campaign, Student student, User parent) {
+        HealthCheckForm form = new HealthCheckForm();
+        form.setCampaign(campaign);
+        form.setStudent(student);
+        form.setParent(parent);
+        form.setStatus(FormStatus.PENDING);
+        form.setSentAt(LocalDateTime.now());
+        form.setCreatedAt(LocalDateTime.now());
 
         return formRepository.save(form);
     }
 
     @Override
-    public HealthCheckForm getFormById(Long id) {
-        Optional<HealthCheckForm> form = formRepository.findById(id);
-        return form.orElseThrow(() -> new RuntimeException("Form not found with id: " + id));
+    @Transactional
+    public void sendFormToParent(HealthCheckForm form) {
+        // Send invitation notification to parent
+        notificationService.sendHealthCheckCampaignParentInvitation(
+                form.getCampaign(),
+                form.getParent(),
+                form.getStudent(),
+                "Your child has been invited to participate in a health check campaign.",
+                form
+        );
     }
 
     @Override
-    public List<HealthCheckForm> getFormsByCampaign(Long campaignId) {
-        HealthCheckCampaign campaign = campaignService.getCampaignById(campaignId);
-        return formRepository.findByCampaign(campaign);
+    @Transactional
+    public void sendReminderNotifications() {
+        LocalDateTime reminderThreshold = LocalDateTime.now().minusDays(1); // Send reminder if form is 1 day old
+        
+        List<HealthCheckForm> formsNeedingReminder = formRepository.findFormsNeedingReminder(
+                FormStatus.PENDING,
+                reminderThreshold
+        );
+
+        for (HealthCheckForm form : formsNeedingReminder) {
+            // Send reminder notification
+            notificationService.sendHealthCheckCampaignParentInvitation(
+                    form.getCampaign(),
+                    form.getParent(),
+                    form.getStudent(),
+                    "Nhắc nhở: Quý phụ huynh vui lòng phản hồi lời mời tham gia đợt khám sức khỏe tại trường dành cho con em. Việc phản hồi đúng hạn sẽ giúp nhà trường sắp xếp và tổ chức khám sức khỏe hiệu quả hơn.\n" +
+                    "Trân trọng cảm ơn!",
+                    form
+            );
+
+            // Mark reminder as sent
+            form.setReminderSent(true);
+            formRepository.save(form);
+        }
     }
 
     @Override
-    public List<HealthCheckForm> getFormsByCampaignAndStatus(Long campaignId, FormStatus status) {
-        HealthCheckCampaign campaign = campaignService.getCampaignById(campaignId);
-        return formRepository.findByCampaignAndStatus(campaign, status);
+    public long getFormCountByCampaignAndStatus(HealthCheckCampaign campaign, FormStatus status) {
+        return formRepository.countByCampaignAndStatus(campaign, status);
     }
 
     @Override
-    public List<HealthCheckForm> getFormsByParent(User parent) {
-        return formRepository.findByParent(parent);
+    public HealthCheckFormDTO convertToDTO(HealthCheckForm form) {
+        HealthCheckFormDTO dto = new HealthCheckFormDTO();
+        
+        dto.setId(form.getId());
+        dto.setStatus(form.getStatus());
+        dto.setSentAt(form.getSentAt());
+        dto.setCreatedAt(form.getCreatedAt());
+        dto.setRespondedAt(form.getRespondedAt());
+        dto.setParentNote(form.getParentNote());
+        dto.setAppointmentTime(form.getAppointmentTime());
+        dto.setAppointmentLocation(form.getAppointmentLocation());
+        dto.setReminderSent(form.isReminderSent());
+        dto.setCheckedIn(form.isCheckedIn());
+        dto.setCheckedInAt(form.getCheckedInAt());
+
+        // Campaign information
+        if (form.getCampaign() != null) {
+            HealthCheckCampaign campaign = form.getCampaign();
+            dto.setCampaignId(campaign.getId());
+            dto.setCampaignName(campaign.getName());
+            dto.setCampaignDescription(campaign.getDescription());
+            dto.setCampaignStartDate(campaign.getStartDate().atStartOfDay());
+            dto.setCampaignEndDate(campaign.getEndDate().atTime(23, 59, 59));
+            dto.setLocation(campaign.getLocation()); // Use getLocation instead of getCampaignLocation
+            dto.setCampaignStatus(campaign.getStatus().toString());
+            
+            // Add categories to the DTO
+            Set<String> categoriesAsStrings = new HashSet<>();
+            if (campaign.getCategories() != null) {
+                campaign.getCategories().forEach(category -> 
+                    categoriesAsStrings.add(category.name()));
+            }
+            dto.setCategories(categoriesAsStrings);
+        }
+
+        // Student information
+        if (form.getStudent() != null) {
+            Student student = form.getStudent();
+            dto.setStudentId(student.getStudentID()); // Use getStudentID instead of getId
+            dto.setStudentFullName(student.getFullName());
+            dto.setStudentClassName(student.getClassName());
+            if (student.getDob() != null) {
+                dto.setStudentDateOfBirth(student.getDob().toString()); // Use getDob instead of getDateOfBirth
+            }
+        }
+
+        // Parent information
+        if (form.getParent() != null) {
+            User parent = form.getParent();
+            dto.setParentId(parent.getId());
+            dto.setParentFullName(parent.getFullName());
+            dto.setParentPhone(parent.getPhone()); // Use getPhone instead of getPhoneNumber
+        }
+
+        return dto;
     }
 
     @Override
-    public List<HealthCheckForm> getFormsByParentAndStatus(User parent, FormStatus status) {
-        return formRepository.findByParentAndStatus(parent, status);
-    }
-
-    @Override
-    public List<HealthCheckForm> getFormsByStudent(Student student) {
-        return formRepository.findByStudent(student);
-    }
-
-    @Override
-    public int getConfirmedCountByCampaign(Long campaignId) {
-        HealthCheckCampaign campaign = campaignService.getCampaignById(campaignId);
-        return formRepository.countByCampaignAndStatus(campaign, FormStatus.CONFIRMED);
-    }
-
-    @Override
-    public int getPendingCountByCampaign(Long campaignId) {
-        HealthCheckCampaign campaign = campaignService.getCampaignById(campaignId);
-        return formRepository.countByCampaignAndStatus(campaign, FormStatus.PENDING);
+    public List<HealthCheckForm> getConfirmedFormsByCampaignId(Long campaignId) {
+        return formRepository.findByCampaignIdAndConfirmed(campaignId, true);
     }
 }

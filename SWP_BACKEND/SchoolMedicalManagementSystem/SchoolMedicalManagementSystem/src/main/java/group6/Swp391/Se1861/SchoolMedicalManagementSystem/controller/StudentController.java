@@ -39,7 +39,7 @@ public class StudentController {
             @RequestParam(required = false) String className) {
         try {
             // Get campaign details
-            HealthCheckCampaign campaign = healthCheckCampaignService.getCampaignById(campaignId);
+            HealthCheckCampaign campaign = healthCheckCampaignService.getCampaignModelById(campaignId);
             if (campaign == null) {
                 return ResponseEntity.notFound().build();
             }

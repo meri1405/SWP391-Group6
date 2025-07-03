@@ -11,17 +11,23 @@ import java.time.LocalDate;
 @NoArgsConstructor
 public class StudentDTO {
     private Long studentID;
+    private String studentCode;
     private String firstName;
     private String lastName;
+    private String className;
+    private int age;
     private LocalDate dob;
     private String gender;
-    private String className;
     private String birthPlace;
     private String address;
     private String citizenship;
     private boolean isDisabled;
     private Long motherId;
     private Long fatherId;
+    
+    // Parent information
+    private String parentName;
+    private String parentPhone;
     
     // Additional fields for frontend compatibility
     public Long getId() {
@@ -34,5 +40,9 @@ public class StudentDTO {
     
     public String getClass_() {
         return className;
+    }
+
+    public String getFullName() {
+        return lastName + " " + firstName;
     }
 }

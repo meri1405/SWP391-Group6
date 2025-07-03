@@ -7,6 +7,7 @@ import managerApi from "../../../api/managerApi";
 import webSocketService from "../../../services/webSocketService";
 import { VaccinationFormModal } from "../vaccinations";
 import "../../../styles/Notifications.css";
+import { HealthCheckFormModal } from "../health";
 
 const Notifications = ({ role = "parent" }) => {
   const [filter, setFilter] = useState("all");
@@ -15,6 +16,9 @@ const Notifications = ({ role = "parent" }) => {
   const [error, setError] = useState(null);
   const [showVaccinationModal, setShowVaccinationModal] = useState(false);
   const [selectedVaccinationFormId, setSelectedVaccinationFormId] =
+    useState(null);
+  const [showHealthCheckModal, setShowHealthCheckModal] = useState(false);
+  const [selectedHealthCheckFormId, setSelectedHealthCheckFormId] =
     useState(null);
   const [showCompletionRequestModal, setShowCompletionRequestModal] =
     useState(false);
@@ -122,6 +126,41 @@ const Notifications = ({ role = "parent" }) => {
     });
   };
   const { getToken } = useAuth();
+  
+  // Styles for health check notifications
+  const healthCheckMessageStyles = {
+    healthCheckMessage: {
+      lineHeight: "1.6",
+      whiteSpace: "pre-line",
+      fontFamily: "Arial, sans-serif",
+    },
+    messageHeader: {
+      fontWeight: "bold",
+      marginBottom: "10px",
+    },
+    messageBody: {
+      margin: "8px 0",
+    },
+    messageFooter: {
+      marginTop: "10px",
+      fontStyle: "italic",
+    },
+    messageSection: {
+      marginTop: "15px",
+      marginBottom: "5px",
+      fontWeight: "bold",
+      borderTop: "1px solid #eee",
+      paddingTop: "10px",
+    },
+    messageSpacer: {
+      height: "10px",
+    }
+  };
+
+  // Use a ref to track if the component is mounted
+  const isMounted = useRef(true);
+  // Use a ref to prevent duplicate API calls
+  const isLoadingRef = useRef(false);
 
   // Use appropriate API based on role
   const api =
@@ -142,6 +181,12 @@ const Notifications = ({ role = "parent" }) => {
     if (notification.vaccinationFormId) {
       return "vaccination";
     }
+
+    if(notification.healthCheckFormId) {
+      return "health";
+    }
+
+    console.log(notification.healthCheckFormId);
 
     // Check title and message content for additional clues
     const titleLower = notification.title?.toLowerCase() || "";
@@ -268,6 +313,7 @@ const Notifications = ({ role = "parent" }) => {
       notification.medicationRequest ||
       notification.medicationSchedule ||
       notification.vaccinationFormId ||
+      notification.healthCheckFormId ||
       type === "completion-request"
     );
   };
@@ -291,6 +337,12 @@ const Notifications = ({ role = "parent" }) => {
     } else {
       return `${diffInDays} ngày trước`;
     }
+  };
+
+  // Helper function to detect if a string contains HTML
+  const isHtmlContent = (str) => {
+    if (!str) return false;
+    return /<[a-z][\s\S]*>/i.test(str);
   };
 
   // Format notification message to replace ISO dates with Vietnamese format
@@ -319,7 +371,29 @@ const Notifications = ({ role = "parent" }) => {
       .replace(/has been processed/gi, "đã được xử lý")
       .replace(/needs attention/gi, "cần được chú ý")
       .replace(/requires review/gi, "cần được xem xét");
+    
+    // Format the message with proper line breaks for health check notifications
+    if (translatedMessage.includes("đợt khám sức khỏe") || 
+        translatedMessage.includes("Đợt khám sức khỏe") ||
+        translatedMessage.includes("Thân gửi Quý phụ huynh")) {
+      
+      // Format health check notifications with proper paragraph breaks
+      translatedMessage = translatedMessage
+        // First, normalize line breaks (remove duplicates, etc)
+        .replace(/\n\s*\n/g, '\n')
+        // Add proper spacing around key phrases
+        .replace(/Thân gửi Quý phụ huynh,/g, 'Thân gửi Quý phụ huynh, ')
+        .replace(/Nhà trường thông báo/g, 'Nhà trường thông báo')
+        .replace(/Kính đề nghị/g, 'Kính đề nghị')
+        .replace(/Vui lòng phản hồi/g, 'Vui lòng phản hồi')
+        .replace(/Trân trọng,/g, 'Trân trọng,')
+        .replace(/Ban Giám hiệu/g, 'Ban Giám hiệu')
+        .replace(/--- Thông tin học sinh ---/g, '--- Thông tin học sinh ---')
+        .replace(/Tên:/g, 'Tên:')
+        .replace(/Lớp:/g, 'Lớp:');
+    }
 
+    // Replace ISO dates with Vietnamese format
     return translatedMessage.replace(isoDateRegex, (match) => {
       try {
         const date = new Date(match);
@@ -349,14 +423,60 @@ const Notifications = ({ role = "parent" }) => {
 
   // Load notifications on component mount
   const loadNotifications = useCallback(async () => {
+    // Prevent duplicate API calls
+    if (isLoadingRef.current) return;
+    
     const token = getToken();
     if (!token) return;
 
     try {
+      isLoadingRef.current = true;
       setLoading(true);
       setError(null);
       const data = await api.getAllNotifications(token);
+      // Only update state if component is still mounted
+      if (isMounted.current) {
+        // Transform backend notification data to frontend format
+        const transformedNotifications = data.map((notification) => {
+          // Translate notification title if it's in English
+          let translatedTitle = notification.title;
+          if (translatedTitle === "Campaign Approved") {
+            translatedTitle = "Chiến dịch được phê duyệt";
+          } else if (translatedTitle === "Campaign Rejected") {
+            translatedTitle = "Chiến dịch bị từ chối";
+          } else if (translatedTitle === "Campaign Scheduled") {
+            translatedTitle = "Chiến dịch đã lên lịch";
+          } else if (translatedTitle === "Campaign Completed") {
+            translatedTitle = "Chiến dịch hoàn thành";
+          } else if (translatedTitle === "Health Check Approved") {
+            translatedTitle = "Đợt khám sức khỏe được phê duyệt";
+          } else if (translatedTitle === "Health Check Rejected") {
+            translatedTitle = "Đợt khám sức khỏe bị từ chối";
+          } else if (translatedTitle === "Medication Request Approved") {
+            translatedTitle = "Yêu cầu thuốc được phê duyệt";
+          } else if (translatedTitle === "Medication Request Rejected") {
+            translatedTitle = "Yêu cầu thuốc bị từ chối";
+          }
 
+          return {
+            id: notification.id,
+            type: getNotificationType(notification),
+            title: translatedTitle,
+            message: formatNotificationMessage(notification.message),
+            time: formatTimeAgo(notification.createdAt),
+            date: notification.createdAt,
+            read: notification.read,
+            priority: determinePriority(notification),
+            actionRequired: determineActionRequired(notification),
+            medicationRequest: notification.medicationRequest,
+            medicationSchedule: notification.medicationSchedule,
+            vaccinationFormId: notification.vaccinationFormId,
+            healthCheckFormId: notification.healthCheckFormId,
+          };
+        });
+
+        setNotifications(transformedNotifications);
+      }
       // Transform backend notification data to frontend format
       const transformedNotifications = data.map((notification) => {
         // Translate notification title if it's in English
@@ -399,11 +519,16 @@ const Notifications = ({ role = "parent" }) => {
       setNotifications(transformedNotifications);
     } catch (error) {
       console.error("Error loading notifications:", error);
-      setError("Không thể tải thông báo. Vui lòng thử lại.");
+      if (isMounted.current) {
+        setError("Không thể tải thông báo. Vui lòng thử lại.");
+      }
     } finally {
-      setLoading(false);
+      isLoadingRef.current = false;
+      if (isMounted.current) {
+        setLoading(false);
+      }
     }
-  }, [getToken, formatNotificationMessage]);
+  }, [getToken, formatNotificationMessage, api]);
 
   const setupWebSocketConnection = useCallback(async () => {
     const token = getToken();
@@ -413,7 +538,9 @@ const Notifications = ({ role = "parent" }) => {
       // Connect to WebSocket
       await webSocketService.connect(token);
       // Add message handler for real-time notifications
-      webSocketService.addMessageHandler("notifications", (newNotification) => {
+      webSocketService.addMessageHandler("/queue/notifications", (newNotification) => {
+        if (!isMounted.current) return;
+        
         // Translate notification title if it's in English
         let translatedTitle = newNotification.title;
         if (translatedTitle === "Campaign Approved") {
@@ -448,6 +575,7 @@ const Notifications = ({ role = "parent" }) => {
           medicationRequest: newNotification.medicationRequest,
           medicationSchedule: newNotification.medicationSchedule,
           vaccinationFormId: newNotification.vaccinationFormId,
+          healthCheckFormId: newNotification.healthCheckFormId,
           campaignCompletionRequestId:
             newNotification.campaignCompletionRequestId,
         };
@@ -461,14 +589,21 @@ const Notifications = ({ role = "parent" }) => {
   }, [getToken, formatNotificationMessage]);
 
   useEffect(() => {
+    // Set isMounted ref to true when component mounts
+    isMounted.current = true;
+    
+    // Load data only once when component mounts
     loadNotifications();
     setupWebSocketConnection();
 
     return () => {
+      // Set isMounted ref to false when component unmounts
+      isMounted.current = false;
+      
       // Cleanup WebSocket connection when component unmounts
-      webSocketService.removeMessageHandler("notifications");
+      webSocketService.removeMessageHandler("/queue/notifications");
     };
-  }, [loadNotifications, setupWebSocketConnection, api]);
+  }, [loadNotifications, setupWebSocketConnection]);
 
   // Helper functions for formatting
   const formatVietnameseDate = useCallback((dateString) => {
@@ -511,13 +646,15 @@ const Notifications = ({ role = "parent" }) => {
 
     try {
       await api.markNotificationAsRead(id, token);
-      setNotifications((prev) =>
-        prev.map((notification) =>
-          notification.id === id
-            ? { ...notification, read: true }
-            : notification
-        )
-      );
+      if (isMounted.current) {
+        setNotifications((prev) =>
+          prev.map((notification) =>
+            notification.id === id
+              ? { ...notification, read: true }
+              : notification
+          )
+        );
+      }
     } catch (error) {
       console.error("Error marking notification as read:", error);
     }
@@ -540,7 +677,17 @@ const Notifications = ({ role = "parent" }) => {
       // Open vaccination form modal
       setSelectedVaccinationFormId(notification.vaccinationFormId);
       setShowVaccinationModal(true);
-    }
+    } else if (notification.healthCheckFormId) {
+      // Open health check form modal only for parent role
+      // Skip opening modal for schoolnurse and manager roles
+      if (role !== "schoolnurse" && role !== "manager") {
+        console.log("Opening health check form modal for ID:", notification.healthCheckFormId);
+        setSelectedHealthCheckFormId(notification.healthCheckFormId);
+        setShowHealthCheckModal(true);
+      } else {
+        console.log("Health check form modal disabled for role:", role);
+      }
+    } 
 
     // Mark as read when action is taken
     if (!notification.read) {
@@ -550,8 +697,18 @@ const Notifications = ({ role = "parent" }) => {
 
   const handleVaccinationFormUpdated = () => {
     // Refresh notifications when vaccination form is updated
-    loadNotifications();
+    setTimeout(() => {
+      loadNotifications();
+    }, 500);
   };
+
+  const handleHealthCheckFormUpdated = () => {
+    // Refresh notifications when health check form is updated
+    setTimeout(() => {
+      loadNotifications();
+    }, 500);
+  };
+
   const getTypeIcon = (type) => {
     switch (type) {
       case "vaccination":
@@ -670,7 +827,30 @@ const Notifications = ({ role = "parent" }) => {
                 {!notification.read && <div className="unread-dot"></div>}
               </div>{" "}
               <div className="notification-body">
-                <p>{notification.message}</p>
+                {notification.type === "health" ? (
+                  <div style={healthCheckMessageStyles.healthCheckMessage}>
+                    {isHtmlContent(notification.message) ? (
+                      <div dangerouslySetInnerHTML={{ __html: notification.message }} />
+                    ) : (
+                      // Fallback for plain text messages using the previous implementation
+                      notification.message.split('\n').map((line, i) => {
+                        if (!line.trim()) {
+                          return <div key={i} style={healthCheckMessageStyles.messageSpacer}></div>;
+                        } else if (line.includes("Thân gửi")) {
+                          return <div key={i} style={healthCheckMessageStyles.messageHeader}>{line}</div>;
+                        } else if (line.includes("Trân trọng") || line.includes("Ban Giám hiệu")) {
+                          return <div key={i} style={healthCheckMessageStyles.messageFooter}>{line}</div>;
+                        } else if (line.includes("--- Thông tin học sinh ---")) {
+                          return <div key={i} style={healthCheckMessageStyles.messageSection}>{line}</div>;
+                        } else {
+                          return <div key={i} style={healthCheckMessageStyles.messageBody}>{line}</div>;
+                        }
+                      })
+                    )}
+                  </div>
+                ) : (
+                  <p>{notification.message}</p>
+                )}
 
                 {/* Additional details based on notification type */}
                 {notification.medicationRequest && (
@@ -733,17 +913,16 @@ const Notifications = ({ role = "parent" }) => {
                     Đánh dấu đã đọc
                   </button>
                 )}
-                {/* Only show "Xem chi tiết" button for MANAGER role, not for NURSE */}
-                {notification.actionRequired &&
-                  role !== "nurse" &&
-                  role !== "schoolnurse" && (
-                    <button
-                      className="action-btn primary"
-                      onClick={() => confirmAction(notification)}
-                    >
-                      Xem chi tiết
-                    </button>
-                  )}
+                {notification.actionRequired && 
+                  // Hide "Xem chi tiết" button for health check notifications when user is schoolnurse
+                  !(notification.healthCheckFormId && (role === "schoolnurse")) && (
+                  <button
+                    className="action-btn primary"
+                    onClick={() => confirmAction(notification)}
+                  >
+                    Xem chi tiết
+                  </button>
+                )}
               </div>
             </div>
           ))}
@@ -763,6 +942,15 @@ const Notifications = ({ role = "parent" }) => {
           vaccinationFormId={selectedVaccinationFormId}
           onClose={() => setShowVaccinationModal(false)}
           onFormUpdated={handleVaccinationFormUpdated}
+        />
+      )}
+      {/* Health Check Form Modal */}
+      {showHealthCheckModal && (
+        <HealthCheckFormModal
+          isOpen={showHealthCheckModal}
+          healthCheckFormId={selectedHealthCheckFormId}
+          onClose={() => setShowHealthCheckModal(false)}
+          onFormUpdated={handleHealthCheckFormUpdated}
         />
       )}
       {/* Campaign Completion Request Modal */}
@@ -804,9 +992,9 @@ const CampaignCompletionRequestModal = ({
     completionRequest?.status === "REJECTED";
   const statusMessage =
     completionRequest?.status === "APPROVED"
-      ? "✅ Yêu cầu đã được phê duyệt"
+      ? "Yêu cầu đã được phê duyệt"
       : completionRequest?.status === "REJECTED"
-      ? "❌ Yêu cầu đã bị từ chối"
+      ? "Yêu cầu đã bị từ chối"
       : null;
 
   // Helper function to extract statistics from completion request message

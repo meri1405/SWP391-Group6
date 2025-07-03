@@ -38,6 +38,9 @@ public class HealthCheckForm {
     @Column(name = "sentAt", nullable = false)
     private LocalDateTime sentAt = LocalDateTime.now();
 
+    @Column(name = "createdAt", nullable = false)
+    private LocalDateTime createdAt = LocalDateTime.now();
+
     @Column(name = "respondedAt", nullable = true)
     private LocalDateTime respondedAt;
 
