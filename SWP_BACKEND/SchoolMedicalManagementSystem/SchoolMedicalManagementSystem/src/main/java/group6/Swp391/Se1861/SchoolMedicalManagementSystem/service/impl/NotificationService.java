@@ -2,6 +2,9 @@ package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.NotificationDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.*;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.FormStatus;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.TimeSlot;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.HealthCheckFormRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.NotificationRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.UserRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.INotificationService;
@@ -23,6 +26,7 @@ public class NotificationService implements INotificationService {
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final HealthCheckFormRepository healthCheckFormRepository;
     private final SimpMessagingTemplate messagingTemplate;
 
     /**
@@ -888,6 +892,7 @@ public class NotificationService implements INotificationService {
             }
         }
     }
+    
     /**
      * CAMPAIGN COMPLETION REQUEST NOTIFICATIONS
      */
@@ -1660,6 +1665,112 @@ public class NotificationService implements INotificationService {
         notification.setHealthCheckCampaign(campaign);
         
         notificationRepository.save(notification);
+    }
+    
+    /**
+     * Send health check schedule notification to parents
+     */
+    @Transactional
+    public void notifyParentsAboutHealthCheckSchedule(HealthCheckCampaign campaign) {
+        // Get all confirmed health check forms for this campaign
+        List<HealthCheckForm> confirmedForms = healthCheckFormRepository
+                .findByCampaignAndStatus(campaign, FormStatus.CONFIRMED);
+        
+        if (confirmedForms.isEmpty()) {
+            System.out.println("No confirmed forms found for campaign: " + campaign.getName());
+            return;
+        }
+        
+        // Get time slot text in Vietnamese
+        String timeSlotText = getTimeSlotText(campaign.getTimeSlot());
+        
+        // Send notification to each parent
+        for (HealthCheckForm form : confirmedForms) {
+            User parent = form.getParent();
+            Student student = form.getStudent();
+            
+            // Create detailed schedule message
+            String title = "LỊCH KHÁM SỨC KHỎE - " + student.getFullName().toUpperCase();
+            String message = String.format(
+                "Thân gửi Quý phụ huynh,\n\n" +
+                "Nhà trường thông báo lịch khám sức khỏe của đợt khám \"%s\".\n\n" +
+                "Thông tin lịch khám:\n\n" +
+                "Thời gian: %s\n" +
+                "Ngày giờ cụ thể: %s %s\n" +
+                "Địa điểm: %s\n" +
+                "Thứ tự khám: %d\n" +
+                "Học sinh: %s - Lớp %s\n" +
+                "%s\n\n" +
+                "Xin vui lòng chuẩn bị đầy đủ thông tin sức khỏe cơ bản và đưa học sinh đến đúng giờ.\n\n" +
+                "Trân trọng,\n" +
+                "Ban Giám hiệu",
+                campaign.getName(),
+                timeSlotText,
+                campaign.getStartDate().toString(),
+                getTimeSlotTimeText(campaign.getTimeSlot()),
+                campaign.getLocation(),
+                getStudentOrder(confirmedForms, student),
+                student.getFullName(),
+                student.getClassName(),
+                campaign.getScheduleNotes() != null ? "Lưu ý: " + campaign.getScheduleNotes() : ""
+            );
+            
+            // Create notification
+            Notification notification = new Notification();
+            notification.setTitle(title);
+            notification.setMessage(message);
+            notification.setNotificationType("HEALTH_CHECK_SCHEDULE");
+            notification.setRecipient(parent);
+            notification.setHealthCheckCampaign(campaign);
+            notification.setHealthCheckForm(form);
+            
+            Notification savedNotification = notificationRepository.save(notification);
+            NotificationDTO notificationDTO = convertToDTO(savedNotification);
+            
+            // Send real-time notification via WebSocket
+            try {
+                if (parent.getUsername() != null) {
+                    messagingTemplate.convertAndSendToUser(
+                            parent.getUsername(),
+                            "/queue/notifications",
+                            notificationDTO
+                    );
+                }
+            } catch (Exception e) {
+                System.err.println("Error sending WebSocket notification to parent: " + e.getMessage());
+            }
+        }
+    }
+    
+    private String getTimeSlotText(TimeSlot timeSlot) {
+        if (timeSlot == null) return "Chưa xác định";
+        switch (timeSlot) {
+            case MORNING: return "Sáng";
+            case AFTERNOON: return "Chiều";
+            case BOTH: return "Cả ngày";
+            default: return "Chưa xác định";
+        }
+    }
+    
+    private String getTimeSlotTimeText(TimeSlot timeSlot) {
+        if (timeSlot == null) return "00:00";
+        switch (timeSlot) {
+            case MORNING: return "08:00";
+            case AFTERNOON: return "14:00";
+            case BOTH: return "08:00";
+            default: return "08:00";
+        }
+    }
+    
+    private int getStudentOrder(List<HealthCheckForm> forms, Student student) {
+        // Sort forms by student name and find the order
+        forms.sort((f1, f2) -> f1.getStudent().getFullName().compareTo(f2.getStudent().getFullName()));
+        for (int i = 0; i < forms.size(); i++) {
+            if (forms.get(i).getStudent().getStudentID().equals(student.getStudentID())) {
+                return i + 1;
+            }
+        }
+        return 1;
     }
 }
 

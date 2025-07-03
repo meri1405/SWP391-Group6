@@ -9,12 +9,14 @@ import java.time.LocalDate;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class HearingDTO {
+public class OralDTO {
     private Long id;
-    private int leftEar;
-    private int rightEar;
+    private String teethCondition;
+    private String gumsCondition;
+    private String tongueCondition;
     private String description;
     private String doctorName;
     private LocalDate dateOfExamination;
+    private boolean isAbnormal;
     private Long healthProfileId;
 }

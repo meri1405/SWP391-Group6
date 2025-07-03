@@ -36,6 +36,9 @@ public class Vision {
     @Column(name = "dateOfExamination", nullable = true)
     private LocalDate dateOfExamination;
 
+    @Column(name = "doctorName", nullable = true)
+    private String doctorName;
+
     @ManyToOne
     @JoinColumn(name = "healthProfileId", nullable = false)
     private HealthProfile healthProfile;
