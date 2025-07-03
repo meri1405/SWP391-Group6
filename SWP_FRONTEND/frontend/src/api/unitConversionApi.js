@@ -2,11 +2,14 @@ const API_BASE_URL = "/api";
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem("token");
-  
+
   if (!token) {
     console.warn("No token found in localStorage");
   } else {
-    console.log("Getting auth headers for unit conversions, token:", token ? "exists" : "missing");
+    console.log(
+      "Getting auth headers for unit conversions, token:",
+      token ? "exists" : "missing"
+    );
   }
 
   return {
@@ -79,10 +82,15 @@ export const unitConversionApi = {
   // Get convertible units for a given unit
   getConvertibleUnits: async (fromUnit) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/unit-conversions/convertible-units/${encodeURIComponent(fromUnit)}`, {
-        method: "GET",
-        headers: getAuthHeaders(),
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/unit-conversions/convertible-units/${encodeURIComponent(
+          fromUnit
+        )}`,
+        {
+          method: "GET",
+          headers: getAuthHeaders(),
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -182,7 +190,9 @@ export const unitConversionApi = {
   canConvert: async (fromUnit, toUnit) => {
     try {
       const response = await fetch(
-        `${API_BASE_URL}/unit-conversions/can-convert?fromUnit=${encodeURIComponent(fromUnit)}&toUnit=${encodeURIComponent(toUnit)}`,
+        `${API_BASE_URL}/unit-conversions/can-convert?fromUnit=${encodeURIComponent(
+          fromUnit
+        )}&toUnit=${encodeURIComponent(toUnit)}`,
         {
           method: "GET",
           headers: getAuthHeaders(),
@@ -204,10 +214,13 @@ export const unitConversionApi = {
   // Get conversions for a specific unit
   getConversionsForUnit: async (unit) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/unit-conversions/for-unit/${encodeURIComponent(unit)}`, {
-        method: "GET",
-        headers: getAuthHeaders(),
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/unit-conversions/for-unit/${encodeURIComponent(unit)}`,
+        {
+          method: "GET",
+          headers: getAuthHeaders(),
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -224,10 +237,13 @@ export const unitConversionApi = {
   // Seed default conversions
   seedDefaultConversions: async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/unit-conversions/seed-defaults`, {
-        method: "POST",
-        headers: getAuthHeaders(),
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/unit-conversions/seed-defaults`,
+        {
+          method: "POST",
+          headers: getAuthHeaders(),
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -244,10 +260,13 @@ export const unitConversionApi = {
   // Enable unit conversion
   enableConversion: async (id) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/unit-conversions/${id}/enable`, {
-        method: "PUT",
-        headers: getAuthHeaders(),
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/unit-conversions/${id}/enable`,
+        {
+          method: "PUT",
+          headers: getAuthHeaders(),
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -263,10 +282,13 @@ export const unitConversionApi = {
   // Disable unit conversion
   disableConversion: async (id) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/unit-conversions/${id}/disable`, {
-        method: "PUT",
-        headers: getAuthHeaders(),
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/unit-conversions/${id}/disable`,
+        {
+          method: "PUT",
+          headers: getAuthHeaders(),
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

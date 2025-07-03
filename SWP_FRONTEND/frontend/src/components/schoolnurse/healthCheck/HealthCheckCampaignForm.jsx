@@ -17,7 +17,7 @@ import {
 } from 'antd';
 import { SaveOutlined, CloseOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { healthCheckApi } from '../../../api/healthCheckApi';
+import { healthCheckApi, HEALTH_CHECK_CATEGORY_LABELS } from '../../../api/healthCheckApi';
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -54,10 +54,23 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
 
   // Calculate target count when relevant fields change
   const calculateTargetCount = async (minAge, maxAge, targetClasses) => {
+    console.log('Frontend calculateTargetCount called with:', {
+      minAge,
+      maxAge,
+      targetClasses,
+      targetClassesType: typeof targetClasses,
+      targetClassesArray: Array.isArray(targetClasses)
+    });
+    
     if (minAge && maxAge && minAge <= maxAge) {
       setCalculatingTargetCount(true);
       try {
-        const result = await healthCheckApi.calculateTargetCount(minAge, maxAge, targetClasses || []);
+        // If no classes are selected, default to "toàn trường" (whole school)
+        const classesToUse = (targetClasses && targetClasses.length > 0) ? targetClasses : ["toàn trường"];
+        console.log('Using classes:', classesToUse);
+        
+        const result = await healthCheckApi.calculateTargetCount(minAge, maxAge, classesToUse);
+        console.log('Frontend calculateTargetCount result:', result);
         setTargetCount(result.targetCount || 0);
       } catch (error) {
         console.error('Error calculating target count:', error);
@@ -66,6 +79,7 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
         setCalculatingTargetCount(false);
       }
     } else {
+      console.log('Skipping target count calculation - invalid age range');
       setTargetCount(0);
     }
   };
@@ -105,10 +119,16 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
     try {
       const [startDate, endDate] = values.dateRange || [];
       
+      // If no classes are selected, default to "toàn trường" (whole school)
+      const targetClasses = (values.targetClasses && values.targetClasses.length > 0) 
+        ? values.targetClasses 
+        : ["toàn trường"];
+      
       const campaignData = {
         ...values,
-        startDate: startDate ? startDate.format('YYYY-MM-DDTHH:mm:ss') : null,
-        endDate: endDate ? endDate.format('YYYY-MM-DDTHH:mm:ss') : null,
+        targetClasses,
+        startDate: startDate ? startDate.format('YYYY-MM-DD') : null,
+        endDate: endDate ? endDate.format('YYYY-MM-DD') : null,
       };
       
       // Remove dateRange field as it's not part of the backend DTO
@@ -155,10 +175,6 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
         layout="vertical"
         onFinish={handleSubmit}
         onValuesChange={onValuesChange}
-        initialValues={{
-          minAge: 6,
-          maxAge: 12,
-        }}
       >
         <Row gutter={16}>
           <Col span={24}>
@@ -217,7 +233,7 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
               rules={[{ required: true, message: 'Vui lòng nhập độ tuổi tối thiểu' }]}
             >
               <InputNumber 
-                min={6} 
+                min={2} 
                 max={12}
                 style={{ width: '100%' }}
                 placeholder="Nhập độ tuổi tối thiểu"
@@ -244,15 +260,17 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
           <Col span={12}>
             <Form.Item
               name="targetClasses"
-              label="Lớp mục tiêu (tuỳ chọn)"
+              label="Lớp mục tiêu"
+              tooltip="Để trống để áp dụng cho toàn trường"
             >
               <Select 
                 mode="tags"
-                placeholder="Chọn hoặc nhập lớp mục tiêu (Ví dụ: 1A, 2B, 3C, toàn trường)"
+                placeholder="Để trống cho toàn trường, hoặc chọn/nhập lớp cụ thể (Ví dụ: 1A, 2B, 3C)"
                 style={{ width: '100%' }}
                 tokenSeparators={[',']}
               >
                 <Option value="toàn trường">Toàn trường</Option>
+                <Option value="Mầm non">Mầm non</Option>
                 <Option value="1A">Lớp 1A</Option>
                 <Option value="1B">Lớp 1B</Option>
                 <Option value="1C">Lớp 1C</Option>
@@ -283,11 +301,7 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
               >
                 {availableCategories.map(category => (
                   <Option key={category} value={category}>
-                    {category === 'VISION' && 'Khám mắt'}
-                    {category === 'HEARING' && 'Khám tai'}
-                    {category === 'ORAL' && 'Khám răng miệng'}
-                    {category === 'SKIN' && 'Khám da liễu'}
-                    {category === 'RESPIRATORY' && 'Khám hô hấp'}
+                    {HEALTH_CHECK_CATEGORY_LABELS[category] || category}
                   </Option>
                 ))}
               </Select>

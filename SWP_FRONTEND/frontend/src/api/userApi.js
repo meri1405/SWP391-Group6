@@ -22,13 +22,13 @@ export const requestPasswordReset = async (email) => {
     return {
       ok: response.ok,
       status: response.status,
-      data
+      data,
     };
   } catch {
     return {
       ok: false,
       status: 500,
-      data: { message: "Network error" }
+      data: { message: "Network error" },
     };
   }
 };
@@ -47,13 +47,13 @@ export const verifyOtp = async (email, otp) => {
     return {
       ok: response.ok,
       status: response.status,
-      data
+      data,
     };
   } catch {
     return {
       ok: false,
       status: 500,
-      data: { message: "Network error" }
+      data: { message: "Network error" },
     };
   }
 };
@@ -72,13 +72,13 @@ export const resetPassword = async (email, otp, newPassword) => {
     return {
       ok: response.ok,
       status: response.status,
-      data
+      data,
     };
   } catch {
     return {
       ok: false,
       status: 500,
-      data: { message: "Network error" }
+      data: { message: "Network error" },
     };
   }
 };
@@ -118,10 +118,10 @@ export const getAllUsers = async () => {
     console.log("Parsed API data:", data);
     console.log("Data type:", typeof data);
     console.log("Data is array:", Array.isArray(data));
-    
+
     if (Array.isArray(data)) {
       console.log("Data length:", data.length);
-    } else if (data && typeof data === 'object') {
+    } else if (data && typeof data === "object") {
       console.log("Data keys:", Object.keys(data));
     }
 

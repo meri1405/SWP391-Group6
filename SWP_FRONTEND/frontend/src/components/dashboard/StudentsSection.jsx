@@ -1,30 +1,30 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Card, 
-  Table, 
-  Button, 
-  Space, 
-  Typography, 
-  message, 
+import React, { useState, useEffect } from "react";
+import {
+  Card,
+  Table,
+  Button,
+  Space,
+  Typography,
+  message,
   Popconfirm,
-  Tag
-} from 'antd';
-import { 
-  PlusOutlined, 
+  Tag,
+} from "antd";
+import {
+  PlusOutlined,
   DownloadOutlined,
   UploadOutlined,
   CheckCircleOutlined,
-  StopOutlined
-} from '@ant-design/icons';
-import dayjs from 'dayjs';
-import AddStudentWithParentsModal from './AddStudentWithParentsModal';
-import ImportStudentsModal from './ImportStudentsModal';
-import '../../styles/StudentManagement.css';
-import { 
-  getAllStudents, 
-  deleteStudent, 
-  downloadExcelTemplate 
-} from '../../api/studentApi';
+  StopOutlined,
+} from "@ant-design/icons";
+import dayjs from "dayjs";
+import AddStudentWithParentsModal from "./AddStudentWithParentsModal";
+import ImportStudentsModal from "./ImportStudentsModal";
+import "../../styles/StudentManagement.css";
+import {
+  getAllStudents,
+  deleteStudent,
+  downloadExcelTemplate,
+} from "../../api/studentApi";
 
 const StudentsSection = () => {
   const [showAddModal, setShowAddModal] = useState(false);
@@ -40,18 +40,18 @@ const StudentsSection = () => {
     setLoading(true);
     try {
       const data = await getAllStudents();
-      console.log('Fetched students data:', data); // Debug log
-      console.log('First student structure:', data[0]); // Debug first student
-      
+      console.log("Fetched students data:", data); // Debug log
+      console.log("First student structure:", data[0]); // Debug first student
+
       // Sort students by ID in descending order (newest first)
       const sortedData = [...data].sort((a, b) => {
         return b.id - a.id; // Descending order - highest IDs (newest) first
       });
-      
+
       setStudents(sortedData);
       setLastUpdate(Date.now()); // Update timestamp to trigger re-render
     } catch (error) {
-      message.error('Không thể tải danh sách học sinh: ' + error.message);
+      message.error("Không thể tải danh sách học sinh: " + error.message);
     } finally {
       setLoading(false);
     }
@@ -64,24 +64,29 @@ const StudentsSection = () => {
   const handleToggleStudentStatus = async (student) => {
     try {
       setLoading(true);
-      console.log('Toggling status for student:', student.id, 'Current isDisabled:', student.isDisabled);
-      
+      console.log(
+        "Toggling status for student:",
+        student.id,
+        "Current isDisabled:",
+        student.isDisabled
+      );
+
       // Call API first
       const response = await deleteStudent(student.id);
-      console.log('API response:', response);
-      
+      console.log("API response:", response);
+
       // Show success message based on original status (what we're changing FROM)
       if (student.isDisabled) {
-        message.success('Đã kích hoạt lại học sinh thành công');
+        message.success("Đã kích hoạt lại học sinh thành công");
       } else {
-        message.success('Đã vô hiệu hóa học sinh thành công');
+        message.success("Đã vô hiệu hóa học sinh thành công");
       }
-      
+
       // Force refresh data from server to get the latest state
       await fetchStudents();
     } catch (error) {
-      console.error('Error toggling student status:', error);
-      message.error('Không thể thay đổi trạng thái học sinh: ' + error.message);
+      console.error("Error toggling student status:", error);
+      message.error("Không thể thay đổi trạng thái học sinh: " + error.message);
     } finally {
       setLoading(false);
     }
@@ -91,96 +96,105 @@ const StudentsSection = () => {
     try {
       const blob = await downloadExcelTemplate();
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
-      link.download = 'Template_Import_Hoc_Sinh.xlsx';
+      link.download = "Template_Import_Hoc_Sinh.xlsx";
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-      message.success('Tải template thành công');
+      message.success("Tải template thành công");
     } catch (error) {
-      message.error('Không thể tải template: ' + error.message);
+      message.error("Không thể tải template: " + error.message);
     }
   };
 
   const columns = [
     {
-      title: 'STT',
-      key: 'index',
+      title: "STT",
+      key: "index",
       width: 60,
       render: (_, __, index) => {
         // Calculate the ordinal number based on current page
-        return ((currentPage - 1) * pageSize) + index + 1;
+        return (currentPage - 1) * pageSize + index + 1;
       },
     },
-    { 
-      title: 'Họ và tên', 
-      key: 'fullName',
+    {
+      title: "Họ và tên",
+      key: "fullName",
       render: (_, record) => `${record.lastName} ${record.firstName}`,
     },
-    { 
-      title: 'Lớp', 
-      dataIndex: 'className', 
-      key: 'className' 
-    },
-    { 
-      title: 'Ngày sinh', 
-      dataIndex: 'dob', 
-      key: 'dob',
-      render: (date) => date ? dayjs(date).format('DD/MM/YYYY') : ''
-    },
-    { 
-      title: 'Giới tính', 
-      dataIndex: 'gender', 
-      key: 'gender',
-      render: (gender) => gender === 'M' ? 'Nam' : 'Nữ'
-    },
-    { 
-      title: 'Nơi sinh', 
-      dataIndex: 'birthPlace', 
-      key: 'birthPlace' 
+    {
+      title: "Lớp",
+      dataIndex: "className",
+      key: "className",
     },
     {
-      title: 'Trạng thái',
-      key: 'status',
+      title: "Ngày sinh",
+      dataIndex: "dob",
+      key: "dob",
+      render: (date) => (date ? dayjs(date).format("DD/MM/YYYY") : ""),
+    },
+    {
+      title: "Giới tính",
+      dataIndex: "gender",
+      key: "gender",
+      render: (gender) => (gender === "M" ? "Nam" : "Nữ"),
+    },
+    {
+      title: "Nơi sinh",
+      dataIndex: "birthPlace",
+      key: "birthPlace",
+    },
+    {
+      title: "Trạng thái",
+      key: "status",
       render: (_, record) => {
-        console.log('Rendering status for student:', record.id, 'isDisabled:', record.isDisabled);
-        console.log('Full record:', record); // Debug full record
+        console.log(
+          "Rendering status for student:",
+          record.id,
+          "isDisabled:",
+          record.isDisabled
+        );
+        console.log("Full record:", record); // Debug full record
         const isDisabled = record.isDisabled || record.disabled || false; // Handle different field names
         return (
-          <Tag color={isDisabled ? 'red' : 'green'}>
-            {isDisabled ? 'Vô hiệu hóa' : 'Hoạt động'}
+          <Tag color={isDisabled ? "red" : "green"}>
+            {isDisabled ? "Vô hiệu hóa" : "Hoạt động"}
           </Tag>
         );
       },
     },
     {
-      title: 'Thao tác',
-      key: 'actions',
+      title: "Thao tác",
+      key: "actions",
       render: (_, record) => {
         const isDisabled = record.isDisabled || record.disabled || false; // Handle different field names
         return (
           <Space size="middle">
             <Popconfirm
-              title={isDisabled ? "Xác nhận kích hoạt lại" : "Xác nhận vô hiệu hóa"}
+              title={
+                isDisabled ? "Xác nhận kích hoạt lại" : "Xác nhận vô hiệu hóa"
+              }
               description={
-                isDisabled 
-                  ? "Bạn có chắc chắn muốn kích hoạt lại học sinh này?" 
+                isDisabled
+                  ? "Bạn có chắc chắn muốn kích hoạt lại học sinh này?"
                   : "Bạn có chắc chắn muốn vô hiệu hóa học sinh này? Tài khoản phụ huynh cũng sẽ bị vô hiệu hóa."
               }
-              onConfirm={() => handleToggleStudentStatus({ ...record, isDisabled })}
+              onConfirm={() =>
+                handleToggleStudentStatus({ ...record, isDisabled })
+              }
               okText={isDisabled ? "Kích hoạt" : "Vô hiệu hóa"}
               cancelText="Hủy"
               okType={isDisabled ? "primary" : "danger"}
             >
-              <Button 
+              <Button
                 danger={!isDisabled}
                 type={isDisabled ? "primary" : "default"}
-                icon={isDisabled ? <CheckCircleOutlined /> : <StopOutlined />} 
+                icon={isDisabled ? <CheckCircleOutlined /> : <StopOutlined />}
                 size="small"
               >
-                {isDisabled ? 'Kích hoạt' : 'Vô hiệu hóa'}
+                {isDisabled ? "Kích hoạt" : "Vô hiệu hóa"}
               </Button>
             </Popconfirm>
           </Space>
@@ -195,7 +209,7 @@ const StudentsSection = () => {
   return (
     <div className="dashboard-section">
       <div className="section-header">
-        <h2 style={{ fontSize: 24, fontWeight: 600, color: '#333', margin: 0 }}>
+        <h2 style={{ fontSize: 24, fontWeight: 600, color: "#333", margin: 0 }}>
           Học sinh
         </h2>
         <Space>
@@ -217,24 +231,25 @@ const StudentsSection = () => {
             type="primary"
             icon={<PlusOutlined />}
             onClick={() => setShowAddModal(true)}
-            style={{ 
-              background: '#ff6b35', 
-              borderColor: '#ff6b35', 
-              borderRadius: 6, 
-              fontWeight: 500 
+            style={{
+              background: "#ff6b35",
+              borderColor: "#ff6b35",
+              borderRadius: 6,
+              fontWeight: 500,
             }}
           >
             Thêm học sinh
-          </Button>        </Space>
+          </Button>{" "}
+        </Space>
       </div>
-      
+
       <Card
-        style={{ 
-          borderRadius: 12, 
-          boxShadow: '0 4px 20px rgba(0,0,0,0.08)', 
-          marginBottom: 24 
-        }} 
-        bodyStyle={{ padding: 24 }}
+        style={{
+          borderRadius: 12,
+          boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+          marginBottom: 24,
+        }}
+        styles={{ body: { padding: 24 } }}
       >
         <Table
           key={lastUpdate} // Force re-render when data updates
@@ -242,12 +257,13 @@ const StudentsSection = () => {
           dataSource={students}
           rowKey="id"
           loading={loading}
-          pagination={{ 
+          pagination={{
             pageSize: pageSize,
             onChange: (page) => setCurrentPage(page),
-            current: currentPage
+            current: currentPage,
           }}
-          style={{ borderRadius: 8, overflow: 'hidden' }}        />
+          style={{ borderRadius: 8, overflow: "hidden" }}
+        />
       </Card>
 
       <AddStudentWithParentsModal

@@ -205,9 +205,9 @@ export const medicalSupplyApi = {
         {
           method: "PUT",
           headers: getAuthHeaders(),
-          body: JSON.stringify({ 
+          body: JSON.stringify({
             displayQuantity: displayQuantity,
-            displayUnit: displayUnit 
+            displayUnit: displayUnit,
           }),
         }
       );
@@ -232,9 +232,9 @@ export const medicalSupplyApi = {
         {
           method: "PUT",
           headers: getAuthHeaders(),
-          body: JSON.stringify({ 
+          body: JSON.stringify({
             displayQuantity: displayQuantity,
-            displayUnit: displayUnit 
+            displayUnit: displayUnit,
           }),
         }
       );
@@ -270,7 +270,10 @@ export const medicalSupplyApi = {
       const data = await response.json();
       return data;
     } catch (error) {
-      console.error(`Error updating base unit quantity for supply ${id}:`, error);
+      console.error(
+        `Error updating base unit quantity for supply ${id}:`,
+        error
+      );
       throw error;
     }
   },
@@ -322,7 +325,7 @@ export const medicalSupplyApi = {
       if (response.status === 204) {
         return { success: true };
       }
-      
+
       const data = await response.json();
       return data;
     } catch (error) {
@@ -334,13 +337,10 @@ export const medicalSupplyApi = {
   // Get inventory statistics
   getInventoryStats: async () => {
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/medical-supplies/stats`,
-        {
-          method: "GET",
-          headers: getAuthHeaders(),
-        }
-      );
+      const response = await fetch(`${API_BASE_URL}/medical-supplies/stats`, {
+        method: "GET",
+        headers: getAuthHeaders(),
+      });
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

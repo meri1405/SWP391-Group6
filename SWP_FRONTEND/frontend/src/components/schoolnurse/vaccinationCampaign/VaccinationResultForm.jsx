@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Form,
   Input,
@@ -10,17 +10,17 @@ import {
   Col,
   Radio,
   message,
-  Alert
-} from 'antd';
-import { SaveOutlined, CloseOutlined } from '@ant-design/icons';
-import dayjs from 'dayjs';
+  Alert,
+} from "antd";
+import { SaveOutlined, CloseOutlined } from "@ant-design/icons";
+import dayjs from "dayjs";
 
 const { Option } = Select;
 const { TextArea } = Input;
 
 const VaccinationResultForm = ({ form, onSubmit, onCancel }) => {
   const [resultForm] = Form.useForm();
-  const [preVaccinationStatus, setPreVaccinationStatus] = useState('NORMAL');
+  const [preVaccinationStatus, setPreVaccinationStatus] = useState("NORMAL");
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (values) => {
@@ -28,7 +28,9 @@ const VaccinationResultForm = ({ form, onSubmit, onCancel }) => {
     try {
       const recordData = {
         ...values,
-        vaccinationDate: values.vaccinationDate ? values.vaccinationDate.format('YYYY-MM-DDTHH:mm:ss') : dayjs().format('YYYY-MM-DDTHH:mm:ss'),
+        vaccinationDate: values.vaccinationDate
+          ? values.vaccinationDate.format("YYYY-MM-DDTHH:mm:ss")
+          : dayjs().format("YYYY-MM-DDTHH:mm:ss"),
         vaccinationFormId: form.id,
         studentId: form.studentId,
         studentFullName: form.studentFullName,
@@ -36,13 +38,13 @@ const VaccinationResultForm = ({ form, onSubmit, onCancel }) => {
         vaccineName: form.vaccineName,
         vaccineBrand: form.vaccineBrand,
         doseNumber: form.doseNumber,
-        location: form.location
+        location: form.location,
       };
-      
+
       await onSubmit(recordData);
     } catch (error) {
-      message.error('Không thể ghi nhận kết quả tiêm chủng');
-      console.error('Error submitting vaccination result:', error);
+      message.error("Không thể ghi nhận kết quả tiêm chủng");
+      console.error("Error submitting vaccination result:", error);
     } finally {
       setSubmitting(false);
     }
@@ -58,11 +60,22 @@ const VaccinationResultForm = ({ form, onSubmit, onCancel }) => {
         message="Thông tin học sinh"
         description={
           <div>
-            <p><strong>Họ tên:</strong> {form.studentFullName}</p>
-            <p><strong>Mã học sinh:</strong> {form.studentCode}</p>
-            <p><strong>Vắc xin:</strong> {form.vaccineName} {form.vaccineBrand ? `(${form.vaccineBrand})` : ''}</p>
-            <p><strong>Liều:</strong> {form.doseNumber}</p>
-            <p><strong>Phụ huynh:</strong> {form.parentFullName}</p>
+            <p>
+              <strong>Họ tên:</strong> {form.studentFullName}
+            </p>
+            <p>
+              <strong>Mã học sinh:</strong> {form.studentCode}
+            </p>
+            <p>
+              <strong>Vắc xin:</strong> {form.vaccineName}{" "}
+              {form.vaccineBrand ? `(${form.vaccineBrand})` : ""}
+            </p>
+            <p>
+              <strong>Liều:</strong> {form.doseNumber}
+            </p>
+            <p>
+              <strong>Phụ huynh:</strong> {form.parentFullName}
+            </p>
           </div>
         }
         type="info"
@@ -75,8 +88,8 @@ const VaccinationResultForm = ({ form, onSubmit, onCancel }) => {
         layout="vertical"
         onFinish={handleSubmit}
         initialValues={{
-          preVaccinationStatus: 'NORMAL',
-          administeredBy: '',
+          preVaccinationStatus: "NORMAL",
+          administeredBy: "",
           vaccinationDate: dayjs(),
         }}
       >
@@ -85,12 +98,12 @@ const VaccinationResultForm = ({ form, onSubmit, onCancel }) => {
             <Form.Item
               name="vaccinationDate"
               label="Ngày tiêm"
-              rules={[{ required: true, message: 'Vui lòng chọn ngày tiêm' }]}
+              rules={[{ required: true, message: "Vui lòng chọn ngày tiêm" }]}
             >
-              <DatePicker 
-                showTime 
-                format="DD/MM/YYYY HH:mm" 
-                style={{ width: '100%' }}
+              <DatePicker
+                showTime
+                format="DD/MM/YYYY HH:mm"
+                style={{ width: "100%" }}
               />
             </Form.Item>
           </Col>
@@ -98,7 +111,9 @@ const VaccinationResultForm = ({ form, onSubmit, onCancel }) => {
             <Form.Item
               name="lotNumber"
               label="Số lô vắc xin"
-              rules={[{ required: true, message: 'Vui lòng nhập số lô vắc xin' }]}
+              rules={[
+                { required: true, message: "Vui lòng nhập số lô vắc xin" },
+              ]}
             >
               <Input placeholder="Ví dụ: BCG-2024-0057" />
             </Form.Item>
@@ -108,7 +123,9 @@ const VaccinationResultForm = ({ form, onSubmit, onCancel }) => {
         <Form.Item
           name="preVaccinationStatus"
           label="Tình trạng trước tiêm"
-          rules={[{ required: true, message: 'Vui lòng chọn tình trạng trước tiêm' }]}
+          rules={[
+            { required: true, message: "Vui lòng chọn tình trạng trước tiêm" },
+          ]}
         >
           <Radio.Group onChange={handleStatusChange}>
             <Radio.Button value="NORMAL">Bình thường</Radio.Button>
@@ -117,30 +134,35 @@ const VaccinationResultForm = ({ form, onSubmit, onCancel }) => {
           </Radio.Group>
         </Form.Item>
 
-        {preVaccinationStatus !== 'NORMAL' && (
+        {preVaccinationStatus !== "NORMAL" && (
           <Form.Item
             name="preVaccinationNotes"
             label="Lý do"
-            rules={[{ required: true, message: 'Vui lòng nhập lý do' }]}
+            rules={[{ required: true, message: "Vui lòng nhập lý do" }]}
           >
-            <TextArea rows={3} placeholder="Lý do không thể tiêm hoặc cần hoãn tiêm" />
+            <TextArea
+              rows={3}
+              placeholder="Lý do không thể tiêm hoặc cần hoãn tiêm"
+            />
           </Form.Item>
         )}
 
-        {preVaccinationStatus === 'NORMAL' && (
+        {preVaccinationStatus === "NORMAL" && (
           <>
             <Form.Item
               name="administeredBy"
-              label="Y tá thực hiện"
-              rules={[{ required: true, message: 'Vui lòng nhập tên y tá thực hiện' }]}
+              label="Bác sĩ thực hiện"
+              rules={[
+                {
+                  required: true,
+                  message: "Vui lòng nhập tên bác sĩ thực hiện",
+                },
+              ]}
             >
-              <Input placeholder="Nhập tên y tá thực hiện tiêm chủng" />
+              <Input placeholder="Nhập tên bác sĩ thực hiện tiêm chủng" />
             </Form.Item>
 
-            <Form.Item
-              name="notes"
-              label="Ghi chú"
-            >
+            <Form.Item name="notes" label="Ghi chú">
               <TextArea rows={3} placeholder="Ghi chú thêm (nếu có)" />
             </Form.Item>
           </>
@@ -151,17 +173,14 @@ const VaccinationResultForm = ({ form, onSubmit, onCancel }) => {
         <Form.Item>
           <Row justify="end" gutter={16}>
             <Col>
-              <Button 
-                icon={<CloseOutlined />}
-                onClick={onCancel}
-              >
+              <Button icon={<CloseOutlined />} onClick={onCancel}>
                 Hủy
               </Button>
             </Col>
             <Col>
-              <Button 
-                type="primary" 
-                htmlType="submit" 
+              <Button
+                type="primary"
+                htmlType="submit"
                 loading={submitting}
                 icon={<SaveOutlined />}
               >
@@ -175,4 +194,4 @@ const VaccinationResultForm = ({ form, onSubmit, onCancel }) => {
   );
 };
 
-export default VaccinationResultForm; 
+export default VaccinationResultForm;

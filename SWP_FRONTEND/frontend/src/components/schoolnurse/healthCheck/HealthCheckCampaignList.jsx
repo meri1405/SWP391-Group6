@@ -9,7 +9,7 @@ import {
   CloseCircleOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { healthCheckApi } from '../../../api/healthCheckApi';
+import { healthCheckApi, CAMPAIGN_STATUS_LABELS } from '../../../api/healthCheckApi';
 
 const { Option } = Select;
 const { RangePicker } = DatePicker;
@@ -21,23 +21,46 @@ const HealthCheckCampaignList = ({ onCreateNew, onViewDetails, refreshTrigger })
   const [dateRange, setDateRange] = useState(null);
   const [confirmDeleteModal, setConfirmDeleteModal] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState(null);
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 10,
+    total: 0,
+    showSizeChanger: true,
+    showQuickJumper: true,
+    showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} mục`,
+  });
 
   useEffect(() => {
     fetchCampaigns();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterStatus, dateRange, refreshTrigger]);
 
   const fetchCampaigns = async () => {
     setLoading(true);
     try {
       let data;
-      if (filterStatus !== 'ALL') {
-        data = await healthCheckApi.getCampaignsByStatus(filterStatus);
+      
+      if (filterStatus === 'ALL') {
+        // Fetch campaigns created by current nurse only
+        data = await healthCheckApi.getAllNurseCampaigns();
       } else {
-        data = await healthCheckApi.getNurseCampaigns();
+        // Try to fetch campaigns by specific status using manager endpoint
+        try {
+          data = await healthCheckApi.getAllCampaignsByStatus(filterStatus);
+        } catch (error) {
+          // If unauthorized, fallback to nurse campaigns and filter locally
+          if (error.response?.status === 401 || error.response?.status === 403) {
+            console.warn('Unauthorized to fetch campaigns by status, falling back to nurse campaigns');
+            const allCampaigns = await healthCheckApi.getAllNurseCampaigns();
+            data = allCampaigns.filter(campaign => campaign.status === filterStatus);
+          } else {
+            throw error;
+          }
+        }
       }
       
       // Apply date range filter if selected
-      let filteredData = [...data];
+      let filteredData = Array.isArray(data) ? [...data] : [];
       if (dateRange && dateRange.length === 2) {
         const startDate = dateRange[0].startOf('day');
         const endDate = dateRange[1].endOf('day');
@@ -47,15 +70,39 @@ const HealthCheckCampaignList = ({ onCreateNew, onViewDetails, refreshTrigger })
         });
       }
       
+      // Sort campaigns by creation date (newest first)
+      filteredData.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      
+      // Update campaigns state
       setCampaigns(filteredData);
+      
+      // Update pagination total
+      setPagination(prev => ({
+        ...prev,
+        total: filteredData.length,
+        current: 1, // Reset to first page when data changes
+      }));
+      
     } catch (error) {
       message.error('Không thể tải danh sách đợt khám sức khỏe');
       console.error('Error fetching campaigns:', error);
-      // Set mock data for development if needed
       setCampaigns([]);
+      setPagination(prev => ({
+        ...prev,
+        total: 0,
+        current: 1
+      }));
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleTableChange = (newPagination) => {
+    setPagination(prev => ({
+      ...prev,
+      current: newPagination.current,
+      pageSize: newPagination.pageSize,
+    }));
   };
 
   const handleDelete = (campaign) => {
@@ -66,20 +113,26 @@ const HealthCheckCampaignList = ({ onCreateNew, onViewDetails, refreshTrigger })
   const confirmDelete = async () => {
     if (!selectedCampaign) return;
     
+    // Note: The backend doesn't have a delete endpoint yet
+    // For now, we'll just show a message that deletion is not supported
+    message.warning('Tính năng xóa đợt khám chưa được hỗ trợ. Vui lòng liên hệ quản lý để hủy đợt khám.');
+    setConfirmDeleteModal(false);
+    
+    // If delete is implemented in the future, uncomment below:
+    /*
     setLoading(true);
     try {
-      // Backend currently doesn't support delete, we could implement cancel instead
-      const notes = "Cancelled by nurse";
-      await healthCheckApi.cancelCampaign(selectedCampaign.id, notes);
-      message.success('Đã hủy đợt khám sức khỏe');
+      await healthCheckApi.deleteCampaign(selectedCampaign.id);
+      message.success('Đã xóa đợt khám sức khỏe');
       setConfirmDeleteModal(false);
       fetchCampaigns();
     } catch (error) {
-      message.error('Không thể hủy đợt khám. Chỉ có thể hủy đợt khám ở trạng thái CHƯA DUYỆT.');
-      console.error('Error canceling campaign:', error);
+      message.error('Không thể xóa đợt khám. Chỉ có thể xóa đợt khám ở trạng thái CHƯA DUYỆT.');
+      console.error('Error deleting campaign:', error);
     } finally {
       setLoading(false);
     }
+    */
   };
 
   const handleEdit = (campaign) => {
@@ -95,19 +148,22 @@ const HealthCheckCampaignList = ({ onCreateNew, onViewDetails, refreshTrigger })
   };
 
   const getStatusTag = (status) => {
+    const label = CAMPAIGN_STATUS_LABELS[status] || status;
     switch(status) {
       case 'PENDING':
-        return <Tag color="orange">Chưa duyệt</Tag>;
+        return <Tag color="orange">{label}</Tag>;
       case 'APPROVED':
-        return <Tag color="green">Đã duyệt</Tag>;
+        return <Tag color="green">{label}</Tag>;
+      case 'REJECTED':
+        return <Tag color="red">{label}</Tag>;
       case 'IN_PROGRESS':
-        return <Tag color="processing">Đang diễn ra</Tag>;
+        return <Tag color="processing">{label}</Tag>;
       case 'COMPLETED':
-        return <Tag color="success">Đã hoàn thành</Tag>;
-      case 'CANCELED':
-        return <Tag color="red">Đã hủy</Tag>;
+        return <Tag color="success">{label}</Tag>;
+      case 'SCHEDULED':
+        return <Tag color="blue">{label}</Tag>;
       default:
-        return <Tag color="default">{status}</Tag>;
+        return <Tag color="default">{label}</Tag>;
     }
   };
 
@@ -169,16 +225,16 @@ const HealthCheckCampaignList = ({ onCreateNew, onViewDetails, refreshTrigger })
               type="default" 
               icon={<EditOutlined />} 
               size="small" 
-              disabled={!['DRAFT', 'PENDING'].includes(record.status)}
+              disabled={record.status !== 'PENDING'}
               onClick={() => handleEdit(record)}
             />
           </Tooltip>
-          <Tooltip title="Hủy">
+          <Tooltip title="Xóa">
             <Button 
               danger 
-              icon={<CloseCircleOutlined />} 
+              icon={<DeleteOutlined />} 
               size="small" 
-              disabled={!['DRAFT', 'PENDING', 'APPROVED'].includes(record.status)}
+              disabled={record.status !== 'PENDING'}
               onClick={() => handleDelete(record)}
             />
           </Tooltip>
@@ -208,11 +264,12 @@ const HealthCheckCampaignList = ({ onCreateNew, onViewDetails, refreshTrigger })
               onChange={value => setFilterStatus(value)}
             >
               <Option value="ALL">Tất cả trạng thái</Option>
-              <Option value="PENDING">Chưa duyệt</Option>
+              <Option value="PENDING">Chờ duyệt</Option>
               <Option value="APPROVED">Đã duyệt</Option>
-              <Option value="IN_PROGRESS">Đang diễn ra</Option>
-              <Option value="COMPLETED">Đã hoàn thành</Option>
-              <Option value="CANCELED">Đã hủy</Option>
+              <Option value="REJECTED">Bị từ chối</Option>
+              <Option value="IN_PROGRESS">Đang tiến hành</Option>
+              <Option value="COMPLETED">Hoàn thành</Option>
+              <Option value="SCHEDULED">Đã lên lịch</Option>
             </Select>
             <RangePicker 
               onChange={dates => setDateRange(dates)} 
@@ -226,19 +283,21 @@ const HealthCheckCampaignList = ({ onCreateNew, onViewDetails, refreshTrigger })
           columns={columns} 
           dataSource={campaigns.map(campaign => ({ ...campaign, key: campaign.id }))} 
           loading={loading}
-          pagination={{ pageSize: 10 }}
+          pagination={pagination}
+          onChange={handleTableChange}
           rowClassName={record => record.status === 'CANCELED' ? 'cancelled-row' : ''}
         />
       </Card>
 
       <Modal
-        title="Xác nhận hủy đợt khám"
+        title="Xác nhận xóa đợt khám"
         open={confirmDeleteModal}
         onOk={confirmDelete}
         onCancel={() => setConfirmDeleteModal(false)}
         confirmLoading={loading}
       >
-        <p>Bạn có chắc chắn muốn hủy đợt khám <strong>{selectedCampaign?.name}</strong>?</p>
+        <p>Bạn có chắc chắn muốn xóa đợt khám <strong>{selectedCampaign?.name}</strong>?</p>
+        <p style={{ color: 'orange' }}>Lưu ý: Hiện tại chức năng xóa chưa được hỗ trợ bởi hệ thống backend.</p>
       </Modal>
     </>
   );

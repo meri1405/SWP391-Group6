@@ -15,8 +15,14 @@ import {
   Form,
   Spin,
 } from "antd";
-import { CheckOutlined, CloseOutlined, EyeOutlined } from "@ant-design/icons";
+import {
+  CheckOutlined,
+  CloseOutlined,
+  EyeOutlined,
+  CheckCircleOutlined,
+} from "@ant-design/icons";
 import { managerVaccinationApi } from "../../api/vaccinationCampaignApi";
+import managerApi from "../../api/managerApi";
 import "../../styles/ManagerVaccination.css";
 
 const { TextArea } = Input;
@@ -40,7 +46,7 @@ const ManagerVaccinationManagement = () => {
 
   const fetchStatistics = async () => {
     try {
-      const stats = await managerVaccinationApi.getCampaignStatistics();
+      const stats = await managerApi.getVaccinationCampaignStatistics();
       setStatistics(stats);
     } catch (error) {
       console.error("Error fetching statistics:", error);
@@ -50,7 +56,7 @@ const ManagerVaccinationManagement = () => {
   const fetchPendingCampaigns = useCallback(async (page = 1, size = 10) => {
     setLoading(true);
     try {
-      const response = await managerVaccinationApi.getPendingCampaigns(
+      const response = await managerApi.getPendingVaccinationCampaigns(
         page - 1,
         size
       );
@@ -72,8 +78,10 @@ const ManagerVaccinationManagement = () => {
     async (status, page = 1, size = 10) => {
       setLoading(true);
       try {
-        const response = await managerVaccinationApi.getCampaignsByStatus(
-          status,
+        // Convert status from tab key to backend format
+        const backendStatus = status.toUpperCase();
+        const response = await managerApi.getVaccinationCampaignsByStatus(
+          backendStatus,
           page - 1,
           size
         );
@@ -111,7 +119,7 @@ const ManagerVaccinationManagement = () => {
   const handleApproveCampaign = async (campaignId) => {
     setLoading(true);
     try {
-      const response = await managerVaccinationApi.approveCampaign(campaignId);
+      const response = await managerApi.approveVaccinationCampaign(campaignId);
       if (response.success) {
         message.success("Phê duyệt chiến dịch thành công!");
         fetchStatistics();
@@ -133,10 +141,39 @@ const ManagerVaccinationManagement = () => {
     }
   };
 
+  const handleCompleteCampaign = async (campaignId) => {
+    setLoading(true);
+    try {
+      const response = await managerApi.completeCampaign(campaignId);
+      if (response.success) {
+        message.success("Đánh dấu hoàn thành chiến dịch thành công!");
+        fetchStatistics();
+        // Refresh current tab data
+        if (activeTab === "pending") {
+          fetchPendingCampaigns(pagination.current, pagination.pageSize);
+        } else {
+          fetchCampaignsByStatus(
+            activeTab,
+            pagination.current,
+            pagination.pageSize
+          );
+        }
+      }
+    } catch (error) {
+      message.error(
+        "Lỗi khi hoàn thành chiến dịch: " +
+          (error.response?.data?.message || error.message)
+      );
+      console.error("Error completing campaign:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleRejectCampaign = async (campaignId, reason) => {
     setLoading(true);
     try {
-      const response = await managerVaccinationApi.rejectCampaign(
+      const response = await managerApi.rejectVaccinationCampaign(
         campaignId,
         reason
       );
@@ -165,7 +202,7 @@ const ManagerVaccinationManagement = () => {
 
   const showCampaignDetail = async (campaignId) => {
     try {
-      const campaign = await managerVaccinationApi.getCampaignById(campaignId);
+      const campaign = await managerApi.getVaccinationCampaignById(campaignId);
       setSelectedCampaign(campaign);
       setDetailModalVisible(true);
     } catch (error) {
@@ -265,13 +302,17 @@ const ManagerVaccinationManagement = () => {
     {
       title: "Thao tác",
       key: "actions",
-      width: "15%",
+      width: "220px",
+      fixed: "right",
       render: (_, record) => (
-        <Space>
+        <Space size="small" wrap>
           <Button
-            type="text"
+            type="default"
             icon={<EyeOutlined />}
+            size="small"
             onClick={() => showCampaignDetail(record.id)}
+            style={{ borderRadius: 4 }}
+            title="Xem chi tiết"
           >
             Xem
           </Button>
@@ -283,8 +324,19 @@ const ManagerVaccinationManagement = () => {
                 onConfirm={() => handleApproveCampaign(record.id)}
                 okText="Phê duyệt"
                 cancelText="Hủy"
+                placement="topRight"
               >
-                <Button type="primary" icon={<CheckOutlined />} size="small">
+                <Button
+                  type="primary"
+                  icon={<CheckOutlined />}
+                  size="small"
+                  style={{
+                    borderRadius: 4,
+                    backgroundColor: "#52c41a",
+                    borderColor: "#52c41a",
+                  }}
+                  title="Duyệt chiến dịch"
+                >
                   Duyệt
                 </Button>
               </Popconfirm>
@@ -296,10 +348,46 @@ const ManagerVaccinationManagement = () => {
                   setSelectedCampaign(record);
                   setRejectModalVisible(true);
                 }}
+                style={{ borderRadius: 4 }}
+                title="Từ chối chiến dịch"
               >
                 Từ chối
               </Button>
             </>
+          )}
+          {record.status === "IN_PROGRESS" && (
+            <Popconfirm
+              title="Hoàn thành chiến dịch"
+              description={
+                <div>
+                  <p>
+                    Bạn có chắc chắn muốn đánh dấu chiến dịch này là hoàn thành?
+                  </p>
+                  <p style={{ color: "#666", fontSize: "12px", margin: 0 }}>
+                    Hành động này không thể hoàn tác.
+                  </p>
+                </div>
+              }
+              onConfirm={() => handleCompleteCampaign(record.id)}
+              okText="Hoàn thành"
+              cancelText="Hủy"
+              placement="topRight"
+              okButtonProps={{ danger: false, type: "primary" }}
+            >
+              <Button
+                type="primary"
+                icon={<CheckCircleOutlined />}
+                size="small"
+                style={{
+                  borderRadius: 4,
+                  backgroundColor: "#1890ff",
+                  borderColor: "#1890ff",
+                }}
+                title="Đánh dấu chiến dịch hoàn thành (chỉ Manager)"
+              >
+                Hoàn thành
+              </Button>
+            </Popconfirm>
           )}
         </Space>
       ),
@@ -433,6 +521,7 @@ const ManagerVaccinationManagement = () => {
           size="middle"
           bordered={false}
           className="data-table"
+          scroll={{ x: 1200 }}
           style={{
             background: "#fff",
             borderRadius: 8,
@@ -511,21 +600,23 @@ const ManagerVaccinationManagement = () => {
         ]}
         width={900}
         style={{ top: 20 }}
-        bodyStyle={{ padding: "24px" }}
+        styles={{ body: { padding: "24px" } }}
       >
         {selectedCampaign && (
           <Descriptions
             column={2}
             bordered
             size="middle"
-            labelStyle={{
-              background: "#fafafa",
-              fontWeight: 600,
-              color: "#262626",
-            }}
-            contentStyle={{
-              background: "#fff",
-              color: "#595959",
+            styles={{
+              label: {
+                background: "#fafafa",
+                fontWeight: 600,
+                color: "#262626",
+              },
+              content: {
+                background: "#fff",
+                color: "#595959",
+              },
             }}
           >
             <Descriptions.Item label="Tên chiến dịch" span={2}>

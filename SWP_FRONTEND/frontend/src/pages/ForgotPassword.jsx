@@ -135,7 +135,7 @@ const ForgotPassword = () => {
         return (
           <form onSubmit={handleEmailSubmit}>
             <h2>Quên mật khẩu</h2>
-            <p>Nhập email của bạn để nhận mã OTP</p>
+            <p className='otp-instruction'>Nhập email của bạn để nhận mã OTP</p>
             <div className="form-group">
               <input
                 type="email"
@@ -159,7 +159,7 @@ const ForgotPassword = () => {
         return (
           <form onSubmit={handleOtpSubmit}>
             <h2>Xác thực OTP</h2>
-            <p>Nhập mã OTP đã được gửi đến email của bạn</p>
+            <p className='otp-instruction'>Nhập mã OTP đã được gửi đến email của bạn</p>
             <div className="form-group">
               <input
                 type="text"
@@ -191,7 +191,7 @@ const ForgotPassword = () => {
         return (
           <form onSubmit={handlePasswordSubmit}>
             <h2>Đặt lại mật khẩu</h2>
-            <p>Nhập mật khẩu mới của bạn</p>
+            <p className='otp-instruction'>Nhập mật khẩu mới của bạn</p>
             <div className="form-group password-field">
               <input
                 type={showNewPassword ? "text" : "password"}

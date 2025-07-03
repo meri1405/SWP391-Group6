@@ -20,7 +20,8 @@ public class Notification {
     @Column(nullable = false)
     private String title;
 
-    @Column(nullable = false, length = 1000)
+    @Column(nullable = false, length = 4000)
+    @Lob
     private String message;
 
     @Column(nullable = false)
@@ -63,4 +64,17 @@ public class Notification {
     @ManyToOne
     @JoinColumn(name = "restockRequestId")
     private RestockRequest restockRequest;
+  
+    @ManyToOne
+    @JoinColumn(name = "healthCheckFormId")
+    private HealthCheckForm healthCheckForm;
+
+    @ManyToOne
+    @JoinColumn(name = "healthCheckCampaignId")
+    private HealthCheckCampaign healthCheckCampaign;
+  
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "campaign_completion_request_id")
+    private CampaignCompletionRequest campaignCompletionRequest;
+
 }
