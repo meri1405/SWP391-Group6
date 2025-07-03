@@ -3,18 +3,15 @@ package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.CreateHealthCheckCampaignRequest;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.HealthCheckCampaignDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.HealthCheckFormDTO;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.RecordHealthCheckResultRequest;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.ScheduleHealthCheckCampaignRequest;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.StudentDTO;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.HealthCheckCampaign;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.HealthCheckForm;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.Notification;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.Student;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.*;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.CampaignStatus;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.FormStatus;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.HealthCheckCategory;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.HealthCheckCampaignRepository;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.HealthCheckFormRepository;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.NotificationRepository;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.StudentRepository;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.TimeSlot;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.*;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IHealthCheckCampaignService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IHealthCheckFormService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.INotificationService;
@@ -29,6 +26,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -41,6 +39,11 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
     private final StudentRepository studentRepository;
     private final HealthCheckFormRepository healthCheckFormRepository;
     private final NotificationRepository notificationRepository;
+    private final VisionRepository visionRepository;
+    private final HearingRepository hearingRepository;
+    private final OralRepository oralRepository;
+    private final SkinRepository skinRepository;
+    private final RespiratoryRepository respiratoryRepository;
 
     @Transactional
     public HealthCheckCampaign createCampaign(String name, String description, LocalDate startDate,
@@ -193,7 +196,7 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
     }
 
     @Transactional
-    public HealthCheckCampaign scheduleCampaign(Long id, int targetCount) {
+    public HealthCheckCampaign scheduleCampaign(Long id, Integer targetCount, TimeSlot timeSlot, String scheduleNotes) {
         Optional<HealthCheckCampaign> optionalCampaign = campaignRepository.findById(id);
         if (optionalCampaign.isEmpty()) {
             throw new RuntimeException("Campaign not found with id: " + id);
@@ -206,9 +209,10 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
             throw new RuntimeException("Cannot schedule campaign that is not in APPROVED status");
         }
 
-        // Instead of changing to SCHEDULED status, we keep it as APPROVED
-        // and just set the target count for manual override if needed
+        // Set the campaign scheduling details
         campaign.setTargetCount(targetCount);
+        campaign.setTimeSlot(timeSlot);
+        campaign.setScheduleNotes(scheduleNotes);
         campaign.setUpdatedAt(LocalDateTime.now());
 
         HealthCheckCampaign savedCampaign = campaignRepository.save(campaign);
@@ -502,8 +506,8 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
         return convertToDTO(campaign);
     }
 
-    public HealthCheckCampaignDTO scheduleCampaignDTO(Long id, int targetCount) {
-        HealthCheckCampaign campaign = scheduleCampaign(id, targetCount);
+    public HealthCheckCampaignDTO scheduleCampaignDTO(Long id, ScheduleHealthCheckCampaignRequest request) {
+        HealthCheckCampaign campaign = scheduleCampaign(id, request.getTargetCount(), request.getTimeSlot(), request.getScheduleNotes());
         return convertToDTO(campaign);
     }
 
@@ -668,10 +672,9 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
                     System.out.println("ERROR: Student entity not found for ID " + studentDTO.getStudentID());
                 }
             } catch (Exception e) {
-                String errorMessage = "Error for student ID " + studentDTO.getStudentID() + ": " + e.getMessage();
                 studentsWithoutParents++;
-                studentsWithoutValidParents.add(errorMessage);
-                System.err.println("ERROR: " + errorMessage);
+                studentsWithoutValidParents.add("Student " + studentDTO.getStudentID() + ": " + e.getMessage());
+                System.err.println("ERROR: " + e.getMessage());
             }
         }
 
@@ -839,5 +842,348 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
             System.err.println("Error finding parents for student ID " + studentDTO.getStudentID() + ": " + e.getMessage());
         }
         return parents;
+    }
+
+    @Override
+    @Transactional
+    public void recordHealthCheckResult(RecordHealthCheckResultRequest request) {
+        System.out.println("DEBUG: Recording health check result for student ID: " + request.getStudentId() + ", campaign ID: " + request.getCampaignId());
+        
+        // Get the campaign and student
+        HealthCheckCampaign campaign = getCampaignModelById(request.getCampaignId());
+        if (campaign.getStatus() != CampaignStatus.IN_PROGRESS) {
+            throw new RuntimeException("Cannot record results for campaign not in progress");
+        }
+        
+        // Find the student
+        Student student = studentRepository.findById(request.getStudentId())
+            .orElseThrow(() -> new RuntimeException("Student not found with ID: " + request.getStudentId()));
+        
+        // Get the student's health profile
+        Set<HealthProfile> healthProfiles = student.getHealthProfiles();
+        if (healthProfiles == null || healthProfiles.isEmpty()) {
+            throw new RuntimeException("No health profile found for student ID: " + student.getStudentID());
+        }
+        HealthProfile healthProfile = healthProfiles.iterator().next();
+        
+        // Get detailed results from request
+        Map<String, Object> detailedResults = request.getDetailedResults();
+        if (detailedResults == null) {
+            throw new RuntimeException("Detailed results are required");
+        }
+        
+        LocalDate examinationDate = LocalDate.now();
+        
+        // Process each category result
+        for (RecordHealthCheckResultRequest.CategoryResult categoryResult : request.getCategories()) {
+            String category = categoryResult.getCategory();
+            
+            // Get the detailed data for this category
+            @SuppressWarnings("unchecked")
+            Map<String, Object> categoryData = (Map<String, Object>) detailedResults.get(category);
+            if (categoryData == null) {
+                System.out.println("WARNING: No detailed data found for category: " + category);
+                continue;
+            }
+            
+            // Save data to appropriate table based on category
+            switch (category) {
+                case "VISION":
+                    Vision vision = new Vision();
+                    vision.setHealthProfile(healthProfile);
+                    vision.setVisionLeft(getIntValue(categoryData, "visionLeft"));
+                    vision.setVisionRight(getIntValue(categoryData, "visionRight"));
+                    vision.setVisionLeftWithGlass(getIntValue(categoryData, "visionLeftWithGlass"));
+                    vision.setVisionRightWithGlass(getIntValue(categoryData, "visionRightWithGlass"));
+                    vision.setVisionDescription(getStringValue(categoryData, "visionDescription"));
+                    vision.setDateOfExamination(examinationDate);
+                    visionRepository.save(vision);
+                    System.out.println("DEBUG: Saved vision result for student " + student.getStudentID());
+                    break;
+                    
+                case "HEARING":
+                    Hearing hearing = new Hearing();
+                    hearing.setHealthProfile(healthProfile);
+                    hearing.setLeftEar(getIntValue(categoryData, "leftEar"));
+                    hearing.setRightEar(getIntValue(categoryData, "rightEar"));
+                    hearing.setDescription(getStringValue(categoryData, "description"));
+                    hearing.setDateOfExamination(examinationDate);
+                    hearingRepository.save(hearing);
+                    System.out.println("DEBUG: Saved hearing result for student " + student.getStudentID());
+                    break;
+                    
+                case "ORAL":
+                    Oral oral = new Oral();
+                    oral.setHealthProfile(healthProfile);
+                    oral.setTeethCondition(getStringValue(categoryData, "teethCondition"));
+                    oral.setGumsCondition(getStringValue(categoryData, "gumsCondition"));
+                    oral.setTongueCondition(getStringValue(categoryData, "tongueCondition"));
+                    oral.setDescription(getStringValue(categoryData, "description"));
+                    oral.setAbnormal(getBooleanValue(categoryData, "isAbnormal"));
+                    oral.setDateOfExamination(examinationDate);
+                    oralRepository.save(oral);
+                    System.out.println("DEBUG: Saved oral result for student " + student.getStudentID());
+                    break;
+                    
+                case "SKIN":
+                    Skin skin = new Skin();
+                    skin.setHealthProfile(healthProfile);
+                    skin.setSkinColor(getStringValue(categoryData, "skinColor"));
+                    skin.setRashes(getBooleanValue(categoryData, "rashes"));
+                    skin.setLesions(getBooleanValue(categoryData, "lesions"));
+                    skin.setDryness(getBooleanValue(categoryData, "dryness"));
+                    skin.setEczema(getBooleanValue(categoryData, "eczema"));
+                    skin.setPsoriasis(getBooleanValue(categoryData, "psoriasis"));
+                    skin.setSkinInfection(getBooleanValue(categoryData, "skinInfection"));
+                    skin.setAllergies(getBooleanValue(categoryData, "allergies"));
+                    skin.setDescription(getStringValue(categoryData, "description"));
+                    skin.setTreatment(getStringValue(categoryData, "treatment"));
+                    skin.setAbnormal(getBooleanValue(categoryData, "isAbnormal"));
+                    skin.setDateOfExamination(examinationDate);
+                    String followUpDateStr = getStringValue(categoryData, "followUpDate");
+                    if (followUpDateStr != null && !followUpDateStr.isEmpty()) {
+                        skin.setFollowUpDate(LocalDate.parse(followUpDateStr));
+                    }
+                    skinRepository.save(skin);
+                    System.out.println("DEBUG: Saved skin result for student " + student.getStudentID());
+                    break;
+                    
+                case "RESPIRATORY":
+                    Respiratory respiratory = new Respiratory();
+                    respiratory.setHealthProfile(healthProfile);
+                    respiratory.setBreathingRate(getIntValue(categoryData, "breathingRate"));
+                    respiratory.setBreathingSound(getStringValue(categoryData, "breathingSound"));
+                    respiratory.setWheezing(getBooleanValue(categoryData, "wheezing"));
+                    respiratory.setCough(getBooleanValue(categoryData, "cough"));
+                    respiratory.setBreathingDifficulty(getBooleanValue(categoryData, "breathingDifficulty"));
+                    Integer oxygenSat = getIntegerValue(categoryData, "oxygenSaturation");
+                    respiratory.setOxygenSaturation(oxygenSat);
+                    respiratory.setTreatment(getStringValue(categoryData, "treatment"));
+                    respiratory.setDescription(getStringValue(categoryData, "description"));
+                    respiratory.setAbnormal(getBooleanValue(categoryData, "isAbnormal"));
+                    respiratory.setDateOfExamination(examinationDate);
+                    String followUpDateStr2 = getStringValue(categoryData, "followUpDate");
+                    if (followUpDateStr2 != null && !followUpDateStr2.isEmpty()) {
+                        respiratory.setFollowUpDate(LocalDate.parse(followUpDateStr2));
+                    }
+                    respiratoryRepository.save(respiratory);
+                    System.out.println("DEBUG: Saved respiratory result for student " + student.getStudentID());
+                    break;
+                    
+                default:
+                    System.out.println("WARNING: Unknown category: " + category);
+                    break;
+            }
+        }
+        
+        System.out.println("DEBUG: Successfully recorded health check results for student " + student.getStudentID());
+    }
+    
+    // Helper methods for data extraction
+    private String getStringValue(Map<String, Object> data, String key) {
+        Object value = data.get(key);
+        return value != null ? value.toString() : null;
+    }
+    
+    private boolean getBooleanValue(Map<String, Object> data, String key) {
+        Object value = data.get(key);
+        if (value instanceof Boolean) {
+            return (Boolean) value;
+        }
+        return false;
+    }
+    
+    private int getIntValue(Map<String, Object> data, String key) {
+        Object value = data.get(key);
+        if (value instanceof Number) {
+            return ((Number) value).intValue();
+        }
+        try {
+            return Integer.parseInt(value.toString());
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+    
+    private Integer getIntegerValue(Map<String, Object> data, String key) {
+        Object value = data.get(key);
+        if (value == null || value.toString().isEmpty()) {
+            return null;
+        }
+        if (value instanceof Number) {
+            return ((Number) value).intValue();
+        }
+        try {
+            return Integer.parseInt(value.toString());
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    @Override
+    public List<Map<String, Object>> getConfirmedStudents(Long campaignId) {
+        System.out.println("DEBUG: Getting confirmed students for campaign ID: " + campaignId);
+        
+        HealthCheckCampaign campaign = getCampaignModelById(campaignId);
+        List<Map<String, Object>> result = new ArrayList<>();
+        
+        // Get all confirmed health check forms for this campaign
+        List<HealthCheckForm> confirmedForms = healthCheckFormRepository
+            .findByCampaignAndStatus(campaign, FormStatus.CONFIRMED);
+        
+        System.out.println("DEBUG: Found " + confirmedForms.size() + " confirmed forms");
+        
+        for (HealthCheckForm form : confirmedForms) {
+            Map<String, Object> studentData = new HashMap<>();
+            Student student = form.getStudent();
+            
+            studentData.put("studentID", student.getStudentID());
+            studentData.put("fullName", student.getFullName());
+            studentData.put("className", student.getClassName());
+            studentData.put("status", form.getStatus().toString());
+            studentData.put("respondedAt", form.getRespondedAt());
+            studentData.put("formId", form.getId());
+            
+            result.add(studentData);
+        }
+        
+        System.out.println("DEBUG: Returning " + result.size() + " confirmed students");
+        return result;
+    }
+
+    @Override
+    public List<Map<String, Object>> getCampaignResults(Long campaignId) {
+        System.out.println("DEBUG: Getting campaign results for campaign ID: " + campaignId);
+        
+        HealthCheckCampaign campaign = getCampaignModelById(campaignId);
+        List<Map<String, Object>> results = new ArrayList<>();
+        
+        // Get all confirmed health check forms for this campaign
+        List<HealthCheckForm> confirmedForms = healthCheckFormRepository
+            .findByCampaignAndStatus(campaign, FormStatus.CONFIRMED);
+        
+        System.out.println("DEBUG: Found " + confirmedForms.size() + " confirmed forms");
+        
+        for (HealthCheckForm form : confirmedForms) {
+            Map<String, Object> studentResult = new HashMap<>();
+            Student student = form.getStudent();
+            
+            // Get the student's health profile (assume one per student, get the first one)
+            Set<HealthProfile> healthProfiles = student.getHealthProfiles();
+            if (healthProfiles == null || healthProfiles.isEmpty()) {
+                System.out.println("WARNING: No health profile found for student ID: " + student.getStudentID());
+                continue; // Skip this student if no health profile
+            }
+            HealthProfile healthProfile = healthProfiles.iterator().next();
+            
+            studentResult.put("studentID", student.getStudentID());
+            studentResult.put("fullName", student.getFullName());
+            studentResult.put("className", student.getClassName());
+            studentResult.put("formId", form.getId());
+            studentResult.put("respondedAt", form.getRespondedAt());
+            
+            // Get results for each category in the campaign
+            Map<String, Object> categoryResults = new HashMap<>();
+            
+            for (HealthCheckCategory category : campaign.getCategories()) {
+                switch (category) {
+                    case VISION:
+                        List<Vision> visionResults = visionRepository.findByHealthProfile(healthProfile);
+                        if (!visionResults.isEmpty()) {
+                            Vision latestVision = visionResults.get(visionResults.size() - 1);
+                            Map<String, Object> visionData = new HashMap<>();
+                            visionData.put("id", latestVision.getId());
+                            visionData.put("visionLeft", latestVision.getVisionLeft());
+                            visionData.put("visionRight", latestVision.getVisionRight());
+                            visionData.put("visionLeftWithGlass", latestVision.getVisionLeftWithGlass());
+                            visionData.put("visionRightWithGlass", latestVision.getVisionRightWithGlass());
+                            visionData.put("description", latestVision.getVisionDescription());
+                            visionData.put("dateOfExamination", latestVision.getDateOfExamination());
+                            categoryResults.put("VISION", visionData);
+                        }
+                        break;
+                        
+                    case HEARING:
+                        List<Hearing> hearingResults = hearingRepository.findByHealthProfile(healthProfile);
+                        if (!hearingResults.isEmpty()) {
+                            Hearing latestHearing = hearingResults.get(hearingResults.size() - 1);
+                            Map<String, Object> hearingData = new HashMap<>();
+                            hearingData.put("id", latestHearing.getId());
+                            hearingData.put("leftEar", latestHearing.getLeftEar());
+                            hearingData.put("rightEar", latestHearing.getRightEar());
+                            hearingData.put("description", latestHearing.getDescription());
+                            hearingData.put("dateOfExamination", latestHearing.getDateOfExamination());
+                            categoryResults.put("HEARING", hearingData);
+                        }
+                        break;
+                        
+                    case ORAL:
+                        List<Oral> oralResults = oralRepository.findByHealthProfile(healthProfile);
+                        if (!oralResults.isEmpty()) {
+                            Oral latestOral = oralResults.get(oralResults.size() - 1);
+                            Map<String, Object> oralData = new HashMap<>();
+                            oralData.put("id", latestOral.getId());
+                            oralData.put("teethCondition", latestOral.getTeethCondition());
+                            oralData.put("gumsCondition", latestOral.getGumsCondition());
+                            oralData.put("tongueCondition", latestOral.getTongueCondition());
+                            oralData.put("description", latestOral.getDescription());
+                            oralData.put("isAbnormal", latestOral.isAbnormal());
+                            oralData.put("dateOfExamination", latestOral.getDateOfExamination());
+                            categoryResults.put("ORAL", oralData);
+                        }
+                        break;
+                        
+                    case SKIN:
+                        List<Skin> skinResults = skinRepository.findByHealthProfile(healthProfile);
+                        if (!skinResults.isEmpty()) {
+                            Skin latestSkin = skinResults.get(skinResults.size() - 1);
+                            Map<String, Object> skinData = new HashMap<>();
+                            skinData.put("id", latestSkin.getId());
+                            skinData.put("skinColor", latestSkin.getSkinColor());
+                            skinData.put("rashes", latestSkin.isRashes());
+                            skinData.put("lesions", latestSkin.isLesions());
+                            skinData.put("dryness", latestSkin.isDryness());
+                            skinData.put("eczema", latestSkin.isEczema());
+                            skinData.put("psoriasis", latestSkin.isPsoriasis());
+                            skinData.put("skinInfection", latestSkin.isSkinInfection());
+                            skinData.put("allergies", latestSkin.isAllergies());
+                            skinData.put("description", latestSkin.getDescription());
+                            skinData.put("treatment", latestSkin.getTreatment());
+                            skinData.put("isAbnormal", latestSkin.isAbnormal());
+                            skinData.put("dateOfExamination", latestSkin.getDateOfExamination());
+                            skinData.put("followUpDate", latestSkin.getFollowUpDate());
+                            categoryResults.put("SKIN", skinData);
+                        }
+                        break;
+                        
+                    case RESPIRATORY:
+                        List<Respiratory> respiratoryResults = respiratoryRepository.findByHealthProfile(healthProfile);
+                        if (!respiratoryResults.isEmpty()) {
+                            Respiratory latestRespiratory = respiratoryResults.get(respiratoryResults.size() - 1);
+                            Map<String, Object> respiratoryData = new HashMap<>();
+                            respiratoryData.put("id", latestRespiratory.getId());
+                            respiratoryData.put("breathingRate", latestRespiratory.getBreathingRate());
+                            respiratoryData.put("breathingSound", latestRespiratory.getBreathingSound());
+                            respiratoryData.put("wheezing", latestRespiratory.isWheezing());
+                            respiratoryData.put("cough", latestRespiratory.isCough());
+                            respiratoryData.put("breathingDifficulty", latestRespiratory.isBreathingDifficulty());
+                            respiratoryData.put("oxygenSaturation", latestRespiratory.getOxygenSaturation());
+                            respiratoryData.put("treatment", latestRespiratory.getTreatment());
+                            respiratoryData.put("description", latestRespiratory.getDescription());
+                            respiratoryData.put("isAbnormal", latestRespiratory.isAbnormal());
+                            respiratoryData.put("dateOfExamination", latestRespiratory.getDateOfExamination());
+                            respiratoryData.put("followUpDate", latestRespiratory.getFollowUpDate());
+                            categoryResults.put("RESPIRATORY", respiratoryData);
+                        }
+                        break;
+                }
+            }
+            
+            studentResult.put("results", categoryResults);
+            results.add(studentResult);
+        }
+        
+        System.out.println("DEBUG: Returning " + results.size() + " student results");
+        return results;
     }
 }

@@ -304,4 +304,8 @@ public interface INotificationService {
      * Notify nurse about campaign completion request rejection
      */
     void notifyNurseAboutCampaignCompletionRejection(CampaignCompletionRequest request, User manager);
+    /**
+     * Notify nurse about health check campaign scheduling
+     */
+    void notifyNurseAboutHealthCheckCampaignScheduling(HealthCheckCampaign campaign);
 }

@@ -1622,4 +1622,43 @@ public class NotificationService implements INotificationService {
             e.printStackTrace();
         }
     }
+
+    @Override
+    public void notifyNurseAboutHealthCheckCampaignScheduling(HealthCheckCampaign campaign) {
+        if (campaign == null || campaign.getCreatedBy() == null) {
+            return;
+        }
+        
+        User nurse = campaign.getCreatedBy();
+        String timeSlotInfo = campaign.getTimeSlot() != null ? 
+                             campaign.getTimeSlot().getDisplayName() : "Cả ngày";
+        
+        String notificationMessage = String.format(
+            "<p>Đợt khám sức khỏe \"<strong>%s</strong>\" đã được lên lịch khám chi tiết.</p>" +
+            "<p><strong>Thông tin lịch:</strong></p>" +
+            "<ul>" +
+            "<li>Thời gian: <strong>%s</strong>, từ ngày <strong>%s</strong> đến <strong>%s</strong></li>" +
+            "<li>Địa điểm: <strong>%s</strong></li>" +
+            "<li>Số học sinh đã xác nhận tham gia: <strong>%d</strong></li>" +
+            "</ul>" +
+            "<p>Thông báo đã được gửi đến phụ huynh các học sinh tham gia.</p>",
+            campaign.getName(),
+            timeSlotInfo,
+            campaign.getStartDate().toString(),
+            campaign.getEndDate().toString(),
+            campaign.getLocation(),
+            campaign.getConfirmedCount()
+        );
+
+        // Create notification
+        Notification notification = new Notification();
+        notification.setTitle("LỊCH KHÁM SỨC KHỎE ĐÃ ĐƯỢC TẠO - " + campaign.getName());
+        notification.setMessage(notificationMessage);
+        notification.setNotificationType("HEALTH_CHECK_SCHEDULE");
+        notification.setRecipient(nurse);
+        notification.setHealthCheckCampaign(campaign);
+        
+        notificationRepository.save(notification);
+    }
 }
+

@@ -154,21 +154,6 @@ const ManagerHealthCheckManagement = () => {
     }
   };
 
-  const handleScheduleCampaign = async (campaignId, targetCount) => {
-    setLoading(true);
-    try {
-      await healthCheckApi.scheduleCampaign(campaignId, targetCount);
-      message.success('Lên lịch chiến dịch khám sức khỏe thành công!');
-      fetchStatistics();
-      fetchCampaignsByStatus(activeTab);
-    } catch (error) {
-      message.error('Lỗi khi lên lịch chiến dịch');
-      console.error('Error scheduling campaign:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const showCampaignDetail = async (campaign) => {
     setSelectedCampaign(campaign); // Set initial value from table
     setDetailModalVisible(true);
@@ -435,50 +420,7 @@ const ManagerHealthCheckManagement = () => {
                 Phê duyệt
               </Button>
             </Popconfirm>
-          ),
-          selectedCampaign?.status === 'APPROVED' && (
-            <Button
-              key="schedule"
-              type="default"
-              onClick={() => {
-                setDetailModalVisible(false);
-                Modal.confirm({
-                  title: 'Lên lịch chiến dịch',
-                  content: (
-                    <Form
-                      layout="vertical"
-                      onFinish={(values) => {
-                        handleScheduleCampaign(selectedCampaign.id, values.targetCount);
-                      }}
-                    >
-                      <Form.Item
-                        name="targetCount"
-                        label="Số lượng mục tiêu"
-                        rules={[
-                          { required: true, message: 'Vui lòng nhập số lượng mục tiêu' },
-                          { type: 'number', min: 1, message: 'Số lượng mục tiêu phải lớn hơn 0' }
-                        ]}
-                      >
-                        <Input
-                          type="number"
-                          placeholder="Nhập số lượng mục tiêu cho chiến dịch"
-                          style={{ borderRadius: 6 }}
-                        />
-                      </Form.Item>
-                    </Form>
-                  ),
-                  onOk: () => {},
-                  onCancel: () => {},
-                  okText: 'Lên lịch',
-                  cancelText: 'Hủy',
-                  width: 400,
-                });
-              }}
-              style={{ borderRadius: 6 }}
-            >
-              Lên lịch
-            </Button>
-          ),
+          )
         ]}
         width={1000}
         className="detail-modal"

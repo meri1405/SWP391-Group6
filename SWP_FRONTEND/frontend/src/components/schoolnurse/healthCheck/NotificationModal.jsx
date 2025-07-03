@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Modal, Form, Input, Button, Typography, message } from 'antd';
 import { SendOutlined } from '@ant-design/icons';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 
@@ -14,16 +16,33 @@ const NotificationModal = ({
 }) => {
   const [form] = Form.useForm();
   const [customMessage, setCustomMessage] = useState('');
+  
+  // Quill editor modules and formats configuration
+  const modules = {
+    toolbar: [
+      [{ 'header': [1, 2, 3, false] }],
+      ['bold', 'italic', 'underline', 'strike'],
+      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+      [{ 'color': [] }, { 'background': [] }],
+      ['clean']
+    ],
+  };
+  
+  const formats = [
+    'header',
+    'bold', 'italic', 'underline', 'strike',
+    'list', 'bullet',
+    'color', 'background'
+  ];
 
-  // Default notification message
-  const defaultMessage = `Thân gửi Quý phụ huynh,
-  Nhà trường thông báo về đợt khám sức khỏe "${campaignName}" sắp diễn ra.
-  Đợt khám sẽ được tổ chức tại trường. Đây là cơ hội để các em học sinh được kiểm tra sức khỏe định kỳ, phát hiện sớm các vấn đề sức khỏe và nhận tư vấn từ các chuyên gia y tế.
-  Kính đề nghị Quý phụ huynh xem xét và cho phép con em tham gia đợt khám sức khỏe này để đảm bảo sức khỏe tốt nhất cho các em.
-  Vui lòng phản hồi qua hệ thống để xác nhận việc tham gia.
-  Nếu có bất kỳ câu hỏi nào, Quý phụ huynh có thể liên hệ với nhà trường qua số điện thoại hoặc email đã cung cấp.
-  Trân trọng,
-  Ban Giám hiệu`;
+  // Default notification message in HTML format for rich text editor
+  const defaultMessage = `<p><strong>Thân gửi Quý phụ huynh,</strong></p>
+  <p>Nhà trường thông báo về đợt khám sức khỏe "<strong>${campaignName}</strong>" sắp diễn ra.</p>
+  <p>Đợt khám sẽ được tổ chức tại trường. Đây là cơ hội để các em học sinh được kiểm tra sức khỏe định kỳ, phát hiện sớm các vấn đề sức khỏe và nhận tư vấn từ các chuyên gia y tế.</p>
+  <p>Kính đề nghị Quý phụ huynh xem xét và cho phép con em tham gia đợt khám sức khỏe này để đảm bảo sức khỏe tốt nhất cho các em.</p>
+  <p>Vui lòng phản hồi qua hệ thống để xác nhận việc tham gia.</p>
+  <p>Nếu có bất kỳ câu hỏi nào, Quý phụ huynh có thể liên hệ với nhà trường qua số điện thoại hoặc email đã cung cấp.</p>
+  <p><em>Trân trọng,</em><br>Ban Giám hiệu</p>`;
 
   const handleSubmit = () => {
     form.validateFields().then(values => {
@@ -93,18 +112,28 @@ const NotificationModal = ({
           label="Nội dung thông báo"
           rules={[
             {
-              max: 1000,
-              message: 'Nội dung thông báo không được vượt quá 1000 ký tự'
+              validator: (_, value) => {
+                // Remove HTML tags to get text length
+                const textLength = value ? value.replace(/<[^>]+>/g, '').length : 0;
+                if (textLength > 1000) {
+                  return Promise.reject('Nội dung thông báo không được vượt quá 1000 ký tự');
+                }
+                return Promise.resolve();
+              }
             }
           ]}
         >
-          <TextArea
-            rows={12}
+          <ReactQuill
+            theme="snow"
+            modules={modules}
+            formats={formats}
+            style={{ height: '250px', marginBottom: '40px' }}
             placeholder="Nhập nội dung thông báo tùy chỉnh hoặc sử dụng mẫu mặc định..."
-            showCount
-            maxLength={1000}
             value={customMessage}
-            onChange={(e) => setCustomMessage(e.target.value)}
+            onChange={value => {
+              setCustomMessage(value);
+              form.setFieldsValue({ message: value });
+            }}
           />
         </Form.Item>
 
@@ -119,12 +148,11 @@ const NotificationModal = ({
             marginTop: 8, 
             fontSize: 12, 
             color: '#666',
-            whiteSpace: 'pre-line',
             maxHeight: 150,
             overflowY: 'auto'
-          }}>
-            {defaultMessage}
-          </div>
+          }}
+            dangerouslySetInnerHTML={{ __html: defaultMessage }}
+          />
         </div>
       </Form>
     </Modal>

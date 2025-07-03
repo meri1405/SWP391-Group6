@@ -2,6 +2,9 @@ package group6.Swp391.Se1861.SchoolMedicalManagementSystem.controller;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.*;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.HealthCheckCampaign;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.TimeSlot;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.HealthCheckForm;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.Student;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.CampaignStatus;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IHealthCheckCampaignService;
@@ -231,6 +234,121 @@ public class HealthCheckCampaignController {
             return ResponseEntity.badRequest().build();
         }
     }
+
+    /**
+     * Get schedule details for a campaign including student sequence
+     */
+    @GetMapping("/{id}/schedule")
+    public ResponseEntity<Map<String, Object>> getScheduleDetails(@PathVariable Long id) {
+        try {
+            // Get the campaign
+            HealthCheckCampaign campaign = campaignService.getCampaignModelById(id);
+            
+            // Get all forms confirmed by parents
+            List<HealthCheckForm> confirmedForms = healthCheckFormService.getConfirmedFormsByCampaignId(id);
+            
+            // Sort students by class and name
+            confirmedForms.sort((a, b) -> {
+                // First sort by class
+                int classCompare = a.getStudent().getClassName().compareTo(b.getStudent().getClassName());
+                if (classCompare != 0) return classCompare;
+                
+                // Then sort by name
+                return a.getStudent().getFirstName().compareTo(b.getStudent().getFirstName());
+            });
+            
+            // Build response with schedule details
+            List<Map<String, Object>> studentSchedule = new ArrayList<>();
+            int sequenceNumber = 1;
+            
+            for (HealthCheckForm form : confirmedForms) {
+                Student student = form.getStudent();
+                Map<String, Object> studentInfo = new HashMap<>();
+                
+                studentInfo.put("sequenceNumber", sequenceNumber);
+                studentInfo.put("studentId", student.getStudentID());
+                studentInfo.put("studentName", student.getFirstName() + " " + student.getLastName());
+                studentInfo.put("studentClass", student.getClassName());
+                studentInfo.put("formId", form.getId());
+                
+                studentSchedule.add(studentInfo);
+                sequenceNumber++;
+            }
+            
+            Map<String, Object> scheduleDetails = new HashMap<>();
+            scheduleDetails.put("campaignId", campaign.getId());
+            scheduleDetails.put("campaignName", campaign.getName());
+            scheduleDetails.put("startDate", campaign.getStartDate());
+            scheduleDetails.put("endDate", campaign.getEndDate());
+            scheduleDetails.put("location", campaign.getLocation());
+            scheduleDetails.put("timeSlot", campaign.getTimeSlot());
+            scheduleDetails.put("scheduleNotes", campaign.getScheduleNotes());
+            scheduleDetails.put("confirmedCount", campaign.getConfirmedCount());
+            scheduleDetails.put("studentSchedule", studentSchedule);
+            
+            return ResponseEntity.ok(scheduleDetails);
+        } catch (RuntimeException e) {
+            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    /**
+     * Schedule a campaign
+     */
+    @PostMapping("/{id}/schedule")
+    public ResponseEntity<HealthCheckCampaignDTO> scheduleCampaign(
+            @PathVariable Long id,
+            @RequestBody ScheduleHealthCheckCampaignRequest request) {
+        try {
+            // Call service to schedule campaign
+            HealthCheckCampaign scheduledCampaign = campaignService.scheduleCampaign(
+                id, request.getTargetCount(), request.getTimeSlot(), request.getScheduleNotes());
+            
+            return ResponseEntity.ok(campaignService.convertToDTO(scheduledCampaign));
+        } catch (RuntimeException e) {
+            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    /**
+     * Record health check result for a student
+     */
+    @PostMapping("/record-result")
+    public ResponseEntity<String> recordHealthCheckResult(
+            @RequestBody RecordHealthCheckResultRequest request) {
+        try {
+            campaignService.recordHealthCheckResult(request);
+            return ResponseEntity.ok("Health check result recorded successfully");
+        } catch (RuntimeException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    /**
+     * Get confirmed students for a campaign (for recording results)
+     */
+    @GetMapping("/{id}/confirmed-students")
+    public ResponseEntity<List<Map<String, Object>>> getConfirmedStudents(@PathVariable Long id) {
+        try {
+            List<Map<String, Object>> confirmedStudents = campaignService.getConfirmedStudents(id);
+            return ResponseEntity.ok(confirmedStudents);
+        } catch (RuntimeException e) {
+            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    /**
+     * Get health check results for a campaign
+     */
+    @GetMapping("/{id}/results")
+    public ResponseEntity<List<Map<String, Object>>> getCampaignResults(@PathVariable Long id) {
+        try {
+            List<Map<String, Object>> results = campaignService.getCampaignResults(id);
+            return ResponseEntity.ok(results);
+        } catch (RuntimeException e) {
+            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+        }
+    }
 }
 
 /**
@@ -287,25 +405,6 @@ class HealthCheckCampaignManagerController {
         try {
             String notes = requestBody.get("notes");
             HealthCheckCampaignDTO campaign = campaignService.rejectCampaignDTO(id, manager, notes);
-            return ResponseEntity.ok(campaign);
-        } catch (RuntimeException e) {
-            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
-        }
-    }
-
-    /**
-     * Schedule a campaign with target count
-     */
-    @PostMapping("/{id}/schedule")
-    public ResponseEntity<HealthCheckCampaignDTO> scheduleCampaign(
-            @PathVariable Long id,
-            @RequestBody Map<String, Integer> requestBody) {
-        try {
-            Integer targetCount = requestBody.get("targetCount");
-            if (targetCount == null || targetCount <= 0) {
-                return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
-            }
-            HealthCheckCampaignDTO campaign = campaignService.scheduleCampaignDTO(id, targetCount);
             return ResponseEntity.ok(campaign);
         } catch (RuntimeException e) {
             return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);

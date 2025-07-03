@@ -76,4 +76,12 @@ public interface HealthCheckFormRepository extends JpaRepository<HealthCheckForm
         @Param("status") FormStatus status,
         @Param("reminderThreshold") LocalDateTime reminderThreshold
     );
+    
+    // Count forms by campaign ID and confirmation status
+    @Query("SELECT COUNT(hcf) FROM HealthCheckForm hcf WHERE hcf.campaign.id = :campaignId AND hcf.status = 'CONFIRMED'")
+    int countByCampaignIdAndConfirmed(@Param("campaignId") Long campaignId, @Param("confirmed") boolean confirmed);
+    
+    // Find forms by campaign ID and confirmation status
+    @Query("SELECT hcf FROM HealthCheckForm hcf WHERE hcf.campaign.id = :campaignId AND hcf.status = 'CONFIRMED'")
+    List<HealthCheckForm> findByCampaignIdAndConfirmed(@Param("campaignId") Long campaignId, @Param("confirmed") boolean confirmed);
 }

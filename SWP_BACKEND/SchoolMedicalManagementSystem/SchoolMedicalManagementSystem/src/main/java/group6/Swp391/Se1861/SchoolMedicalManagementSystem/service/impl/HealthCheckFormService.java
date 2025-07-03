@@ -290,4 +290,9 @@ public class HealthCheckFormService implements IHealthCheckFormService {
 
         return dto;
     }
+
+    @Override
+    public List<HealthCheckForm> getConfirmedFormsByCampaignId(Long campaignId) {
+        return formRepository.findByCampaignIdAndConfirmed(campaignId, true);
+    }
 }

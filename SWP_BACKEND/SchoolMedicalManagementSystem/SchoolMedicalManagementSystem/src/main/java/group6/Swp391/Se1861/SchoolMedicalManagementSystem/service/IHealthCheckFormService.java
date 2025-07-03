@@ -36,4 +36,6 @@ public interface IHealthCheckFormService {
     long getFormCountByCampaignAndStatus(HealthCheckCampaign campaign, FormStatus status);
     
     HealthCheckFormDTO convertToDTO(HealthCheckForm form);
+
+    List<HealthCheckForm> getConfirmedFormsByCampaignId(Long campaignId);
 }

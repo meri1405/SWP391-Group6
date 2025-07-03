@@ -2,11 +2,14 @@ package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.CreateHealthCheckCampaignRequest;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.HealthCheckCampaignDTO;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.RecordHealthCheckResultRequest;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.ScheduleHealthCheckCampaignRequest;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.StudentDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.HealthCheckCampaign;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.CampaignStatus;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.HealthCheckCategory;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.TimeSlot;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -33,7 +36,9 @@ public interface IHealthCheckCampaignService {
     
     HealthCheckCampaignDTO rejectCampaignDTO(Long id, User manager, String notes);
     
-    HealthCheckCampaignDTO scheduleCampaignDTO(Long id, int targetCount);
+    HealthCheckCampaignDTO scheduleCampaignDTO(Long id, ScheduleHealthCheckCampaignRequest request);
+    
+    HealthCheckCampaign scheduleCampaign(Long id, Integer targetCount, TimeSlot timeSlot, String scheduleNotes);
     
     HealthCheckCampaignDTO startCampaignDTO(Long id);
     
@@ -54,6 +59,12 @@ public interface IHealthCheckCampaignService {
     void sendFormsToEligibleParents(HealthCheckCampaign campaign);
     
     HealthCheckCampaignDTO convertToDTO(HealthCheckCampaign campaign);
+    
+    void recordHealthCheckResult(RecordHealthCheckResultRequest request);
+    
+    List<Map<String, Object>> getConfirmedStudents(Long campaignId);
+    
+    List<Map<String, Object>> getCampaignResults(Long campaignId);
     
     int calculateTargetCount(Integer minAge, Integer maxAge, Set<String> targetClasses);
 }

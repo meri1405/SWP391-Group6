@@ -2,6 +2,7 @@ package group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.CampaignStatus;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.HealthCheckCategory;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.TimeSlot;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -38,4 +39,9 @@ public class HealthCheckCampaignDTO {
     // Approver info
     private Long approvedById;
     private String approvedByName;
+    
+    // Schedule info
+    private TimeSlot timeSlot;
+    private String scheduleNotes;
+    private Integer confirmedCount; // Number of students confirmed by parents
 }

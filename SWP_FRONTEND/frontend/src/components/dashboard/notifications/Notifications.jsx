@@ -339,6 +339,12 @@ const Notifications = ({ role = "parent" }) => {
     }
   };
 
+  // Helper function to detect if a string contains HTML
+  const isHtmlContent = (str) => {
+    if (!str) return false;
+    return /<[a-z][\s\S]*>/i.test(str);
+  };
+
   // Format notification message to replace ISO dates with Vietnamese format
   const formatNotificationMessage = useCallback((message) => {
     if (!message) return message;
@@ -823,19 +829,24 @@ const Notifications = ({ role = "parent" }) => {
               <div className="notification-body">
                 {notification.type === "health" ? (
                   <div style={healthCheckMessageStyles.healthCheckMessage}>
-                    {notification.message.split('\n').map((line, i) => {
-                      if (!line.trim()) {
-                        return <div key={i} style={healthCheckMessageStyles.messageSpacer}></div>;
-                      } else if (line.includes("Thân gửi")) {
-                        return <div key={i} style={healthCheckMessageStyles.messageHeader}>{line}</div>;
-                      } else if (line.includes("Trân trọng") || line.includes("Ban Giám hiệu")) {
-                        return <div key={i} style={healthCheckMessageStyles.messageFooter}>{line}</div>;
-                      } else if (line.includes("--- Thông tin học sinh ---")) {
-                        return <div key={i} style={healthCheckMessageStyles.messageSection}>{line}</div>;
-                      } else {
-                        return <div key={i} style={healthCheckMessageStyles.messageBody}>{line}</div>;
-                      }
-                    })}
+                    {isHtmlContent(notification.message) ? (
+                      <div dangerouslySetInnerHTML={{ __html: notification.message }} />
+                    ) : (
+                      // Fallback for plain text messages using the previous implementation
+                      notification.message.split('\n').map((line, i) => {
+                        if (!line.trim()) {
+                          return <div key={i} style={healthCheckMessageStyles.messageSpacer}></div>;
+                        } else if (line.includes("Thân gửi")) {
+                          return <div key={i} style={healthCheckMessageStyles.messageHeader}>{line}</div>;
+                        } else if (line.includes("Trân trọng") || line.includes("Ban Giám hiệu")) {
+                          return <div key={i} style={healthCheckMessageStyles.messageFooter}>{line}</div>;
+                        } else if (line.includes("--- Thông tin học sinh ---")) {
+                          return <div key={i} style={healthCheckMessageStyles.messageSection}>{line}</div>;
+                        } else {
+                          return <div key={i} style={healthCheckMessageStyles.messageBody}>{line}</div>;
+                        }
+                      })
+                    )}
                   </div>
                 ) : (
                   <p>{notification.message}</p>

@@ -20,7 +20,8 @@ public class Notification {
     @Column(nullable = false)
     private String title;
 
-    @Column(nullable = false, length = 1000)
+    @Column(nullable = false, length = 4000)
+    @Lob
     private String message;
 
     @Column(nullable = false)

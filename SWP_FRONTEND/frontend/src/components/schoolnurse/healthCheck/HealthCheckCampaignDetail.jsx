@@ -28,10 +28,13 @@ import {
   FileTextOutlined,
   UserOutlined,
   ReloadOutlined,
+  CalendarOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { healthCheckApi, CAMPAIGN_STATUS_LABELS, HEALTH_CHECK_CATEGORY_LABELS } from '../../../api/healthCheckApi';
 import NotificationModal from './NotificationModal';
+import ScheduleModal from './ScheduleModal';
+import RecordResultsTab from './RecordResultsTab';
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -48,6 +51,8 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
   const [sendingNotification, setSendingNotification] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(null);
   const [notificationModal, setNotificationModal] = useState({ visible: false });
+  const [scheduleModal, setScheduleModal] = useState({ visible: false });
+  const [scheduling, setScheduling] = useState(false);
   
   // Use refs to prevent duplicate API calls and track component mount state
   const isMounted = useRef(true);
@@ -63,14 +68,13 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
     setResultsLoading(true);
     
     try {
-      // Note: The backend doesn't have a specific endpoint for results yet
-      // For now, we'll just show an empty array
-      // TODO: Implement getResultsByCampaign when backend supports it
-      console.log('Results endpoint not yet implemented in backend');
+      console.log('Fetching results for campaign:', campaignId);
+      const data = await healthCheckApi.getCampaignResults(campaignId);
       
       // Only update state if component is still mounted
       if (isMounted.current) {
-        setResults([]);
+        console.log('Results fetched:', data.length, 'students');
+        setResults(data);
       }
     } catch (error) {
       if (isMounted.current) {
@@ -84,7 +88,7 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
         setResultsLoading(false);
       }
     }
-  }, []); // Remove campaignId dependency since it's not used in the function body
+  }, [campaignId]); // Add campaignId dependency since it's used in the function body
 
   const fetchEligibleStudents = useCallback(async () => {
     // Prevent duplicate API calls
@@ -240,6 +244,37 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
     setNotificationModal({ visible: true });
   };
 
+  const handleScheduleCampaign = () => {
+    setScheduleModal({ visible: true });
+  };
+  
+  const executeScheduleCampaign = async (scheduleData) => {
+    setScheduling(true);
+    try {
+      console.log('Scheduling campaign with data:', scheduleData);
+      
+      // Call the API
+      const response = await healthCheckApi.scheduleCampaign(campaignId, scheduleData);
+      
+      // Update campaign data
+      setCampaign(response);
+      
+      // Refresh eligible students to get updated status
+      await fetchEligibleStudents();
+      
+      // Show success message
+      message.success('Đã lên lịch khám thành công');
+      
+      // Close modal
+      setScheduleModal({ visible: false });
+    } catch (error) {
+      console.error('Error scheduling campaign:', error);
+      message.error('Không thể lên lịch khám: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setScheduling(false);
+    }
+  };
+
   // Manual refresh for eligible students (disabled auto-refresh to prevent constant reloading)
   const handleRefreshStudents = useCallback(async () => {
     console.log('Manual refresh triggered by user');
@@ -263,25 +298,6 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
       setStudentsLoading(false);
     }
   }, [campaignId]); // Only depend on campaignId
-
-  // Commented out auto-refresh to prevent constant page reloading
-  // useEffect(() => {
-  //   let intervalId;
-  //   
-  //   if (campaign?.status === 'APPROVED') {
-  //     // Refresh every 30 seconds
-  //     intervalId = setInterval(() => {
-  //       console.log('Auto-refreshing student list...');
-  //       fetchEligibleStudents(campaign);
-  //     }, 30000);
-  //   }
-  //   
-  //   return () => {
-  //     if (intervalId) {
-  //       clearInterval(intervalId);
-  //     }
-  //   };
-  // }, [campaign, fetchEligibleStudents]);
 
   const executeSendNotifications = async (customMessage = null) => {
     setSendingNotification(true);
@@ -347,29 +363,59 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
     await executeSendNotifications(customMessage);
   };
 
+  const handleScheduleModalCancel = () => {
+    setScheduleModal({ visible: true });
+  };
+
+  const handleScheduleModalConfirm = async (scheduleData) => {
+    executeScheduleCampaign(scheduleData);
+  };
+
   const getActionButtons = () => {
     if (!campaign) return null;
 
     const buttons = [];
     
     switch (campaign.status) {
-      case 'APPROVED':
+      case 'APPROVED': {
+        // Add schedule button if notifications have been sent and not yet scheduled
+        if (notificationSent && !campaign.timeSlot) {
+          buttons.push(
+            <Button 
+              key="schedule" 
+              type="primary" 
+              style={{ marginRight: 8 }}
+              icon={<CalendarOutlined />} 
+              onClick={handleScheduleCampaign}
+            >
+              Lên lịch khám
+            </Button>
+          );
+        }
+        
+        // Only show "Bắt đầu khám" button if notifications have been sent AND campaign is scheduled
+        const isScheduled = campaign.timeSlot && campaign.timeSlot !== null;
+        const canStartCampaign = notificationSent && isScheduled;
+        
         buttons.push(
           <Button 
             key="start" 
             type="primary" 
             icon={<PlayCircleOutlined />} 
+            disabled={!canStartCampaign}
             onClick={() => showConfirmModal(
               'start', 
               'Xác nhận bắt đầu', 
               'Bạn có chắc chắn muốn bắt đầu đợt khám này?'
             )}
+            title={!canStartCampaign ? 'Cần gửi thông báo và lên lịch trước khi bắt đầu khám' : ''}
           >
             Bắt đầu khám
           </Button>
         );
         break;
-      case 'IN_PROGRESS':
+      }
+      case 'IN_PROGRESS': {
         buttons.push(
           <Button 
             key="complete" 
@@ -385,6 +431,7 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
           </Button>
         );
         break;
+      }
       default:
         break;
     }
@@ -825,8 +872,24 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
               )
             },
             {
+              key: 'record-results',
+              label: 'Ghi kết quả khám',
+              disabled: campaign.status !== 'IN_PROGRESS',
+              children: (
+                <RecordResultsTab 
+                  campaignId={campaignId}
+                  campaign={campaign}
+                  onRefreshData={() => {
+                    // Refresh results when a new result is recorded
+                    fetchResults();
+                    fetchEligibleStudents();
+                  }}
+                />
+              )
+            },
+            {
               key: 'results',
-              label: 'Kết quả khám',
+              label: 'Xem kết quả khám',
               disabled: campaign.status !== 'IN_PROGRESS' && campaign.status !== 'COMPLETED',
               children: (
                 <div>
@@ -866,6 +929,14 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
         loading={sendingNotification}
         studentCount={eligibleStudents.length}
         campaignName={campaign?.name || ''}
+      />
+
+      <ScheduleModal
+        visible={scheduleModal.visible}
+        onCancel={handleScheduleModalCancel}
+        onConfirm={handleScheduleModalConfirm}
+        loading={scheduling}
+        confirmedCount={campaign?.confirmedCount || 0}
       />
     </>
   );

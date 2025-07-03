@@ -163,6 +163,27 @@ export const healthCheckApi = {
     }
   },
 
+   /**
+   * Schedule a health check campaign with time slots and target count
+   * @param {number} id - Campaign ID
+   * @param {Object} scheduleData - Schedule data including timeSlot, scheduleNotes and optional targetCount
+   * @returns {Promise} Updated campaign DTO
+   */
+  scheduleCampaign: async (id, scheduleData) => {
+    try {
+      console.log(`Calling API to schedule campaign ${id} with data:`, scheduleData);
+      const response = await healthCheckApiClient.post(
+        `/nurse/health-check-campaigns/${id}/schedule`,
+        scheduleData
+      );
+      console.log('Schedule campaign response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error(`Error scheduling health check campaign ${id}:`, error);
+      throw error;
+    }
+  },
+
   /**
    * Update a campaign (only if status is PENDING)
    * @param {number} id - Campaign ID
@@ -384,25 +405,6 @@ export const healthCheckApi = {
     }
   },
 
-  /**
-   * Schedule a campaign with target count
-   * @param {number} id - Campaign ID
-   * @param {number} targetCount - Target number of students
-   * @returns {Promise} Updated campaign DTO
-   */
-  scheduleCampaign: async (id, targetCount) => {
-    try {
-      const response = await healthCheckApiClient.post(
-        `/manager/health-check-campaigns/${id}/schedule`,
-        { targetCount }
-      );
-      return response.data;
-    } catch (error) {
-      console.error(`Error scheduling health check campaign ${id}:`, error);
-      throw error;
-    }
-  },
-
   // ==================== UTILITY FUNCTIONS ====================
 
   /**
@@ -513,7 +515,59 @@ export const healthCheckApi = {
       console.error("Error fetching forms by campaign:", error);
       throw error;
     }
-  }
+  },
+
+  /**
+   * Record health check result for a student
+   * @param {Object} resultData - Health check result data
+   * @returns {Promise} Success response
+   */
+  recordHealthCheckResult: async (resultData) => {
+    try {
+      const response = await healthCheckApiClient.post(
+        `/nurse/health-check-campaigns/record-result`,
+        resultData
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error recording health check result:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get confirmed students for a campaign (for recording results)
+   * @param {number} campaignId - Campaign ID
+   * @returns {Promise} Array of confirmed students
+   */
+  getConfirmedStudents: async (campaignId) => {
+    try {
+      const response = await healthCheckApiClient.get(
+        `/nurse/health-check-campaigns/${campaignId}/confirmed-students`
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error getting confirmed students:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get health check results for a campaign
+   * @param {number} campaignId - Campaign ID
+   * @returns {Promise} Array of student results
+   */
+  getCampaignResults: async (campaignId) => {
+    try {
+      const response = await healthCheckApiClient.get(
+        `/nurse/health-check-campaigns/${campaignId}/results`
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error getting campaign results:', error);
+      throw error;
+    }
+  },
 };
 
 export default healthCheckApi;
