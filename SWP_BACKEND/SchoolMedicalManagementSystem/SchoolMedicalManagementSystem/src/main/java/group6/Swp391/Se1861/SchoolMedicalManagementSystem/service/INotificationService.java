@@ -181,6 +181,109 @@ public interface INotificationService {
     /**
      * Notify nurse about restock request rejection
      */
+    void 
+      (RestockRequest restockRequest, String notes);
+
+    /**
+     * Create abnormal health check result notification
+     */
+    
+    /**
+     * HEALTH CHECK CAMPAIGN NOTIFICATIONS
+     */
+    
+    /**
+     * Notify managers about new health check campaign pending approval
+     */
+    void notifyManagersAboutHealthCheckCampaignApproval(HealthCheckCampaign campaign, int estimatedStudentCount);
+    
+    /**
+     * Notify nurse about health check campaign approval
+     */
+    void notifyNurseAboutHealthCheckCampaignApproval(HealthCheckCampaign campaign, User approver);
+    
+    /**
+     * Notify nurse about health check campaign rejection
+     */
+    void notifyNurseAboutHealthCheckCampaignRejection(HealthCheckCampaign campaign, User rejector, String reason);
+    
+    /**
+     * Notify manager about health check campaign scheduling
+     */
+    void notifyManagerAboutHealthCheckCampaignScheduling(HealthCheckCampaign campaign, int scheduledStudentCount);
+    
+    /**
+     * Notify manager about health check campaign completion
+     */
+    void notifyManagerAboutHealthCheckCampaignCompletion(HealthCheckCampaign campaign, int completedStudentCount);
+    
+    /**
+     * Send health check campaign invitation to parents (with customizable content)
+     */
+    NotificationDTO sendHealthCheckCampaignInvitationToParent(
+            User parent,
+            HealthCheckCampaign campaign,
+            String studentName,
+            String customMessage,
+            HealthCheckForm healthCheckForm);
+    
+    /**
+     * Send health check campaign parent confirmation/decline notification
+     */
+    void sendHealthCheckCampaignParentConfirmation(
+            HealthCheckCampaign campaign,
+            User parent,
+            Student student,
+            String message);
+    
+    /**
+     * Send health check form confirmation/decline notification with form reference
+     * Also notifies the school nurse about parent's response
+     */
+    void sendHealthCheckFormConfirmation(
+            HealthCheckForm form,
+            User parent,
+            Student student,
+            String message,
+            boolean isConfirmed);
+    
+    /**
+     * Send health check campaign parent invitation
+     */
+    void sendHealthCheckCampaignParentInvitation(
+            HealthCheckCampaign campaign,
+            User parent,
+            Student student,
+            String message,
+            HealthCheckForm form);
+    
+    /**
+     * Send health check appointment details to parent
+     */
+    NotificationDTO sendHealthCheckAppointmentToParent(
+            User parent,
+            String studentName,
+            String appointmentDate,
+            String appointmentTime,
+            String location,
+            int queueNumber,
+            HealthCheckCampaign campaign);
+    
+    /**
+     * Send abnormal health check result notification to parent
+     */
+    NotificationDTO sendAbnormalHealthCheckResultToParent(
+            User parent,
+            String studentName,
+            String abnormalFindings,
+            String recommendations,
+            HealthCheckCampaign campaign);
+    
+    /**
+     * Send completion reminder to nurse
+     */
+    void sendHealthCheckCampaignCompletionReminder(HealthCheckCampaign campaign);
+
     void notifyNurseAboutRestockRequestRejection(RestockRequest restockRequest, String notes);
 
     /**
