@@ -22,6 +22,8 @@ import org.springframework.security.oauth2.client.authentication.OAuth2Authentic
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.time.Period;
 import java.util.Map;
 import java.util.Optional;
 
@@ -312,6 +314,26 @@ public class AuthService implements IAuthService {
 
         if (user.getDob() == null) {
             throw new IllegalArgumentException("Date of birth is required for all users");
+        }
+
+        // Age validation - check minimum age based on role
+        LocalDate today = LocalDate.now();
+        LocalDate birthDate = user.getDob(); // dob is already LocalDate
+        int age = Period.between(birthDate, today).getYears();
+        
+        // For NURSE, MANAGER, ADMIN roles, minimum age is 25
+        if (("SCHOOLNURSE".equalsIgnoreCase(roleName) || "MANAGER".equalsIgnoreCase(roleName) || "ADMIN".equalsIgnoreCase(roleName)) && age < 25) {
+            throw new IllegalArgumentException("Tuổi tối thiểu cho vai trò " + roleName + " là 25 tuổi");
+        }
+        
+        // For all other roles, minimum age is 16
+        if (age < 16) {
+            throw new IllegalArgumentException("Tuổi tối thiểu là 16 tuổi");
+        }
+        
+        // Maximum age check for all roles
+        if (age > 100) {
+            throw new IllegalArgumentException("Tuổi không thể lớn hơn 100 tuổi");
         }
 
         if (user.getGender() == null || user.getGender().trim().isEmpty()) {

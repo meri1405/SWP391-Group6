@@ -14,7 +14,7 @@ import {
   Space,
   Popconfirm,
   Card,
-  DatePicker
+  DatePicker,
 } from "antd";
 import {
   TeamOutlined,
@@ -76,7 +76,7 @@ const validatePassword = (password) => {
 
 // Helper function to check password strength
 const getPasswordStrength = (password) => {
-  if (!password) return { score: 0, text: "", color: "" };
+  if (!password) return { score: 0, text: "", color: "", feedback: "" };
 
   let score = 0;
   let feedback = [];
@@ -587,7 +587,7 @@ const UserManagement = ({
                     <li>
                       Mật khẩu: Ít nhất 8 ký tự, độ mạnh từ 'Trung bình' trở lên
                     </li>
-                    <li>Ngày sinh: Tuổi từ 16-100</li>
+                    <li>Ngày sinh: Tuổi từ 25-100</li>
                     <li>Giới tính: Bắt buộc chọn</li>
                     <li>Địa chỉ: 10-200 ký tự</li>
                   </ul>
@@ -772,9 +772,19 @@ const UserManagement = ({
                           );
                         }
 
-                        if (age < 16) {
+                        // Get current role to apply appropriate age validation
+                        const currentRole =
+                          userFormInstance.getFieldValue("role");
+                        const minAge =
+                          currentRole === "SCHOOLNURSE" ||
+                          currentRole === "MANAGER" ||
+                          currentRole === "ADMIN"
+                            ? 25
+                            : 16;
+
+                        if (age < minAge) {
                           return Promise.reject(
-                            new Error("Tuổi phải từ 16 trở lên!")
+                            new Error(`Tuổi phải từ ${minAge} trở lên!`)
                           );
                         }
 
@@ -788,23 +798,117 @@ const UserManagement = ({
                       },
                     },
                   ]}
+                  extra={
+                    <Form.Item
+                      noStyle
+                      shouldUpdate={(prevValues, currentValues) =>
+                        prevValues.role !== currentValues.role ||
+                        prevValues.dob !== currentValues.dob
+                      }
+                    >
+                      {({ getFieldValue }) => {
+                        const selectedRole = getFieldValue("role");
+                        const dobValue = getFieldValue("dob");
+                        const isStaffRole =
+                          selectedRole === "SCHOOLNURSE" ||
+                          selectedRole === "MANAGER" ||
+                          selectedRole === "ADMIN";
+
+                        if (!isStaffRole) return null;
+
+                        // Check if field is empty or age is less than 25
+                        let shouldShowWarning = false;
+
+                        if (!dobValue) {
+                          // Field is empty
+                          shouldShowWarning = true;
+                        } else {
+                          // Calculate age
+                          const today = new Date();
+                          const birthDate = new Date(dobValue);
+                          let age =
+                            today.getFullYear() - birthDate.getFullYear();
+                          const monthDiff =
+                            today.getMonth() - birthDate.getMonth();
+
+                          if (
+                            monthDiff < 0 ||
+                            (monthDiff === 0 &&
+                              today.getDate() < birthDate.getDate())
+                          ) {
+                            age--;
+                          }
+
+                          if (age < 25) {
+                            shouldShowWarning = true;
+                          }
+                        }
+
+                        return shouldShowWarning ? (
+                          <span style={{ color: "#ff7a00", fontSize: "12px" }}>
+                            Lưu ý: Tuổi phải từ 25 tuổi trở lên
+                          </span>
+                        ) : null;
+                      }}
+                    </Form.Item>
+                  }
                 >
-                  <DatePicker
-                    style={{ width: "100%" }}
-                    placeholder="Chọn ngày sinh"
-                    format="DD/MM/YYYY"
-                    disabledDate={(current) => {
-                      // Disable future dates and dates more than 100 years ago
+                  <Form.Item
+                    noStyle
+                    shouldUpdate={(prevValues, currentValues) =>
+                      prevValues.role !== currentValues.role
+                    }
+                  >
+                    {({ getFieldValue }) => {
+                      const selectedRole = getFieldValue("role");
+                      const today = dayjs();
+                      const currentYear = today.year();
+
+                      // Determine minimum age based on role
+                      const minAge =
+                        selectedRole === "SCHOOLNURSE" ||
+                        selectedRole === "MANAGER" ||
+                        selectedRole === "ADMIN"
+                          ? 25
+                          : 16;
+
+                      // Calculate default year for picker (person who is exactly minimum age)
+                      const defaultYear = currentYear - minAge;
+                      const defaultPickerValue = dayjs()
+                        .year(defaultYear)
+                        .month(0)
+                        .date(1); // January 1st of default year
+
+                      // Calculate min and max birth years
+                      const minBirthYear = currentYear - 100; // 100 years ago
+                      const maxBirthYear = currentYear - minAge; // Minimum age years ago
+
                       return (
-                        current &&
-                        (current > new Date() ||
-                          current <
-                            new Date().setFullYear(
-                              new Date().getFullYear() - 100
-                            ))
+                        <DatePicker
+                          style={{ width: "100%" }}
+                          placeholder="Chọn ngày sinh"
+                          format="DD/MM/YYYY"
+                          defaultPickerValue={defaultPickerValue}
+                          disabledDate={(current) => {
+                            if (!current) return false;
+
+                            const currentYear = current.year();
+
+                            // Disable future dates
+                            if (current.isAfter(today, "day")) return true;
+
+                            // Disable dates that make person too young
+                            if (currentYear > maxBirthYear) return true;
+
+                            // Disable dates that make person too old (over 100)
+                            if (currentYear < minBirthYear) return true;
+
+                            return false;
+                          }}
+                        />
                       );
                     }}
-                  />
+                  </Form.Item>
                 </Form.Item>
                 <Form.Item
                   label="Giới tính"
@@ -1050,18 +1154,23 @@ const UserManagement = ({
                             onChange={(e) => setCurrentPassword(e.target.value)}
                             autoComplete="new-password"
                           />
-                          {currentPassword && modalMode === "add" && (
-                            <div style={{ marginTop: "8px" }}>
-                              <div
-                                style={{
-                                  fontSize: "12px",
-                                  color: "#666",
-                                }}
-                              >
-                                {getPasswordStrength(currentPassword).feedback}
+                          {currentPassword &&
+                            modalMode === "add" &&
+                            getPasswordStrength(currentPassword).feedback && (
+                              <div style={{ marginTop: "8px" }}>
+                                <div
+                                  style={{
+                                    fontSize: "12px",
+                                    color: "#666",
+                                  }}
+                                >
+                                  {
+                                    getPasswordStrength(currentPassword)
+                                      .feedback
+                                  }
+                                </div>
                               </div>
-                            </div>
-                          )}
+                            )}
                         </div>
                       </Form.Item>
                     ) : null;
@@ -1124,9 +1233,9 @@ const UserManagement = ({
 const AdminProfile = ({ userInfo: initialUserInfo, onProfileUpdate }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [avatarUrl] = useState(null);  // Removed setAvatarUrl since it's unused
+  const [avatarUrl] = useState(null); // Removed setAvatarUrl since it's unused
   const [previewVisible, setPreviewVisible] = useState(false);
-  const [previewImage] = useState("");  // Removed setPreviewImage since it's unused
+  const [previewImage] = useState(""); // Removed setPreviewImage since it's unused
   const [adminProfile, setAdminProfile] = useState(null);
   const [formData, setFormData] = useState({
     firstName: "",
@@ -1931,12 +2040,23 @@ const AdminDashboard = () => {
   const handleRoleChange = (newRole, form) => {
     console.log("Role changed to:", newRole);
 
+    // Calculate default date of birth based on role
+    const today = dayjs();
+    const currentYear = today.year();
+    const minAge =
+      newRole === "SCHOOLNURSE" || newRole === "MANAGER" || newRole === "ADMIN"
+        ? 25
+        : 16;
+    const defaultYear = currentYear - minAge;
+    const defaultDob = dayjs().year(defaultYear).month(0).date(1); // January 1st of appropriate year
+
     // Prepare the fields to update based on role
     const fieldsToUpdate = {
       username: "",
       password: "",
       email: "",
       jobTitle: "",
+      dob: defaultDob, // Set appropriate default date based on role
       status: "ACTIVE", // Keep status as ACTIVE
     };
 
@@ -1969,6 +2089,15 @@ const AdminDashboard = () => {
       if (form && form.getFieldsValue) {
         // Update all fields at once
         form.setFieldsValue(fieldsToUpdate);
+
+        // Force re-validation of the dob field to update DatePicker constraints
+        setTimeout(() => {
+          if (form.validateFields) {
+            form.validateFields(["dob"]).catch(() => {
+              // Ignore validation errors during reset
+            });
+          }
+        }, 100);
 
         // Debug: Check if fields were set correctly
         setTimeout(() => {
@@ -2020,6 +2149,16 @@ const AdminDashboard = () => {
     setTimeout(() => {
       if (userFormInstance && isUserFormMounted) {
         try {
+          // Calculate default date of birth based on role (person who is exactly minimum age)
+          const today = dayjs();
+          const currentYear = today.year();
+          const minAge =
+            role === "SCHOOLNURSE" || role === "MANAGER" || role === "ADMIN"
+              ? 25
+              : 16;
+          const defaultYear = currentYear - minAge;
+          const defaultDob = dayjs().year(defaultYear).month(0).date(1); // January 1st of appropriate year
+
           userFormInstance.setFieldsValue({
             role: role,
             username: "",
@@ -2031,9 +2170,18 @@ const AdminDashboard = () => {
             phone: "",
             address: "",
             gender: undefined,
-            dob: null,
+            dob: defaultDob, // Set default date instead of null
             status: "ACTIVE",
           });
+
+          // Clear any validation errors from previous role
+          setTimeout(() => {
+            if (userFormInstance.validateFields) {
+              userFormInstance.validateFields(["dob"]).catch(() => {
+                // Ignore validation errors during reset
+              });
+            }
+          }, 100);
         } catch (error) {
           console.warn("Error setting form values:", error);
         }
@@ -2205,7 +2353,23 @@ const AdminDashboard = () => {
       }
     } catch (error) {
       console.error("Form validation error:", error);
-      message.error("Vui lòng kiểm tra lại thông tin!");
+
+      // Display detailed error messages for validation failures
+      if (error.errorFields && error.errorFields.length > 0) {
+        const firstError = error.errorFields[0];
+        const fieldName = firstError.name[0];
+        const errorMessage = firstError.errors[0];
+
+        console.log(
+          "Validation failed for field:",
+          fieldName,
+          "Error:",
+          errorMessage
+        );
+        message.error(`Lỗi ở trường "${fieldName}": ${errorMessage}`);
+      } else {
+        message.error("Vui lòng kiểm tra lại thông tin!");
+      }
     }
   };
 
