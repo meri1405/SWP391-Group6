@@ -19,8 +19,6 @@ public interface IMedicationRequestService {
 
     List<MedicationRequestDTO> getPendingMedicationRequests();
 
-    int autoRejectExpiredRequests();
-
     MedicationRequestDTO updateMedicationRequest(Long requestId, MedicationRequestDTO medicationRequestDTO, User parent);
 
     void deleteMedicationRequest(Long requestId, User parent);

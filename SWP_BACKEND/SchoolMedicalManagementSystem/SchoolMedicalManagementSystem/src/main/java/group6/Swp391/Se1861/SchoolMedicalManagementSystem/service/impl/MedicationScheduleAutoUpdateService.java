@@ -44,21 +44,12 @@ public class MedicationScheduleAutoUpdateService {
     @Scheduled(fixedRate = 600000) // 10 minutes = 600,000 milliseconds
     public void autoMarkOverdueSchedules() {
         try {
-            log.info("=== Starting scheduled auto-update check for overdue medication schedules ===");
-            log.info("Current time: {}", LocalDateTime.now());
             
             int skippedCount = medicationScheduleService.autoMarkOverdueSchedulesAsSkipped();
             
-            if (skippedCount > 0) {
-                log.info("✅ Scheduled auto-update completed: {} medication schedules marked as SKIPPED", skippedCount);
-            } else {
-                log.debug("✅ Scheduled auto-update completed: No overdue medication schedules found");
-            }
-            
         } catch (Exception e) {
-            log.error("❌ Error occurred during scheduled auto-update of medication schedules", e);
+            log.error("Error occurred during scheduled auto-update of medication schedules", e);
         }
-        log.info("=== Scheduled auto-update check completed ===");
     }
 
     /**
@@ -68,19 +59,10 @@ public class MedicationScheduleAutoUpdateService {
     @Scheduled(cron = "0 */3 7-18 * * *") // Every 3 minutes from 7 AM to 6 PM, every day
     public void autoMarkOverdueSchedulesDuringSchoolHours() {
         try {
-            log.info("=== School hours auto-update check for overdue medication schedules ===");
-            log.info("Current time: {}", LocalDateTime.now());
-            
             int skippedCount = medicationScheduleService.autoMarkOverdueSchedulesAsSkipped();
             
-            if (skippedCount > 0) {
-                log.info("✅ School hours auto-update: {} medication schedules marked as SKIPPED", skippedCount);
-            } else {
-                log.debug("✅ School hours auto-update: No overdue medication schedules found");
-            }
-            
         } catch (Exception e) {
-            log.error("❌ Error occurred during school hours auto-update", e);
+            log.error("Error occurred during school hours auto-update", e);
         }
     }
 } 

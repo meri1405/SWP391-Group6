@@ -20,6 +20,8 @@ const HealthCheckCampaignManagement = () => {
     setActiveView("list");
     setSelectedCampaignId(null);
     setCampaignToEdit(null);
+    // Refresh the list when returning from detail view
+    setRefreshTrigger(prev => prev + 1);
   };
 
   const handleCreateNew = (campaignData = null) => {
@@ -42,6 +44,8 @@ const HealthCheckCampaignManagement = () => {
       setActiveView("list");
     }
     setCampaignToEdit(null);
+    // Trigger a refresh of the campaign list
+    setRefreshTrigger(prev => prev + 1);
   };
 
   return (

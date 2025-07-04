@@ -127,9 +127,9 @@ public class SchoolNurseHealthProfileService implements ISchoolNurseHealthProfil
         // Send notification to parent using NotificationService
         if (approvedProfile.getParent() != null) {
             String title = "Hồ sơ sức khỏe đã được duyệt";
-            String message = "Hồ sơ sức khỏe của học sinh " +
-                    approvedProfile.getStudent().getFirstName() + " " +
-                    approvedProfile.getStudent().getLastName() + " đã được y tá trường duyệt.";
+            String message = "<p>Hồ sơ sức khỏe của học sinh " +
+                   "<strong>" + approvedProfile.getStudent().getFirstName() + " " +
+                    approvedProfile.getStudent().getLastName() + "</strong>"  + " đã được y tá trường duyệt.</p>";
 
             notificationService.createHealthProfileNotification(
                 approvedProfile,
@@ -191,10 +191,10 @@ public class SchoolNurseHealthProfileService implements ISchoolNurseHealthProfil
         // Send notification to parent using NotificationService
         if (rejectedProfile.getParent() != null) {
             String title = "Hồ sơ sức khỏe đã bị từ chối";
-            String message = "Hồ sơ sức khỏe của học sinh " +
-                    rejectedProfile.getStudent().getFirstName() + " " +
-                    rejectedProfile.getStudent().getLastName() + 
-                    " đã bị từ chối. Lý do: " + nurseNote;
+            String message = "<p>Hồ sơ sức khỏe của học sinh " +
+                   "<strong>" + rejectedProfile.getStudent().getFirstName() + " " +
+                    rejectedProfile.getStudent().getLastName() + "</strong>" +
+                    " đã bị từ chối. Lý do: " + nurseNote + "</p>";
 
             notificationService.createHealthProfileNotification(
                 rejectedProfile,

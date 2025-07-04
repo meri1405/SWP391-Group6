@@ -400,8 +400,8 @@ public class NotificationService implements INotificationService {
             User completedBy) {
         
         String title = "CHIẾN DỊCH ĐÃ HOÀN THÀNH";
-        String message = "Chiến dịch tiêm chủng '" + campaign.getName() + "' đã được hoàn thành bởi " + 
-                        completedBy.getUsername() + " vào ngày " + new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm").format(new Date());
+        String message = "<p>Chiến dịch tiêm chủng '<strong>" + campaign.getName() + "</strong>' đã được hoàn thành bởi <strong>" + 
+                        completedBy.getUsername() + "</strong> vào ngày <strong>" + new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm").format(new Date()) + "</strong></p>";
         String notificationType = "CAMPAIGN_COMPLETED";
         
         return createGeneralNotification(recipient, title, message, notificationType);
@@ -495,7 +495,7 @@ public class NotificationService implements INotificationService {
             String vaccineName) {
         
         String title = "XÁC NHẬN ĐỒNG Ý TIÊM CHỦNG";
-        String message = "Phụ huynh đã xác nhận tiêm chủng cho " + studentName + " - " + vaccineName;
+        String message = "<p>Phụ huynh đã xác nhận tiêm chủng cho <strong>" + studentName + "</strong> - <strong>" + vaccineName + "</strong></p>";
         String notificationType = "VACCINATION_CONSENT_CONFIRMED";
         
         return createGeneralNotification(recipient, title, message, notificationType);
@@ -513,9 +513,9 @@ public class NotificationService implements INotificationService {
             String reason) {
         
         String title = "TỪ CHỐI TIÊM CHỦNG";
-        String message = "Cha mẹ đã từ chối tiêm vắc-xin cho " + studentName + " - " + vaccineName;
+        String message = "<p>Phụ huynh đã từ chối tiêm vắc-xin cho <strong>" + studentName + "</strong> - <strong>" + vaccineName + "</strong></p>";
         if (reason != null && !reason.trim().isEmpty()) {
-            message += ". Lý do: " + reason;
+            message += "<p><strong>Lý do:</strong> " + reason + "</p>";
         }
         String notificationType = "VACCINATION_CONSENT_DECLINED";
         
@@ -532,7 +532,7 @@ public class NotificationService implements INotificationService {
             String studentName) {
         
         String title = "PHIẾU TIÊM CHỦNG HẾT HẠN";
-        String message = "Mẫu đơn đồng ý tiêm chủng cho " + studentName + " đã quá thời hạn xác nhận";
+        String message = "<p>Mẫu đơn đồng ý tiêm chủng cho <strong>" + studentName + "</strong> đã quá thời hạn xác nhận</p>";
         String notificationType = "VACCINATION_CONSENT_EXPIRED";
         return createGeneralNotification(recipient, title, message, notificationType);
     }
@@ -548,7 +548,7 @@ public class NotificationService implements INotificationService {
             String approverName) {
         
         String title = "CHIẾN DỊCH ĐÃ ĐƯỢC CHẤP NHẬN";
-        String message = "Chiến dịch tiêm chủng của bạn '" + campaignName + "' đã được chấp nhận bởi " + approverName;
+        String message = "<p>Chiến dịch tiêm chủng của bạn '<strong>" + campaignName + "</strong>' đã được chấp nhận bởi <strong>" + approverName + "</strong></p>";
         String notificationType = "CAMPAIGN_APPROVAL";
         
         return createGeneralNotification(recipient, title, message, notificationType);
@@ -565,7 +565,8 @@ public class NotificationService implements INotificationService {
             String reason) {
         
         String title = "CHIẾN DỊCH ĐÃ BỊ TỪ CHỐI";
-        String message = "Chiến dịch tiêm chủng của bạn '" + campaignName + "' đã bị từ chối. Lý do: " + reason;
+        String message = "<p>Chiến dịch tiêm chủng của bạn '<strong>" + campaignName + "</strong>' đã bị từ chối.</p>" +
+                        "<p><strong>Lý do:</strong> " + reason + "</p>";
         String notificationType = "CAMPAIGN_REJECTION";
         
         return createGeneralNotification(recipient, title, message, notificationType);
@@ -582,7 +583,7 @@ public class NotificationService implements INotificationService {
             String creatorName) {
         
         String title = "CHIẾN DỊCH CHỜ PHÊ DUYỆT";
-        String message = "Một chiến dịch tiêm chủng mới '" + campaignName + "' được tạo bởi  " + creatorName + " đang chờ duyệt.";
+        String message = "<p>Một chiến dịch tiêm chủng mới '<strong>" + campaignName + "</strong>' được tạo bởi <strong>" + creatorName + "</strong> đang chờ duyệt.</p>";
         String notificationType = "CAMPAIGN_APPROVAL_REQUEST";
         
         return createGeneralNotification(recipient, title, message, notificationType);
@@ -602,13 +603,14 @@ public class NotificationService implements INotificationService {
             VaccinationForm vaccinationForm) {
 
         String title = "XÁC NHẬN ĐỒNG Ý TIÊM CHỦNG";
-        String message = "Vui lòng xem xét và xác nhận tiêm chủng cho " + studentName + " - " + vaccineName;
+        String message = "<p>Vui lòng xem xét và xác nhận tiêm chủng cho <strong>" + studentName + "</strong> - <strong>" + vaccineName + "</strong>";
         if (location != null && !location.trim().isEmpty()) {
-            message += " tại " + location;
+            message += " tại <strong>" + location + "</strong>";
         }
         if (scheduledDate != null && !scheduledDate.trim().isEmpty()) {
-            message += " vào " + scheduledDate;
+            message += " vào <strong>" + scheduledDate + "</strong>";
         }
+        message += "</p>";
         String notificationType = "VACCINATION_CONSENT_REQUIRED";
         
         Notification notification = new Notification();
@@ -687,13 +689,13 @@ public class NotificationService implements INotificationService {
         }
         
         String title = "Yêu cầu nhập kho mới";
-        String message = "Có yêu cầu nhập kho mới từ y tá " + 
+        String message = "<p>Có yêu cầu nhập kho mới từ y tá <strong>" + 
                 (restockRequest.getRequestedBy() != null ? 
-                userRepository.findById(restockRequest.getRequestedBy()).map(User::getFullName).orElse("") : "");
+                userRepository.findById(restockRequest.getRequestedBy()).map(User::getFullName).orElse("") : "") + "</strong></p>";
                 
         if (restockRequest.getPriority() != null && restockRequest.getPriority().equals("HIGH") || 
             restockRequest.getPriority() != null && restockRequest.getPriority().equals("URGENT")) {
-            message += " (Ưu tiên: " + (restockRequest.getPriority().equals("HIGH") ? "Cao" : "Khẩn cấp") + ")";
+            message += "<p><span style='color: #dc3545; font-weight: bold;'>Ưu tiên: " + (restockRequest.getPriority().equals("HIGH") ? "Cao" : "Khẩn cấp") + "</span></p>";
         }
         
         System.out.println("NotificationService: Preparing notification with title: '" + title + "', message: '" + message + "'");
@@ -753,10 +755,10 @@ public class NotificationService implements INotificationService {
         
         // Create notification
         String title = "Yêu cầu nhập kho đã được duyệt";
-        String message = "Yêu cầu nhập kho của bạn đã được duyệt và đã bổ sung vào kho.";
+        String message = "<p>Yêu cầu nhập kho của bạn đã được duyệt và đã bổ sung vào kho.</p>";
         
         if (restockRequest.getReviewNotes() != null && !restockRequest.getReviewNotes().trim().isEmpty()) {
-            message += " Ghi chú: " + restockRequest.getReviewNotes();
+            message += "<p><strong>Ghi chú:</strong> " + restockRequest.getReviewNotes() + "</p>";
         }
         
         Notification notification = new Notification();
@@ -802,12 +804,12 @@ public class NotificationService implements INotificationService {
         
         // Create notification
         String title = "Yêu cầu nhập kho bị từ chối";
-        String message = "Yêu cầu nhập kho của bạn đã bị từ chối.";
+        String message = "<p>Yêu cầu nhập kho của bạn đã bị từ chối.</p>";
         
         if (notes != null && !notes.trim().isEmpty()) {
-            message += " Lý do: " + notes;
+            message += "<p><strong>Lý do:</strong> " + notes + "</p>";
         } else if (restockRequest.getReviewNotes() != null && !restockRequest.getReviewNotes().trim().isEmpty()) {
-            message += " Lý do: " + restockRequest.getReviewNotes();
+            message += "<p><strong>Lý do:</strong> " + restockRequest.getReviewNotes() + "</p>";
         }
         
         Notification notification = new Notification();
@@ -861,10 +863,13 @@ public class NotificationService implements INotificationService {
         }
         
         String title = "Chiến dịch khám sức khỏe cần phê duyệt";
-        String message = "Chiến dịch khám sức khỏe mới '" + campaign.getName() + "' được tạo bởi " + 
+        String message = "<p>Chiến dịch khám sức khỏe mới '<strong>" + campaign.getName() + "</strong>' được tạo bởi <strong>" + 
                 (campaign.getCreatedBy() != null ? campaign.getCreatedBy().getFullName() : "Y tá trường") + 
-                " đang chờ phê duyệt. Số học sinh dự kiến: " + estimatedStudentCount + 
-                ". Thời gian: " + campaign.getStartDate() + " đến " + campaign.getEndDate();
+                "</strong> đang chờ phê duyệt.</p>" +
+                "<ul>" +
+                "<li><strong>Số học sinh dự kiến:</strong> " + estimatedStudentCount + "</li>" +
+                "<li><strong>Thời gian:</strong> " + campaign.getStartDate() + " đến " + campaign.getEndDate() + "</li>" +
+                "</ul>";
         
         // Notify each manager
         for (User manager : managers) {
@@ -919,10 +924,11 @@ public class NotificationService implements INotificationService {
             try {
                 // Create new notification with manual title and message that includes the notification type in title
                 String notificationTitle = "CHIẾN DỊCH CHỜ PHÊ DUYỆT";
-                String notificationMessage = "Một chiến dịch tiêm chủng mới 'YÊU CẦU HOÀN THÀNH CHIẾN DỊCH: " + 
-                                           request.getCampaign().getName() + "' được tạo bởi  Y tá " + 
-                                           request.getRequestedBy().getFullName() + " yêu cầu hoàn thành chiến dịch '" + 
-                                           request.getCampaign().getName() + "' đang chờ duyệt.";
+                String notificationMessage = "<p>Một chiến dịch tiêm chủng mới '<strong>YÊU CẦU HOÀN THÀNH CHIẾN DỊCH: " + 
+                                           request.getCampaign().getName() + "</strong>' được tạo bởi Y tá <strong>" + 
+                                           request.getRequestedBy().getFullName() + "</strong>.</p>" +
+                                           "<p>Yêu cầu hoàn thành chiến dịch '<strong>" + 
+                                           request.getCampaign().getName() + "</strong>' đang chờ duyệt.</p>";
                 
                 Notification notification = new Notification();
                 notification.setTitle(notificationTitle);
@@ -992,8 +998,9 @@ public class NotificationService implements INotificationService {
         }
         
         String title = "Chiến dịch khám sức khỏe đã được phê duyệt";
-        String message = "Chiến dịch khám sức khỏe '" + campaign.getName() + "' của bạn đã được phê duyệt bởi " + 
-                (approver != null ? approver.getFullName() : "quản lý") + ". Bạn có thể bắt đầu mời phụ huynh tham gia.";
+        String message = "<p>Chiến dịch khám sức khỏe '<strong>" + campaign.getName() + "</strong>' của bạn đã được phê duyệt bởi <strong>" + 
+                (approver != null ? approver.getFullName() : "quản lý") + "</strong>.</p>" +
+                "<p>Bạn có thể bắt đầu mời phụ huynh tham gia.</p>";
         
         Notification notification = new Notification();
         notification.setTitle(title);
@@ -1032,11 +1039,11 @@ public class NotificationService implements INotificationService {
         }
         
         String title = "Chiến dịch khám sức khỏe bị từ chối";
-        String message = "Chiến dịch khám sức khỏe '" + campaign.getName() + "' của bạn đã bị từ chối bởi " + 
-                (rejector != null ? rejector.getFullName() : "quản lý");
+        String message = "<p>Chiến dịch khám sức khỏe '<strong>" + campaign.getName() + "</strong>' của bạn đã bị từ chối bởi <strong>" + 
+                (rejector != null ? rejector.getFullName() : "quản lý") + "</strong>.</p>";
         
         if (reason != null && !reason.trim().isEmpty()) {
-            message += ". Lý do: " + reason;
+            message += "<p><strong>Lý do:</strong> " + reason + "</p>";
         }
         
         Notification notification = new Notification();
@@ -1082,9 +1089,10 @@ public class NotificationService implements INotificationService {
         }
         
         String title = "Chiến dịch khám sức khỏe đã được lên lịch";
-        String message = "Chiến dịch khám sức khỏe '" + campaign.getName() + "' đã được lên lịch với " + 
-                scheduledStudentCount + " học sinh tham gia. Thời gian thực hiện: " + 
-                campaign.getStartDate() + " đến " + campaign.getEndDate();
+        String message = "<p>Chiến dịch khám sức khỏe '<strong>" + campaign.getName() + "</strong>' đã được lên lịch với <strong>" + 
+                scheduledStudentCount + " học sinh</strong> tham gia.</p>" +
+                "<p><strong>Thời gian thực hiện:</strong> " + 
+                campaign.getStartDate() + " đến " + campaign.getEndDate() + "</p>";
         
         for (User manager : managers) {
             Notification notification = new Notification();
@@ -1131,9 +1139,9 @@ public class NotificationService implements INotificationService {
         }
         
         String title = "Chiến dịch khám sức khỏe đã hoàn thành";
-        String message = "Chiến dịch khám sức khỏe '" + campaign.getName() + "' đã hoàn thành. " + 
-                "Tổng số học sinh đã khám: " + completedStudentCount + ". " +
-                "Vui lòng xem báo cáo chi tiết trong hệ thống.";
+        String message = "<p>Chiến dịch khám sức khỏe '<strong>" + campaign.getName() + "</strong>' đã hoàn thành.</p>" + 
+                "<p><strong>Tổng số học sinh đã khám:</strong> " + completedStudentCount + "</p>" +
+                "<p>Vui lòng xem báo cáo chi tiết trong hệ thống.</p>";
         
         for (User manager : managers) {
             Notification notification = new Notification();
@@ -1180,16 +1188,16 @@ public class NotificationService implements INotificationService {
             message = customMessage;
         } else {
             // Default message template
-            message = "Kính gửi phụ huynh,\n" +
-                     "Trường đang tổ chức chiến dịch khám sức khỏe định kỳ '" + campaign.getName() + "' " +
-                     "cho học sinh " + studentName + ".\n" +
-                     "Thời gian dự kiến: " + campaign.getStartDate() + " đến " + campaign.getEndDate() + "\n" +
-                     "Các hạng mục khám: " + String.join(", ", 
+            message = "<p><strong>Kính gửi phụ huynh,</strong></p>" +
+                     "<p>Trường đang tổ chức chiến dịch khám sức khỏe định kỳ '<strong>" + campaign.getName() + "</strong>' " +
+                     "cho học sinh <strong>" + studentName + "</strong>.</p>" +
+                     "<p><strong>Thời gian dự kiến:</strong> " + campaign.getStartDate() + " đến " + campaign.getEndDate() + "</p>" +
+                     "<p><strong>Các hạng mục khám:</strong> " + String.join(", ", 
                          campaign.getCategories().stream()
                              .map(category -> translateHealthCategory(category.toString()))
-                             .toArray(String[]::new)) + "\n" +
-                     "Vui lòng xác nhận sự tham gia của con em trong vòng 3 ngày và ít nhất 5 ngày trước khi chiến dịch bắt đầu.\n" +
-                     "Trân trọng,\nY tá trường";
+                             .toArray(String[]::new)) + "</p>" +
+                     "<p>Vui lòng xác nhận sự tham gia của con em trong vòng 3 ngày và ít nhất 5 ngày trước khi chiến dịch bắt đầu.</p>" +
+                     "<p><em>Trân trọng,<br>Y tá trường</em></p>";
         }
         
         Notification notification = new Notification();
@@ -1235,14 +1243,16 @@ public class NotificationService implements INotificationService {
             HealthCheckCampaign campaign) {
         
         String title = "Lịch hẹn khám sức khỏe";
-        String message = "Kính gửi phụ huynh,\n\n" +
-                        "Lịch hẹn khám sức khỏe cho học sinh " + studentName + " đã được xác định:\n" +
-                        "Ngày khám: " + appointmentDate + "\n" +
-                        "Thời gian: " + appointmentTime + "\n" +
-                        "Địa điểm: " + (location != null ? location : "Phòng y tế trường") + "\n" +
-                        "Số thứ tự: " + queueNumber + "\n\n" +
-                        "Vui lòng đưa con đến đúng giờ để được khám sức khỏe.\n" +
-                        "Trân trọng,\nY tá trường";
+        String message = "<p><strong>Kính gửi phụ huynh,</strong></p>" +
+                        "<p>Lịch hẹn khám sức khỏe cho học sinh <strong>" + studentName + "</strong> đã được xác định:</p>" +
+                        "<ul>" +
+                        "<li><strong>Ngày khám:</strong> " + appointmentDate + "</li>" +
+                        "<li><strong>Thời gian:</strong> " + appointmentTime + "</li>" +
+                        "<li><strong>Địa điểm:</strong> " + (location != null ? location : "Phòng y tế trường") + "</li>" +
+                        "<li><strong>Số thứ tự:</strong> " + queueNumber + "</li>" +
+                        "</ul>" +
+                        "<p>Vui lòng đưa con đến đúng giờ để được khám sức khỏe.</p>" +
+                        "<p><em>Trân trọng,<br>Y tá trường</em></p>";
         
         Notification notification = new Notification();
         notification.setTitle(title);
@@ -1283,17 +1293,17 @@ public class NotificationService implements INotificationService {
             HealthCheckCampaign campaign) {
         
         String title = "KẾT QUẢ KHÁM SỨC KHỎE CẦN QUAN TÂM";
-        String message = "Kính gửi phụ huynh,\n" +
-                        "Kết quả khám sức khỏe của học sinh " + studentName + " trong chiến dịch '" + 
-                        campaign.getName() + "' có một số dấu hiệu cần quan tâm:\n\n" +
-                        "Phát hiện: " + abnormalFindings + "\n";
+        String message = "<p><strong>Kính gửi phụ huynh,</strong></p>" +
+                        "<p>Kết quả khám sức khỏe của học sinh <strong>" + studentName + "</strong> trong chiến dịch '<strong>" + 
+                        campaign.getName() + "</strong>' có một số dấu hiệu cần quan tâm:</p>" +
+                        "<p><strong>Phát hiện:</strong> " + abnormalFindings + "</p>";
         
         if (recommendations != null && !recommendations.trim().isEmpty()) {
-            message += "Khuyến nghị: " + recommendations + "\n";
+            message += "<p><strong>Khuyến nghị:</strong> " + recommendations + "</p>";
         }
         
-        message += "Vui lòng liên hệ với y tá trường hoặc đưa con đến cơ sở y tế để được tư vấn và kiểm tra thêm.\n" +
-                  "Trân trọng,\nY tá trường";
+        message += "<p>Vui lòng liên hệ với y tá trường hoặc đưa con đến cơ sở y tế để được tư vấn và kiểm tra thêm.</p>" +
+                  "<p><em>Trân trọng,<br>Y tá trường</em></p>";
         
         Notification notification = new Notification();
         notification.setTitle(title);
@@ -1334,9 +1344,9 @@ public class NotificationService implements INotificationService {
         }
         
         String title = "Nhắc nhở hoàn thành chiến dịch khám sức khỏe";
-        String message = "Chiến dịch khám sức khỏe '" + campaign.getName() + "' đã kết thúc từ " + 
-                        campaign.getEndDate() + ". Vui lòng xác nhận hoàn thành chiến dịch trong hệ thống " +
-                        "để cập nhật trạng thái và tạo báo cáo tổng kết.";
+        String message = "<p>Chiến dịch khám sức khỏe '<strong>" + campaign.getName() + "</strong>' đã kết thúc từ <strong>" + 
+                        campaign.getEndDate() + "</strong>.</p>" +
+                        "<p>Vui lòng xác nhận hoàn thành chiến dịch trong hệ thống để cập nhật trạng thái và tạo báo cáo tổng kết.</p>";
         
         Notification notification = new Notification();
         notification.setTitle(title.trim().toUpperCase());
@@ -1373,9 +1383,10 @@ public class NotificationService implements INotificationService {
             
             // Create notification for the nurse
             String notificationTitle = "YÊU CẦU HOÀN THÀNH CHIẾN DỊCH ĐÃ ĐƯỢC PHÊ DUYỆT";
-            String notificationMessage = "Yêu cầu hoàn thành chiến dịch '" + request.getCampaign().getName() + 
-                                       "' của bạn đã được quản lý " + manager.getFullName() + 
-                                       " phê duyệt. Chiến dịch đã chuyển sang trạng thái hoàn thành.";
+            String notificationMessage = "<p>Yêu cầu hoàn thành chiến dịch '<strong>" + request.getCampaign().getName() + 
+                                       "</strong>' của bạn đã được quản lý <strong>" + manager.getFullName() + 
+                                       "</strong> phê duyệt.</p>" +
+                                       "<p>Chiến dịch đã chuyển sang trạng thái hoàn thành.</p>";
             
             Notification notification = new Notification();
             notification.setTitle(notificationTitle);
@@ -1503,12 +1514,14 @@ public class NotificationService implements INotificationService {
         User nurse = campaign.getCreatedBy(); // The nurse who created the campaign
         if (nurse != null) {
             String nurseMessage = String.format(
-                "Parent %s %s has %s the health check form for student %s %s (Class: %s).\n" +
-                "Campaign: %s\n" +
-                "Form ID: %d\n" +
-                "Response Date: %s",
+                "<p>Phụ huynh <strong>%s %s</strong> đã <strong>%s</strong> mẫu kiểm tra sức khỏe cho học sinh <strong>%s %s</strong> (Lớp: <strong>%s</strong>).</p>" +
+                "<ul>" +
+                "<li><strong>Chiến dịch:</strong> %s</li>" +
+                "<li><strong>Mã mẫu:</strong> %d</li>" +
+                "<li><strong>Ngày phản hồi:</strong> %s</li>" +
+                "</ul>",
                 parent.getFirstName(), parent.getLastName(),
-                actionText,
+                actionText.equals("confirmed") ? "xác nhận" : "từ chối",
                 student.getFirstName(), student.getLastName(),
                 student.getClassName() != null ? student.getClassName() : "N/A",
                 campaign.getName(),
@@ -1589,9 +1602,10 @@ public class NotificationService implements INotificationService {
             
             // Create notification for the nurse
             String notificationTitle = "YÊU CẦU HOÀN THÀNH CHIẾN DỊCH BỊ TỪ CHỐI";
-            String notificationMessage = "Yêu cầu hoàn thành chiến dịch '" + request.getCampaign().getName() + 
-                                       "' của bạn đã bị quản lý " + manager.getFullName() + 
-                                       " từ chối. Lý do: " + request.getReviewNotes();
+            String notificationMessage = "<p>Yêu cầu hoàn thành chiến dịch '<strong>" + request.getCampaign().getName() + 
+                                       "</strong>' của bạn đã bị quản lý <strong>" + manager.getFullName() + 
+                                       "</strong> từ chối.</p>" +
+                                       "<p><strong>Lý do:</strong> " + request.getReviewNotes() + "</p>";
             
             Notification notification = new Notification();
             notification.setTitle(notificationTitle);
@@ -1692,18 +1706,21 @@ public class NotificationService implements INotificationService {
             // Create detailed schedule message
             String title = "LỊCH KHÁM SỨC KHỎE - " + student.getFullName().toUpperCase();
             String message = String.format(
-                "Thân gửi Quý phụ huynh,\n\n" +
-                "Nhà trường thông báo lịch khám sức khỏe của đợt khám \"%s\".\n\n" +
-                "Thông tin lịch khám:\n\n" +
-                "Thời gian: %s\n" +
-                "Ngày giờ cụ thể: %s %s\n" +
-                "Địa điểm: %s\n" +
-                "Thứ tự khám: %d\n" +
-                "Học sinh: %s - Lớp %s\n" +
-                "%s\n\n" +
-                "Xin vui lòng chuẩn bị đầy đủ thông tin sức khỏe cơ bản và đưa học sinh đến đúng giờ.\n\n" +
-                "Trân trọng,\n" +
-                "Ban Giám hiệu",
+                "<p><strong>Thân gửi Quý phụ huynh,</strong></p>" +
+                "<p>Nhà trường thông báo lịch khám sức khỏe của đợt khám \"<strong>%s</strong>\".</p>" +
+                "<div style='background-color: #f5f5f5; padding: 15px; border-left: 4px solid #007bff; margin: 15px 0;'>" +
+                "<h4 style='margin-top: 0; color: #007bff;'>Thông tin lịch khám:</h4>" +
+                "<ul style='margin: 10px 0;'>" +
+                "<li><strong>Thời gian:</strong> %s</li>" +
+                "<li><strong>Ngày giờ cụ thể:</strong> %s %s</li>" +
+                "<li><strong>Địa điểm:</strong> %s</li>" +
+                "<li><strong>Thứ tự khám:</strong> %d</li>" +
+                "<li><strong>Học sinh:</strong> %s - Lớp %s</li>" +
+                "</ul>" +
+                "%s" +
+                "</div>" +
+                "<p>Xin vui lòng chuẩn bị đầy đủ thông tin sức khỏe cơ bản và đưa học sinh đến đúng giờ.</p>" +
+                "<p><em>Trân trọng,<br>Ban Giám hiệu</em></p>",
                 campaign.getName(),
                 timeSlotText,
                 campaign.getStartDate().toString(),
@@ -1712,7 +1729,7 @@ public class NotificationService implements INotificationService {
                 getStudentOrder(confirmedForms, student),
                 student.getFullName(),
                 student.getClassName(),
-                campaign.getScheduleNotes() != null ? "Lưu ý: " + campaign.getScheduleNotes() : ""
+                campaign.getScheduleNotes() != null ? "<p><strong>Lưu ý:</strong> " + campaign.getScheduleNotes() + "</p>" : ""
             );
             
             // Create notification
