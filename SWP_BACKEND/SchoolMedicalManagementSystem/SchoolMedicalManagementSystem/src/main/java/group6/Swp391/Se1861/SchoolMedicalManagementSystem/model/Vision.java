@@ -39,6 +39,24 @@ public class Vision {
     @Column(name = "doctorName", nullable = true)
     private String doctorName;
 
+    @Column(name = "colorVision", nullable = true)
+    private String colorVision;
+
+    @Column(name = "eyeMovement", nullable = true)
+    private String eyeMovement;
+
+    @Column(name = "eyePressure", nullable = true)
+    private Integer eyePressure;
+
+    @Column(name = "needsGlasses", nullable = true)
+    private boolean needsGlasses;
+
+    @Column(name = "isAbnormal", nullable = false)
+    private boolean isAbnormal;
+
+    @Column(name = "recommendations", nullable = true)
+    private String recommendations;
+
     @ManyToOne
     @JoinColumn(name = "healthProfileId", nullable = false)
     private HealthProfile healthProfile;

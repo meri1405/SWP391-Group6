@@ -49,8 +49,8 @@ public class HealthProfile {
     @Column(name = "nurseNote", nullable = true)
     private String nurseNote;
 
-    @ManyToOne
-    @JoinColumn(name = "studentId", nullable = false)
+    @OneToOne
+    @JoinColumn(name = "studentId", nullable = false, unique = true)
     private Student student;
 
     @ManyToOne

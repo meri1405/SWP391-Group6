@@ -39,6 +39,24 @@ public class Oral {
     @Column(name = "isAbnormal", nullable = false)
     private boolean isAbnormal;
 
+    @Column(name = "oralHygiene", nullable = true)
+    private String oralHygiene;
+
+    @Column(name = "cavitiesCount", nullable = false)
+    private int cavitiesCount;
+
+    @Column(name = "plaquePresent", nullable = false)
+    private boolean plaquePresent;
+
+    @Column(name = "gingivitis", nullable = false)
+    private boolean gingivitis;
+
+    @Column(name = "mouthUlcers", nullable = false)
+    private boolean mouthUlcers;
+
+    @Column(name = "recommendations", nullable = true)
+    private String recommendations;
+
     @ManyToOne
     @JoinColumn(name = "healthProfileId", nullable = false)
     private HealthProfile healthProfile;

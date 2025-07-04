@@ -19,4 +19,10 @@ public class OralDTO {
     private LocalDate dateOfExamination;
     private boolean isAbnormal;
     private Long healthProfileId;
+    private String oralHygiene;
+    private int cavitiesCount;
+    private boolean plaquePresent;
+    private boolean gingivitis;
+    private boolean mouthUlcers;
+    private String recommendations;
 }

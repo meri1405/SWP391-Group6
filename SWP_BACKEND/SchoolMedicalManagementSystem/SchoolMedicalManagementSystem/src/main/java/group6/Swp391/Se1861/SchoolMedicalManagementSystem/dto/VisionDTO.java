@@ -19,4 +19,10 @@ public class VisionDTO {
     private String doctorName;
     private LocalDate dateOfExamination;
     private Long healthProfileId;
+    private String colorVision;
+    private String eyeMovement;
+    private Integer eyePressure;
+    private boolean needsGlasses;
+    private boolean isAbnormal;
+    private String recommendations;
 }

@@ -249,8 +249,8 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
 
         HealthCheckCampaign savedCampaign = campaignRepository.save(campaign);
         
-        // Send forms to eligible parents when campaign starts
-        sendFormsToEligibleParents(savedCampaign);
+        // Note: Forms and notifications are already sent during scheduling phase
+        // No need to send notifications again when starting the campaign
 
         return savedCampaign;
     }
@@ -869,11 +869,15 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
     @Transactional
     public void recordHealthCheckResult(RecordHealthCheckResultRequest request) {
         System.out.println("DEBUG: Recording health check result for student ID: " + request.getStudentId() + ", campaign ID: " + request.getCampaignId());
+        System.out.println("DEBUG: Request weight: " + request.getWeight() + ", height: " + request.getHeight());
+        System.out.println("DEBUG: Categories count: " + (request.getCategories() != null ? request.getCategories().size() : "null"));
+        System.out.println("DEBUG: Detailed results keys: " + (request.getDetailedResults() != null ? request.getDetailedResults().keySet() : "null"));
         
         // Get the campaign and student
         HealthCheckCampaign campaign = getCampaignModelById(request.getCampaignId());
-        if (campaign.getStatus() != CampaignStatus.IN_PROGRESS) {
-            throw new RuntimeException("Cannot record results for campaign not in progress");
+        System.out.println("DEBUG: Campaign status: " + campaign.getStatus());
+        if (campaign.getStatus() != CampaignStatus.IN_PROGRESS && campaign.getStatus() != CampaignStatus.APPROVED) {
+            throw new RuntimeException("Cannot record results for campaign not in progress or approved. Current status: " + campaign.getStatus());
         }
         
         // Find the student
@@ -886,20 +890,20 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
             .orElseThrow(() -> new RuntimeException("Health check form not found for student ID: " + student.getStudentID() + " and campaign ID: " + campaign.getId()));
         
         // Get the student's health profile
-        Set<HealthProfile> healthProfiles = student.getHealthProfiles();
-        if (healthProfiles == null || healthProfiles.isEmpty()) {
+        HealthProfile healthProfile = student.getHealthProfile();
+        if (healthProfile == null) {
             throw new RuntimeException("No health profile found for student ID: " + student.getStudentID());
         }
-        HealthProfile healthProfile = healthProfiles.iterator().next();
         
-        // Get basic measurements from detailed results (fallback to 0 if not provided)
+        // Get basic measurements from request (fallback to 0 if not provided)
         Map<String, Object> detailedResults = request.getDetailedResults();
         if (detailedResults == null) {
             throw new RuntimeException("Detailed results are required");
         }
         
-        double weight = getDoubleValue(detailedResults, "weight");
-        double height = getDoubleValue(detailedResults, "height");
+        // Use weight and height from request object directly
+        double weight = request.getWeight() != null ? request.getWeight() : 0.0;
+        double height = request.getHeight() != null ? request.getHeight() : 0.0;
         Double bmi = null;
         if (weight > 0 && height > 0) {
             bmi = weight / Math.pow(height / 100, 2); // height in cm, convert to meters
@@ -1007,7 +1011,8 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
         switch (category) {
             case VISION:
                 Vision vision = new Vision();
-                // Don't link to health profile for health check results
+                // Set health profile to satisfy database constraint, but actual link is in HealthCheckResult
+                vision.setHealthProfile(healthProfile);
                 vision.setVisionLeft(getIntValue(categoryData, "visionLeft"));
                 vision.setVisionRight(getIntValue(categoryData, "visionRight"));
                 vision.setVisionLeftWithGlass(getIntValue(categoryData, "visionLeftWithGlass"));
@@ -1021,7 +1026,8 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
                 
             case HEARING:
                 Hearing hearing = new Hearing();
-                // Don't link to health profile for health check results
+                // Set health profile to satisfy database constraint, but actual link is in HealthCheckResult
+                hearing.setHealthProfile(healthProfile);
                 hearing.setLeftEar(getIntValue(categoryData, "leftEar"));
                 hearing.setRightEar(getIntValue(categoryData, "rightEar"));
                 hearing.setDescription(getStringValue(categoryData, "description"));
@@ -1033,7 +1039,8 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
                 
             case ORAL:
                 Oral oral = new Oral();
-                // Don't link to health profile for health check results
+                // Set health profile to satisfy database constraint, but actual link is in HealthCheckResult
+                oral.setHealthProfile(healthProfile);
                 oral.setTeethCondition(getStringValue(categoryData, "teethCondition"));
                 oral.setGumsCondition(getStringValue(categoryData, "gumsCondition"));
                 oral.setTongueCondition(getStringValue(categoryData, "tongueCondition"));
@@ -1047,7 +1054,8 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
                 
             case SKIN:
                 Skin skin = new Skin();
-                // Don't link to health profile for health check results
+                // Set health profile to satisfy database constraint, but actual link is in HealthCheckResult
+                skin.setHealthProfile(healthProfile);
                 skin.setSkinColor(getStringValue(categoryData, "skinColor"));
                 skin.setRashes(getBooleanValue(categoryData, "rashes"));
                 skin.setLesions(getBooleanValue(categoryData, "lesions"));
@@ -1071,7 +1079,8 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
                 
             case RESPIRATORY:
                 Respiratory respiratory = new Respiratory();
-                // Don't link to health profile for health check results
+                // Set health profile to satisfy database constraint, but actual link is in HealthCheckResult
+                respiratory.setHealthProfile(healthProfile);
                 respiratory.setBreathingRate(getIntValue(categoryData, "breathingRate"));
                 respiratory.setBreathingSound(getStringValue(categoryData, "breathingSound"));
                 respiratory.setWheezing(getBooleanValue(categoryData, "wheezing"));
@@ -1207,47 +1216,55 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
             
             // Get health check results from HealthCheckResult table
             List<HealthCheckResult> healthCheckResults = healthCheckResultRepository.findByForm(form);
-            System.out.println("DEBUG: Found " + healthCheckResults.size() + " health check results for form " + form.getId());
+            System.out.println("DEBUG: Found " + healthCheckResults.size() + " health check results for student " + student.getStudentID() + " (form " + form.getId() + ")");
             
-            Map<String, Object> categoryResults = new HashMap<>();
-            Map<String, Object> overallResults = new HashMap<>();
-            
-            // Process each health check result
-            for (HealthCheckResult result : healthCheckResults) {
-                HealthCheckCategory category = result.getCategory();
+            // Only include students who have results
+            if (!healthCheckResults.isEmpty()) {
+                Map<String, Object> categoryResults = new HashMap<>();
+                Map<String, Object> overallResults = new HashMap<>();
                 
-                // Create category-specific result data
-                Map<String, Object> categoryData = getCategorySpecificData(result);
-                
-                // Add common fields from HealthCheckResult
-                categoryData.put("healthCheckResultId", result.getId());
-                categoryData.put("weight", result.getWeight());
-                categoryData.put("height", result.getHeight());
-                categoryData.put("bmi", result.getBmi());
-                categoryData.put("status", result.getStatus());
-                categoryData.put("isAbnormal", result.isAbnormal());
-                categoryData.put("resultNotes", result.getResultNotes());
-                categoryData.put("recommendations", result.getRecommendations());
-                categoryData.put("performedAt", result.getPerformedAt());
-                categoryData.put("nurseId", result.getNurse() != null ? result.getNurse().getId() : null);
-                categoryData.put("nurseName", result.getNurse() != null ? result.getNurse().getFullName() : null);
-                
-                categoryResults.put(category.toString(), categoryData);
-                
-                // Store overall results (weight, height, BMI) - use the first one found
-                if (overallResults.isEmpty()) {
-                    overallResults.put("weight", result.getWeight());
-                    overallResults.put("height", result.getHeight());
-                    overallResults.put("bmi", result.getBmi());
-                    overallResults.put("performedAt", result.getPerformedAt());
-                    overallResults.put("nurseId", result.getNurse() != null ? result.getNurse().getId() : null);
-                    overallResults.put("nurseName", result.getNurse() != null ? result.getNurse().getFullName() : null);
+                // Process each health check result
+                for (HealthCheckResult result : healthCheckResults) {
+                    HealthCheckCategory category = result.getCategory();
+                    
+                    // Create category-specific result data
+                    Map<String, Object> categoryData = getCategorySpecificData(result);
+                    
+                    // Add common fields from HealthCheckResult
+                    categoryData.put("healthCheckResultId", result.getId());
+                    categoryData.put("weight", result.getWeight());
+                    categoryData.put("height", result.getHeight());
+                    categoryData.put("bmi", result.getBmi());
+                    categoryData.put("status", result.getStatus());
+                    categoryData.put("isAbnormal", result.isAbnormal());
+                    categoryData.put("resultNotes", result.getResultNotes());
+                    categoryData.put("recommendations", result.getRecommendations());
+                    categoryData.put("performedAt", result.getPerformedAt());
+                    categoryData.put("nurseId", result.getNurse() != null ? result.getNurse().getId() : null);
+                    categoryData.put("nurseName", result.getNurse() != null ? result.getNurse().getFullName() : null);
+                    
+                    categoryResults.put(category.toString(), categoryData);
+                    
+                    // Store overall results (weight, height, BMI) - use the first one found
+                    if (overallResults.isEmpty()) {
+                        overallResults.put("weight", result.getWeight());
+                        overallResults.put("height", result.getHeight());
+                        overallResults.put("bmi", result.getBmi());
+                        overallResults.put("performedAt", result.getPerformedAt());
+                        overallResults.put("nurseId", result.getNurse() != null ? result.getNurse().getId() : null);
+                        overallResults.put("nurseName", result.getNurse() != null ? result.getNurse().getFullName() : null);
+                    }
                 }
+                
+                studentResult.put("results", categoryResults);
+                studentResult.put("overallResults", overallResults);
+                studentResult.put("hasResults", true);
+                results.add(studentResult);
+                
+                System.out.println("DEBUG: Added student " + student.getStudentID() + " with results to response");
+            } else {
+                System.out.println("DEBUG: Student " + student.getStudentID() + " has no health check results yet");
             }
-            
-            studentResult.put("results", categoryResults);
-            studentResult.put("overallResults", overallResults);
-            results.add(studentResult);
         }
         
         System.out.println("DEBUG: Returning " + results.size() + " student results");
@@ -1276,8 +1293,15 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
                         categoryData.put("visionRight", vision.getVisionRight());
                         categoryData.put("visionLeftWithGlass", vision.getVisionLeftWithGlass());
                         categoryData.put("visionRightWithGlass", vision.getVisionRightWithGlass());
-                        categoryData.put("description", vision.getVisionDescription());
+                        categoryData.put("visionDescription", vision.getVisionDescription());
+                        categoryData.put("doctorName", vision.getDoctorName());
                         categoryData.put("dateOfExamination", vision.getDateOfExamination());
+                        categoryData.put("colorVision", vision.getColorVision());
+                        categoryData.put("eyeMovement", vision.getEyeMovement());
+                        categoryData.put("eyePressure", vision.getEyePressure());
+                        categoryData.put("needsGlasses", vision.isNeedsGlasses());
+                        categoryData.put("isAbnormal", vision.isAbnormal());
+                        categoryData.put("recommendations", vision.getRecommendations());
                     }
                     break;
                     
@@ -1289,7 +1313,14 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
                         categoryData.put("leftEar", hearing.getLeftEar());
                         categoryData.put("rightEar", hearing.getRightEar());
                         categoryData.put("description", hearing.getDescription());
+                        categoryData.put("doctorName", hearing.getDoctorName());
                         categoryData.put("dateOfExamination", hearing.getDateOfExamination());
+                        categoryData.put("hearingAcuity", hearing.getHearingAcuity());
+                        categoryData.put("tympanometry", hearing.getTympanometry());
+                        categoryData.put("earWaxPresent", hearing.isEarWaxPresent());
+                        categoryData.put("earInfection", hearing.isEarInfection());
+                        categoryData.put("isAbnormal", hearing.isAbnormal());
+                        categoryData.put("recommendations", hearing.getRecommendations());
                     }
                     break;
                     
@@ -1302,8 +1333,15 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
                         categoryData.put("gumsCondition", oral.getGumsCondition());
                         categoryData.put("tongueCondition", oral.getTongueCondition());
                         categoryData.put("description", oral.getDescription());
-                        categoryData.put("categoryIsAbnormal", oral.isAbnormal());
+                        categoryData.put("doctorName", oral.getDoctorName());
                         categoryData.put("dateOfExamination", oral.getDateOfExamination());
+                        categoryData.put("oralHygiene", oral.getOralHygiene());
+                        categoryData.put("cavitiesCount", oral.getCavitiesCount());
+                        categoryData.put("plaquePresent", oral.isPlaquePresent());
+                        categoryData.put("gingivitis", oral.isGingivitis());
+                        categoryData.put("mouthUlcers", oral.isMouthUlcers());
+                        categoryData.put("isAbnormal", oral.isAbnormal());
+                        categoryData.put("recommendations", oral.getRecommendations());
                     }
                     break;
                     
@@ -1320,9 +1358,15 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
                         categoryData.put("psoriasis", skin.isPsoriasis());
                         categoryData.put("skinInfection", skin.isSkinInfection());
                         categoryData.put("allergies", skin.isAllergies());
+                        categoryData.put("acne", skin.isAcne());
+                        categoryData.put("scars", skin.isScars());
+                        categoryData.put("birthmarks", skin.isBirthmarks());
+                        categoryData.put("skinTone", skin.getSkinTone());
                         categoryData.put("description", skin.getDescription());
                         categoryData.put("treatment", skin.getTreatment());
-                        categoryData.put("categoryIsAbnormal", skin.isAbnormal());
+                        categoryData.put("doctorName", skin.getDoctorName());
+                        categoryData.put("isAbnormal", skin.isAbnormal());
+                        categoryData.put("recommendations", skin.getRecommendations());
                         categoryData.put("dateOfExamination", skin.getDateOfExamination());
                         categoryData.put("followUpDate", skin.getFollowUpDate());
                     }
@@ -1339,9 +1383,15 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
                         categoryData.put("cough", respiratory.isCough());
                         categoryData.put("breathingDifficulty", respiratory.isBreathingDifficulty());
                         categoryData.put("oxygenSaturation", respiratory.getOxygenSaturation());
+                        categoryData.put("chestExpansion", respiratory.getChestExpansion());
+                        categoryData.put("lungSounds", respiratory.getLungSounds());
+                        categoryData.put("asthmaHistory", respiratory.isAsthmaHistory());
+                        categoryData.put("allergicRhinitis", respiratory.isAllergicRhinitis());
                         categoryData.put("treatment", respiratory.getTreatment());
                         categoryData.put("description", respiratory.getDescription());
-                        categoryData.put("categoryIsAbnormal", respiratory.isAbnormal());
+                        categoryData.put("doctorName", respiratory.getDoctorName());
+                        categoryData.put("isAbnormal", respiratory.isAbnormal());
+                        categoryData.put("recommendations", respiratory.getRecommendations());
                         categoryData.put("dateOfExamination", respiratory.getDateOfExamination());
                         categoryData.put("followUpDate", respiratory.getFollowUpDate());
                     }

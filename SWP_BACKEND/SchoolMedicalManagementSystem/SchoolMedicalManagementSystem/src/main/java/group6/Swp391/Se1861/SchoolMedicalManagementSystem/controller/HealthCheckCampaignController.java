@@ -317,9 +317,12 @@ public class HealthCheckCampaignController {
     public ResponseEntity<String> recordHealthCheckResult(
             @RequestBody RecordHealthCheckResultRequest request) {
         try {
+            System.out.println("DEBUG: Controller received request to record health check result");
             campaignService.recordHealthCheckResult(request);
             return ResponseEntity.ok("Health check result recorded successfully");
         } catch (RuntimeException e) {
+            System.err.println("ERROR: Exception in recordHealthCheckResult: " + e.getMessage());
+            e.printStackTrace();
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
         }
     }
