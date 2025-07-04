@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Modal,
   Form,
@@ -17,8 +17,11 @@ import {
 } from "antd";
 import { UserAddOutlined, TeamOutlined } from "@ant-design/icons";
 import { createStudentWithParents } from "../../api/studentApi";
-import { validatePhone, VIETNAMESE_MOBILE_PREFIXES } from "../../utils/phoneValidator";
-import moment from "moment";
+import {
+  validatePhone,
+  VIETNAMESE_MOBILE_PREFIXES,
+} from "../../utils/phoneValidator";
+import dayjs from "dayjs";
 import "../../styles/StudentManagement.css";
 
 const { Option } = Select;
@@ -70,9 +73,47 @@ const birthPlaceOptions = [
 const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
-  const [studentDob, setStudentDob] = useState(null);
   const [fatherEnabled, setFatherEnabled] = useState(true);
   const [motherEnabled, setMotherEnabled] = useState(false);
+  const [studentDob, setStudentDob] = useState(
+    dayjs().year(2017).month(0).date(1)
+  );
+  const [hasUserSelectedDate, setHasUserSelectedDate] = useState(false);
+
+  // Function để tính lớp học tự động dựa trên ngày sinh
+  const calculateAutoGrade = (dateOfBirth) => {
+    if (!dateOfBirth) return "";
+
+    const today = dayjs();
+    const age = today.diff(dateOfBirth, "year");
+
+    // Hệ thống giáo dục Việt Nam - tự động điền số lớp
+    if (age === 6) {
+      return "1"; // Lớp 1
+    } else if (age === 7) {
+      return "2"; // Lớp 2 (có thể là 1 hoặc 2, nhưng chọn 2 làm mặc định)
+    } else if (age === 8) {
+      return "3"; // Lớp 3 (có thể là 2 hoặc 3, nhưng chọn 3 làm mặc định)
+    } else if (age === 9) {
+      return "4"; // Lớp 4 (có thể là 3 hoặc 4, nhưng chọn 4 làm mặc định)
+    } else if (age === 10) {
+      return "5"; // Lớp 5 (có thể là 4 hoặc 5, nhưng chọn 5 làm mặc định)
+    } else if (age === 11) {
+      return "6"; // Lớp 6 (có thể là 5 hoặc 6, nhưng chọn 6 làm mặc định)
+    } else {
+      return ""; // Không tự động điền cho các tuổi khác
+    }
+  };
+
+  // Effect để tự động điền lớp học chỉ khi user đã chọn ngày sinh
+  useEffect(() => {
+    if (hasUserSelectedDate) {
+      const autoGrade = calculateAutoGrade(studentDob);
+      if (autoGrade) {
+        form.setFieldsValue({ student_className: autoGrade });
+      }
+    }
+  }, [studentDob, hasUserSelectedDate, form]);
 
   // Custom validator cho thông tin phụ huynh
   const validateParentInfo = (parentType) => {
@@ -95,19 +136,36 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
 
         // Nếu có số điện thoại thì phải có tên và họ
         if (phone && phone.trim()) {
-          if (currentField === firstNameField && (!firstName || !firstName.trim())) {
-            return Promise.reject(new Error('Tên là bắt buộc khi có số điện thoại'));
+          if (
+            currentField === firstNameField &&
+            (!firstName || !firstName.trim())
+          ) {
+            return Promise.reject(
+              new Error("Tên là bắt buộc khi có số điện thoại")
+            );
           }
-          if (currentField === lastNameField && (!lastName || !lastName.trim())) {
-            return Promise.reject(new Error('Họ là bắt buộc khi có số điện thoại'));
+          if (
+            currentField === lastNameField &&
+            (!lastName || !lastName.trim())
+          ) {
+            return Promise.reject(
+              new Error("Họ là bắt buộc khi có số điện thoại")
+            );
           }
           if (currentField === dobField && !dob) {
-            return Promise.reject(new Error('Ngày sinh là bắt buộc khi có số điện thoại'));
+            return Promise.reject(
+              new Error("Ngày sinh là bắt buộc khi có số điện thoại")
+            );
           }
-          if (currentField === jobTitleField && (!jobTitle || !jobTitle.trim())) {
-            return Promise.reject(new Error('Nghề nghiệp là bắt buộc khi có số điện thoại'));
+          if (
+            currentField === jobTitleField &&
+            (!jobTitle || !jobTitle.trim())
+          ) {
+            return Promise.reject(
+              new Error("Nghề nghiệp là bắt buộc khi có số điện thoại")
+            );
           }
-          
+
           // Validate phone format
           if (currentField === phoneField) {
             const phoneError = validatePhone(phone);
@@ -116,11 +174,13 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
             }
           }
         }
-        
+
         // Nếu có tên hoặc họ thì phải có số điện thoại
         if ((firstName && firstName.trim()) || (lastName && lastName.trim())) {
           if (currentField === phoneField && (!phone || !phone.trim())) {
-            return Promise.reject(new Error('Số điện thoại là bắt buộc khi có họ tên'));
+            return Promise.reject(
+              new Error("Số điện thoại là bắt buộc khi có họ tên")
+            );
           }
         }
 
@@ -143,16 +203,15 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
       setFatherEnabled(false);
     }
   };
-  
+
   const handleSubmit = async (values) => {
     setLoading(true);
     try {
       // Validation bổ sung trước khi gửi
-      if (
-        !values.father_phone &&
-        !values.mother_phone
-      ) {
-        message.error("Vui lòng nhập thông tin ít nhất một phụ huynh (số điện thoại)");
+      if (!values.father_phone && !values.mother_phone) {
+        message.error(
+          "Vui lòng nhập thông tin ít nhất một phụ huynh (số điện thoại)"
+        );
         setLoading(false);
         return;
       }
@@ -163,7 +222,7 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
           {
             firstName: values.student_firstName,
             lastName: values.student_lastName,
-            dob: (studentDob || values.student_dob).format("YYYY-MM-DD"),
+            dob: studentDob.format("YYYY-MM-DD"), // Use state instead of form value
             gender: values.student_gender,
             className: values.student_className,
             birthPlace: values.student_birthPlace,
@@ -249,7 +308,7 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
 
   const handleCancel = () => {
     form.resetFields();
-    setStudentDob(null);
+    setStudentDob(dayjs().year(2017).month(0).date(1)); // Reset to default 2017
     setFatherEnabled(true);
     setMotherEnabled(false);
     onCancel();
@@ -327,9 +386,11 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
               >
                 <DatePicker
                   style={{ width: "100%" }}
-                  placeholder="Chọn ngày sinh"
-                  allowClear
-                  value={studentDob}
+                  placeholder="Chọn ngày sinh (7 tuổi)"
+                  allowClear={false}
+                  key="student-datepicker"
+                  value={studentDob} // Controlled value
+                  defaultPickerValue={dayjs().year(2017).month(0).date(1)} // Calendar always opens at 2017
                   onChange={(date, dateString) => {
                     console.log(
                       "Student DatePicker onChange:",
@@ -337,8 +398,9 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
                       "dateString:",
                       dateString
                     );
-                    setStudentDob(date);
-                    form.setFieldsValue({ student_dob: date });
+                    setStudentDob(date); // Update state
+                    setHasUserSelectedDate(true); // Mark that user has selected a date
+                    form.setFieldsValue({ student_dob: date }); // Update form
                     if (date) {
                       console.log("Date object details:", {
                         year: date.year(),
@@ -351,7 +413,7 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
                   disabledDate={(current) => {
                     if (!current) return false;
 
-                    const today = moment();
+                    const today = dayjs();
                     const currentYear = today.year();
                     const selectedYear = current.year();
 
@@ -387,8 +449,13 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
                 name="student_className"
                 label="Lớp học"
                 rules={[{ required: true, message: "Vui lòng nhập lớp học" }]}
+                help={
+                  <span style={{ color: "#666", fontSize: "12px" }}>
+                    Chỉ cần thên chữ cái A,B,C,... sau số lớp
+                  </span>
+                }
               >
-                <Input placeholder="Ví dụ: 1A" />
+                <Input placeholder="Chọn ngày sinh trước để tự động điền số lớp" />
               </Form.Item>
             </Col>
           </Row>
@@ -440,8 +507,8 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
         >
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item 
-                name="father_firstName" 
+              <Form.Item
+                name="father_firstName"
                 label="Tên"
                 rules={[validateParentInfo("father")]}
               >
@@ -449,8 +516,8 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item 
-                name="father_lastName" 
+              <Form.Item
+                name="father_lastName"
                 label="Họ"
                 rules={[validateParentInfo("father")]}
               >
@@ -492,18 +559,19 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
                 <DatePicker
                   style={{ width: "100%" }}
                   placeholder="Chọn ngày sinh"
+                  defaultPickerValue={dayjs().year(2006).startOf("year")} // Fixed to year 2006 (18 years old)
                   disabledDate={(current) => {
                     if (!current) return false;
 
-                    const today = moment();
+                    const today = dayjs();
                     const currentYear = today.year();
                     const selectedYear = current.year();
 
-                    // Disable các ngày trong tương lai và ngoài khoảng tuổi cho phép  
+                    // Disable các ngày trong tương lai và ngoài khoảng tuổi cho phép
                     // Tuổi tối thiểu 18 năm, tối đa 100 năm (tính theo năm)
                     return (
-                      current > today || 
-                      selectedYear < currentYear - 100 || 
+                      current > today ||
+                      selectedYear < currentYear - 100 ||
                       selectedYear > currentYear - 18
                     );
                   }}
@@ -529,15 +597,14 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
           >
             <Input.TextArea rows={2} placeholder="Nhập địa chỉ" />
           </Form.Item>
-          
           <Form.Item
             name="father_enabled"
             label="Cho phép truy cập hệ thống"
             valuePropName="checked"
             initialValue={true}
           >
-            <Switch 
-              checked={fatherEnabled} 
+            <Switch
+              checked={fatherEnabled}
               onChange={handleFatherAccessChange}
             />
           </Form.Item>
@@ -559,8 +626,8 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
         >
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item 
-                name="mother_firstName" 
+              <Form.Item
+                name="mother_firstName"
                 label="Tên"
                 rules={[validateParentInfo("mother")]}
               >
@@ -568,8 +635,8 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item 
-                name="mother_lastName" 
+              <Form.Item
+                name="mother_lastName"
                 label="Họ"
                 rules={[validateParentInfo("mother")]}
               >
@@ -611,18 +678,19 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
                 <DatePicker
                   style={{ width: "100%" }}
                   placeholder="Chọn ngày sinh"
+                  defaultPickerValue={dayjs().year(2006).startOf("year")} // Fixed to year 2006 (18 years old)
                   disabledDate={(current) => {
                     if (!current) return false;
 
-                    const today = moment();
+                    const today = dayjs();
                     const currentYear = today.year();
                     const selectedYear = current.year();
 
-                    // Disable các ngày trong tương lai và ngoài khoảng tuổi cho phép  
+                    // Disable các ngày trong tương lai và ngoài khoảng tuổi cho phép
                     // Tuổi tối thiểu 18 năm, tối đa 100 năm (tính theo năm)
                     return (
-                      current > today || 
-                      selectedYear < currentYear - 100 || 
+                      current > today ||
+                      selectedYear < currentYear - 100 ||
                       selectedYear > currentYear - 18
                     );
                   }}
@@ -647,15 +715,14 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
           >
             <Input.TextArea rows={2} placeholder="Nhập địa chỉ" />
           </Form.Item>
-          
           <Form.Item
             name="mother_enabled"
             label="Cho phép truy cập hệ thống"
             valuePropName="checked"
             initialValue={false}
           >
-            <Switch 
-              checked={motherEnabled} 
+            <Switch
+              checked={motherEnabled}
               onChange={handleMotherAccessChange}
             />
           </Form.Item>
@@ -665,15 +732,23 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
             </Text>
           )}
         </Card>
-        
-        <div style={{ marginTop: 16, padding: 16, backgroundColor: "#f5f5f5", borderRadius: 4 }}>
+        <div
+          style={{
+            marginTop: 16,
+            padding: 16,
+            backgroundColor: "#f5f5f5",
+            borderRadius: 4,
+          }}
+        >
           <Text type="secondary">
-            <strong>Lưu ý:</strong> Chỉ một phụ huynh được phép truy cập hệ thống. Nếu cả hai phụ huynh được chọn, hệ thống sẽ tự động chọn cha.
+            <strong>Lưu ý:</strong> Chỉ một phụ huynh được phép truy cập hệ
+            thống. Nếu cả hai phụ huynh được chọn, hệ thống sẽ tự động chọn cha.
           </Text>
         </div>
-        
         {/* Buttons */}
-        <Form.Item style={{ textAlign: "right", marginBottom: 0, marginTop: 16 }}>
+        <Form.Item
+          style={{ textAlign: "right", marginBottom: 0, marginTop: 16 }}
+        >
           <Space>
             <Button onClick={handleCancel}>Hủy</Button>
             <Button type="primary" htmlType="submit" loading={loading}>
