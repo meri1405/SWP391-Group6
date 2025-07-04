@@ -206,44 +206,6 @@ public class MedicationRequestService implements IMedicationRequestService {
         return requests.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
-    }    /**
-     * Auto-reject medication requests that are pending for more than 24 hours
-     * This method should be called by a scheduled job
-     * @return number of auto-rejected requests
-     */
-    @Transactional
-    @Override
-    public int autoRejectExpiredRequests() {
-        LocalDateTime cutoffDateTime = LocalDateTime.now().minusHours(24);
-        LocalDate cutoffDate = cutoffDateTime.toLocalDate();
-        
-        List<MedicationRequest> expiredRequests = medicationRequestRepository
-                .findByStatusAndRequestDateBefore("PENDING", cutoffDate);
-        
-        int rejectedCount = 0;
-        for (MedicationRequest request : expiredRequests) {
-            // Skip requests created less than 24 hours ago, even if they're from yesterday
-            if (request.getRequestDate().equals(cutoffDate)) {
-                // For requests created on the cutoff date, check if they're actually older than 24 hours
-                // This is a simplification since we don't have request time - in a real system, 
-                // you would store and check the exact timestamp
-                continue;
-            }
-            
-            request.setStatus("REJECTED");
-            request.setConfirm(true);
-            request.setNote("Tự động từ chối - Quá 24 giờ không được phê duyệt");
-            
-            // Delete all associated medication schedules
-            for (ItemRequest itemRequest : request.getItemRequests()) {
-                medicationScheduleService.deleteSchedulesForItemRequest(itemRequest.getId());
-            }
-            
-            medicationRequestRepository.save(request);
-            rejectedCount++;
-        }
-        
-        return rejectedCount;
     }
 
     /**
@@ -421,7 +383,8 @@ public class MedicationRequestService implements IMedicationRequestService {
                     itemDTO.setId(item.getId());
                     itemDTO.setItemName(item.getItemName());
                     itemDTO.setPurpose(item.getPurpose());
-                    itemDTO.setItemType(item.getItemType());                    itemDTO.setDosage(item.getDosage());
+                    itemDTO.setItemType(item.getItemType());                    
+                    itemDTO.setDosage(item.getDosage());
                     itemDTO.setFrequency(item.getFrequency());
                     itemDTO.setNote(item.getNote());
                     itemDTO.setStartDate(item.getStartDate());

@@ -146,17 +146,17 @@ public class MedicalEventService implements IMedicalEventService {
         if (parent != null) {
             String title = "Cảnh Báo Sự Kiện Y Tế: " + student.getFirstName() + " " + student.getLastName();
             StringBuilder message = new StringBuilder();
-            message.append("Con của bạn đã gặp phải một sự kiện y tế \n");
-            message.append("Loại: ").append(translateEventType(medicalEvent.getEventType())).append("\n");
-            message.append("Mức độ nghiêm trọng: ").append(translateSeverityLevel(medicalEvent.getSeverityLevel())).append("\n");
-            message.append("Thời gian: ").append(medicalEvent.getOccurrenceTime()).append("\n");
-            message.append("Địa điểm: ").append(medicalEvent.getLocation()).append("\n");
+            message.append("<p>Con của bạn đã gặp phải một sự kiện y tế</p>");
+            message.append("<p><strong>Loại:</strong> ").append(translateEventType(medicalEvent.getEventType())).append("</p>");
+            message.append("<p><strong>Mức độ nghiêm trọng:</strong> ").append(translateSeverityLevel(medicalEvent.getSeverityLevel())).append("</p>");
+            message.append("<p><strong>Thời gian:</strong> ").append(medicalEvent.getOccurrenceTime()).append("</p>");
+            message.append("<p><strong>Địa điểm:</strong> ").append(medicalEvent.getLocation()).append("</p>");
 
             if (medicalEvent.getFirstAidActions() != null && !medicalEvent.getFirstAidActions().isEmpty()) {
-                message.append("Sơ cứu đã thực hiện: ").append(medicalEvent.getFirstAidActions()).append("\n");
+                message.append("<p><strong>Sơ cứu đã thực hiện:</strong> ").append(medicalEvent.getFirstAidActions()).append("</p>");
             }
 
-            message.append("Vui lòng phản hồi hoặc liên hệ với y tá trường để biết thêm thông tin.");
+            message.append("<p>Vui lòng liên hệ với y tá trường để biết thêm thông tin.</p>");
 
             // Create notification using the correct method from INotificationService
             notificationService.createMedicalEventNotification(
@@ -284,10 +284,10 @@ public class MedicalEventService implements IMedicalEventService {
         if (parent != null) {
             String title = "Cập Nhật Sự Kiện Y Tế: " + student.getFirstName() + " " + student.getLastName();
             StringBuilder message = new StringBuilder();
-            message.append("Sự kiện y tế của con bạn đã được xử lý bởi đội ngũ y tế.\n");
-            message.append("Loại: ").append(translateEventType(medicalEvent.getEventType())).append("\n");
-            message.append("Xử lý lúc: ").append(medicalEvent.getProcessedTime()).append("\n");
-            message.append("Xử lý bởi: ").append(medicalEvent.getProcessedBy().getFullName()).append("\n");
+            message.append("<p>Sự kiện y tế của con bạn đã được xử lý bởi đội ngũ y tế.</p>");
+            message.append("<p><strong>Loại:</strong> ").append(translateEventType(medicalEvent.getEventType())).append("</p>");
+            message.append("<p><strong>Xử lý lúc:</strong> ").append(medicalEvent.getProcessedTime()).append("</p>");
+            message.append("<p><strong>Xử lý bởi:</strong> ").append(medicalEvent.getProcessedBy().getFullName()).append("</p>");
 
             // Create notification using the correct method from INotificationService
             notificationService.createMedicalEventNotification(
