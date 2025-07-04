@@ -26,7 +26,4 @@ public interface MedicationRequestRepository extends JpaRepository<MedicationReq
 
     // Find all medication requests by status
     List<MedicationRequest> findByStatus(String status);
-
-    // Find all medication requests by status and request date before specified date (for auto-rejection)
-    List<MedicationRequest> findByStatusAndRequestDateBefore(String status, LocalDate requestDate);
 }

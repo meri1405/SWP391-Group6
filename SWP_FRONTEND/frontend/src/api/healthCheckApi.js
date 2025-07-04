@@ -488,7 +488,12 @@ export const healthCheckApi = {
    */
   sendNotificationsToParents: async (campaignId, customMessage = null) => {
     try {
-      const payload = customMessage ? { message: customMessage } : {};
+      // Only include message in payload if it's a non-empty string after trimming
+      let payload = {};
+      if (customMessage && customMessage.trim().length > 0) {
+        payload = { message: customMessage.trim() };
+      }
+      
       const response = await healthCheckApiClient.post(
         `/nurse/health-check-campaigns/${campaignId}/send-notifications`,
         payload

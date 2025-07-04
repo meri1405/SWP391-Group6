@@ -315,10 +315,14 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
       message.success(`Đã tạo ${formsResponse.formsGenerated || eligibleStudents.length} phiếu khám sức khỏe`);
       
       // Step 2: Send notifications to parents
+      // Ensure customMessage is properly handled - if it's just whitespace, treat as null
+      const messageToSend = customMessage && customMessage.trim().length > 0 ? customMessage : null;
+      
       console.log('Step 2: Sending notifications to parents...');
+      console.log('Using custom message:', messageToSend ? 'Yes' : 'No (using default template)');
       message.loading('Đang gửi thông báo đến phụ huynh...', 0);
       
-      const notificationResponse = await healthCheckApi.sendNotificationsToParents(campaignId, customMessage);
+      const notificationResponse = await healthCheckApi.sendNotificationsToParents(campaignId, messageToSend);
       console.log('Notification response:', notificationResponse);
       
       message.destroy();

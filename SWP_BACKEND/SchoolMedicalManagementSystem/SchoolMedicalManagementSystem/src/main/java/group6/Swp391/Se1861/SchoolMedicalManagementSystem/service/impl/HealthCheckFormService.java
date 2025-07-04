@@ -81,9 +81,9 @@ public class HealthCheckFormService implements IHealthCheckFormService {
                 savedForm,
                 parent,
                 savedForm.getStudent(),
-                "Cảm ơn quý phụ huynh đã đồng ý cho con em tham gia đợt khám sức khỏe tại trường. \n" +
-                "Thời gian cụ thể của buổi khám sẽ được nhà trường thông báo sau.\n" +
-                "Trân trọng!",
+                "<p>Cảm ơn quý phụ huynh đã đồng ý cho con em tham gia đợt khám sức khỏe tại trường.</p>" +
+                "<p>Thời gian cụ thể của buổi khám sẽ được nhà trường thông báo sau.</p>" +
+                "<p><em>Trân trọng!</em></p>",
                 true
         );
 
@@ -117,10 +117,10 @@ public class HealthCheckFormService implements IHealthCheckFormService {
                 savedForm,
                 parent,
                 savedForm.getStudent(),
-                "Cảm ơn quý phụ huynh đã phản hồi về việc tham gia khám sức khỏe cho con em. \n" + 
-                "Chúng tôi ghi nhận rằng quý phụ huynh đã từ chối cho con tham gia đợt khám sức khỏe tại trường. " +"\n" +
-                "Nếu có bất kỳ thay đổi hoặc thắc mắc nào, xin vui lòng liên hệ với nhà trường. \n" +
-                "Trân trọng!",
+                "<p>Cảm ơn quý phụ huynh đã phản hồi về việc tham gia khám sức khỏe cho con em.</p>" + 
+                "<p>Chúng tôi ghi nhận rằng quý phụ huynh đã từ chối cho con tham gia đợt khám sức khỏe tại trường.</p>" +
+                "<p>Nếu có bất kỳ thay đổi hoặc thắc mắc nào, xin vui lòng liên hệ với nhà trường.</p>" +
+                "<p><em>Trân trọng!</em></p>",
                 false
         );
 
@@ -165,9 +165,9 @@ public class HealthCheckFormService implements IHealthCheckFormService {
                     form.getCampaign(),
                     form.getParent(),
                     form.getStudent(),
-                    "Phiếu khám sức khỏe của con em quý phụ huynh đã bị từ chối tự động do không có phản hồi trong thời gian quy định. \n" +
-                    "Nếu quý phụ huynh vẫn có nhu cầu cho con tham gia, xin vui lòng liên hệ với nhà trường để được hỗ trợ. \n" +
-                    "Trân trọng!"
+                    "<p>Phiếu khám sức khỏe của con em quý phụ huynh đã bị từ chối tự động do không có phản hồi trong thời gian quy định.</p>" +
+                    "<p>Nếu quý phụ huynh vẫn có nhu cầu cho con tham gia, xin vui lòng liên hệ với nhà trường để được hỗ trợ.</p>" +
+                    "<p><em>Trân trọng!</em></p>"
             );
 
             System.out.println("Auto-declined health check form ID: " + form.getId() + 
@@ -197,43 +197,52 @@ public class HealthCheckFormService implements IHealthCheckFormService {
         return formRepository.save(form);
     }
 
-    @Override
-    @Transactional
-    public void sendFormToParent(HealthCheckForm form) {
-        // Send invitation notification to parent
-        notificationService.sendHealthCheckCampaignParentInvitation(
-                form.getCampaign(),
-                form.getParent(),
-                form.getStudent(),
-                "Your child has been invited to participate in a health check campaign.",
-                form
-        );
-    }
 
     @Override
     @Transactional
     public void sendReminderNotifications() {
-        LocalDateTime reminderThreshold = LocalDateTime.now().minusDays(1); // Send reminder if form is 1 day old
+        // Calculate the time 24 hours before expiration
+        // Forms expire after 3 days, so we want to send reminder when forms are 2 days old
+        LocalDateTime reminderTriggerTime = LocalDateTime.now().minusDays(2);
         
+        // We also want to avoid sending reminders for forms that are too old (already expired)
+        LocalDateTime tooOldThreshold = LocalDateTime.now().minusDays(3).minusHours(1); // Add buffer to avoid edge cases
+        
+        // Find forms that:
+        // 1. Are still pending
+        // 2. Are around 2 days old (within a small window to account for scheduling precision)
+        // 3. Have not had a reminder sent yet
+        // 4. Are not already expired
         List<HealthCheckForm> formsNeedingReminder = formRepository.findFormsNeedingReminder(
                 FormStatus.PENDING,
-                reminderThreshold
+                reminderTriggerTime,
+                tooOldThreshold
         );
 
         for (HealthCheckForm form : formsNeedingReminder) {
+            // Calculate expiration time (3 days after form was sent)
+            LocalDateTime expirationTime = form.getSentAt().plusDays(3);
+            
             // Send reminder notification
             notificationService.sendHealthCheckCampaignParentInvitation(
                     form.getCampaign(),
                     form.getParent(),
                     form.getStudent(),
-                    "Nhắc nhở: Quý phụ huynh vui lòng phản hồi lời mời tham gia đợt khám sức khỏe tại trường dành cho con em. Việc phản hồi đúng hạn sẽ giúp nhà trường sắp xếp và tổ chức khám sức khỏe hiệu quả hơn.\n" +
-                    "Trân trọng cảm ơn!",
+                    "<p><strong>Nhắc nhở quan trọng:</strong> Quý phụ huynh vui lòng phản hồi lời mời tham gia đợt khám sức khỏe tại trường dành cho con em trước <strong>" + 
+                    expirationTime.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm, dd/MM/yyyy")) + 
+                    "</strong>. Sau thời hạn này, phiếu đồng ý sẽ tự động bị từ chối.</p>" +
+                    "<p>Việc phản hồi đúng hạn sẽ giúp nhà trường sắp xếp và tổ chức khám sức khỏe hiệu quả hơn.</p>" +
+                    "<p><em>Trân trọng cảm ơn!</em></p>",
                     form
             );
 
             // Mark reminder as sent
             form.setReminderSent(true);
             formRepository.save(form);
+            
+            System.out.println("Sent reminder for form ID: " + form.getId() + 
+                             " for student: " + form.getStudent().getFullName() + 
+                             ", expires at: " + expirationTime);
         }
     }
 
@@ -303,5 +312,22 @@ public class HealthCheckFormService implements IHealthCheckFormService {
     @Override
     public List<HealthCheckForm> getConfirmedFormsByCampaignId(Long campaignId) {
         return formRepository.findByCampaignIdAndConfirmed(campaignId, true);
+    }
+
+    @Override
+    public void sendFormToParent(HealthCheckForm form) {
+        // Get necessary information
+        User parent = form.getParent();
+        Student student = form.getStudent();
+        HealthCheckCampaign campaign = form.getCampaign();
+        
+        // Send notification to parent about the health check form
+        notificationService.sendHealthCheckCampaignParentInvitation(
+            campaign,
+            parent,
+            student,
+            "Please review and respond to the health check consent form for your child.",
+            form
+        );
     }
 }

@@ -67,23 +67,14 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
         campaign.setCreatedAt(LocalDateTime.now());
         campaign.setUpdatedAt(LocalDateTime.now());
 
-        // Always calculate target count when creating campaign
-        System.out.println("=== CAMPAIGN CREATION DEBUG ===");
-        System.out.println("Campaign name: " + name);
-        System.out.println("Min age: " + minAge + ", Max age: " + maxAge);
-        System.out.println("Target classes: " + targetClasses);
-        System.out.println("Calculating target count...");
         int targetCount = calculateTargetCountInternal(minAge, maxAge, targetClasses);
-        System.out.println("Calculated target count: " + targetCount);
+
         campaign.setTargetCount(targetCount);
 
         HealthCheckCampaign savedCampaign = campaignRepository.save(campaign);
-        System.out.println("Saved campaign with target count: " + savedCampaign.getTargetCount());
 
         // Notify managers about a new campaign pending approval
         int estimatedCount = savedCampaign.getTargetCount();
-        System.out.println("Notifying managers with estimated count: " + estimatedCount);
-        System.out.println("=== END CAMPAIGN CREATION DEBUG ===");
         notificationService.notifyManagersAboutHealthCheckCampaignApproval(savedCampaign, estimatedCount);
 
         return savedCampaign;
@@ -157,6 +148,15 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
         if (campaign.getStatus() != CampaignStatus.PENDING) {
             throw new RuntimeException("Cannot approve campaign that is not in PENDING status");
         }
+        
+        // Check if the campaign was created within the last 24 hours
+        LocalDateTime creationTime = campaign.getCreatedAt();
+        LocalDateTime currentTime = LocalDateTime.now();
+        LocalDateTime approvalDeadline = creationTime.plusHours(24);
+        
+        if (currentTime.isAfter(approvalDeadline)) {
+            throw new RuntimeException("Approval window expired. Campaigns must be approved within 24 hours of creation.");
+        }
 
         campaign.setStatus(CampaignStatus.APPROVED);
         campaign.setApprovedBy(manager);
@@ -221,6 +221,9 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
 
         // Notify manager about campaign scheduling and target count
         notificationService.notifyManagerAboutHealthCheckCampaignScheduling(savedCampaign, targetCount);
+        
+        // Update appointment information for all confirmed forms
+        updateAppointmentInfoForForms(savedCampaign);
         
         // Send detailed schedule notifications to parents
         notificationService.notifyParentsAboutHealthCheckSchedule(savedCampaign);
@@ -889,6 +892,12 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
             .findByCampaignAndStudent(campaign, student)
             .orElseThrow(() -> new RuntimeException("Health check form not found for student ID: " + student.getStudentID() + " and campaign ID: " + campaign.getId()));
         
+        // Set check-in status and time
+        LocalDateTime now = LocalDateTime.now();
+        form.setCheckedInAt(now);
+        form.setCheckedIn(true);
+        healthCheckFormRepository.save(form);
+        
         // Get the student's health profile
         HealthProfile healthProfile = student.getHealthProfile();
         if (healthProfile == null) {
@@ -1406,5 +1415,41 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
         }
         
         return categoryData;
+    }
+
+    /**
+     * Update appointment information for all health check forms associated with the campaign
+     * Sets the appointment location to the campaign location and appointment time based on the timeslot
+     */
+    private void updateAppointmentInfoForForms(HealthCheckCampaign campaign) {
+        // Find all health check forms for this campaign
+        List<HealthCheckForm> forms = healthCheckFormRepository.findByCampaign(campaign);
+        
+        // Calculate appointment date (use campaign start date)
+        LocalDateTime appointmentDate = campaign.getStartDate().atStartOfDay();
+        
+        // Determine the time based on the time slot
+        LocalDateTime appointmentTime;
+        if (campaign.getTimeSlot() == TimeSlot.MORNING) {
+            // Morning slot (8:00 AM)
+            appointmentTime = appointmentDate.withHour(8).withMinute(0);
+        } else if (campaign.getTimeSlot() == TimeSlot.AFTERNOON) {
+            // Afternoon slot (1:00 PM)
+            appointmentTime = appointmentDate.withHour(13).withMinute(0);
+        } else {
+            // Default to morning if not specified
+            appointmentTime = appointmentDate.withHour(8).withMinute(0);
+        }
+        
+        System.out.println("DEBUG: Updating appointment info for " + forms.size() + " forms");
+        System.out.println("DEBUG: Setting appointment location to: " + campaign.getLocation());
+        System.out.println("DEBUG: Setting appointment time to: " + appointmentTime);
+        
+        // Update all forms with the appointment information
+        for (HealthCheckForm form : forms) {
+            form.setAppointmentLocation(campaign.getLocation());
+            form.setAppointmentTime(appointmentTime);
+            healthCheckFormRepository.save(form);
+        }
     }
 }
