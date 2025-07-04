@@ -84,15 +84,17 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
         // Validate parent is related to student        
         if (!isParentRelatedToStudent(parent, student)) {
             throw new ForbiddenAccessException("Parent is not associated with this student");
-        }        // Check existing profiles for this student to enforce business rules
-        List<HealthProfile> existingProfiles = healthProfileRepository.findByStudentStudentIDAndParentId(
+        }        // Check if student already has a health profile
+        Optional<HealthProfile> existingProfile = healthProfileRepository.findSingleByStudentStudentIDAndParentId(
             healthProfileDTO.getStudentId(), parentId);
 
-        // Only prevent creating new profiles if there's a PENDING profile
-        boolean hasPendingProfile = existingProfiles.stream()
-            .anyMatch(profile -> profile.getStatus() == ProfileStatus.PENDING);
-        if (hasPendingProfile) {
-            throw new BadRequestException("Cannot create new profile when a pending profile exists. Please wait for review or edit the existing pending profile.");
+        if (existingProfile.isPresent()) {
+            HealthProfile profile = existingProfile.get();
+            if (profile.getStatus() == ProfileStatus.PENDING) {
+                throw new BadRequestException("Cannot create new profile when a pending profile exists. Please wait for review or edit the existing pending profile.");
+            }
+            // If there's an approved profile, we can't create another one
+            throw new BadRequestException("Student already has a health profile. You can update the existing profile instead.");
         }
 
         // Create health profile
@@ -286,13 +288,13 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
     }
 
     /**
-     * Get health profiles by student ID, ensuring the parent has access to them
+     * Get health profile by student ID, ensuring the parent has access to it
      * @param parentId ID of the parent user
      * @param studentId ID of the student
-     * @return list of health profiles for the student
+     * @return single health profile for the student
      */
     @Override
-    public List<HealthProfileDTO> getHealthProfilesByStudentId(Long parentId, Long studentId) {
+    public HealthProfileDTO getHealthProfileByStudentId(Long parentId, Long studentId) {
         // Validate parent exists
         User parent = userRepository.findById(parentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Parent not found"));
@@ -311,23 +313,25 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
             throw new ForbiddenAccessException("Parent is not associated with this student");
         }
 
-        // Get health profiles
-        List<HealthProfile> healthProfiles = healthProfileRepository.findByStudentStudentIDAndParentId(studentId, parentId);
+        // Get the single health profile for this student
+        Optional<HealthProfile> healthProfileOpt = healthProfileRepository.findSingleByStudentStudentIDAndParentId(studentId, parentId);
 
-        // Convert to DTOs
-        return healthProfiles.stream()
-                .map(this::convertToDetailedDTO)
-                .collect(Collectors.toList());
+        // Return single profile or null
+        if (healthProfileOpt.isPresent()) {
+            return convertToDetailedDTO(healthProfileOpt.get());
+        } else {
+            return null;
+        }
     }
 
     /**
-     * Get approved health profiles by student ID, ensuring the parent has access to them
+     * Get approved health profile by student ID, ensuring the parent has access to it
      * @param parentId ID of the parent user
      * @param studentId ID of the student
-     * @return list of approved health profiles for the student
+     * @return single approved health profile for the student
      */
     @Override
-    public List<HealthProfileDTO> getApprovedHealthProfilesByStudentId(Long parentId, Long studentId) {
+    public HealthProfileDTO getApprovedHealthProfileByStudentId(Long parentId, Long studentId) {
         // Validate parent exists
         User parent = userRepository.findById(parentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Parent not found"));
@@ -346,18 +350,15 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
             throw new ForbiddenAccessException("Parent is not associated with this student");
         }
 
-        // Get approved health profiles only
-        List<HealthProfile> healthProfiles = healthProfileRepository.findByStudentStudentIDAndParentId(studentId, parentId);
+        // Get the single health profile for this student  
+        Optional<HealthProfile> healthProfileOpt = healthProfileRepository.findSingleByStudentStudentIDAndParentId(studentId, parentId);
 
-        // Filter for approved profiles only
-        List<HealthProfile> approvedProfiles = healthProfiles.stream()
-                .filter(profile -> profile.getStatus() == ProfileStatus.APPROVED)
-                .collect(Collectors.toList());
-
-        // Convert to DTOs
-        return approvedProfiles.stream()
-                .map(this::convertToDetailedDTO)
-                .collect(Collectors.toList());
+        // Check if profile exists and is approved
+        if (healthProfileOpt.isPresent() && healthProfileOpt.get().getStatus() == ProfileStatus.APPROVED) {
+            return convertToDetailedDTO(healthProfileOpt.get());
+        } else {
+            return null;
+        }
     }
 
     /**
@@ -1153,36 +1154,31 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
                 return false;
             }
 
-            // Check existing profiles
-            List<HealthProfile> existingProfiles = healthProfileRepository.findByStudentStudentIDAndParentId(studentId, parentId);
+            // Check if student already has a health profile
+            Optional<HealthProfile> existingProfile = healthProfileRepository.findSingleByStudentStudentIDAndParentId(studentId, parentId);
 
-            if (existingProfiles.isEmpty()) {
-                return true; // No existing profiles, can create new one
+            if (existingProfile.isEmpty()) {
+                return true; // No existing profile, can create new one
             }
 
-            // Cannot create if there's an APPROVED profile
-            boolean hasApprovedProfile = existingProfiles.stream()
-                .anyMatch(profile -> profile.getStatus() == ProfileStatus.APPROVED);
-            if (hasApprovedProfile) {
+            HealthProfile profile = existingProfile.get();
+            
+            // Cannot create if there's an APPROVED profile (one-to-one relationship allows only one)
+            if (profile.getStatus() == ProfileStatus.APPROVED) {
                 return false;
             }
 
             // Cannot create if there's a PENDING profile
-            boolean hasPendingProfile = existingProfiles.stream()
-                .anyMatch(profile -> profile.getStatus() == ProfileStatus.PENDING);
-            if (hasPendingProfile) {
+            if (profile.getStatus() == ProfileStatus.PENDING) {
                 return false;
             }
 
             // Cannot create if there's a REJECTED profile that was previously approved
-            boolean hasEditableRejectedProfile = existingProfiles.stream()
-                .anyMatch(profile -> profile.getStatus() == ProfileStatus.REJECTED && 
-                         wasProfilePreviouslyApproved(profile));
-            if (hasEditableRejectedProfile) {
+            if (profile.getStatus() == ProfileStatus.REJECTED && wasProfilePreviouslyApproved(profile)) {
                 return false;
             }
 
-            // Can create new profile (only for first-time rejected profiles)
+            // Can create new profile (only for first-time rejected profiles or when no profile exists)
             return true;
         } catch (Exception e) {
             return false;

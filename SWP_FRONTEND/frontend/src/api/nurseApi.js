@@ -267,35 +267,6 @@ export const nurseApi = {
     }
   },
 
-  // Cập nhật hồ sơ sức khỏe
-  updateHealthProfile: async (profileId, healthProfileData) => {
-    try {
-      console.log(
-        `Updating health profile with ID: ${profileId}`,
-        healthProfileData
-      );
-      const token = getTokenFromStorage();
-      const authAxios = createAuthAxios(token);
-      const response = await authAxios.put(
-        `/api/nurse/health-profiles/${profileId}`,
-        healthProfileData
-      );
-      console.log("Update profile response:", response.data);
-
-      return {
-        success: true,
-        data: response.data,
-        message: "Cập nhật hồ sơ sức khỏe thành công",
-      };
-    } catch (error) {
-      console.error("Error updating health profile:", error);
-      return {
-        success: false,
-        message: error.response?.data?.message || "Không thể cập nhật hồ sơ",
-      };
-    }
-  },
-
   // Duyệt hồ sơ sức khỏe
   approveHealthProfile: async (profileId, nurseNote = "") => {
     try {

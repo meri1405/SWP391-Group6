@@ -24,11 +24,6 @@ public interface ISchoolNurseHealthProfileService {
     HealthProfileDTO getHealthProfileById(Long profileId);
 
     /**
-     * Update health profile (school nurse can modify profiles)
-     */
-    HealthProfileDTO updateHealthProfile(Long nurseId, Long profileId, HealthProfileDTO healthProfileDTO);
-
-    /**
      * Approve health profile
      */
     HealthProfileDTO approveHealthProfile(Long nurseId, Long profileId, String nurseNote);

@@ -4,7 +4,6 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.VaccinationRecordD
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.*;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.VaccinationRecordRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.VaccinationHistoryRepository;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.HealthProfileRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IVaccinationRecordService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -21,7 +20,6 @@ public class VaccinationRecordService implements IVaccinationRecordService {
 
     private final VaccinationRecordRepository recordRepository;
     private final VaccinationHistoryRepository historyRepository;
-    private final HealthProfileRepository healthProfileRepository;
 
     @Override
     public VaccinationRecordDTO getRecordById(Long id) {
@@ -181,16 +179,11 @@ public class VaccinationRecordService implements IVaccinationRecordService {
             return;
         }
 
-        // Find the student's active health profile
-        Optional<HealthProfile> healthProfileOpt = healthProfileRepository
-                .findByStudentAndStatus(record.getStudent(), 
-                        group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.ProfileStatus.APPROVED);
-        
-        if (healthProfileOpt.isEmpty()) {
-            throw new IllegalArgumentException("No active health profile found for student");
+        // Get the student's health profile (one-to-one relationship)
+        HealthProfile healthProfile = record.getStudent().getHealthProfile();
+        if (healthProfile == null) {
+            throw new IllegalArgumentException("No health profile found for student");
         }
-
-        HealthProfile healthProfile = healthProfileOpt.get();
 
         // Check if history entry already exists
         List<VaccinationHistory> existingHistories = historyRepository
