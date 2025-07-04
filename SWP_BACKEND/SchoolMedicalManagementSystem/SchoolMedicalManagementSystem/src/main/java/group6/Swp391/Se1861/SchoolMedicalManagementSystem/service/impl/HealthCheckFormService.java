@@ -201,20 +201,37 @@ public class HealthCheckFormService implements IHealthCheckFormService {
     @Override
     @Transactional
     public void sendReminderNotifications() {
-        LocalDateTime reminderThreshold = LocalDateTime.now().minusDays(1); // Send reminder if form is 1 day old
+        // Calculate the time 24 hours before expiration
+        // Forms expire after 3 days, so we want to send reminder when forms are 2 days old
+        LocalDateTime reminderTriggerTime = LocalDateTime.now().minusDays(2);
         
+        // We also want to avoid sending reminders for forms that are too old (already expired)
+        LocalDateTime tooOldThreshold = LocalDateTime.now().minusDays(3).minusHours(1); // Add buffer to avoid edge cases
+        
+        // Find forms that:
+        // 1. Are still pending
+        // 2. Are around 2 days old (within a small window to account for scheduling precision)
+        // 3. Have not had a reminder sent yet
+        // 4. Are not already expired
         List<HealthCheckForm> formsNeedingReminder = formRepository.findFormsNeedingReminder(
                 FormStatus.PENDING,
-                reminderThreshold
+                reminderTriggerTime,
+                tooOldThreshold
         );
 
         for (HealthCheckForm form : formsNeedingReminder) {
+            // Calculate expiration time (3 days after form was sent)
+            LocalDateTime expirationTime = form.getSentAt().plusDays(3);
+            
             // Send reminder notification
             notificationService.sendHealthCheckCampaignParentInvitation(
                     form.getCampaign(),
                     form.getParent(),
                     form.getStudent(),
-                    "<p><strong>Nhắc nhở:</strong> Quý phụ huynh vui lòng phản hồi lời mời tham gia đợt khám sức khỏe tại trường dành cho con em. Việc phản hồi đúng hạn sẽ giúp nhà trường sắp xếp và tổ chức khám sức khỏe hiệu quả hơn.</p>" +
+                    "<p><strong>Nhắc nhở quan trọng:</strong> Quý phụ huynh vui lòng phản hồi lời mời tham gia đợt khám sức khỏe tại trường dành cho con em trước <strong>" + 
+                    expirationTime.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm, dd/MM/yyyy")) + 
+                    "</strong>. Sau thời hạn này, phiếu đồng ý sẽ tự động bị từ chối.</p>" +
+                    "<p>Việc phản hồi đúng hạn sẽ giúp nhà trường sắp xếp và tổ chức khám sức khỏe hiệu quả hơn.</p>" +
                     "<p><em>Trân trọng cảm ơn!</em></p>",
                     form
             );
@@ -222,6 +239,10 @@ public class HealthCheckFormService implements IHealthCheckFormService {
             // Mark reminder as sent
             form.setReminderSent(true);
             formRepository.save(form);
+            
+            System.out.println("Sent reminder for form ID: " + form.getId() + 
+                             " for student: " + form.getStudent().getFullName() + 
+                             ", expires at: " + expirationTime);
         }
     }
 

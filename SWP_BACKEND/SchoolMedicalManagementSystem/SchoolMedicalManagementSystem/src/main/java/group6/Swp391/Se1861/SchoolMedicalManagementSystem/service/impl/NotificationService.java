@@ -1682,6 +1682,96 @@ public class NotificationService implements INotificationService {
     }
     
     /**
+     * Send manager approval reminder for health check campaigns
+     */
+    @Transactional
+    @Override
+    public void sendManagerApprovalReminder(HealthCheckCampaign campaign, User manager) {
+        if (manager == null) {
+            System.out.println("Warning: Cannot send approval reminder - manager is null for campaign ID: " + campaign.getId());
+            return;
+        }
+
+        String title = "NHẮC NHỞ PHẢN HỒI CHIẾN DỊCH";
+        String message = "<p>Chiến dịch khám sức khỏe '<strong>" + campaign.getName() + 
+                        "</strong>' đã được tạo hơn 12 giờ và đang chờ phê duyệt của bạn.</p>" +
+                        "<p>Vui lòng xem xét và phản hồi sớm nhất có thể.</p>" +
+                        "<p>Nếu không có phản hồi trong vòng 24 giờ kể từ khi tạo, chiến dịch sẽ tự động bị từ chối.</p>";
+        String notificationType = "CAMPAIGN_APPROVAL_REMINDER";
+
+        // Create notification
+        Notification notification = new Notification();
+        notification.setTitle(title);
+        notification.setMessage(message);
+        notification.setNotificationType(notificationType);
+        notification.setRecipient(manager);
+        notification.setHealthCheckCampaign(campaign);
+
+        Notification savedNotification = notificationRepository.save(notification);
+
+        try {
+            // Send real-time notification via WebSocket
+            if (manager.getUsername() != null) {
+                NotificationDTO notificationDTO = convertToDTO(savedNotification);
+                messagingTemplate.convertAndSendToUser(
+                        manager.getUsername(),
+                        "/queue/notifications",
+                        notificationDTO
+                );
+                System.out.println("Manager approval reminder sent to: " + manager.getUsername() + 
+                                 " for campaign: " + campaign.getName());
+            }
+        } catch (Exception e) {
+            System.err.println("Error sending WebSocket notification for manager approval reminder: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Send auto-rejection notification for health check campaigns
+     */
+    @Transactional
+    @Override
+    public void sendCampaignAutoRejectionNotification(HealthCheckCampaign campaign, User creator) {
+        if (creator == null) {
+            System.out.println("Warning: Cannot send auto-rejection notification - creator is null for campaign ID: " + campaign.getId());
+            return;
+        }
+
+        String title = "CHIẾN DỊCH TỰ ĐỘNG BỊ TỪ CHỐI";
+        String message = "<p>Chiến dịch khám sức khỏe '<strong>" + campaign.getName() + 
+                        "</strong>' đã bị từ chối tự động do không nhận được phản hồi từ quản lý trong vòng 24 giờ.</p>" +
+                        "<p>Bạn có thể tạo chiến dịch mới nếu cần thiết.</p>" +
+                        "<p>Thời gian từ chối: <strong>" + new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm").format(new Date()) + "</strong></p>";
+        String notificationType = "CAMPAIGN_AUTO_REJECTED";
+
+        // Create notification
+        Notification notification = new Notification();
+        notification.setTitle(title);
+        notification.setMessage(message);
+        notification.setNotificationType(notificationType);
+        notification.setRecipient(creator);
+        notification.setHealthCheckCampaign(campaign);
+
+        Notification savedNotification = notificationRepository.save(notification);
+
+        try {
+            // Send real-time notification via WebSocket
+            if (creator.getUsername() != null) {
+                NotificationDTO notificationDTO = convertToDTO(savedNotification);
+                messagingTemplate.convertAndSendToUser(
+                        creator.getUsername(),
+                        "/queue/notifications",
+                        notificationDTO
+                );
+                System.out.println("Auto-rejection notification sent to: " + creator.getUsername() + 
+                                 " for campaign: " + campaign.getName());
+            }
+        } catch (Exception e) {
+            System.err.println("Error sending WebSocket notification for auto-rejection: " + e.getMessage());
+        }
+    }
+
+    /**
      * Send health check schedule notification to parents
      */
     @Transactional
