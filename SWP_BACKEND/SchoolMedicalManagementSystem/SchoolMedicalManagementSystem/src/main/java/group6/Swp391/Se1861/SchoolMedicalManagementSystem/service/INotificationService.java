@@ -306,4 +306,20 @@ public interface INotificationService {
      * Send health check schedule notification to parents
      */
     void notifyParentsAboutHealthCheckSchedule(HealthCheckCampaign campaign);
+
+    /**
+     * Send a reminder to managers about a pending health check campaign that needs approval
+     * This is sent when a campaign has been pending for 12 hours
+     * @param campaign The pending campaign
+     * @param manager The manager to send the reminder to
+     */
+    void sendManagerApprovalReminder(HealthCheckCampaign campaign, User manager);
+
+    /**
+     * Send auto-rejection notification when a campaign is automatically rejected
+     * This is sent when a campaign has been pending for 24 hours without manager response
+     * @param campaign The campaign that was auto-rejected
+     * @param creator The creator of the campaign to notify
+     */
+    void sendCampaignAutoRejectionNotification(HealthCheckCampaign campaign, User creator);
 }

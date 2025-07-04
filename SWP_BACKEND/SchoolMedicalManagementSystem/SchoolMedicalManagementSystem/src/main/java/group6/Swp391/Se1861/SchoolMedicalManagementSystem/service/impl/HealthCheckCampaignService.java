@@ -67,23 +67,14 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
         campaign.setCreatedAt(LocalDateTime.now());
         campaign.setUpdatedAt(LocalDateTime.now());
 
-        // Always calculate target count when creating campaign
-        System.out.println("=== CAMPAIGN CREATION DEBUG ===");
-        System.out.println("Campaign name: " + name);
-        System.out.println("Min age: " + minAge + ", Max age: " + maxAge);
-        System.out.println("Target classes: " + targetClasses);
-        System.out.println("Calculating target count...");
         int targetCount = calculateTargetCountInternal(minAge, maxAge, targetClasses);
-        System.out.println("Calculated target count: " + targetCount);
+
         campaign.setTargetCount(targetCount);
 
         HealthCheckCampaign savedCampaign = campaignRepository.save(campaign);
-        System.out.println("Saved campaign with target count: " + savedCampaign.getTargetCount());
 
         // Notify managers about a new campaign pending approval
         int estimatedCount = savedCampaign.getTargetCount();
-        System.out.println("Notifying managers with estimated count: " + estimatedCount);
-        System.out.println("=== END CAMPAIGN CREATION DEBUG ===");
         notificationService.notifyManagersAboutHealthCheckCampaignApproval(savedCampaign, estimatedCount);
 
         return savedCampaign;
@@ -156,6 +147,15 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
         // Only allow approval if the campaign is in PENDING status
         if (campaign.getStatus() != CampaignStatus.PENDING) {
             throw new RuntimeException("Cannot approve campaign that is not in PENDING status");
+        }
+        
+        // Check if the campaign was created within the last 24 hours
+        LocalDateTime creationTime = campaign.getCreatedAt();
+        LocalDateTime currentTime = LocalDateTime.now();
+        LocalDateTime approvalDeadline = creationTime.plusHours(24);
+        
+        if (currentTime.isAfter(approvalDeadline)) {
+            throw new RuntimeException("Approval window expired. Campaigns must be approved within 24 hours of creation.");
         }
 
         campaign.setStatus(CampaignStatus.APPROVED);
