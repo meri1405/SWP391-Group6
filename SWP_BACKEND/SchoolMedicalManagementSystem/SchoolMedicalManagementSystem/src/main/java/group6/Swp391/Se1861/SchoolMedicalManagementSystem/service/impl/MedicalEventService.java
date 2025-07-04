@@ -6,7 +6,6 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.MedicalSupplyUsage
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.exception.ResourceNotFoundException;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.*;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.EventType;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.ProfileStatus;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.SeverityLevel;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.*;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IMedicalEventService;
@@ -33,7 +32,6 @@ public class MedicalEventService implements IMedicalEventService {
     private final StudentRepository studentRepository;
     private final UserRepository userRepository;
     private final INotificationService notificationService;
-    private final HealthProfileRepository healthProfileRepository;
 
     @Override
     @Transactional
@@ -57,9 +55,11 @@ public class MedicalEventService implements IMedicalEventService {
         medicalEvent.setStudent(student);
         medicalEvent.setCreatedBy(createdBy);
 
-        // Find the student's most recent APPROVED health profile and associate the event with it
-        HealthProfile healthProfile = healthProfileRepository.findTopByStudentAndStatusOrderByCreatedAtDesc(student, ProfileStatus.APPROVED)
-                .orElseThrow(() -> new ResourceNotFoundException("No approved health profile found for student id: " + student.getStudentID()));
+        // Get the student's health profile (one-to-one relationship)
+        HealthProfile healthProfile = student.getHealthProfile();
+        if (healthProfile == null) {
+            throw new ResourceNotFoundException("No health profile found for student id: " + student.getStudentID());
+        }
 
         medicalEvent.setHealthProfile(healthProfile);
 

@@ -89,41 +89,6 @@ public class SchoolNurseHealthProfileService implements ISchoolNurseHealthProfil
     }
 
     /**
-     * Update a health profile
-     * @param nurseId ID of the nurse user
-     * @param profileId ID of the health profile
-     * @param healthProfileDTO updated health profile data
-     * @return updated health profile
-     */
-    @Transactional
-    @Override
-    public HealthProfileDTO updateHealthProfile(Long nurseId, Long profileId, HealthProfileDTO healthProfileDTO) {
-        // Validate nurse exists
-        User nurse = userRepository.findById(nurseId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Nurse not found"));
-
-        // Check if the user has SCHOOLNURSE role
-        if (!nurse.getRole().getRoleName().equals("SCHOOLNURSE")) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only school nurses can update health profiles");
-        }
-
-        // Get health profile
-        HealthProfile healthProfile = healthProfileRepository.findById(profileId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Health profile not found"));
-
-        // Update basic information
-        healthProfile.setWeight(healthProfileDTO.getWeight());
-        healthProfile.setHeight(healthProfileDTO.getHeight());
-        healthProfile.setNote(healthProfileDTO.getNote());
-        healthProfile.setUpdatedAt(LocalDate.now());
-
-        // Save updated profile
-        HealthProfile updatedProfile = healthProfileRepository.save(healthProfile);
-
-        return convertToDetailedDTO(updatedProfile);
-    }
-
-    /**
      * Approve a health profile
      * @param nurseId ID of the nurse user
      * @param profileId ID of the health profile

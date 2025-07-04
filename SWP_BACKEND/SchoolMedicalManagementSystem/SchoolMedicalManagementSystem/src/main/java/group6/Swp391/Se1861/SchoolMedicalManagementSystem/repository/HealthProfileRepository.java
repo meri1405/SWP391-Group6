@@ -55,4 +55,16 @@ public interface HealthProfileRepository extends JpaRepository<HealthProfile, Lo
 
     // Find health profile by student and status
     Optional<HealthProfile> findByStudentAndStatus(Student student, ProfileStatus status);
+    
+    // Single health profile methods for one-to-one relationship
+    // Find single health profile by student ID and parent ID (for the new one-to-one relationship)
+    @Query("SELECT hp FROM HealthProfile hp WHERE hp.student.studentID = :studentId AND hp.parent.id = :parentId")
+    Optional<HealthProfile> findSingleByStudentStudentIDAndParentId(@Param("studentId") Long studentId, @Param("parentId") Long parentId);
+    
+    // Find single health profile by student ID
+    @Query("SELECT hp FROM HealthProfile hp WHERE hp.student.studentID = :studentId")
+    Optional<HealthProfile> findSingleByStudentStudentID(@Param("studentId") Long studentId);
+    
+    // Find single health profile by student
+    Optional<HealthProfile> findSingleByStudent(Student student);
 }

@@ -167,6 +167,23 @@ export const parentApi = {
     }
   },
 
+  getHealthProfileByStudentId: async (
+    studentId,
+    token = getTokenFromStorage()
+  ) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.get(
+        `/api/parent/students/${studentId}/health-profile`
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching health profile by student ID:", error);
+      throw error;
+    }
+  },
+
+  // Backward compatibility: returns array for legacy code
   getHealthProfilesByStudentId: async (
     studentId,
     token = getTokenFromStorage()
@@ -179,6 +196,22 @@ export const parentApi = {
       return response.data;
     } catch (error) {
       console.error("Error fetching health profiles by student ID:", error);
+      throw error;
+    }
+  },
+
+  getApprovedHealthProfileByStudentId: async (
+    studentId,
+    token = getTokenFromStorage()
+  ) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.get(
+        `/api/parent/students/${studentId}/health-profile/approved`
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching approved health profile by student ID:", error);
       throw error;
     }
   },

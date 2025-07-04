@@ -8,8 +8,6 @@ import {
   Modal,
   Form,
   Input,
-  InputNumber,
-  Select,
   Tabs,
   List,
   Descriptions,
@@ -26,7 +24,6 @@ import {
 } from "antd";
 import {
   EyeOutlined,
-  EditOutlined,
   CheckOutlined,
   CloseOutlined,
   FileTextOutlined,
@@ -44,7 +41,6 @@ import relativeTime from "dayjs/plugin/relativeTime";
 dayjs.extend(relativeTime);
 
 const { TextArea } = Input;
-const { Option } = Select;
 const { Title, Text } = Typography;
 const { Panel } = Collapse;
 
@@ -53,11 +49,9 @@ const NurseHealthProfiles = () => {
   const [loading, setLoading] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
-  const [editModalVisible, setEditModalVisible] = useState(false);
   const [approveModalVisible, setApproveModalVisible] = useState(false);
   const [rejectModalVisible, setRejectModalVisible] = useState(false);
   const [statusFilter, setStatusFilter] = useState("PENDING");
-  const [form] = Form.useForm();
   const [approveForm] = Form.useForm();
   const [rejectForm] = Form.useForm();
   const [actionLoading, setActionLoading] = useState(false);
@@ -261,13 +255,6 @@ const NurseHealthProfiles = () => {
           </Tooltip>
           {record.status === "PENDING" && (
             <>
-              <Tooltip title="Chỉnh sửa">
-                <Button
-                  type="link"
-                  icon={<EditOutlined />}
-                  onClick={() => handleEdit(record)}
-                />
-              </Tooltip>
               <Tooltip title="Duyệt">
                 <Button
                   type="link"
@@ -317,29 +304,6 @@ const NurseHealthProfiles = () => {
     }
   };
 
-  const handleEdit = async (profile) => {
-    try {
-      setLoading(true);
-      const response = await nurseApi.getHealthProfileDetail(profile.id);
-      const detailProfile = response.success ? response.data : response;
-      console.log("Detail profile for edit:", detailProfile);
-      console.log("BloodType for edit:", detailProfile.bloodType);
-      setSelectedProfile(detailProfile);
-      form.setFieldsValue({
-        weight: detailProfile.weight,
-        height: detailProfile.height,
-        bloodType: detailProfile.bloodType,
-        note: detailProfile.note,
-      });
-      setEditModalVisible(true);
-    } catch (error) {
-      console.error("Error loading for edit:", error);
-      message.error("Không thể tải thông tin hồ sơ để chỉnh sửa.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleApprove = (profile) => {
     setSelectedProfile(profile);
     setApproveModalVisible(true);
@@ -357,57 +321,6 @@ const NurseHealthProfiles = () => {
     // Clear form
     if (rejectForm) {
       rejectForm.resetFields();
-    }
-  };
-
-  const handleSaveEdit = async () => {
-    try {
-      const values = await form.validateFields();
-      setActionLoading(true);
-      // Create update payload with only the fields that need to be updated
-      const updatePayload = {
-        weight: values.weight,
-        height: values.height,
-        bloodType: values.bloodType,
-        note: values.note,
-      };
-
-      console.log(
-        `Updating profile ${selectedProfile.id} with data:`,
-        updatePayload
-      );
-
-      const response = await nurseApi.updateHealthProfile(
-        selectedProfile.id,
-        updatePayload
-      );
-      console.log("Profile update response:", response);
-
-      if (response.success) {
-        message.success(response.message || "Cập nhật hồ sơ thành công");
-        setEditModalVisible(false);
-        form.resetFields();
-
-        // Refresh the profile list
-        await loadHealthProfiles();
-
-        // If the detail modal is still open, refresh the profile details
-        if (detailModalVisible) {
-          const refreshResponse = await nurseApi.getHealthProfileDetail(
-            selectedProfile.id
-          );
-          if (refreshResponse.success && refreshResponse.data) {
-            setSelectedProfile(refreshResponse.data);
-          }
-        }
-      } else {
-        message.error(response.message || "Không thể cập nhật hồ sơ sức khỏe.");
-      }
-    } catch (error) {
-      console.error("Error updating profile:", error);
-      message.error("Có lỗi xảy ra khi cập nhật hồ sơ. Vui lòng thử lại sau.");
-    } finally {
-      setActionLoading(false);
     }
   };
 
@@ -915,13 +828,6 @@ const NurseHealthProfiles = () => {
                   Từ chối
                 </Button>,
                 <Button
-                  key="edit"
-                  onClick={() => handleEdit(selectedProfile)}
-                  icon={<EditOutlined />}
-                >
-                  Chỉnh sửa
-                </Button>,
-                <Button
                   key="approve"
                   type="primary"
                   onClick={() => handleApprove(selectedProfile)}
@@ -1087,83 +993,6 @@ const NurseHealthProfiles = () => {
             </Collapse>
           </div>
         )}
-      </Modal>
-
-      {/* Edit Modal */}
-      <Modal
-        title={
-          <span>
-            <EditOutlined /> Chỉnh sửa hồ sơ sức khỏe
-          </span>
-        }
-        open={editModalVisible}
-        onCancel={() => setEditModalVisible(false)}
-        onOk={handleSaveEdit}
-        confirmLoading={actionLoading}
-        width={600}
-        centered
-      >
-        <Form form={form} layout="vertical">
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                label="Cân nặng (kg)"
-                name="weight"
-                rules={[{ required: true, message: "Vui lòng nhập cân nặng" }]}
-              >
-                <InputNumber
-                  style={{ width: "100%" }}
-                  placeholder="Nhập cân nặng"
-                  step={0.1}
-                  precision={1}
-                  min={1}
-                  max={200}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                label="Chiều cao (cm)"
-                name="height"
-                rules={[{ required: true, message: "Vui lòng nhập chiều cao" }]}
-              >
-                <InputNumber
-                  style={{ width: "100%" }}
-                  placeholder="Nhập chiều cao"
-                  step={0.1}
-                  precision={1}
-                  min={50}
-                  max={250}
-                  onChange={(value) => {
-                    // Trigger validation when value changes
-                    if (value && (value < 50 || value > 250)) {
-                      // This will be handled by the InputNumber component
-                    }
-                  }}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                label="Nhóm máu"
-                name="bloodType"
-                rules={[{ required: true, message: "Vui lòng chọn nhóm máu" }]}
-              >
-                <Select placeholder="Chọn nhóm máu">
-                  <Option value="A">A</Option>
-                  <Option value="B">B</Option>
-                  <Option value="AB">AB</Option>
-                  <Option value="O">O</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-          <Form.Item label="Ghi chú của Y tá" name="note">
-            <TextArea rows={4} placeholder="Thêm ghi chú hoặc nhận xét..." />
-          </Form.Item>
-        </Form>
       </Modal>
 
       {/* Approve Modal */}

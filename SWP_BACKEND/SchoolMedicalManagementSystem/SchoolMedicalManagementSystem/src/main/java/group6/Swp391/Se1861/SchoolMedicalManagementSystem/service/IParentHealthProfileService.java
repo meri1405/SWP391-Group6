@@ -18,14 +18,14 @@ public interface IParentHealthProfileService {
     HealthProfileDTO getHealthProfileById(Long parentId, Long profileId);
 
     /**
-     * Get health profiles by student ID
+     * Get health profile by student ID (single profile per student)
      */
-    List<HealthProfileDTO> getHealthProfilesByStudentId(Long parentId, Long studentId);
+    HealthProfileDTO getHealthProfileByStudentId(Long parentId, Long studentId);
 
     /**
-     * Get approved health profiles by student ID
+     * Get approved health profile by student ID (single profile per student)
      */
-    List<HealthProfileDTO> getApprovedHealthProfilesByStudentId(Long parentId, Long studentId);
+    HealthProfileDTO getApprovedHealthProfileByStudentId(Long parentId, Long studentId);
 
     /**
      * Update health profile (parent can only update pending profiles)

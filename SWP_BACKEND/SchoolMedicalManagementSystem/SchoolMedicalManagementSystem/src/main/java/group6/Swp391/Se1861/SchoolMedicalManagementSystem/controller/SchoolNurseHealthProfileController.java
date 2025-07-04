@@ -68,28 +68,6 @@ public class SchoolNurseHealthProfileController {
     }
 
     /**
-     * Update a health profile
-     * @param user authenticated school nurse user
-     * @param profileId ID of the health profile
-     * @param healthProfileDTO updated health profile data
-     * @return updated health profile
-     */
-    @PutMapping("/{profileId}")
-    public ResponseEntity<HealthProfileDTO> updateHealthProfile(
-            @AuthenticationPrincipal User user,
-            @PathVariable Long profileId,
-            @Valid @RequestBody HealthProfileDTO healthProfileDTO) {
-
-        // Verify user has SCHOOLNURSE role
-        if (user == null || !user.getRole().getRoleName().equals("SCHOOLNURSE")) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only school nurses can update health profiles");
-        }
-
-        HealthProfileDTO updatedProfile = schoolNurseHealthProfileService.updateHealthProfile(user.getId(), profileId, healthProfileDTO);
-        return ResponseEntity.ok(updatedProfile);
-    }
-
-    /**
      * Approve a health profile
      * @param user authenticated school nurse user
      * @param profileId ID of the health profile

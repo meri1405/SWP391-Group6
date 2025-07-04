@@ -11,6 +11,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Collections;
 import java.util.List;
 
 @RestController
@@ -22,10 +23,50 @@ public class ParentStudentHealthProfileController {
     private IParentHealthProfileService parentHealthProfileService;
 
     /**
-     * Get health profiles by student ID
+     * Get health profile by student ID
      * @param user authenticated parent user
      * @param studentId ID of the student
-     * @return list of health profiles for the student
+     * @return health profile for the student
+     */
+    @GetMapping("/{studentId}/health-profile")
+    public ResponseEntity<HealthProfileDTO> getHealthProfileByStudentId(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long studentId) {
+
+        // Verify user has PARENT role
+        if (user == null || !user.getRole().getRoleName().equals("PARENT")) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only parents can access health profiles");
+        }
+
+        HealthProfileDTO healthProfile = parentHealthProfileService.getHealthProfileByStudentId(user.getId(), studentId);
+        return ResponseEntity.ok(healthProfile);
+    }
+
+    /**
+     * Get approved health profile by student ID
+     * @param user authenticated parent user
+     * @param studentId ID of the student
+     * @return approved health profile for the student
+     */
+    @GetMapping("/{studentId}/health-profile/approved")
+    public ResponseEntity<HealthProfileDTO> getApprovedHealthProfileByStudentId(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long studentId) {
+
+        // Verify user has PARENT role
+        if (user == null || !user.getRole().getRoleName().equals("PARENT")) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only parents can access health profiles");
+        }
+
+        HealthProfileDTO approvedHealthProfile = parentHealthProfileService.getApprovedHealthProfileByStudentId(user.getId(), studentId);
+        return ResponseEntity.ok(approvedHealthProfile);
+    }
+
+    /**
+     * Get health profile by student ID (backward compatibility - returns as list)
+     * @param user authenticated parent user
+     * @param studentId ID of the student
+     * @return list containing single health profile for the student
      */
     @GetMapping("/{studentId}/health-profiles")
     public ResponseEntity<List<HealthProfileDTO>> getHealthProfilesByStudentId(
@@ -37,15 +78,17 @@ public class ParentStudentHealthProfileController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only parents can access health profiles");
         }
 
-        List<HealthProfileDTO> healthProfiles = parentHealthProfileService.getHealthProfilesByStudentId(user.getId(), studentId);
+        HealthProfileDTO healthProfile = parentHealthProfileService.getHealthProfileByStudentId(user.getId(), studentId);
+        List<HealthProfileDTO> healthProfiles = healthProfile != null ? 
+            Collections.singletonList(healthProfile) : Collections.emptyList();
         return ResponseEntity.ok(healthProfiles);
     }
 
     /**
-     * Get approved health profiles by student ID
+     * Get approved health profile by student ID (backward compatibility - returns as list)
      * @param user authenticated parent user
      * @param studentId ID of the student
-     * @return list of approved health profiles for the student
+     * @return list containing single approved health profile for the student
      */
     @GetMapping("/{studentId}/health-profiles/approved")
     public ResponseEntity<List<HealthProfileDTO>> getApprovedHealthProfilesByStudentId(
@@ -57,7 +100,9 @@ public class ParentStudentHealthProfileController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only parents can access health profiles");
         }
 
-        List<HealthProfileDTO> approvedHealthProfiles = parentHealthProfileService.getApprovedHealthProfilesByStudentId(user.getId(), studentId);
+        HealthProfileDTO approvedHealthProfile = parentHealthProfileService.getApprovedHealthProfileByStudentId(user.getId(), studentId);
+        List<HealthProfileDTO> approvedHealthProfiles = approvedHealthProfile != null ? 
+            Collections.singletonList(approvedHealthProfile) : Collections.emptyList();
         return ResponseEntity.ok(approvedHealthProfiles);
     }
 }

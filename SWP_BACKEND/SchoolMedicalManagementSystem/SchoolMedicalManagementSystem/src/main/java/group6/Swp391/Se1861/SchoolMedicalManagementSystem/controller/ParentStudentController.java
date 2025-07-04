@@ -86,9 +86,9 @@ public class ParentStudentController {
                     studentInfo.put("dateOfBirth", student.getDob());
                     
                     // Check if student has health profile
-                    List<HealthProfile> healthProfiles = healthProfileRepository.findByStudent(student);
-                    studentInfo.put("hasHealthProfile", !healthProfiles.isEmpty());
-                    studentInfo.put("healthProfileCount", healthProfiles.size());
+                    boolean hasHealthProfile = student.getHealthProfile() != null;
+                    studentInfo.put("hasHealthProfile", hasHealthProfile);
+                    studentInfo.put("healthProfileCount", hasHealthProfile ? 1 : 0);
                     
                     return studentInfo;
                 })
@@ -113,10 +113,7 @@ public class ParentStudentController {
             List<Student> students = studentRepository.findByParent(parent);
             
             List<Map<String, Object>> studentsMissingProfile = students.stream()
-                .filter(student -> {
-                    List<HealthProfile> healthProfiles = healthProfileRepository.findByStudent(student);
-                    return healthProfiles.isEmpty();
-                })
+                .filter(student -> student.getHealthProfile() == null)
                 .map(student -> {
                     Map<String, Object> studentInfo = new HashMap<>();
                     studentInfo.put("id", student.getStudentID());
