@@ -417,6 +417,41 @@ public class MedicationScheduleService implements IMedicationScheduleService {
     }
 
     /**
+     * Get all medication schedules for a specific nurse
+     * @param nurse The authenticated nurse
+     * @return List of medication schedule DTOs
+     */
+    @Override
+    public List<MedicationScheduleDTO> getAllSchedulesForNurse(User nurse) {
+        log.info("Getting all medication schedules for nurse: {} {}", nurse.getFirstName(), nurse.getLastName());
+        
+        // Get all schedules where the medication request was approved by this nurse
+        List<MedicationSchedule> schedules = medicationScheduleRepository.findByItemRequestMedicationRequestNurse(nurse);
+        
+        log.info("Found {} medication schedules for nurse", schedules.size());
+        return convertToScheduleDTOList(schedules);
+    }
+
+    /**
+     * Get medication schedules by status for a specific nurse
+     * @param status The medication status filter
+     * @param nurse The authenticated nurse
+     * @return List of medication schedule DTOs
+     */
+    @Override
+    public List<MedicationScheduleDTO> getSchedulesByStatusAndNurse(MedicationStatus status, User nurse) {
+        log.info("Getting medication schedules with status {} for nurse: {} {}", 
+                status, nurse.getFirstName(), nurse.getLastName());
+        
+        // Get schedules with specific status where the medication request was approved by this nurse
+        List<MedicationSchedule> schedules = medicationScheduleRepository
+                .findByStatusAndItemRequestMedicationRequestNurse(status, nurse);
+        
+        log.info("Found {} medication schedules with status {} for nurse", schedules.size(), status);
+        return convertToScheduleDTOList(schedules);
+    }
+
+    /**
      * Auto-mark medication schedules as SKIPPED if they are overdue based on configured threshold
      * This method is called by the scheduled task to automatically mark missed medication times
      * @return number of schedules marked as skipped

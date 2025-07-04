@@ -118,6 +118,17 @@ public class NurseMedicationController {
     }
 
     /**
+     * Get all medication schedules
+     * @param nurse Authenticated nurse
+     * @return List of all medication schedules
+     */
+    @GetMapping("/schedules/all")
+    public ResponseEntity<List<MedicationScheduleDTO>> getAllMedicationSchedules(
+            @AuthenticationPrincipal User nurse) {
+        return ResponseEntity.ok(medicationScheduleService.getAllSchedulesForNurse(nurse));
+    }
+
+    /**
      * Get medication schedules for a specific date and status
      * @param date The date
      * @param status The status filter
@@ -126,9 +137,20 @@ public class NurseMedicationController {
      */
     @GetMapping("/schedules")
     public ResponseEntity<List<MedicationScheduleDTO>> getSchedulesByDateAndStatus(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam(required = false) MedicationStatus status,
             @AuthenticationPrincipal User nurse) {
+        
+        // If no date provided, return all schedules
+        if (date == null) {
+            if (status == null) {
+                return ResponseEntity.ok(medicationScheduleService.getAllSchedulesForNurse(nurse));
+            } else {
+                return ResponseEntity.ok(medicationScheduleService.getSchedulesByStatusAndNurse(status, nurse));
+            }
+        }
+        
+        // If date is provided
         if (status == null) {
             // Return all schedules for the date if status is not specified, filtered by nurse
             return ResponseEntity.ok(medicationScheduleService.getSchedulesByDateAndNurse(date, nurse));
