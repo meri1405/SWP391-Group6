@@ -48,6 +48,21 @@ public class Respiratory {
     @Column(name = "oxygenSaturation", nullable = true)
     private Integer oxygenSaturation;
 
+    @Column(name = "chestExpansion", nullable = true)
+    private String chestExpansion;
+
+    @Column(name = "lungSounds", nullable = true)
+    private String lungSounds;
+
+    @Column(name = "asthmaHistory", nullable = false)
+    private boolean asthmaHistory;
+
+    @Column(name = "allergicRhinitis", nullable = false)
+    private boolean allergicRhinitis;
+
+    @Column(name = "recommendations", nullable = true)
+    private String recommendations;
+
     @Column(name = "treatment", nullable = true)
     private String treatment;
 

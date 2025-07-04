@@ -61,8 +61,8 @@ public class Student {
     @OneToMany(mappedBy = "student", cascade = CascadeType.ALL)
     private Set<MedicationRequest> medicationRequests;
 
-    @OneToMany(mappedBy = "student", cascade = CascadeType.ALL)
-    private Set<HealthProfile> healthProfiles;
+    @OneToOne(mappedBy = "student", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private HealthProfile healthProfile;
 
     public String getFullName() {
         return lastName + " " + firstName;

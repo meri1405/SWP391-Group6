@@ -58,6 +58,21 @@ public class Skin {
     @Column(name = "allergies", nullable = false)
     private boolean allergies;
 
+    @Column(name = "acne", nullable = false)
+    private boolean acne;
+
+    @Column(name = "scars", nullable = false)
+    private boolean scars;
+
+    @Column(name = "birthmarks", nullable = false)
+    private boolean birthmarks;
+
+    @Column(name = "skinTone", nullable = true)
+    private String skinTone;
+
+    @Column(name = "recommendations", nullable = true)
+    private String recommendations;
+
     @Column(name = "treatment", nullable = true)
     private String treatment;
 

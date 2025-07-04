@@ -26,4 +26,9 @@ public class SkinDTO {
     private LocalDate followUpDate;
     private boolean isAbnormal;
     private Long healthProfileId;
+    private boolean acne;
+    private boolean scars;
+    private boolean birthmarks;
+    private String skinTone;
+    private String recommendations;
 }

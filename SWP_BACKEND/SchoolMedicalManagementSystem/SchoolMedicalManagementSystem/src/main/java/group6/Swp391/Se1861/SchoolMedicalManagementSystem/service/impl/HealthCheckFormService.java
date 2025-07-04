@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -177,6 +178,13 @@ public class HealthCheckFormService implements IHealthCheckFormService {
     @Override
     @Transactional
     public HealthCheckForm createHealthCheckForm(HealthCheckCampaign campaign, Student student, User parent) {
+        // Check if a form already exists for this campaign and student
+        Optional<HealthCheckForm> existingForm = formRepository.findByCampaignAndStudent(campaign, student);
+        if (existingForm.isPresent()) {
+            System.out.println("DEBUG: Form already exists for student " + student.getStudentID() + " in campaign " + campaign.getId());
+            return existingForm.get();
+        }
+        
         HealthCheckForm form = new HealthCheckForm();
         form.setCampaign(campaign);
         form.setStudent(student);
@@ -185,6 +193,7 @@ public class HealthCheckFormService implements IHealthCheckFormService {
         form.setSentAt(LocalDateTime.now());
         form.setCreatedAt(LocalDateTime.now());
 
+        System.out.println("DEBUG: Creating new form for student " + student.getStudentID() + " in campaign " + campaign.getId());
         return formRepository.save(form);
     }
 
