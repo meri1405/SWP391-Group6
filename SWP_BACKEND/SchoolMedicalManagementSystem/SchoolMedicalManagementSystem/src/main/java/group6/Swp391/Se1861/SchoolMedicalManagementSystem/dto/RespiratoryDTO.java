@@ -24,4 +24,9 @@ public class RespiratoryDTO {
     private LocalDate followUpDate;
     private boolean isAbnormal;
     private Long healthProfileId;
+    private String chestExpansion;
+    private String lungSounds;
+    private boolean asthmaHistory;
+    private boolean allergicRhinitis;
+    private String recommendations;
 }

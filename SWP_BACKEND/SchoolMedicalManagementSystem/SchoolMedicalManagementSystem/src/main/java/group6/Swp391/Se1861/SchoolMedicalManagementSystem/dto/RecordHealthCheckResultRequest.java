@@ -13,6 +13,8 @@ public class RecordHealthCheckResultRequest {
     private Long studentId;
     private Long campaignId;
     private List<CategoryResult> categories;
+    private Double weight; // Student weight in kg
+    private Double height; // Student height in cm
     private Map<String, Object> detailedResults; // Detailed form data for each category
     
     @Data
