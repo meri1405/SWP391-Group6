@@ -88,8 +88,14 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
   const onValuesChange = (changedValues, allValues) => {
     const { minAge, maxAge, targetClasses } = allValues;
     
-    // Only recalculate if the relevant fields have changed
+    // Trigger validation for age and class fields when they change
     if ('minAge' in changedValues || 'maxAge' in changedValues || 'targetClasses' in changedValues) {
+      // Validate the related fields
+      setTimeout(() => {
+        form.validateFields(['minAge', 'maxAge', 'targetClasses']);
+      }, 100);
+      
+      // Only recalculate if the relevant fields have changed
       // Add a small delay to avoid too many API calls
       const timeoutId = setTimeout(() => {
         calculateTargetCount(minAge, maxAge, targetClasses);
@@ -180,7 +186,7 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
           <Col span={24}>
             <Form.Item
               name="name"
-              label="Tên đợt khám"
+              label={<span>Tên đợt khám <span style={{color: 'red'}}>*</span></span>}
               rules={[{ required: true, message: 'Vui lòng nhập tên đợt khám' }]}
             >
               <Input placeholder="Nhập tên đợt khám sức khỏe cho học sinh tiểu học" />
@@ -192,7 +198,7 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
           <Col span={24}>
             <Form.Item
               name="description"
-              label="Mô tả"
+              label={<span>Mô tả <span style={{color: 'red'}}>*</span></span>}
               rules={[{ required: true, message: 'Vui lòng nhập mô tả' }]}
             >
               <TextArea rows={3} placeholder="Nhập mô tả chi tiết về đợt khám sức khỏe cho học sinh tiểu học" />
@@ -204,20 +210,50 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
           <Col span={12}>
             <Form.Item
               name="dateRange"
-              label="Thời gian thực hiện"
-              rules={[{ required: true, message: 'Vui lòng chọn thời gian thực hiện' }]}
+              label={<span>Thời gian thực hiện <span style={{color: 'red'}}>*</span></span>}
+              rules={[
+                { required: true, message: 'Vui lòng chọn thời gian thực hiện' },
+                {
+                  validator: (_, value) => {
+                    if (!value || !Array.isArray(value) || value.length !== 2) {
+                      return Promise.resolve();
+                    }
+                    
+                    const [startDate, endDate] = value;
+                    const today = dayjs();
+                    const minStartDate = today.add(5, 'day');
+                    
+                    // Kiểm tra ngày bắt đầu phải sau 5 ngày kể từ hôm nay
+                    if (startDate && startDate.isBefore(minStartDate, 'day')) {
+                      return Promise.reject(new Error('Ngày bắt đầu phải sau ít nhất 5 ngày kể từ hôm nay'));
+                    }
+                    
+                    // Kiểm tra ngày kết thúc phải sau ngày bắt đầu
+                    if (startDate && endDate && endDate.isBefore(startDate, 'day')) {
+                      return Promise.reject(new Error('Ngày kết thúc phải sau ngày bắt đầu'));
+                    }
+                    
+                    return Promise.resolve();
+                  }
+                }
+              ]}
             >
               <RangePicker 
                 format="DD/MM/YYYY"
                 style={{ width: '100%' }}
                 placeholder={['Ngày bắt đầu', 'Ngày kết thúc']}
+                disabledDate={(current) => {
+                  // Vô hiệu hóa tất cả ngày trước ngày hôm nay + 5 ngày
+                  const minDate = dayjs().add(5, 'day');
+                  return current && current.isBefore(minDate, 'day');
+                }}
               />
             </Form.Item>
           </Col>
           <Col span={12}>
             <Form.Item
               name="location"
-              label="Địa điểm"
+              label={<span>Địa điểm <span style={{color: 'red'}}>*</span></span>}
               rules={[{ required: true, message: 'Vui lòng nhập địa điểm' }]}
             >
               <Input placeholder="Nhập địa điểm khám sức khỏe cho học sinh tiểu học" />
@@ -230,7 +266,31 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
             <Form.Item
               name="minAge"
               label="Độ tuổi tối thiểu"
-              rules={[{ required: true, message: 'Vui lòng nhập độ tuổi tối thiểu' }]}
+              rules={[
+                {
+                  validator: (_, value, { getFieldValue }) => {
+                    const maxAge = getFieldValue('maxAge');
+                    const targetClasses = getFieldValue('targetClasses') || [];
+                    
+                    // Nếu không có targetClasses, thì minAge và maxAge là bắt buộc
+                    if (!targetClasses || targetClasses.length === 0) {
+                      if (!value) {
+                        return Promise.reject(new Error('Vui lòng nhập độ tuổi tối thiểu hoặc chọn lớp mục tiêu'));
+                      }
+                      if (!maxAge) {
+                        return Promise.reject(new Error('Vui lòng nhập độ tuổi tối đa khi đã có độ tuổi tối thiểu'));
+                      }
+                    }
+                    
+                    // Nếu có giá trị, kiểm tra logic
+                    if (value && maxAge && value > maxAge) {
+                      return Promise.reject(new Error('Độ tuổi tối thiểu phải nhỏ hơn hoặc bằng độ tuổi tối đa'));
+                    }
+                    
+                    return Promise.resolve();
+                  }
+                }
+              ]}
             >
               <InputNumber 
                 min={2} 
@@ -244,7 +304,31 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
             <Form.Item
               name="maxAge"
               label="Độ tuổi tối đa"
-              rules={[{ required: true, message: 'Vui lòng nhập độ tuổi tối đa' }]}
+              rules={[
+                {
+                  validator: (_, value, { getFieldValue }) => {
+                    const minAge = getFieldValue('minAge');
+                    const targetClasses = getFieldValue('targetClasses') || [];
+                    
+                    // Nếu không có targetClasses, thì minAge và maxAge là bắt buộc
+                    if (!targetClasses || targetClasses.length === 0) {
+                      if (!value) {
+                        return Promise.reject(new Error('Vui lòng nhập độ tuổi tối đa hoặc chọn lớp mục tiêu'));
+                      }
+                      if (!minAge) {
+                        return Promise.reject(new Error('Vui lòng nhập độ tuổi tối thiểu khi đã có độ tuổi tối đa'));
+                      }
+                    }
+                    
+                    // Nếu có giá trị, kiểm tra logic
+                    if (value && minAge && value < minAge) {
+                      return Promise.reject(new Error('Độ tuổi tối đa phải lớn hơn hoặc bằng độ tuổi tối thiểu'));
+                    }
+                    
+                    return Promise.resolve();
+                  }
+                }
+              ]}
             >
               <InputNumber 
                 min={6} 
@@ -262,6 +346,21 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
               name="targetClasses"
               label="Lớp mục tiêu"
               tooltip="Để trống để áp dụng cho toàn trường"
+              rules={[
+                {
+                  validator: (_, value, { getFieldValue }) => {
+                    const minAge = getFieldValue('minAge');
+                    const maxAge = getFieldValue('maxAge');
+                    
+                    // Nếu không có minAge và maxAge, thì targetClasses là bắt buộc
+                    if (!minAge && !maxAge && (!value || value.length === 0)) {
+                      return Promise.reject(new Error('Vui lòng chọn lớp mục tiêu hoặc nhập độ tuổi'));
+                    }
+                    
+                    return Promise.resolve();
+                  }
+                }
+              ]}
             >
               <Select 
                 mode="tags"
@@ -292,7 +391,7 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
           <Col span={12}>
             <Form.Item
               name="categories"
-              label="Loại khám"
+              label={<span>Loại khám <span style={{color: 'red'}}>*</span></span>}
               rules={[{ required: true, message: 'Vui lòng chọn ít nhất một loại khám' }]}
             >
               <Select 
@@ -328,7 +427,7 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
               description={
                 targetCount > 0 
                   ? `Dựa trên tiêu chí độ tuổi và lớp đã chọn, hệ thống tính toán có ${targetCount} học sinh phù hợp cho đợt khám này.`
-                  : 'Vui lòng nhập đầy đủ thông tin độ tuổi và lớp mục tiêu để tính toán số lượng học sinh.'
+                  : 'Vui lòng nhập độ tuổi (tối thiểu và tối đa) HOẶC chọn lớp mục tiêu để tính toán số lượng học sinh. Bạn có thể nhập cả hai để lọc chính xác hơn.'
               }
               type={targetCount > 0 ? "info" : "warning"}
               showIcon

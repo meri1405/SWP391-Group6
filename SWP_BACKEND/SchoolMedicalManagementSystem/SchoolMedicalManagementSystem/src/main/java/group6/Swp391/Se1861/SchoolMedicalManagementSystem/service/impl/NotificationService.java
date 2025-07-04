@@ -14,6 +14,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
@@ -28,6 +29,24 @@ public class NotificationService implements INotificationService {
     private final UserRepository userRepository;
     private final HealthCheckFormRepository healthCheckFormRepository;
     private final SimpMessagingTemplate messagingTemplate;
+
+    // Date formatters for consistent date formatting in notifications
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private static final DateTimeFormatter DATETIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm, dd/MM/yyyy");
+
+    /**
+     * Format LocalDate to dd/MM/yyyy
+     */
+    private String formatDate(LocalDate date) {
+        return date != null ? date.format(DATE_FORMATTER) : "N/A";
+    }
+
+    /**
+     * Format LocalDateTime to HH:mm, dd/MM/yyyy
+     */
+    private String formatDateTime(LocalDateTime dateTime) {
+        return dateTime != null ? dateTime.format(DATETIME_FORMATTER) : "N/A";
+    }
 
     /**
      * Create a new notification for medication request approval/rejection
@@ -401,7 +420,7 @@ public class NotificationService implements INotificationService {
         
         String title = "CHIẾN DỊCH ĐÃ HOÀN THÀNH";
         String message = "<p>Chiến dịch tiêm chủng '<strong>" + campaign.getName() + "</strong>' đã được hoàn thành bởi <strong>" + 
-                        completedBy.getUsername() + "</strong> vào ngày <strong>" + new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm").format(new Date()) + "</strong></p>";
+                        completedBy.getUsername() + "</strong> vào ngày <strong>" + formatDateTime(LocalDateTime.now()) + "</strong></p>";
         String notificationType = "CAMPAIGN_COMPLETED";
         
         return createGeneralNotification(recipient, title, message, notificationType);
@@ -1092,7 +1111,7 @@ public class NotificationService implements INotificationService {
         String message = "<p>Chiến dịch khám sức khỏe '<strong>" + campaign.getName() + "</strong>' đã được lên lịch với <strong>" + 
                 scheduledStudentCount + " học sinh</strong> tham gia.</p>" +
                 "<p><strong>Thời gian thực hiện:</strong> " + 
-                campaign.getStartDate() + " đến " + campaign.getEndDate() + "</p>";
+                formatDate(campaign.getStartDate()) + " đến " + formatDate(campaign.getEndDate()) + "</p>";
         
         for (User manager : managers) {
             Notification notification = new Notification();
@@ -1191,7 +1210,7 @@ public class NotificationService implements INotificationService {
             message = "<p><strong>Kính gửi phụ huynh,</strong></p>" +
                      "<p>Trường đang tổ chức chiến dịch khám sức khỏe định kỳ '<strong>" + campaign.getName() + "</strong>' " +
                      "cho học sinh <strong>" + studentName + "</strong>.</p>" +
-                     "<p><strong>Thời gian dự kiến:</strong> " + campaign.getStartDate() + " đến " + campaign.getEndDate() + "</p>" +
+                     "<p><strong>Thời gian dự kiến:</strong> " + formatDate(campaign.getStartDate()) + " đến " + formatDate(campaign.getEndDate()) + "</p>" +
                      "<p><strong>Các hạng mục khám:</strong> " + String.join(", ", 
                          campaign.getCategories().stream()
                              .map(category -> translateHealthCategory(category.toString()))
@@ -1345,7 +1364,7 @@ public class NotificationService implements INotificationService {
         
         String title = "Nhắc nhở hoàn thành chiến dịch khám sức khỏe";
         String message = "<p>Chiến dịch khám sức khỏe '<strong>" + campaign.getName() + "</strong>' đã kết thúc từ <strong>" + 
-                        campaign.getEndDate() + "</strong>.</p>" +
+                        formatDate(campaign.getEndDate()) + "</strong>.</p>" +
                         "<p>Vui lòng xác nhận hoàn thành chiến dịch trong hệ thống để cập nhật trạng thái và tạo báo cáo tổng kết.</p>";
         
         Notification notification = new Notification();
@@ -1526,7 +1545,7 @@ public class NotificationService implements INotificationService {
                 student.getClassName() != null ? student.getClassName() : "N/A",
                 campaign.getName(),
                 form.getId(),
-                LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+                formatDateTime(LocalDateTime.now())
             );
             
             Notification nurseNotification = new Notification();
@@ -1664,8 +1683,8 @@ public class NotificationService implements INotificationService {
             "<p>Thông báo đã được gửi đến phụ huynh các học sinh tham gia.</p>",
             campaign.getName(),
             timeSlotInfo,
-            campaign.getStartDate().toString(),
-            campaign.getEndDate().toString(),
+            formatDate(campaign.getStartDate()),
+            formatDate(campaign.getEndDate()),
             campaign.getLocation(),
             campaign.getConfirmedCount()
         );
@@ -1741,7 +1760,7 @@ public class NotificationService implements INotificationService {
         String message = "<p>Chiến dịch khám sức khỏe '<strong>" + campaign.getName() + 
                         "</strong>' đã bị từ chối tự động do không nhận được phản hồi từ quản lý trong vòng 24 giờ.</p>" +
                         "<p>Bạn có thể tạo chiến dịch mới nếu cần thiết.</p>" +
-                        "<p>Thời gian từ chối: <strong>" + new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm").format(new Date()) + "</strong></p>";
+                        "<p>Thời gian từ chối: <strong>" + formatDateTime(LocalDateTime.now()) + "</strong></p>";
         String notificationType = "CAMPAIGN_AUTO_REJECTED";
 
         // Create notification
@@ -1813,7 +1832,7 @@ public class NotificationService implements INotificationService {
                 "<p><em>Trân trọng,<br>Ban Giám hiệu</em></p>",
                 campaign.getName(),
                 timeSlotText,
-                campaign.getStartDate().toString(),
+                formatDate(campaign.getStartDate()),
                 getTimeSlotTimeText(campaign.getTimeSlot()),
                 campaign.getLocation(),
                 getStudentOrder(confirmedForms, student),

@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -32,6 +33,16 @@ public class MedicalEventService implements IMedicalEventService {
     private final StudentRepository studentRepository;
     private final UserRepository userRepository;
     private final INotificationService notificationService;
+
+    // Date formatter for consistent date formatting in notifications
+    private static final DateTimeFormatter DATETIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm, dd/MM/yyyy");
+
+    /**
+     * Format LocalDateTime to HH:mm, dd/MM/yyyy
+     */
+    private String formatDateTime(LocalDateTime dateTime) {
+        return dateTime != null ? dateTime.format(DATETIME_FORMATTER) : "N/A";
+    }
 
     @Override
     @Transactional
@@ -149,7 +160,7 @@ public class MedicalEventService implements IMedicalEventService {
             message.append("<p>Con của bạn đã gặp phải một sự kiện y tế</p>");
             message.append("<p><strong>Loại:</strong> ").append(translateEventType(medicalEvent.getEventType())).append("</p>");
             message.append("<p><strong>Mức độ nghiêm trọng:</strong> ").append(translateSeverityLevel(medicalEvent.getSeverityLevel())).append("</p>");
-            message.append("<p><strong>Thời gian:</strong> ").append(medicalEvent.getOccurrenceTime()).append("</p>");
+            message.append("<p><strong>Thời gian:</strong> ").append(formatDateTime(medicalEvent.getOccurrenceTime())).append("</p>");
             message.append("<p><strong>Địa điểm:</strong> ").append(medicalEvent.getLocation()).append("</p>");
 
             if (medicalEvent.getFirstAidActions() != null && !medicalEvent.getFirstAidActions().isEmpty()) {
@@ -286,7 +297,7 @@ public class MedicalEventService implements IMedicalEventService {
             StringBuilder message = new StringBuilder();
             message.append("<p>Sự kiện y tế của con bạn đã được xử lý bởi đội ngũ y tế.</p>");
             message.append("<p><strong>Loại:</strong> ").append(translateEventType(medicalEvent.getEventType())).append("</p>");
-            message.append("<p><strong>Xử lý lúc:</strong> ").append(medicalEvent.getProcessedTime()).append("</p>");
+            message.append("<p><strong>Xử lý lúc:</strong> ").append(formatDateTime(medicalEvent.getProcessedTime())).append("</p>");
             message.append("<p><strong>Xử lý bởi:</strong> ").append(medicalEvent.getProcessedBy().getFullName()).append("</p>");
 
             // Create notification using the correct method from INotificationService

@@ -115,7 +115,7 @@ public class MedicationRequestService implements IMedicationRequestService {
         savedRequest = medicationRequestRepository.save(savedRequest);
 
         // Convert back to DTO for response
-        return convertToDTO(savedRequest);
+        return convertToDTOWithScheduleTimes(savedRequest);
     }
 
     /**
@@ -127,7 +127,7 @@ public class MedicationRequestService implements IMedicationRequestService {
     public List<MedicationRequestDTO> getParentMedicationRequests(User parent) {
         List<MedicationRequest> requests = medicationRequestRepository.findByParent(parent);
         return requests.stream()
-                .map(this::convertToDTO)
+                .map(this::convertToDTOWithScheduleTimes)
                 .collect(Collectors.toList());
     }    /**
      * Get a specific medication request
@@ -169,7 +169,7 @@ public class MedicationRequestService implements IMedicationRequestService {
         // Schedules are already generated when parent creates request
         // No need to generate schedules again, just update the request status
 
-        return convertToDTO(medicationRequestRepository.save(request));
+        return convertToDTOWithScheduleTimes(medicationRequestRepository.save(request));
     }
 
     /**
@@ -195,7 +195,7 @@ public class MedicationRequestService implements IMedicationRequestService {
             medicationScheduleService.deleteSchedulesForItemRequest(itemRequest.getId());
         }
 
-        return convertToDTO(medicationRequestRepository.save(request));
+        return convertToDTOWithScheduleTimes(medicationRequestRepository.save(request));
     }    /**
      * Get all pending medication requests for nurse review
      * @return list of pending medication requests
@@ -204,7 +204,7 @@ public class MedicationRequestService implements IMedicationRequestService {
     public List<MedicationRequestDTO> getPendingMedicationRequests() {
         List<MedicationRequest> requests = medicationRequestRepository.findByStatus("PENDING");
         return requests.stream()
-                .map(this::convertToDTO)
+                .map(this::convertToDTOWithScheduleTimes)
                 .collect(Collectors.toList());
     }
 
@@ -317,7 +317,7 @@ public class MedicationRequestService implements IMedicationRequestService {
         MedicationRequest savedRequest = medicationRequestRepository.save(request);
 
         // Convert back to DTO for response
-        return convertToDTO(savedRequest);
+        return convertToDTOWithScheduleTimes(savedRequest);
     }
 
     /**
