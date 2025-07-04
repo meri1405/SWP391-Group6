@@ -28,33 +28,14 @@ const Notifications = ({ role = "parent" }) => {
 
   const { getToken } = useAuth();
   
-  // Styles for health check notifications
-  const healthCheckMessageStyles = {
-    healthCheckMessage: {
+  // Basic styles for notification content
+  const notificationContentStyles = {
+    content: {
       lineHeight: "1.6",
-      whiteSpace: "pre-line",
       fontFamily: "Arial, sans-serif",
     },
-    messageHeader: {
-      fontWeight: "bold",
-      marginBottom: "10px",
-    },
-    messageBody: {
-      margin: "8px 0",
-    },
-    messageFooter: {
-      marginTop: "10px",
-      fontStyle: "italic",
-    },
-    messageSection: {
-      marginTop: "15px",
-      marginBottom: "5px",
-      fontWeight: "bold",
-      borderTop: "1px solid #eee",
-      paddingTop: "10px",
-    },
-    messageSpacer: {
-      height: "10px",
+    textFallback: {
+      margin: "4px 0",
     }
   };
 
@@ -240,86 +221,10 @@ const Notifications = ({ role = "parent" }) => {
     }
   };
 
-  // Helper function to detect if a string contains HTML
-  const isHtmlContent = (str) => {
-    if (!str) return false;
-    return /<[a-z][\s\S]*>/i.test(str);
-  };
-
-  // Format notification message to replace ISO dates with Vietnamese format
-  const formatNotificationMessage = useCallback((message) => {
-    if (!message) return message;
-
-    // Regex to match ISO date format (YYYY-MM-DDTHH:mm or similar)
-    const isoDateRegex = /(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})/g;
-
-    // Replace English phrases with Vietnamese equivalents
-    let translatedMessage = message
-      .replace(/Your vaccination campaign/gi, "Chiến dịch tiêm chủng của bạn")
-      .replace(/has been approved by/gi, "đã được phê duyệt bởi")
-      .replace(/Campaign Approved/gi, "Chiến dịch được phê duyệt")
-      .replace(/Your health check campaign/gi, "Đợt khám sức khỏe của bạn")
-      .replace(/health check campaign/gi, "đợt khám sức khỏe")
-      .replace(/Health Check Campaign/gi, "Đợt khám sức khỏe")
-      .replace(/has been rejected/gi, "đã bị từ chối")
-      .replace(/has been approved/gi, "đã được phê duyệt")
-      .replace(/has been scheduled/gi, "đã được lên lịch")
-      .replace(/has been completed/gi, "đã hoàn thành")
-      .replace(/has been cancelled/gi, "đã bị hủy")
-      .replace(/Your medication request/gi, "Yêu cầu thuốc của bạn")
-      .replace(/medication request/gi, "yêu cầu thuốc")
-      .replace(/Medication Request/gi, "Yêu cầu thuốc")
-      .replace(/has been processed/gi, "đã được xử lý")
-      .replace(/needs attention/gi, "cần được chú ý")
-      .replace(/requires review/gi, "cần được xem xét");
-    
-    // Format the message with proper line breaks for health check notifications
-    if (translatedMessage.includes("đợt khám sức khỏe") || 
-        translatedMessage.includes("Đợt khám sức khỏe") ||
-        translatedMessage.includes("Thân gửi Quý phụ huynh")) {
-      
-      // Format health check notifications with proper paragraph breaks
-      translatedMessage = translatedMessage
-        // First, normalize line breaks (remove duplicates, etc)
-        .replace(/\n\s*\n/g, '\n')
-        // Add proper spacing around key phrases
-        .replace(/Thân gửi Quý phụ huynh,/g, 'Thân gửi Quý phụ huynh, ')
-        .replace(/Nhà trường thông báo/g, 'Nhà trường thông báo')
-        .replace(/Kính đề nghị/g, 'Kính đề nghị')
-        .replace(/Vui lòng phản hồi/g, 'Vui lòng phản hồi')
-        .replace(/Trân trọng,/g, 'Trân trọng,')
-        .replace(/Ban Giám hiệu/g, 'Ban Giám hiệu')
-        .replace(/--- Thông tin học sinh ---/g, '--- Thông tin học sinh ---')
-        .replace(/Tên:/g, 'Tên:')
-        .replace(/Lớp:/g, 'Lớp:');
-    }
-
-    // Replace ISO dates with Vietnamese format
-    return translatedMessage.replace(isoDateRegex, (match) => {
-      try {
-        const date = new Date(match);
-        const day = date.getDate().toString().padStart(2, "0");
-        const month = (date.getMonth() + 1).toString().padStart(2, "0");
-        const year = date.getFullYear();
-        const hours = date.getHours().toString().padStart(2, "0");
-        const minutes = date.getMinutes().toString().padStart(2, "0");
-
-        const dayNames = [
-          "Chủ nhật",
-          "Thứ hai",
-          "Thứ ba",
-          "Thứ tư",
-          "Thứ năm",
-          "Thứ sáu",
-          "Thứ bảy",
-        ];
-        const dayName = dayNames[date.getDay()];
-
-        return `${dayName}, ngày ${day}/${month}/${year} lúc ${hours}:${minutes}`;
-      } catch {
-        return match; // Return original if parsing fails
-      }
-    });
+  // Helper function to check if content is HTML
+  const isHtmlContent = useCallback((content) => {
+    if (!content) return false;
+    return /<[^>]+>/.test(content);
   }, []);
 
   // Load notifications on component mount
@@ -363,7 +268,7 @@ const Notifications = ({ role = "parent" }) => {
             id: notification.id,
             type: getNotificationType(notification),
             title: translatedTitle,
-            message: formatNotificationMessage(notification.message),
+            message: notification.message,
             time: formatTimeAgo(notification.createdAt),
             date: notification.createdAt,
             read: notification.read,
@@ -407,7 +312,7 @@ const Notifications = ({ role = "parent" }) => {
           id: notification.id,
           type: getNotificationType(notification),
           title: translatedTitle,
-          message: formatNotificationMessage(notification.message),
+          message: notification.message,
           time: formatTimeAgo(notification.createdAt),
           date: notification.createdAt,
           read: notification.read,
@@ -433,7 +338,7 @@ const Notifications = ({ role = "parent" }) => {
         setLoading(false);
       }
     }
-  }, [getToken, formatNotificationMessage, determineActionRequired, api]);
+  }, [getToken, determineActionRequired, api]);
 
   const setupWebSocketConnection = useCallback(async () => {
     const token = getToken();
@@ -471,7 +376,7 @@ const Notifications = ({ role = "parent" }) => {
           id: newNotification.id,
           type: getNotificationType(newNotification),
           title: translatedTitle,
-          message: formatNotificationMessage(newNotification.message),
+          message: newNotification.message,
           time: "Vừa xong",
           date: newNotification.createdAt,
           read: false,
@@ -491,7 +396,7 @@ const Notifications = ({ role = "parent" }) => {
     } catch (error) {
       console.error("Error setting up WebSocket connection:", error);
     }
-  }, [getToken, formatNotificationMessage, determineActionRequired]);
+  }, [getToken, determineActionRequired]);
 
   useEffect(() => {
     // Set isMounted ref to true when component mounts
@@ -738,29 +643,21 @@ const Notifications = ({ role = "parent" }) => {
                 {!notification.read && <div className="unread-dot"></div>}
               </div>{" "}
               <div className="notification-body">
-                {notification.type === "health" ? (
-                  <div style={healthCheckMessageStyles.healthCheckMessage}>
-                    {isHtmlContent(notification.message) ? (
-                      <div dangerouslySetInnerHTML={{ __html: notification.message }} />
-                    ) : (
-                      // Fallback for plain text messages using the previous implementation
-                      notification.message.split('\n').map((line, i) => {
-                        if (!line.trim()) {
-                          return <div key={i} style={healthCheckMessageStyles.messageSpacer}></div>;
-                        } else if (line.includes("Thân gửi")) {
-                          return <div key={i} style={healthCheckMessageStyles.messageHeader}>{line}</div>;
-                        } else if (line.includes("Trân trọng") || line.includes("Ban Giám hiệu")) {
-                          return <div key={i} style={healthCheckMessageStyles.messageFooter}>{line}</div>;
-                        } else if (line.includes("--- Thông tin học sinh ---")) {
-                          return <div key={i} style={healthCheckMessageStyles.messageSection}>{line}</div>;
-                        } else {
-                          return <div key={i} style={healthCheckMessageStyles.messageBody}>{line}</div>;
-                        }
-                      })
-                    )}
-                  </div>
+                {/* Render message content - always check for HTML first */}
+                {isHtmlContent(notification.message) ? (
+                  <div 
+                    dangerouslySetInnerHTML={{ __html: notification.message }}
+                    style={notificationContentStyles.content}
+                  />
                 ) : (
-                  <p>{notification.message}</p>
+                  // Fallback for plain text messages
+                  <div style={notificationContentStyles.content}>
+                    {notification.message.split('\n').map((line, i) => (
+                      <div key={i} style={notificationContentStyles.textFallback}>
+                        {line}
+                      </div>
+                    ))}
+                  </div>
                 )}
 
                 {/* Additional details based on notification type */}

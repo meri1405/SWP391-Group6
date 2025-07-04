@@ -19,6 +19,7 @@ import java.time.DateTimeException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -37,6 +38,24 @@ public class MedicationScheduleService implements IMedicationScheduleService {
     private int overdueThresholdMinutes;
 
     private static final Logger log = LoggerFactory.getLogger(MedicationScheduleService.class);
+
+    // Date formatters for consistent date formatting in notifications
+    private static final DateTimeFormatter DATETIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm, dd/MM/yyyy");
+    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
+
+    /**
+     * Format LocalDateTime to HH:mm, dd/MM/yyyy
+     */
+    private String formatDateTime(LocalDateTime dateTime) {
+        return dateTime != null ? dateTime.format(DATETIME_FORMATTER) : "N/A";
+    }
+
+    /**
+     * Format LocalTime to HH:mm
+     */
+    private String formatTime(LocalTime time) {
+        return time != null ? time.format(TIME_FORMATTER) : "N/A";
+    }
 
     /**
      * Generate medication schedules for an item request
@@ -489,7 +508,7 @@ public class MedicationScheduleService implements IMedicationScheduleService {
         try {
             Student student = schedule.getItemRequest().getMedicationRequest().getStudent();
             String medicationName = schedule.getItemRequest().getItemName();
-            String scheduledTime = schedule.getScheduledTime().toString();
+            String scheduledTime = formatTime(schedule.getScheduledTime());
             
             String title = "Lịch uống thuốc bị bỏ lỡ";
             String message = String.format(

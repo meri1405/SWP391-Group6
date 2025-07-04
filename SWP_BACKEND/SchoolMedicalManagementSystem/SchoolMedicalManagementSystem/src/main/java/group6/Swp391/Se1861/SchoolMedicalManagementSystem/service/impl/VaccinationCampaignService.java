@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Period;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -29,6 +30,24 @@ public class VaccinationCampaignService implements IVaccinationCampaignService {
     private final StudentRepository studentRepository;
     private final UserRepository userRepository;
     private final INotificationService notificationService;
+
+    // Date formatter for consistent date formatting in notifications
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private static final DateTimeFormatter DATETIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm, dd/MM/yyyy");
+
+    /**
+     * Format LocalDate to dd/MM/yyyy
+     */
+    private String formatDate(LocalDate date) {
+        return date != null ? date.format(DATE_FORMATTER) : "N/A";
+    }
+
+    /**
+     * Format LocalDateTime to HH:mm, dd/MM/yyyy
+     */
+    private String formatDateTime(LocalDateTime dateTime) {
+        return dateTime != null ? dateTime.format(DATETIME_FORMATTER) : "N/A";
+    }
 
     @Override
     @Transactional
@@ -482,7 +501,7 @@ public class VaccinationCampaignService implements IVaccinationCampaignService {
                         studentName,
                         vaccineName,
                         form.getLocation(),
-                        form.getScheduledDate() != null ? form.getScheduledDate().toString() : null,
+                        form.getScheduledDate() != null ? formatDateTime(form.getScheduledDate()) : null,
                         form
                 );
 

@@ -12,6 +12,7 @@ import {
   Divider,
   Tooltip,
   Typography,
+  Image,
 } from "antd";
 import {
   CheckOutlined,
@@ -22,6 +23,8 @@ import {
   MedicineBoxOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 import { nurseApi } from "../../api/nurseApi";
 import "../../styles/NurseMedicationComponents.css";
 
@@ -41,6 +44,28 @@ const NurseMedicationRequests = () => {
   const [rejectCustomMessage, setRejectCustomMessage] = useState("");
   const [approvalLoading, setApprovalLoading] = useState(false);
   const [rejectionLoading, setRejectionLoading] = useState(false);
+  
+  // Image preview states
+  const [imageLoading, setImageLoading] = useState({});
+
+  // ReactQuill configuration for custom message editor
+  const quillModules = {
+    toolbar: [
+      [{ 'header': [1, 2, 3, false] }],
+      ['bold', 'italic', 'underline'],
+      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+      [{ 'color': [] }, { 'background': [] }],
+      ['clean']
+    ],
+  };
+
+  const quillFormats = [
+    'header',
+    'bold', 'italic', 'underline',
+    'list', 'bullet',
+    'color', 'background'
+  ];
+  
   const fetchPendingRequests = useCallback(async () => {
     try {
       setLoading(true);
@@ -175,13 +200,34 @@ const NurseMedicationRequests = () => {
     }
   };
 
+  // Image loading functions
+  const handleImageLoad = (imageId) => {
+    setImageLoading(prev => ({ ...prev, [imageId]: false }));
+  };
+
+  const handleImageLoadStart = (imageId) => {
+    setImageLoading(prev => ({ ...prev, [imageId]: true }));
+  };
+
+  // Function to render item type tag with colors
+  const getItemTypeTag = (itemType) => {
+    const typeConfig = {
+      "CREAM": { color: "red", label: "Kem" },
+      "DROPS": { color: "green", label: "Giọt" },
+      "TABLET": { color: "blue", label: "Viên" },
+      "SPOONFUL": { color: "cyan", label: "Thìa" },
+      "SPRAY": { color: "magenta", label: "Xịt" },
+      "CAPSULE": { color: "orange", label: "Viên nang" },
+      "LIQUID": { color: "purple", label: "Dung dịch" },
+      "INJECTION": { color: "volcano", label: "Tiêm" },
+      "POWDER": { color: "geekblue", label: "Bột" }
+    };
+
+    const config = typeConfig[itemType] || { color: "default", label: itemType };
+    return <Tag color={config.color}>{config.label}</Tag>;
+  };
+
   const columns = [
-    {
-      title: "ID",
-      dataIndex: "id",
-      key: "id",
-      width: 80,
-    },
     {
       title: "Học sinh",
       dataIndex: "studentName",
@@ -314,9 +360,6 @@ const NurseMedicationRequests = () => {
               size="small"
               column={3}
             >
-              <Descriptions.Item label="ID">
-                {selectedRequest.id}
-              </Descriptions.Item>
               <Descriptions.Item label="Học sinh" span={2}>
                 {selectedRequest.studentName}
               </Descriptions.Item>
@@ -334,6 +377,104 @@ const NurseMedicationRequests = () => {
                 {selectedRequest.note || "Không có ghi chú"}
               </Descriptions.Item>
             </Descriptions>
+
+            {/* Prescription Images Display */}
+            {selectedRequest.prescriptionImages &&
+              selectedRequest.prescriptionImages.length > 0 && (
+                <div
+                  className="prescription-images-section"
+                  style={{ marginTop: "16px" }}
+                >
+                  <h4>
+                    <strong>
+                      Ảnh đơn thuốc (
+                      {selectedRequest.prescriptionImages.length})
+                    </strong>
+                  </h4>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: "8px",
+                      marginTop: "8px",
+                    }}
+                  >
+                    <Image.PreviewGroup>
+                      {selectedRequest.prescriptionImages.map(
+                        (imageUrl, index) => (
+                          <div key={index} style={{ position: "relative" }}>
+                            {imageLoading[`detail-${index}`] && (
+                              <div
+                                style={{
+                                  position: "absolute",
+                                  top: "50%",
+                                  left: "50%",
+                                  transform: "translate(-50%, -50%)",
+                                  zIndex: 1,
+                                }}
+                              >
+                                <div className="ant-spin ant-spin-spinning">
+                                  <span className="ant-spin-dot ant-spin-dot-spin">
+                                    <i className="ant-spin-dot-item"></i>
+                                    <i className="ant-spin-dot-item"></i>
+                                    <i className="ant-spin-dot-item"></i>
+                                    <i className="ant-spin-dot-item"></i>
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                            <Image
+                              src={
+                                imageUrl ||
+                                "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2VlZSIvPjx0ZXh0IHg9IjUwIiB5PSI1MCIgZm9udC1zaXplPSIxMiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPk5vIEltYWdlPC90ZXh0Pjwvc3ZnPg=="
+                              }
+                              alt={`Đơn thuốc ${index + 1}`}
+                              width={100}
+                              height={100}
+                              style={{
+                                objectFit: "cover",
+                                borderRadius: "4px",
+                                border: "1px solid #d9d9d9",
+                                cursor: "pointer",
+                              }}
+                              onLoad={() => handleImageLoad(`detail-${index}`)}
+                              onLoadStart={() => handleImageLoadStart(`detail-${index}`)}
+                              onError={(e) => {
+                                e.target.style.border = "2px solid red";
+                                handleImageLoad(`detail-${index}`);
+                              }}
+                            />
+                            <div
+                              style={{
+                                position: "absolute",
+                                bottom: "2px",
+                                left: "2px",
+                                backgroundColor: "rgba(0,0,0,0.6)",
+                                color: "white",
+                                padding: "2px 6px",
+                                borderRadius: "2px",
+                                fontSize: "10px",
+                              }}
+                            >
+                              {index + 1}
+                            </div>
+                          </div>
+                        )
+                      )}
+                    </Image.PreviewGroup>
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "12px",
+                      color: "#666",
+                      marginTop: "4px",
+                    }}
+                  >
+                    Click vào ảnh để xem kích thước đầy đủ
+                  </div>
+                </div>
+              )}
 
             <Divider />
 
@@ -353,7 +494,7 @@ const NurseMedicationRequests = () => {
                       <Title level={5}>
                         {index + 1}. {item.itemName}
                       </Title>
-                      <Tag color="blue">{item.itemType}</Tag>
+                      <p><strong>Loại: </strong>{getItemTypeTag(item.itemType)}</p>
                     </div>
                     <div className="item-details">
                       <p>
@@ -520,14 +661,20 @@ const NurseMedicationRequests = () => {
           >
             Thông báo gửi phụ huynh (tùy chọn)
           </label>
-          <TextArea
-            rows={3}
+          <ReactQuill
             value={approveCustomMessage}
-            onChange={(e) => setApproveCustomMessage(e.target.value)}
+            onChange={setApproveCustomMessage}
+            modules={quillModules}
+            formats={quillFormats}
             placeholder="Nhập thông báo tùy chỉnh gửi cho phụ huynh (nếu có). Để trống sẽ gửi thông báo mặc định..."
-            maxLength={500}
+            style={{ 
+              backgroundColor: '#ffffff',
+              border: '1px solid #d9d9d9',
+              borderRadius: '6px'
+            }}
+            theme="snow"
           />
-          <small style={{ color: "#666" }}>
+          <small style={{ color: "#666", marginTop: 8, display: "block" }}>
             Nếu để trống, hệ thống sẽ gửi thông báo mặc định về việc duyệt yêu
             cầu thuốc.
           </small>
@@ -582,14 +729,20 @@ const NurseMedicationRequests = () => {
           >
             Thông báo gửi phụ huynh (tùy chọn)
           </label>
-          <TextArea
-            rows={3}
+          <ReactQuill
             value={rejectCustomMessage}
-            onChange={(e) => setRejectCustomMessage(e.target.value)}
+            onChange={setRejectCustomMessage}
+            modules={quillModules}
+            formats={quillFormats}
             placeholder="Nhập thông báo tùy chỉnh gửi cho phụ huynh (nếu có). Để trống sẽ gửi thông báo mặc định kèm lý do từ chối..."
-            maxLength={500}
+            style={{ 
+              backgroundColor: '#ffffff',
+              border: '1px solid #d9d9d9',
+              borderRadius: '6px'
+            }}
+            theme="snow"
           />
-          <small style={{ color: "#666" }}>
+          <small style={{ color: "#666", marginTop: 8, display: "block" }}>
             Nếu để trống, hệ thống sẽ gửi thông báo mặc định kèm lý do từ chối.
           </small>
         </div>

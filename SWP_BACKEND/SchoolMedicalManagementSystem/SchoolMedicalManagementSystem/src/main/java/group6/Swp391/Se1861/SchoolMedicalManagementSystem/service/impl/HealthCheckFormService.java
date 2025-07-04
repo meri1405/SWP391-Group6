@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -24,6 +25,16 @@ public class HealthCheckFormService implements IHealthCheckFormService {
 
     private final HealthCheckFormRepository formRepository;
     private final INotificationService notificationService;
+
+    // Date formatter for consistent date formatting in notifications
+    private static final DateTimeFormatter DATETIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm, dd/MM/yyyy");
+
+    /**
+     * Format LocalDateTime to HH:mm, dd/MM/yyyy
+     */
+    private String formatDateTime(LocalDateTime dateTime) {
+        return dateTime != null ? dateTime.format(DATETIME_FORMATTER) : "N/A";
+    }
 
     @Override
     public HealthCheckFormDTO getFormById(Long id) {
@@ -229,7 +240,7 @@ public class HealthCheckFormService implements IHealthCheckFormService {
                     form.getParent(),
                     form.getStudent(),
                     "<p><strong>Nhắc nhở quan trọng:</strong> Quý phụ huynh vui lòng phản hồi lời mời tham gia đợt khám sức khỏe tại trường dành cho con em trước <strong>" + 
-                    expirationTime.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm, dd/MM/yyyy")) + 
+                    formatDateTime(expirationTime) + 
                     "</strong>. Sau thời hạn này, phiếu đồng ý sẽ tự động bị từ chối.</p>" +
                     "<p>Việc phản hồi đúng hạn sẽ giúp nhà trường sắp xếp và tổ chức khám sức khỏe hiệu quả hơn.</p>" +
                     "<p><em>Trân trọng cảm ơn!</em></p>",
