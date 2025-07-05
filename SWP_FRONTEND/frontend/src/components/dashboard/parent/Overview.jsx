@@ -28,6 +28,12 @@ const Overview = ({ userInfo: externalUserInfo }) => {
   const [recentNotifications, setRecentNotifications] = useState([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
 
+  // Helper function to check if content is HTML
+  const isHtmlContent = useCallback((content) => {
+    if (!content) return false;
+    return /<[^>]+>/.test(content);
+  }, []);
+
   // When externalUserInfo changes, update the parent profile
   useEffect(() => {
     if (externalUserInfo) {
@@ -467,7 +473,30 @@ const Overview = ({ userInfo: externalUserInfo }) => {
                     title={notification.title}
                     description={
                       <div>
-                        <Text>{notification.message}</Text>
+                        {isHtmlContent(notification.message) ? (
+                          <div 
+                            dangerouslySetInnerHTML={{ __html: notification.message }}
+                            style={{ 
+                              maxHeight: '100px',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis'
+                            }}
+                          />
+                        ) : (
+                          <Text style={{ 
+                            maxHeight: '100px',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            display: 'block'
+                          }}>
+                            {notification.message.split('\n').map((line, i) => (
+                              <span key={i}>
+                                {line}
+                                {i < notification.message.split('\n').length - 1 && <br />}
+                              </span>
+                            ))}
+                          </Text>
+                        )}
                         <br />
                         <Text type="secondary" style={{ fontSize: '12px' }}>
                           {notification.time}

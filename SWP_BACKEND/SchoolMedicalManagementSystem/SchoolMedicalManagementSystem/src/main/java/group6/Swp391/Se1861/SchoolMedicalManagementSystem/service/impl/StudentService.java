@@ -763,4 +763,9 @@ public class StudentService implements IStudentService {
                 .map(StudentMapper::toBasicInfoMap)
                 .collect(Collectors.toList());
     }
+
+    @Override
+    public List<String> getAvailableClassNames() {
+        return studentRepository.findDistinctClassNamesFromActiveStudents();
+    }
 }

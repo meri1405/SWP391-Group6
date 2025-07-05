@@ -8,7 +8,6 @@ import webSocketService from "../../../services/webSocketService";
 import { VaccinationFormModal } from "../vaccinations";
 import "../../../styles/Notifications.css";
 import { HealthCheckFormModal } from "../health";
-import CampaignCompletionRequestModal from "./CampaignCompletionRequestModal";
 
 const Notifications = ({ role = "parent" }) => {
   const [filter, setFilter] = useState("all");
@@ -20,10 +19,6 @@ const Notifications = ({ role = "parent" }) => {
     useState(null);
   const [showHealthCheckModal, setShowHealthCheckModal] = useState(false);
   const [selectedHealthCheckFormId, setSelectedHealthCheckFormId] =
-    useState(null);
-  const [showCompletionRequestModal, setShowCompletionRequestModal] =
-    useState(false);
-  const [selectedCompletionRequest, setSelectedCompletionRequest] =
     useState(null);
 
   const { getToken } = useAuth();
@@ -479,11 +474,7 @@ const Notifications = ({ role = "parent" }) => {
     const type = getNotificationType(notification);
     console.log("Notification type determined as:", type);
 
-    if (type === "completion-request") {
-      // Open completion request modal
-      setSelectedCompletionRequest(notification);
-      setShowCompletionRequestModal(true);
-    } else if (type === "status-update") {
+    if (type === "status-update") {
       // For status updates, just mark as read - no special action needed
     } else if (notification.medicationRequest) {
       // Redirect to medication request details
@@ -721,9 +712,7 @@ const Notifications = ({ role = "parent" }) => {
                     Đánh dấu đã đọc
                   </button>
                 )}
-                {notification.actionRequired && 
-                  // Hide "Xem chi tiết" button for health check notifications when user is schoolnurse
-                  !(notification.healthCheckFormId && (role === "schoolnurse")) && (
+                {notification.actionRequired && role === "parent" && (
                   <button
                     className="action-btn primary"
                     onClick={() => confirmAction(notification)}
@@ -759,17 +748,6 @@ const Notifications = ({ role = "parent" }) => {
           healthCheckFormId={selectedHealthCheckFormId}
           onClose={() => setShowHealthCheckModal(false)}
           onFormUpdated={handleHealthCheckFormUpdated}
-        />
-      )}
-      {/* Campaign Completion Request Modal */}
-      {showCompletionRequestModal && (
-        <CampaignCompletionRequestModal
-          isOpen={showCompletionRequestModal}
-          completionRequest={selectedCompletionRequest}
-          onClose={() => {
-            setShowCompletionRequestModal(false);
-            setSelectedCompletionRequest(null);
-          }}
         />
       )}
     </div>

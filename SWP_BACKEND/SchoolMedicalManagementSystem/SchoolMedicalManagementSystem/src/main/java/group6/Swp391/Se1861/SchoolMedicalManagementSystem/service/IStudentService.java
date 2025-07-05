@@ -113,4 +113,10 @@ public interface IStudentService {
      * @return list of students without health profiles
      */
     List<Map<String, Object>> getStudentsMissingHealthProfiles(User parent);
+
+    /**
+     * Get all available class names from active students
+     * @return list of distinct class names sorted alphabetically
+     */
+    List<String> getAvailableClassNames();
 }
