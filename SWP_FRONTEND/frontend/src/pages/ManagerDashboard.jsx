@@ -291,7 +291,7 @@ const ManagerDashboard = () => {
                 background: "#fff2e8",
               }}
             >
-              Quản lý y tế
+              {user?.lastName} {user?.firstName}
             </span>
           )}
         </div>
@@ -344,7 +344,9 @@ const ManagerDashboard = () => {
             >
               <UserOutlined style={{ fontSize: 20, color: "#ff6b35" }} />
             </div>
-            <span style={{ fontWeight: 500, fontSize: 16 }}>Quản lý y tế</span>
+            <span style={{ fontWeight: 500, fontSize: 16 }}>
+              {user?.lastName} {user?.firstName}
+            </span>
           </div>
         </Header>
         <Content

@@ -28,7 +28,6 @@ import dayjs from "dayjs";
 
 const { Option } = Select;
 const { TextArea } = Input;
-const { TabPane } = Tabs;
 
 const BlogSection = () => {
   const [form] = Form.useForm();
@@ -298,16 +297,17 @@ const BlogSection = () => {
           activeKey={activeTab}
           onChange={setActiveTab}
           style={{ marginBottom: 24 }}
-        >
-          <TabPane
-            tab={<span>Đã đăng ({publishedPosts.length})</span>}
-            key="published"
-          />
-          <TabPane
-            tab={<span>Bản nháp ({draftPosts.length})</span>}
-            key="drafts"
-          />
-        </Tabs>
+          items={[
+            {
+              key: "published",
+              label: <span>Đã đăng ({publishedPosts.length})</span>,
+            },
+            {
+              key: "drafts",
+              label: <span>Bản nháp ({draftPosts.length})</span>,
+            },
+          ]}
+        />
         <div
           style={{
             display: "flex",

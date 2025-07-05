@@ -1,6 +1,7 @@
 package group6.Swp391.Se1861.SchoolMedicalManagementSystem.controller;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.StudentDTO;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.StudentFilterDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.StudentWithParentsCreationDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.StudentWithParentsCreationResponseDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IStudentService;
@@ -69,6 +70,37 @@ public class ManagerStudentController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ErrorResponse("Có lỗi xảy ra khi lấy danh sách học sinh: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * Lọc học sinh theo nhiều tiêu chí
+     * Manager có thể lọc học sinh theo tên, lớp, nơi sinh, năm sinh
+     * 
+     * @param searchName Tìm kiếm theo tên học sinh
+     * @param className Lọc theo lớp học
+     * @param birthPlace Lọc theo nơi sinh
+     * @param birthYear Lọc theo năm sinh
+     * @return Danh sách học sinh được lọc
+     */
+    @GetMapping("/filter")
+    public ResponseEntity<?> filterStudents(
+            @RequestParam(required = false) String searchName,
+            @RequestParam(required = false) String className,
+            @RequestParam(required = false) String birthPlace,
+            @RequestParam(required = false) Integer birthYear) {
+        try {
+            StudentFilterDTO filter = new StudentFilterDTO();
+            filter.setSearchName(searchName);
+            filter.setClassName(className);
+            filter.setBirthPlace(birthPlace);
+            filter.setBirthYear(birthYear);
+            
+            List<StudentDTO> students = studentService.filterStudents(filter);
+            return ResponseEntity.ok(students);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Có lỗi xảy ra khi lọc danh sách học sinh: " + e.getMessage()));
         }
     }
     

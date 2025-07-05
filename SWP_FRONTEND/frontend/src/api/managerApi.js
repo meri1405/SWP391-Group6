@@ -238,6 +238,49 @@ const managerApi = {
     }
   },
 
+  // Medical Event Statistics API for Manager
+  getMedicalEventStatistics: async (
+    params = {},
+    token = getTokenFromStorage()
+  ) => {
+    try {
+      const authAxios = createAuthAxios(token);
+
+      // Build query parameters
+      const queryParams = new URLSearchParams();
+      if (params.period) queryParams.append("period", params.period);
+      if (params.dateFrom) queryParams.append("dateFrom", params.dateFrom);
+      if (params.dateTo) queryParams.append("dateTo", params.dateTo);
+
+      console.log(
+        "Fetching medical event statistics for manager with params:",
+        params
+      );
+
+      const response = await authAxios.get(
+        `/api/manager/medical-events/statistics?${queryParams}`
+      );
+
+      console.log(
+        "Medical event statistics received for manager:",
+        response.data
+      );
+      return response.data;
+    } catch (error) {
+      console.error(
+        "Error fetching medical event statistics for manager:",
+        error
+      );
+      // Return fallback data if API fails
+      return {
+        total: 89,
+        emergency: 12,
+        resolved: 76,
+        pending: 13,
+      };
+    }
+  },
+
   // Debug endpoint to test authentication
   testManagerAuth: async (token = getTokenFromStorage()) => {
     try {

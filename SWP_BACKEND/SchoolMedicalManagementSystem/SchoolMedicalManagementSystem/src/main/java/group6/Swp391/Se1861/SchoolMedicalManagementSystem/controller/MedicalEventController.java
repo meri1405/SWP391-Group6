@@ -2,12 +2,14 @@ package group6.Swp391.Se1861.SchoolMedicalManagementSystem.controller;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.MedicalEventRequestDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.MedicalEventResponseDTO;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.HealthProfileDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.exception.ResourceNotFoundException;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.EventType;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.SeverityLevel;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.UserRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IMedicalEventService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.ISchoolNurseHealthProfileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/medical-events")
@@ -27,6 +30,7 @@ public class MedicalEventController {
 
     private final IMedicalEventService IMedicalEventService;
     private final UserRepository userRepository;
+    private final ISchoolNurseHealthProfileService healthProfileService;
 
     @PostMapping
     @PreAuthorize("hasRole('SCHOOLNURSE')")
@@ -36,6 +40,12 @@ public class MedicalEventController {
 
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         Long userId = getUserIdFromUsername(userDetails.getUsername());
+
+        // Validate that student has approved health profile
+        if (!healthProfileService.hasApprovedHealthProfile(requestDTO.getStudentId())) {
+            return ResponseEntity.badRequest()
+                    .body(null); // Return error response indicating student has no health profile
+        }
 
         MedicalEventResponseDTO responseDTO = IMedicalEventService.createMedicalEvent(requestDTO, userId);
         return new ResponseEntity<>(responseDTO, HttpStatus.CREATED);
@@ -112,6 +122,26 @@ public class MedicalEventController {
         Long userId = getUserIdFromUsername(userDetails.getUsername());
 
         return ResponseEntity.ok(IMedicalEventService.processMedicalEvent(id, userId));
+    }
+    
+    /**
+     * Check if student has approved health profile
+     */
+    @GetMapping("/check-health-profile/{studentId}")
+    @PreAuthorize("hasRole('SCHOOLNURSE')")
+    public ResponseEntity<Map<String, Object>> checkStudentHealthProfile(@PathVariable Long studentId) {
+        boolean hasProfile = healthProfileService.hasApprovedHealthProfile(studentId);
+        HealthProfileDTO profile = null;
+        
+        if (hasProfile) {
+            profile = healthProfileService.getApprovedHealthProfileByStudentId(studentId);
+        }
+        
+        return ResponseEntity.ok(Map.of(
+                "hasApprovedProfile", hasProfile,
+                "message", hasProfile ? "Học sinh đã được khai báo hồ sơ sức khỏe" : "Học sinh chưa được phụ huynh khai báo hồ sơ sức khỏe",
+                "profile", profile != null ? profile : Map.of()
+        ));
     }
 
     // Helper method to get user ID from username

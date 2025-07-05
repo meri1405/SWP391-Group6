@@ -25,7 +25,6 @@ import {
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 
-const { TabPane } = Tabs;
 const { Option } = Select;
 const { TextArea } = Input;
 
@@ -315,24 +314,25 @@ const HealthChecksSection = () => {
           activeKey={activeTab}
           onChange={setActiveTab}
           style={{ marginBottom: 24 }}
-        >
-          <TabPane
-            tab={
-              <span>
-                <CalendarOutlined /> Đợt kiểm tra ({campaigns.length})
-              </span>
-            }
-            key="campaigns"
-          />
-          <TabPane
-            tab={
-              <span>
-                <CheckCircleOutlined /> Kết quả ({results.length})
-              </span>
-            }
-            key="results"
-          />
-        </Tabs>
+          items={[
+            {
+              key: "campaigns",
+              label: (
+                <span>
+                  <CalendarOutlined /> Đợt kiểm tra ({campaigns.length})
+                </span>
+              ),
+            },
+            {
+              key: "results",
+              label: (
+                <span>
+                  <CheckCircleOutlined /> Kết quả ({results.length})
+                </span>
+              ),
+            },
+          ]}
+        />
         <div
           style={{
             display: "flex",
