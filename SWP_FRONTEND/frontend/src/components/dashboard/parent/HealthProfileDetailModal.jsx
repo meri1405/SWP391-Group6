@@ -125,7 +125,12 @@ const HealthProfileDetailModal = ({ visible, onClose, healthProfile }) => {
                 <Text strong>Họ và tên phụ huynh: </Text>
                 <Text>{parentName}</Text>
               </div>
+            </Space>
+          </Col>
+          <Col span={12}>
+            <Space direction="vertical" size="small">
               <div>
+                <CalendarOutlined style={{ marginRight: 8 }} />
                 <Text strong>Ngày sinh: </Text>
                 <Text>
                   {student?.dateOfBirth
@@ -135,12 +140,7 @@ const HealthProfileDetailModal = ({ visible, onClose, healthProfile }) => {
                     : "N/A"}
                 </Text>
               </div>
-            </Space>
-          </Col>
-          <Col span={12}>
-            <Space direction="vertical" size="small">
               <div>
-                <CalendarOutlined style={{ marginRight: 8 }} />
                 <Text strong>Ngày tạo: </Text>
                 <Text>{formatDate(healthProfile.createdAt)}</Text>
               </div>
@@ -148,58 +148,71 @@ const HealthProfileDetailModal = ({ visible, onClose, healthProfile }) => {
                 <Text strong>Trạng thái: </Text>
                 {getStatusTag(healthProfile.status)}{" "}
               </div>
-              {healthProfile.status === "REJECTED" &&
-                healthProfile.nurseNote && (
-                  <div style={{ marginTop: 8 }}>
-                    <Alert
-                      message="Hồ sơ đã bị từ chối"
-                      description={
-                        <>
-                          <strong>Lý do từ chối: </strong>
-                          {healthProfile.nurseNote}
-                        </>
-                      }
-                      type="error"
-                      showIcon
-                      style={{ marginBottom: 8 }}
-                    />
-                  </div>
-                )}
-              {healthProfile.status === "APPROVED" &&
-                healthProfile.nurseNote && (
-                  <div style={{ marginTop: 8 }}>
-                    <Alert
-                      message="Hồ sơ đã được duyệt"
-                      description={
-                        <>
-                          <strong>Ghi chú của Y tá: </strong>
-                          {healthProfile.nurseNote}
-                        </>
-                      }
-                      type="success"
-                      showIcon
-                      style={{ marginBottom: 8 }}
-                    />
-                  </div>
-                )}
-              {(healthProfile.status === "APPROVED" ||
-                healthProfile.status === "REJECTED") &&
-                healthProfile.schoolNurseFullName && (
-                  <div>
-                    <Text strong>Y tá trường: </Text>
-                    <Text>{healthProfile.schoolNurseFullName}</Text>
-                  </div>
-                )}
-              {healthProfile.updatedAt &&
-                healthProfile.updatedAt !== healthProfile.createdAt && (
-                  <div>
-                    <Text strong>Cập nhật lần cuối: </Text>
-                    <Text>{formatDate(healthProfile.updatedAt)}</Text>
-                  </div>
-                )}
             </Space>
           </Col>
         </Row>
+
+        {/* Alerts and additional info */}
+        {healthProfile.status === "REJECTED" && healthProfile.nurseNote && (
+          <Alert
+            message="Hồ sơ đã bị từ chối"
+            description={
+              <>
+                <strong>Lý do từ chối: </strong>
+                {healthProfile.nurseNote}
+              </>
+            }
+            type="error"
+            showIcon
+            style={{ marginTop: 16 }}
+          />
+        )}
+        {healthProfile.status === "APPROVED" && healthProfile.nurseNote && (
+          <Alert
+            message="Hồ sơ đã được duyệt"
+            description={
+              <>
+                <strong>Ghi chú của Y tá: </strong>
+                {healthProfile.nurseNote}
+              </>
+            }
+            type="success"
+            showIcon
+            style={{ marginTop: 16 }}
+          />
+        )}
+
+        {/* Additional info row */}
+        {((healthProfile.status === "APPROVED" ||
+          healthProfile.status === "REJECTED") &&
+          healthProfile.schoolNurseFullName) ||
+        (healthProfile.updatedAt &&
+          healthProfile.updatedAt !== healthProfile.createdAt) ? (
+          <Row
+            gutter={16}
+            style={{
+              marginTop: 16,
+              paddingTop: 16,
+              borderTop: "1px solid #f0f0f0",
+            }}
+          >
+            {(healthProfile.status === "APPROVED" ||
+              healthProfile.status === "REJECTED") &&
+              healthProfile.schoolNurseFullName && (
+                <Col span={12}>
+                  <Text strong>Y tá trường: </Text>
+                  <Text>{healthProfile.schoolNurseFullName}</Text>
+                </Col>
+              )}
+            {healthProfile.updatedAt &&
+              healthProfile.updatedAt !== healthProfile.createdAt && (
+                <Col span={12}>
+                  <Text strong>Cập nhật lần cuối: </Text>
+                  <Text>{formatDate(healthProfile.updatedAt)}</Text>
+                </Col>
+              )}
+          </Row>
+        ) : null}
       </Card>{" "}
       <Tabs
         defaultActiveKey="basic"

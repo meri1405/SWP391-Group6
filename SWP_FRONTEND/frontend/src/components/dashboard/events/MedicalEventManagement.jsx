@@ -67,11 +67,17 @@ const MedicalEventManagement = () => {
     processed: 0,
   });
 
+  // New states for class-student cascade
+  const [classes, setClasses] = useState([]);
+  const [selectedClass, setSelectedClass] = useState(null);
+  const [filteredStudents, setFilteredStudents] = useState([]);
+  const [studentCount, setStudentCount] = useState(0);
+
   // Get user context for role-based permissions
   const { user } = useAuth();
-  
+
   // Check if user is manager (view-only mode)
-  const isManager = user?.roleName === 'MANAGER';
+  const isManager = user?.roleName === "MANAGER";
   const isViewOnly = isManager;
 
   // Backend EventType enum values (từ backend)
@@ -97,7 +103,7 @@ const MedicalEventManagement = () => {
       const response = await getMedicalEvents();
       console.log("Events API Response:", response);
       const eventsData = Array.isArray(response) ? response : [];
-      
+
       // Sort events by creation date - newest first
       const sortedEvents = [...eventsData].sort((a, b) => {
         // Primary sort by creation date (newest first)
@@ -105,7 +111,7 @@ const MedicalEventManagement = () => {
         const dateB = new Date(b.createdAt || b.occurrenceTime);
         return dateB - dateA;
       });
-      
+
       setEvents(sortedEvents);
       calculateStatistics(sortedEvents);
     } catch (error) {
@@ -124,12 +130,92 @@ const MedicalEventManagement = () => {
       // Handle different response formats
       const studentsData = response?.students || response || [];
       console.log("Processed students data:", studentsData);
-      setStudents(Array.isArray(studentsData) ? studentsData : []);
+      const studentsArray = Array.isArray(studentsData) ? studentsData : [];
+      setStudents(studentsArray);
+
+      // Extract unique classes from students
+      extractClassesFromStudents(studentsArray);
     } catch (error) {
       console.error("Error loading students:", error);
       message.error("Không thể tải danh sách học sinh");
     }
   }, []);
+
+  // Extract unique classes from students data
+  const extractClassesFromStudents = useCallback((studentsData) => {
+    const uniqueClasses = [];
+    const classSet = new Set();
+
+    studentsData.forEach((student) => {
+      const className = student.className;
+      if (className && !classSet.has(className)) {
+        classSet.add(className);
+        // Count students in this class
+        const studentsInClass = studentsData.filter(
+          (s) => s.className === className
+        );
+        uniqueClasses.push({
+          name: className,
+          studentCount: studentsInClass.length,
+        });
+      }
+    });
+
+    // Sort classes by name
+    uniqueClasses.sort((a, b) => a.name.localeCompare(b.name));
+
+    console.log("Extracted classes:", uniqueClasses);
+    setClasses(uniqueClasses);
+  }, []);
+
+  // Handle class selection
+  const handleClassChange = useCallback(
+    (className) => {
+      setSelectedClass(className);
+
+      if (className) {
+        // Filter students by selected class
+        const studentsInClass = students.filter(
+          (student) => student.className === className
+        );
+        setFilteredStudents(studentsInClass);
+        setStudentCount(studentsInClass.length);
+
+        // Reset student selection in form
+        form.setFieldsValue({ studentId: undefined });
+
+        console.log(
+          `Class "${className}" selected. Found ${studentsInClass.length} students.`
+        );
+      } else {
+        // If no class selected, clear filtered students
+        setFilteredStudents([]);
+        setStudentCount(0);
+        form.setFieldsValue({ studentId: undefined });
+      }
+    },
+    [students, form]
+  );
+
+  // Reset class and student selection when modal opens
+  const handleAddEvent = () => {
+    if (isViewOnly) {
+      message.warning("Bạn không có quyền thêm sự kiện y tế");
+      return;
+    }
+
+    // Reset form and selections
+    setSelectedEvent(null);
+    setSelectedClass(null);
+    setFilteredStudents([]);
+    setStudentCount(0);
+    setModalVisible(true);
+
+    // Reset form after modal is opened to avoid the warning
+    setTimeout(() => {
+      form.resetFields();
+    }, 0);
+  };
 
   const loadMedicalSupplies = useCallback(async () => {
     try {
@@ -183,7 +269,7 @@ const MedicalEventManagement = () => {
       processed,
     });
   };
-  
+
   const filterEvents = useCallback(() => {
     let filtered = events;
 
@@ -232,7 +318,14 @@ const MedicalEventManagement = () => {
 
     // Make sure filtered events maintain the same sort order as the original list (newest first)
     setFilteredEvents(filtered);
-  }, [events, searchText, filterProcessed, filterType, filterSeverity, dateRange]);
+  }, [
+    events,
+    searchText,
+    filterProcessed,
+    filterType,
+    filterSeverity,
+    dateRange,
+  ]);
 
   // Load data on component mount
   useEffect(() => {
@@ -246,18 +339,12 @@ const MedicalEventManagement = () => {
     filterEvents();
   }, [filterEvents]);
 
-  const handleAddEvent = () => {
-    if (isViewOnly) {
-      message.warning('Bạn không có quyền thêm sự kiện y tế');
-      return;
+  // Sync form field with selectedClass state
+  useEffect(() => {
+    if (form && selectedClass) {
+      form.setFieldsValue({ className: selectedClass });
     }
-    setSelectedEvent(null);
-    setModalVisible(true);
-    // Reset form after modal is opened to avoid the warning
-    setTimeout(() => {
-      form.resetFields();
-    }, 0);
-  };
+  }, [form, selectedClass]);
 
   const handleViewEvent = async (eventId) => {
     try {
@@ -272,7 +359,7 @@ const MedicalEventManagement = () => {
 
   const handleProcessEvent = async (eventId) => {
     if (isViewOnly) {
-      message.warning('Bạn không có quyền xử lý sự kiện y tế');
+      message.warning("Bạn không có quyền xử lý sự kiện y tế");
       return;
     }
     try {
@@ -291,45 +378,57 @@ const MedicalEventManagement = () => {
 
   const onSubmitForm = async (values) => {
     if (isViewOnly) {
-      message.error('Bạn không có quyền thêm sự kiện y tế');
+      message.error("Bạn không có quyền thêm sự kiện y tế");
       return;
     }
     try {
       setLoading(true);
-      
+
       // values is already provided by form.onFinish
-      
+
       // Check that all required fields have values
       const requiredFields = [
-        'occurrenceTime', 'studentId', 'eventType', 'severityLevel', 'location'
+        "occurrenceTime",
+        "className",
+        "studentId",
+        "eventType",
+        "severityLevel",
+        "location",
       ];
-      
-      const missingFields = requiredFields.filter(field => !values[field]);
-      
+
+      const missingFields = requiredFields.filter((field) => !values[field]);
+
       if (missingFields.length > 0) {
         // Create a friendly message about missing fields
         const fieldLabels = {
-          'occurrenceTime': 'Thời gian xảy ra',
-          'studentId': 'Học sinh',
-          'eventType': 'Loại sự kiện',
-          'severityLevel': 'Mức độ nghiêm trọng',
-          'location': 'Địa điểm xảy ra'
+          occurrenceTime: "Thời gian xảy ra",
+          className: "Lớp",
+          studentId: "Học sinh",
+          eventType: "Loại sự kiện",
+          severityLevel: "Mức độ nghiêm trọng",
+          location: "Địa điểm xảy ra",
         };
-        
-        const missingFieldLabels = missingFields.map(field => fieldLabels[field]);
-        message.error(`Vui lòng điền đầy đủ thông tin: ${missingFieldLabels.join(', ')}`);
+
+        const missingFieldLabels = missingFields.map(
+          (field) => fieldLabels[field]
+        );
+        message.error(
+          `Vui lòng điền đầy đủ thông tin: ${missingFieldLabels.join(", ")}`
+        );
         setLoading(false);
         return;
       }
-      
+
       // Validate medical supplies if any are provided
       if (values.suppliesUsed && values.suppliesUsed.length > 0) {
         const invalidSupplies = values.suppliesUsed.filter(
-          supply => !supply.medicalSupplyId || !supply.quantityUsed
+          (supply) => !supply.medicalSupplyId || !supply.quantityUsed
         );
-        
+
         if (invalidSupplies.length > 0) {
-          message.error('Vui lòng chọn vật tư và nhập số lượng cho tất cả vật tư y tế');
+          message.error(
+            "Vui lòng chọn vật tư và nhập số lượng cho tất cả vật tư y tế"
+          );
           setLoading(false);
           return;
         }
@@ -362,38 +461,42 @@ const MedicalEventManagement = () => {
 
       // Show success message
       message.success("Đã thêm sự kiện mới thành công");
-      
+
       // Add the new event to the top of the list
       if (response) {
         const newEvent = response;
-        setEvents(prevEvents => [newEvent, ...prevEvents]);
+        setEvents((prevEvents) => [newEvent, ...prevEvents]);
         // Recalculate statistics
         calculateStatistics([newEvent, ...events]);
       } else {
         // If no response or incomplete response, refresh the full list
         loadEvents();
       }
-      
+
       setModalVisible(false);
+      setSelectedClass(null);
+      setFilteredStudents([]);
+      setStudentCount(0);
       form.resetFields();
     } catch (error) {
       console.error("Error saving event:", error);
-      
+
       // Show more helpful error messages for validation failures
       if (error.errorFields) {
         // This is a form validation error
         const fieldLabels = {
-          'occurrenceTime': 'Thời gian xảy ra',
-          'studentId': 'Học sinh',
-          'eventType': 'Loại sự kiện',
-          'severityLevel': 'Mức độ nghiêm trọng',
-          'location': 'Địa điểm xảy ra'
+          occurrenceTime: "Thời gian xảy ra",
+          className: "Lớp",
+          studentId: "Học sinh",
+          eventType: "Loại sự kiện",
+          severityLevel: "Mức độ nghiêm trọng",
+          location: "Địa điểm xảy ra",
         };
-        
+
         const firstError = error.errorFields[0];
         const fieldName = firstError.name[0];
         const fieldLabel = fieldLabels[fieldName] || fieldName;
-        
+
         message.error(`Vui lòng điền đúng thông tin: ${fieldLabel}`);
       } else {
         // This is another type of error
@@ -598,7 +701,8 @@ const MedicalEventManagement = () => {
       <Card>
         <div className="header-section">
           <Title level={3}>
-            <MedicineBoxOutlined /> {isViewOnly ? 'Xem sự kiện y tế' : 'Quản lý sự kiện y tế'}
+            <MedicineBoxOutlined />{" "}
+            {isViewOnly ? "Xem sự kiện y tế" : "Quản lý sự kiện y tế"}
           </Title>
           {!isViewOnly && (
             <Button
@@ -701,6 +805,9 @@ const MedicalEventManagement = () => {
         onOk={() => form.submit()}
         onCancel={() => {
           setModalVisible(false);
+          setSelectedClass(null);
+          setFilteredStudents([]);
+          setStudentCount(0);
           form.resetFields();
         }}
         width={800}
@@ -708,9 +815,16 @@ const MedicalEventManagement = () => {
         destroyOnHidden
         forceRender
         className="event-modal"
-        styles={{ body: { maxHeight: '70vh', overflow: 'auto', paddingTop: 10 } }}
+        styles={{
+          body: { maxHeight: "70vh", overflow: "auto", paddingTop: 10 },
+        }}
       >
-        <Form form={form} layout="vertical" preserve={false} onFinish={onSubmitForm}>
+        <Form
+          form={form}
+          layout="vertical"
+          preserve={false}
+          onFinish={onSubmitForm}
+        >
           <Row gutter={[16, 16]}>
             <Col xs={24} sm={12}>
               <Form.Item
@@ -736,11 +850,16 @@ const MedicalEventManagement = () => {
                   format="DD/MM/YYYY HH:mm"
                   style={{ width: "100%" }}
                   placeholder="Chọn thời gian"
-                  disabledDate={(current) => current && current > dayjs().endOf('day')}
+                  disabledDate={(current) =>
+                    current && current > dayjs().endOf("day")
+                  }
                   disabledTime={() => ({
                     disabledHours: () => {
                       const hours = [];
-                      if (dayjs().format('DD/MM/YYYY') === dayjs().format('DD/MM/YYYY')) {
+                      if (
+                        dayjs().format("DD/MM/YYYY") ===
+                        dayjs().format("DD/MM/YYYY")
+                      ) {
                         for (let i = dayjs().hour() + 1; i < 24; i++) {
                           hours.push(i);
                         }
@@ -749,41 +868,70 @@ const MedicalEventManagement = () => {
                     },
                     disabledMinutes: (hour) => {
                       const minutes = [];
-                      if (dayjs().format('DD/MM/YYYY') === dayjs().format('DD/MM/YYYY') && 
-                          hour === dayjs().hour()) {
+                      if (
+                        dayjs().format("DD/MM/YYYY") ===
+                          dayjs().format("DD/MM/YYYY") &&
+                        hour === dayjs().hour()
+                      ) {
                         for (let i = dayjs().minute() + 1; i < 60; i++) {
                           minutes.push(i);
                         }
                       }
                       return minutes;
-                    }
+                    },
                   })}
                 />
               </Form.Item>
             </Col>
             <Col xs={24} sm={12}>
               <Form.Item
-                name="studentId"
-                label="Học sinh"
-                rules={[{ required: true, message: "Vui lòng chọn học sinh" }]}
+                name="className"
+                label="Lớp"
+                rules={[{ required: true, message: "Vui lòng chọn lớp" }]}
               >
                 <Select
-                  placeholder="Chọn học sinh"
+                  placeholder="Chọn lớp"
+                  value={selectedClass}
+                  onChange={handleClassChange}
                   showSearch
                   filterOption={(input, option) =>
                     option.children.toLowerCase().includes(input.toLowerCase())
                   }
                 >
-                  {Array.isArray(students) &&
-                    students.map((student) => (
-                      <Option
-                        key={student.studentID || student.id}
-                        value={student.studentID || student.id}
-                      >
-                        {student.firstName} {student.lastName} -{" "}
-                        {student.className}
-                      </Option>
-                    ))}
+                  {classes.map((classInfo) => (
+                    <Option key={classInfo.name} value={classInfo.name}>
+                      {classInfo.name} ({classInfo.studentCount} học sinh)
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                name="studentId"
+                label={`Học sinh${
+                  studentCount > 0 ? ` (${studentCount} học sinh)` : ""
+                }`}
+                rules={[{ required: true, message: "Vui lòng chọn học sinh" }]}
+              >
+                <Select
+                  placeholder={
+                    selectedClass ? "Chọn học sinh" : "Vui lòng chọn lớp trước"
+                  }
+                  disabled={!selectedClass}
+                  showSearch
+                  filterOption={(input, option) =>
+                    option.children.toLowerCase().includes(input.toLowerCase())
+                  }
+                >
+                  {filteredStudents.map((student) => (
+                    <Option
+                      key={student.studentID || student.id}
+                      value={student.studentID || student.id}
+                    >
+                      {student.firstName} {student.lastName}
+                    </Option>
+                  ))}
                 </Select>
               </Form.Item>
             </Col>
@@ -894,7 +1042,7 @@ const MedicalEventManagement = () => {
                                     >
                                       <span>
                                         {supply.name} - Còn:{" "}
-                                        {supply.displayQuantity || 0 }{" "}
+                                        {supply.displayQuantity || 0}{" "}
                                         {supply.displayUnit}
                                       </span>
                                       {expiryStatus && (
@@ -961,7 +1109,9 @@ const MedicalEventManagement = () => {
           </Button>,
         ]}
         width={800}
-        styles={{ body: { maxHeight: '70vh', overflow: 'auto', paddingTop: 10 } }}
+        styles={{
+          body: { maxHeight: "70vh", overflow: "auto", paddingTop: 10 },
+        }}
       >
         {selectedEvent && (
           <div>

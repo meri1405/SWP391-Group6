@@ -37,6 +37,10 @@ public interface IMedicationScheduleService {
 
     List<MedicationScheduleDTO> getSchedulesForStudentAndNurse(Long studentId, User nurse);
 
+    List<MedicationScheduleDTO> getAllSchedulesForNurse(User nurse);
+
+    List<MedicationScheduleDTO> getSchedulesByStatusAndNurse(MedicationStatus status, User nurse);
+
     void deleteSchedulesForItemRequest(Long itemRequestId);
 
     MedicationScheduleDTO updateScheduleNote(Long scheduleId, User nurse, String note);
