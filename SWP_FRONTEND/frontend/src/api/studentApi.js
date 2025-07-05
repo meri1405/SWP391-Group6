@@ -200,8 +200,6 @@ export const removeParentFromStudent = async (studentId, parentType) => {
   }
 };
 
-// ==================== EXCEL OPERATIONS ====================
-
 /**
  * Import học sinh từ file Excel
  * @param {File} file - File Excel
@@ -253,5 +251,33 @@ export const downloadExcelTemplate = async () => {
     return await response.blob();
   } catch (error) {
     throw new Error(handleApiError(error, "Không thể tải template Excel"));
+  }
+};
+
+/**
+ * Lấy danh sách tên lớp có sẵn từ cơ sở dữ liệu
+ * @returns {Promise<Array>} Danh sách tên lớp duy nhất đã được sắp xếp
+ */
+export const getAvailableClassNames = async () => {
+  try {
+    const response = await fetch(
+      `${API_CONFIG.BASE_URL}/nurse/students/available-classes`,
+      {
+        method: "GET",
+        headers: getAuthHeaders(),
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`
+      );
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching available class names:", error);
+    throw new Error(handleApiError(error, "Không thể lấy danh sách lớp học"));
   }
 };
