@@ -9,6 +9,7 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.Student;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public interface IStudentService {
@@ -98,4 +99,18 @@ public interface IStudentService {
      * @return list of filtered students
      */
     List<StudentDTO> filterStudents(StudentFilterDTO filter);
+
+    /**
+     * Get students with their health profile status for a parent
+     * @param parent the parent user
+     * @return list of student information with health profile status
+     */
+    List<Map<String, Object>> getStudentsWithHealthProfileStatus(User parent);
+
+    /**
+     * Get students missing health profiles for a parent
+     * @param parent the parent user
+     * @return list of students without health profiles
+     */
+    List<Map<String, Object>> getStudentsMissingHealthProfiles(User parent);
 }
