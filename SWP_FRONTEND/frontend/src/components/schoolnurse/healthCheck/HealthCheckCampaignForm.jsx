@@ -97,14 +97,9 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
   const onValuesChange = (changedValues, allValues) => {
     const { minAge, maxAge, targetClasses } = allValues;
     
-    // Trigger validation for age and class fields when they change
+    // Only recalculate target count when relevant fields change
+    // Remove immediate validation - let it only happen on form submit
     if ('minAge' in changedValues || 'maxAge' in changedValues || 'targetClasses' in changedValues) {
-      // Validate the related fields
-      setTimeout(() => {
-        form.validateFields(['minAge', 'maxAge', 'targetClasses']);
-      }, 100);
-      
-      // Only recalculate if the relevant fields have changed
       // Add a small delay to avoid too many API calls
       const timeoutId = setTimeout(() => {
         calculateTargetCount(minAge, maxAge, targetClasses);
@@ -290,6 +285,7 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
             <Form.Item
               name="minAge"
               label="Độ tuổi tối thiểu"
+              validateTrigger="onSubmit"
               rules={[
                 {
                   validator: (_, value, { getFieldValue }) => {
@@ -328,6 +324,7 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
             <Form.Item
               name="maxAge"
               label="Độ tuổi tối đa"
+              validateTrigger="onSubmit"
               rules={[
                 {
                   validator: (_, value, { getFieldValue }) => {
@@ -370,6 +367,7 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
               name="targetClasses"
               label="Lớp mục tiêu"
               tooltip="Để trống để áp dụng cho toàn trường"
+              validateTrigger="onSubmit"
               rules={[
                 {
                   validator: (_, value, { getFieldValue }) => {
