@@ -405,4 +405,24 @@ public class SchoolNurseHealthProfileService implements ISchoolNurseHealthProfil
 
         return dto;
     }
+    
+    /**
+     * Check if student has approved health profile
+     */
+    @Override
+    public boolean hasApprovedHealthProfile(Long studentId) {
+        return healthProfileRepository.existsByStudentStudentIDAndStatus(studentId, ProfileStatus.APPROVED);
+    }
+    
+    /**
+     * Get approved health profile by student ID
+     */
+    @Override
+    public HealthProfileDTO getApprovedHealthProfileByStudentId(Long studentId) {
+        HealthProfile healthProfile = healthProfileRepository
+                .findByStudentStudentIDAndStatus(studentId, ProfileStatus.APPROVED)
+                .orElse(null);
+        
+        return healthProfile != null ? convertToBasicDTO(healthProfile) : null;
+    }
 }

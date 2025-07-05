@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Spin, Typography, Progress, Row, Col } from "antd";
 import { managerVaccinationApi } from "../../api/vaccinationCampaignApi";
 import { healthCheckApi } from "../../api/healthCheckApi";
-import { getMedicalEventStatistics } from "../../api/medicalEventApi";
+import managerApi from "../../api/managerApi";
 import { restockRequestApi } from "../../api/restockRequestApi";
 import {
   Chart as ChartJS,
@@ -46,7 +46,7 @@ const ManagerOverview = () => {
       // Fetch data from existing APIs
       const [vaccinationData, medicalEventData] = await Promise.all([
         managerVaccinationApi.getCampaignStatistics(),
-        getMedicalEventStatistics().catch(() => ({
+        managerApi.getMedicalEventStatistics().catch(() => ({
           total: 89,
           emergency: 12,
           resolved: 76,

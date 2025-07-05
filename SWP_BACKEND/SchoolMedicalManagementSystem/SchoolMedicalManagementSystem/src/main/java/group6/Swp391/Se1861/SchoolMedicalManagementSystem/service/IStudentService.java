@@ -2,6 +2,7 @@ package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.ParentDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.StudentDTO;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.StudentFilterDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.StudentWithParentsCreationDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.StudentWithParentsCreationResponseDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.Student;
@@ -90,4 +91,11 @@ public interface IStudentService {
      * @return list of eligible students
      */
     List<StudentDTO> getEligibleStudentsForClasses(Set<String> classNames, Integer minAge, Integer maxAge);
+    
+    /**
+     * Filter students based on multiple criteria
+     * @param filter the filter criteria containing searchName, className, birthPlace, birthYear
+     * @return list of filtered students
+     */
+    List<StudentDTO> filterStudents(StudentFilterDTO filter);
 }

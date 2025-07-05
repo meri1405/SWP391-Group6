@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -698,5 +699,46 @@ public class StudentService implements IStudentService {
         // Fallback - trả về danh sách rỗng
         System.out.println("No logic matched, returning empty list");
         return new ArrayList<>();
+    }
+    
+    @Override
+    public List<StudentDTO> filterStudents(StudentFilterDTO filter) {
+        List<Student> students = studentRepository.findAllActiveWithParents();
+        
+        // Apply filters
+        if (filter.getSearchName() != null && !filter.getSearchName().trim().isEmpty()) {
+            String searchName = filter.getSearchName().toLowerCase().trim();
+            students = students.stream()
+                    .filter(student -> {
+                        String fullName = (student.getLastName() + " " + student.getFirstName()).toLowerCase();
+                        return fullName.contains(searchName);
+                    })
+                    .collect(Collectors.toList());
+        }
+        
+        if (filter.getClassName() != null && !filter.getClassName().trim().isEmpty()) {
+            students = students.stream()
+                    .filter(student -> student.getClassName().equals(filter.getClassName()))
+                    .collect(Collectors.toList());
+        }
+        
+        if (filter.getBirthPlace() != null && !filter.getBirthPlace().trim().isEmpty()) {
+            students = students.stream()
+                    .filter(student -> student.getBirthPlace() != null && 
+                                     student.getBirthPlace().equals(filter.getBirthPlace()))
+                    .collect(Collectors.toList());
+        }
+        
+        if (filter.getBirthYear() != null) {
+            students = students.stream()
+                    .filter(student -> student.getDob() != null && 
+                                     student.getDob().getYear() == filter.getBirthYear())
+                    .collect(Collectors.toList());
+        }
+        
+        // Convert to DTOs
+        return students.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
     }
 }

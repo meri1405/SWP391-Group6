@@ -35,7 +35,6 @@ import "../../styles/NurseMedicationComponents.css";
 
 const { TextArea } = Input;
 const { Title, Text } = Typography;
-const { TabPane } = Tabs;
 
 const NurseMedicationRequests = () => {
   const [loading, setLoading] = useState(false);
@@ -591,300 +590,314 @@ const NurseMedicationRequests = () => {
           </Button>
         </div>
 
-        <Tabs defaultActiveKey="all" type="card">
-          <TabPane tab={`Tất cả (${medicationSchedules.length})`} key="all">
-            {/* Grouped by student view */}
-            <div className="medication-schedules-grouped">
-              {Object.entries(
-                medicationSchedules.reduce((groups, schedule) => {
-                  const key = `${schedule.studentName}-${schedule.className}`;
-                  if (!groups[key]) {
-                    groups[key] = {
-                      studentName: schedule.studentName,
-                      className: schedule.className,
-                      schedules: [],
-                    };
-                  }
-                  groups[key].schedules.push(schedule);
-                  return groups;
-                }, {})
-              ).map(([key, group]) => (
-                <Card
-                  key={key}
-                  className="student-medication-group"
-                  style={{ marginBottom: "16px" }}
-                  title={
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                      }}
-                    >
-                      <span>
-                        <UserOutlined
-                          style={{ marginRight: "8px", color: "#1890ff" }}
-                        />
-                        <strong>{group.studentName}</strong>
-                        <span
-                          style={{
-                            marginLeft: "8px",
-                            color: "#666",
-                            fontSize: "14px",
-                          }}
-                        >
-                          ({group.className})
-                        </span>
-                      </span>
-                      <span style={{ fontSize: "14px", color: "#666" }}>
-                        {group.schedules.length} lịch uống thuốc
-                      </span>
-                    </div>
-                  }
-                >
-                  <div className="medication-schedules-list">
-                    {/* Group schedules by medication */}
-                    {Object.entries(
-                      group.schedules.reduce((medGroups, schedule) => {
-                        const medKey = schedule.medicationName;
-                        if (!medGroups[medKey]) {
-                          medGroups[medKey] = {
-                            medicationName: schedule.medicationName,
-                            dosage: schedule.dosage,
-                            frequency: schedule.frequency,
-                            schedules: [],
-                          };
-                        }
-                        medGroups[medKey].schedules.push(schedule);
-                        return medGroups;
-                      }, {})
-                    ).map(([medKey, medGroup]) => (
-                      <div
-                        key={medKey}
-                        className="medication-item-group"
-                        style={{ marginBottom: "16px" }}
-                      >
+        <Tabs
+          defaultActiveKey="all"
+          type="card"
+          items={[
+            {
+              key: "all",
+              label: `Tất cả (${medicationSchedules.length})`,
+              children: (
+                <div className="medication-schedules-grouped">
+                  {Object.entries(
+                    medicationSchedules.reduce((groups, schedule) => {
+                      const key = `${schedule.studentName}-${schedule.className}`;
+                      if (!groups[key]) {
+                        groups[key] = {
+                          studentName: schedule.studentName,
+                          className: schedule.className,
+                          schedules: [],
+                        };
+                      }
+                      groups[key].schedules.push(schedule);
+                      return groups;
+                    }, {})
+                  ).map(([key, group]) => (
+                    <Card
+                      key={key}
+                      className="student-medication-group"
+                      style={{ marginBottom: "16px" }}
+                      title={
                         <div
                           style={{
                             display: "flex",
                             justifyContent: "space-between",
                             alignItems: "center",
-                            marginBottom: "8px",
-                            padding: "8px 12px",
-                            backgroundColor: "#f8f9fa",
-                            borderRadius: "6px",
                           }}
                         >
-                          <div>
-                            <strong style={{ color: "#1890ff" }}>
-                              {medGroup.medicationName}
-                            </strong>
-                            <span style={{ marginLeft: "8px", color: "#666" }}>
-                              {medGroup.dosage} • {medGroup.frequency} lần/ngày
+                          <span>
+                            <UserOutlined
+                              style={{ marginRight: "8px", color: "#1890ff" }}
+                            />
+                            <strong>{group.studentName}</strong>
+                            <span
+                              style={{
+                                marginLeft: "8px",
+                                color: "#666",
+                                fontSize: "14px",
+                              }}
+                            >
+                              ({group.className})
                             </span>
-                          </div>
-                          <div style={{ fontSize: "12px", color: "#666" }}>
-                            {medGroup.schedules.length} lịch
-                            <span style={{ marginLeft: "8px" }}>
-                              (
-                              {
-                                medGroup.schedules.filter(
-                                  (s) => s.status === "PENDING"
-                                ).length
-                              }{" "}
-                              chờ thực hiện)
-                            </span>
-                          </div>
+                          </span>
+                          <span style={{ fontSize: "14px", color: "#666" }}>
+                            {group.schedules.length} lịch uống thuốc
+                          </span>
                         </div>
+                      }
+                    >
+                      <div className="medication-schedules-list">
+                        {/* Group schedules by medication */}
+                        {Object.entries(
+                          group.schedules.reduce((medGroups, schedule) => {
+                            const medKey = schedule.medicationName;
+                            if (!medGroups[medKey]) {
+                              medGroups[medKey] = {
+                                medicationName: schedule.medicationName,
+                                dosage: schedule.dosage,
+                                frequency: schedule.frequency,
+                                schedules: [],
+                              };
+                            }
+                            medGroups[medKey].schedules.push(schedule);
+                            return medGroups;
+                          }, {})
+                        ).map(([medKey, medGroup]) => (
+                          <div
+                            key={medKey}
+                            className="medication-item-group"
+                            style={{ marginBottom: "16px" }}
+                          >
+                            <div
+                              style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                marginBottom: "8px",
+                                padding: "8px 12px",
+                                backgroundColor: "#f8f9fa",
+                                borderRadius: "6px",
+                              }}
+                            >
+                              <div>
+                                <strong style={{ color: "#1890ff" }}>
+                                  {medGroup.medicationName}
+                                </strong>
+                                <span
+                                  style={{ marginLeft: "8px", color: "#666" }}
+                                >
+                                  {medGroup.dosage} • {medGroup.frequency}{" "}
+                                  lần/ngày
+                                </span>
+                              </div>
+                              <div style={{ fontSize: "12px", color: "#666" }}>
+                                {medGroup.schedules.length} lịch
+                                <span style={{ marginLeft: "8px" }}>
+                                  (
+                                  {
+                                    medGroup.schedules.filter(
+                                      (s) => s.status === "PENDING"
+                                    ).length
+                                  }{" "}
+                                  chờ thực hiện)
+                                </span>
+                              </div>
+                            </div>
 
-                        {/* Show schedules with expand/collapse logic */}
-                        <div className="schedule-items">
-                          {(() => {
-                            const groupKey = `${group.studentName}-${group.className}-${medGroup.medicationName}`;
-                            const isExpanded = expandedGroups[groupKey];
-                            const schedulesToShow = isExpanded
-                              ? medGroup.schedules
-                              : medGroup.schedules.slice(0, 3);
+                            {/* Show schedules with expand/collapse logic */}
+                            <div className="schedule-items">
+                              {(() => {
+                                const groupKey = `${group.studentName}-${group.className}-${medGroup.medicationName}`;
+                                const isExpanded = expandedGroups[groupKey];
+                                const schedulesToShow = isExpanded
+                                  ? medGroup.schedules
+                                  : medGroup.schedules.slice(0, 3);
 
-                            return (
-                              <>
-                                {schedulesToShow.map((schedule, index) => (
-                                  <div
-                                    key={schedule.id}
-                                    className="schedule-item"
-                                    style={{
-                                      display: "flex",
-                                      justifyContent: "space-between",
-                                      alignItems: "center",
-                                      padding: "8px 12px",
-                                      marginBottom: "4px",
-                                      backgroundColor: "#fff",
-                                      border: "1px solid #e8e8e8",
-                                      borderRadius: "4px",
-                                    }}
-                                  >
-                                    <div style={{ flex: 1 }}>
-                                      <div style={{ fontSize: "13px" }}>
-                                        <CalendarOutlined
-                                          style={{ marginRight: "4px" }}
-                                        />
-                                        {dayjs(schedule.startDate).format(
-                                          "DD/MM/YYYY"
-                                        )}
-                                        <span style={{ margin: "0 8px" }}>
-                                          •
-                                        </span>
-                                        <ClockCircleOutlined
-                                          style={{ marginRight: "4px" }}
-                                        />
-                                        {schedule.scheduleTimes.join(", ")}
-                                      </div>
+                                return (
+                                  <>
+                                    {schedulesToShow.map((schedule, index) => (
                                       <div
+                                        key={schedule.id}
+                                        className="schedule-item"
                                         style={{
-                                          fontSize: "11px",
-                                          color: "#666",
-                                          marginTop: "2px",
+                                          display: "flex",
+                                          justifyContent: "space-between",
+                                          alignItems: "center",
+                                          padding: "8px 12px",
+                                          marginBottom: "4px",
+                                          backgroundColor: "#fff",
+                                          border: "1px solid #e8e8e8",
+                                          borderRadius: "4px",
                                         }}
                                       >
-                                        đến{" "}
-                                        {dayjs(schedule.endDate).format(
-                                          "DD/MM/YYYY"
-                                        )}
+                                        <div style={{ flex: 1 }}>
+                                          <div style={{ fontSize: "13px" }}>
+                                            <CalendarOutlined
+                                              style={{ marginRight: "4px" }}
+                                            />
+                                            {dayjs(schedule.startDate).format(
+                                              "DD/MM/YYYY"
+                                            )}
+                                            <span style={{ margin: "0 8px" }}>
+                                              •
+                                            </span>
+                                            <ClockCircleOutlined
+                                              style={{ marginRight: "4px" }}
+                                            />
+                                            {schedule.scheduleTimes.join(", ")}
+                                          </div>
+                                          <div
+                                            style={{
+                                              fontSize: "11px",
+                                              color: "#666",
+                                              marginTop: "2px",
+                                            }}
+                                          >
+                                            đến{" "}
+                                            {dayjs(schedule.endDate).format(
+                                              "DD/MM/YYYY"
+                                            )}
+                                          </div>
+                                        </div>
+
+                                        <div
+                                          style={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: "8px",
+                                          }}
+                                        >
+                                          {getStatusTag(schedule.status)}
+                                          <Space size="small">
+                                            <Tooltip title="Xem chi tiết">
+                                              <Button
+                                                type="text"
+                                                size="small"
+                                                icon={<EyeOutlined />}
+                                                onClick={() =>
+                                                  handleViewScheduleDetail(
+                                                    schedule
+                                                  )
+                                                }
+                                              />
+                                            </Tooltip>
+                                          </Space>
+                                        </div>
                                       </div>
-                                    </div>
+                                    ))}
 
-                                    <div
-                                      style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: "8px",
-                                      }}
-                                    >
-                                      {getStatusTag(schedule.status)}
-                                      <Space size="small">
-                                        <Tooltip title="Xem chi tiết">
-                                          <Button
-                                            type="text"
-                                            size="small"
-                                            icon={<EyeOutlined />}
-                                            onClick={() =>
-                                              handleViewScheduleDetail(schedule)
-                                            }
-                                          />
-                                        </Tooltip>
-                                      </Space>
-                                    </div>
-                                  </div>
-                                ))}
-
-                                {/* Show expand/collapse button if there are more than 3 schedules */}
-                                {medGroup.schedules.length > 3 && (
-                                  <div
-                                    style={{
-                                      textAlign: "center",
-                                      marginTop: "8px",
-                                    }}
-                                  >
-                                    <Button
-                                      type="link"
-                                      size="small"
-                                      onClick={() =>
-                                        toggleGroupExpansion(groupKey)
-                                      }
-                                    >
-                                      {isExpanded
-                                        ? "Thu gọn"
-                                        : `Xem thêm ${
-                                            medGroup.schedules.length - 3
-                                          } lịch`}
-                                    </Button>
-                                  </div>
-                                )}
-                              </>
-                            );
-                          })()}
-                        </div>
+                                    {/* Show expand/collapse button if there are more than 3 schedules */}
+                                    {medGroup.schedules.length > 3 && (
+                                      <div
+                                        style={{
+                                          textAlign: "center",
+                                          marginTop: "8px",
+                                        }}
+                                      >
+                                        <Button
+                                          type="link"
+                                          size="small"
+                                          onClick={() =>
+                                            toggleGroupExpansion(groupKey)
+                                          }
+                                        >
+                                          {isExpanded
+                                            ? "Thu gọn"
+                                            : `Xem thêm ${
+                                                medGroup.schedules.length - 3
+                                              } lịch`}
+                                        </Button>
+                                      </div>
+                                    )}
+                                  </>
+                                );
+                              })()}
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                </Card>
-              ))}
+                    </Card>
+                  ))}
 
-              {medicationSchedules.length === 0 && (
-                <div
-                  style={{
-                    textAlign: "center",
-                    padding: "40px",
-                    color: "#666",
-                  }}
-                >
-                  Không có lịch uống thuốc nào
+                  {medicationSchedules.length === 0 && (
+                    <div
+                      style={{
+                        textAlign: "center",
+                        padding: "40px",
+                        color: "#666",
+                      }}
+                    >
+                      Không có lịch uống thuốc nào
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          </TabPane>
-
-          <TabPane
-            tab={`Chờ thực hiện (${
-              medicationSchedules.filter((s) => s.status === "PENDING").length
-            })`}
-            key="pending"
-          >
-            <Table
-              className="medication-schedules-table"
-              dataSource={medicationSchedules.filter(
-                (s) => s.status === "PENDING"
-              )}
-              columns={scheduleColumns}
-              rowKey="id"
-              loading={scheduleLoading}
-              pagination={{ pageSize: 10 }}
-              locale={{
-                emptyText: "Không có lịch uống thuốc nào chờ thực hiện",
-              }}
-            />
-          </TabPane>
-
-          <TabPane
-            tab={`Đã uống thuốc (${
-              medicationSchedules.filter((s) => s.status === "TAKEN").length
-            })`}
-            key="taken"
-          >
-            <Table
-              className="medication-schedules-table"
-              dataSource={medicationSchedules.filter(
-                (s) => s.status === "TAKEN"
-              )}
-              columns={scheduleColumns}
-              rowKey="id"
-              loading={scheduleLoading}
-              pagination={{ pageSize: 10 }}
-              locale={{
-                emptyText: "Không có lịch uống thuốc nào đã hoàn thành",
-              }}
-            />
-          </TabPane>
-
-          <TabPane
-            tab={`Đã bỏ lỡ (${
-              medicationSchedules.filter((s) => s.status === "SKIPPED").length
-            })`}
-            key="skipped"
-          >
-            <Table
-              className="medication-schedules-table"
-              dataSource={medicationSchedules.filter(
-                (s) => s.status === "SKIPPED"
-              )}
-              columns={scheduleColumns}
-              rowKey="id"
-              loading={scheduleLoading}
-              pagination={{ pageSize: 10 }}
-              locale={{ emptyText: "Không có lịch uống thuốc nào bị bỏ lỡ" }}
-            />
-          </TabPane>
-        </Tabs>
+              ),
+            },
+            {
+              key: "pending",
+              label: `Chờ thực hiện (${
+                medicationSchedules.filter((s) => s.status === "PENDING").length
+              })`,
+              children: (
+                <Table
+                  className="medication-schedules-table"
+                  dataSource={medicationSchedules.filter(
+                    (s) => s.status === "PENDING"
+                  )}
+                  columns={scheduleColumns}
+                  rowKey="id"
+                  loading={scheduleLoading}
+                  pagination={{ pageSize: 10 }}
+                  locale={{
+                    emptyText: "Không có lịch uống thuốc nào chờ thực hiện",
+                  }}
+                />
+              ),
+            },
+            {
+              key: "taken",
+              label: `Đã uống thuốc (${
+                medicationSchedules.filter((s) => s.status === "TAKEN").length
+              })`,
+              children: (
+                <Table
+                  className="medication-schedules-table"
+                  dataSource={medicationSchedules.filter(
+                    (s) => s.status === "TAKEN"
+                  )}
+                  columns={scheduleColumns}
+                  rowKey="id"
+                  loading={scheduleLoading}
+                  pagination={{ pageSize: 10 }}
+                  locale={{
+                    emptyText: "Không có lịch uống thuốc nào đã hoàn thành",
+                  }}
+                />
+              ),
+            },
+            {
+              key: "skipped",
+              label: `Đã bỏ lỡ (${
+                medicationSchedules.filter((s) => s.status === "SKIPPED").length
+              })`,
+              children: (
+                <Table
+                  className="medication-schedules-table"
+                  dataSource={medicationSchedules.filter(
+                    (s) => s.status === "SKIPPED"
+                  )}
+                  columns={scheduleColumns}
+                  rowKey="id"
+                  loading={scheduleLoading}
+                  pagination={{ pageSize: 10 }}
+                  locale={{
+                    emptyText: "Không có lịch uống thuốc nào bị bỏ lỡ",
+                  }}
+                />
+              ),
+            },
+          ]}
+        />
       </Card>
 
       {/* Detail Modal */}

@@ -35,6 +35,7 @@ import {
   getMedicalEventById,
   updateMedicalEventStatus,
   getAllStudents,
+  checkStudentHealthProfile,
 } from "../../../api/medicalEventApi";
 import { medicalSupplyApi } from "../../../api/medicalSupplyApi";
 import { useAuth } from "../../../contexts/AuthContext";
@@ -72,6 +73,10 @@ const MedicalEventManagement = () => {
   const [selectedClass, setSelectedClass] = useState(null);
   const [filteredStudents, setFilteredStudents] = useState([]);
   const [studentCount, setStudentCount] = useState(0);
+
+  // Health profile validation state
+  const [healthProfileValid, setHealthProfileValid] = useState(true);
+  const [healthProfileMessage, setHealthProfileMessage] = useState("");
 
   // Get user context for role-based permissions
   const { user } = useAuth();
@@ -197,6 +202,43 @@ const MedicalEventManagement = () => {
     [students, form]
   );
 
+  // Check student health profile
+  const checkHealthProfile = useCallback(async (studentId) => {
+    if (!studentId) {
+      setHealthProfileValid(true);
+      setHealthProfileMessage("");
+      return;
+    }
+
+    try {
+      const response = await checkStudentHealthProfile(studentId);
+      setHealthProfileValid(response.hasApprovedProfile);
+      setHealthProfileMessage(response.message);
+
+      if (!response.hasApprovedProfile) {
+        message.warning(response.message);
+      }
+    } catch (error) {
+      console.error("Error checking health profile:", error);
+      setHealthProfileValid(false);
+      setHealthProfileMessage("Không thể kiểm tra hồ sơ sức khỏe");
+      message.error("Không thể kiểm tra hồ sơ sức khỏe của học sinh");
+    }
+  }, []);
+
+  // Handle student selection
+  const handleStudentChange = useCallback(
+    (studentId) => {
+      if (studentId) {
+        checkHealthProfile(studentId);
+      } else {
+        setHealthProfileValid(true);
+        setHealthProfileMessage("");
+      }
+    },
+    [checkHealthProfile]
+  );
+
   // Reset class and student selection when modal opens
   const handleAddEvent = () => {
     if (isViewOnly) {
@@ -209,6 +251,8 @@ const MedicalEventManagement = () => {
     setSelectedClass(null);
     setFilteredStudents([]);
     setStudentCount(0);
+    setHealthProfileValid(true);
+    setHealthProfileMessage("");
     setModalVisible(true);
 
     // Reset form after modal is opened to avoid the warning
@@ -383,6 +427,13 @@ const MedicalEventManagement = () => {
     }
     try {
       setLoading(true);
+
+      // Check if student has approved health profile
+      if (!healthProfileValid) {
+        message.error("Không thể tạo sự kiện y tế: " + healthProfileMessage);
+        setLoading(false);
+        return;
+      }
 
       // values is already provided by form.onFinish
 
@@ -913,6 +964,8 @@ const MedicalEventManagement = () => {
                   studentCount > 0 ? ` (${studentCount} học sinh)` : ""
                 }`}
                 rules={[{ required: true, message: "Vui lòng chọn học sinh" }]}
+                validateStatus={!healthProfileValid ? "error" : ""}
+                help={!healthProfileValid ? healthProfileMessage : ""}
               >
                 <Select
                   placeholder={
@@ -923,6 +976,7 @@ const MedicalEventManagement = () => {
                   filterOption={(input, option) =>
                     option.children.toLowerCase().includes(input.toLowerCase())
                   }
+                  onChange={handleStudentChange}
                 >
                   {filteredStudents.map((student) => (
                     <Option

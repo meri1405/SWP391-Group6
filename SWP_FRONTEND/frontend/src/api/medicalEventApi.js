@@ -517,6 +517,34 @@ export const uploadMedicalEventAttachment = async (eventId, file) => {
   }
 };
 
+// ==================== HEALTH PROFILE CHECK ====================
+
+// Check if student has approved health profile
+export const checkStudentHealthProfile = async (studentId) => {
+  try {
+    console.log("Checking health profile for student:", studentId);
+
+    const response = await fetch(
+      `${API_BASE_URL}/medical-events/check-health-profile/${studentId}`,
+      {
+        method: "GET",
+        headers: getAuthHeaders(),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log("Health profile check result:", data);
+    return data;
+  } catch (error) {
+    console.error("Error checking student health profile:", error);
+    throw error;
+  }
+};
+
 // ==================== VALIDATION HELPERS ====================
 
 // Validate medical event data
@@ -602,5 +630,6 @@ export default {
   getEmergencyContacts,
   triggerEmergencyProtocol,
   uploadMedicalEventAttachment,
+  checkStudentHealthProfile,
   validateMedicalEventData,
 };

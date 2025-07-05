@@ -35,7 +35,7 @@ import PrescriptionImageUpload from "../../common/PrescriptionImageUpload";
 
 const { Option } = Select;
 const { TextArea } = Input;
-const { TabPane } = Tabs;
+
 const { Title } = Typography;
 
 const MedicationManagement = () => {
@@ -243,41 +243,51 @@ const MedicationManagement = () => {
       </Button>
 
       <Card className="medication-content-card">
-        <Tabs activeKey={tabKey} onChange={setTabKey}>
-          <TabPane tab="Đang xử lý" key="active">
-            {loading ? (
-              <div className="loading-container">
-                <Spin size="large" />
-              </div>
-            ) : (
-              <Table
-                dataSource={getFilteredMedications()}
-                columns={columns}
-                rowKey="id"
-                pagination={{ pageSize: 5 }}
-                locale={{ emptyText: "Không có yêu cầu thuốc nào" }}
-              />
-            )}
-          </TabPane>
-          <TabPane tab="Đã duyệt/Đã hoàn thành/Từ chối" key="completed">
-            {loading ? (
-              <div className="loading-container">
-                <Spin size="large" />
-              </div>
-            ) : (
-              <Table
-                dataSource={getFilteredMedications()}
-                columns={columns}
-                rowKey="id"
-                pagination={{ pageSize: 5 }}
-                locale={{ emptyText: "Không có yêu cầu thuốc nào" }}
-              />
-            )}
-          </TabPane>
-          <TabPane tab="Lịch uống thuốc" key="schedules">
-            <ParentMedicationSchedules />
-          </TabPane>
-        </Tabs>
+        <Tabs
+          activeKey={tabKey}
+          onChange={setTabKey}
+          items={[
+            {
+              key: "active",
+              label: "Đang xử lý",
+              children: loading ? (
+                <div className="loading-container">
+                  <Spin size="large" />
+                </div>
+              ) : (
+                <Table
+                  dataSource={getFilteredMedications()}
+                  columns={columns}
+                  rowKey="id"
+                  pagination={{ pageSize: 5 }}
+                  locale={{ emptyText: "Không có yêu cầu thuốc nào" }}
+                />
+              ),
+            },
+            {
+              key: "completed",
+              label: "Đã duyệt/Đã hoàn thành/Từ chối",
+              children: loading ? (
+                <div className="loading-container">
+                  <Spin size="large" />
+                </div>
+              ) : (
+                <Table
+                  dataSource={getFilteredMedications()}
+                  columns={columns}
+                  rowKey="id"
+                  pagination={{ pageSize: 5 }}
+                  locale={{ emptyText: "Không có yêu cầu thuốc nào" }}
+                />
+              ),
+            },
+            {
+              key: "schedules",
+              label: "Lịch uống thuốc",
+              children: <ParentMedicationSchedules />,
+            },
+          ]}
+        />
       </Card>
 
       {/* Modal for adding/editing medication requests */}

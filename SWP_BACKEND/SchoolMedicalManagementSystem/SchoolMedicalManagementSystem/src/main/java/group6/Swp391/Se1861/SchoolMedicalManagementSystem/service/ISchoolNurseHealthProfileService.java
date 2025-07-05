@@ -42,4 +42,14 @@ public interface ISchoolNurseHealthProfileService {
      * Convert entity to DTO
      */
     HealthProfileDTO convertToDetailedDTO(HealthProfile healthProfile);
+    
+    /**
+     * Check if student has approved health profile
+     */
+    boolean hasApprovedHealthProfile(Long studentId);
+    
+    /**
+     * Get approved health profile by student ID
+     */
+    HealthProfileDTO getApprovedHealthProfileByStudentId(Long studentId);
 }
