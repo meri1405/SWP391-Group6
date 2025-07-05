@@ -8,6 +8,7 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.RoleReposit
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.StudentRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.UserRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IStudentService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.util.StudentMapper;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.utils.PhoneValidator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -15,7 +16,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -739,6 +742,25 @@ public class StudentService implements IStudentService {
         // Convert to DTOs
         return students.stream()
                 .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<Map<String, Object>> getStudentsWithHealthProfileStatus(User parent) {
+        List<Student> students = studentRepository.findByParent(parent);
+        
+        return students.stream()
+                .map(StudentMapper::toHealthProfileStatusMap)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<Map<String, Object>> getStudentsMissingHealthProfiles(User parent) {
+        List<Student> students = studentRepository.findByParent(parent);
+        
+        return students.stream()
+                .filter(student -> student.getHealthProfile() == null)
+                .map(StudentMapper::toBasicInfoMap)
                 .collect(Collectors.toList());
     }
 }
