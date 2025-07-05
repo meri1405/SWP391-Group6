@@ -477,14 +477,14 @@ const Overview = ({ userInfo: externalUserInfo }) => {
                           <div 
                             dangerouslySetInnerHTML={{ __html: notification.message }}
                             style={{ 
-                              maxHeight: '100px',
+                              minHeight: '20px',
                               overflow: 'hidden',
                               textOverflow: 'ellipsis'
                             }}
                           />
                         ) : (
                           <Text style={{ 
-                            maxHeight: '100px',
+                            minHeight: '20px',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             display: 'block'
