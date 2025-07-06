@@ -83,6 +83,88 @@ export const resetPassword = async (email, otp, newPassword) => {
   }
 };
 
+// First-time login functions
+export const checkFirstLogin = async (email) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/check-first-login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+    return {
+      ok: response.ok,
+      status: response.status,
+      data,
+    };
+  } catch {
+    return {
+      ok: false,
+      status: 500,
+      data: { message: "Network error" },
+    };
+  }
+};
+
+export const sendOtpForPasswordChange = async (email) => {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/auth/send-otp-password-change`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      }
+    );
+
+    const data = await response.json().catch(() => ({}));
+    return {
+      ok: response.ok,
+      status: response.status,
+      data,
+    };
+  } catch {
+    return {
+      ok: false,
+      status: 500,
+      data: { message: "Network error" },
+    };
+  }
+};
+
+export const verifyOtpAndChangePassword = async (email, otp, newPassword) => {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/auth/verify-otp-change-password`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, otp, newPassword }),
+      }
+    );
+
+    const data = await response.json().catch(() => ({}));
+    return {
+      ok: response.ok,
+      status: response.status,
+      data,
+    };
+  } catch {
+    return {
+      ok: false,
+      status: 500,
+      data: { message: "Network error" },
+    };
+  }
+};
+
 // Get all users
 export const getAllUsers = async () => {
   try {
@@ -152,22 +234,21 @@ export const getUserById = async (userId) => {
   }
 };
 
-// Create new user
+// Create new staff user (Admin only creates staff: ADMIN, MANAGER, SCHOOLNURSE)
 export const createUser = async (userData) => {
   try {
     console.log("🔧 userApi.createUser received userData:", userData);
 
-    // Block STUDENT role creation entirely
-    if (userData.role === "STUDENT") {
+    // Only allow staff role creation through admin
+    const allowedRoles = ["ADMIN", "MANAGER", "SCHOOLNURSE"];
+    if (!allowedRoles.includes(userData.role)) {
       throw new Error(
-        "STUDENT creation is not supported through this endpoint."
+        `Admin can only create staff accounts. Role '${userData.role}' is not supported.`
       );
     }
 
-    // Format data for backend
+    // Format data for backend - only staff-relevant fields
     const requestData = {
-      username: userData.username,
-      password: userData.password,
       firstName: userData.firstName,
       lastName: userData.lastName,
       dob: userData.dob || userData.dateOfBirth,
@@ -177,16 +258,18 @@ export const createUser = async (userData) => {
       jobTitle: userData.jobTitle,
       roleName: userData.role,
       status: userData.status,
-      phone: userData.phone, // All supported roles (PARENT, SCHOOLNURSE, MANAGER, ADMIN) have phone
+      phone: userData.phone,
     };
 
-    console.log("🔧 Formatted requestData:", requestData);
-
-    // Add PARENT-specific fields
-    if (userData.role === "PARENT") {
-      requestData.studentIds = userData.studentIds || [];
+    // Only include username and password if they're provided (for editing existing users)
+    if (userData.username) {
+      requestData.username = userData.username;
+    }
+    if (userData.password) {
+      requestData.password = userData.password;
     }
 
+    console.log("🔧 Formatted requestData:", requestData);
     console.log("🚀 Final requestData to be sent:", requestData);
 
     const response = await fetch(`${API_BASE_URL}/admin/users/create`, {

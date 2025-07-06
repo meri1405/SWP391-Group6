@@ -19,10 +19,10 @@ import java.util.Map;
  * Tất cả endpoint trong controller này yêu cầu vai trò ADMIN
  * 
  * Chức năng chính:
- * - Tạo tài khoản người dùng mới (trừ STUDENT)
+ * - Tạo tài khoản staff (ADMIN, MANAGER, SCHOOLNURSE)
  * - Liệt kê tất cả người dùng trong hệ thống
  * - Kích hoạt/vô hiệu hóa tài khoản
- * - Áp dụng validation theo từng vai trò
+ * - Auto-generate username và password cho staff
  */
 @RestController
 @RequestMapping("/api/admin/users")
@@ -38,12 +38,9 @@ public class AdminUserController {
     }
 
     /**
-     * Tạo người dùng mới với vai trò được chỉ định
-     * Áp dụng validation theo từng vai trò:
-     * - Tất cả vai trò: phone, firstName, lastName, dob, gender, address, jobTitle là bắt buộc
-     * - ADMIN, SCHOOLNURSE, MANAGER: username, password, email là bắt buộc
-     * - PARENT: username, password, email bị bỏ qua/null
-     * - Số điện thoại phải duy nhất cho tất cả người dùng
+     * Tạo tài khoản staff với vai trò được chỉ định
+     * Chỉ hỗ trợ các vai trò: ADMIN, MANAGER, SCHOOLNURSE
+     * Tự động tạo username và password, gửi thông tin qua email
      * 
      * @param userCreationDTO Thông tin người dùng cần tạo
      * @return ResponseEntity chứa thông tin người dùng đã tạo hoặc lỗi
@@ -51,8 +48,8 @@ public class AdminUserController {
     @PostMapping("/create")
     public ResponseEntity<?> createUser(@RequestBody UserCreationDTO userCreationDTO) {
         try {
-            // Xử lý tạo người dùng (không hỗ trợ STUDENT)
-            return handleUserCreation(userCreationDTO);
+            // Xử lý tạo tài khoản staff
+            return handleStaffCreation(userCreationDTO);
         } catch (IllegalArgumentException e) {
             // Trả về lỗi validation
             Map<String, Object> errorResponse = new HashMap<>();
@@ -71,58 +68,47 @@ public class AdminUserController {
     }
 
     /**
-     * Xử lý logic tạo người dùng (loại trừ vai trò STUDENT)
-     * Kiểm tra các điều kiện đặc biệt cho từng vai trò và tạo tài khoản
+     * Xử lý logic tạo tài khoản staff (ADMIN, MANAGER, SCHOOLNURSE)
      * 
      * @param userCreationDTO Thông tin người dùng
      * @return ResponseEntity với kết quả tạo tài khoản
      */
-    private ResponseEntity<?> handleUserCreation(UserCreationDTO userCreationDTO) {
+    private ResponseEntity<?> handleStaffCreation(UserCreationDTO userCreationDTO) {
         try {
-            // Chặn hoàn toàn việc tạo STUDENT
-            if ("STUDENT".equalsIgnoreCase(userCreationDTO.getRoleName())) {
+            // Chỉ cho phép tạo các vai trò staff
+            String roleName = userCreationDTO.getRoleName();
+            if (!"ADMIN".equalsIgnoreCase(roleName) && 
+                !"MANAGER".equalsIgnoreCase(roleName) && 
+                !"SCHOOLNURSE".equalsIgnoreCase(roleName)) {
+                
                 Map<String, Object> errorResponse = new HashMap<>();
                 errorResponse.put("error", "Lỗi validation");
-                errorResponse.put("message", "Không hỗ trợ tạo tài khoản STUDENT thông qua endpoint này.");
+                errorResponse.put("message", "Admin chỉ có thể tạo tài khoản staff (ADMIN, MANAGER, SCHOOLNURSE). Vai trò '" + roleName + "' không được hỗ trợ.");
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
             }
 
-            // Ngăn tạo tài khoản PARENT với username/password/email
-            if ("PARENT".equalsIgnoreCase(userCreationDTO.getRoleName())) {
-                if ((userCreationDTO.getUsername() != null && !userCreationDTO.getUsername().trim().isEmpty()) ||
-                    (userCreationDTO.getPassword() != null && !userCreationDTO.getPassword().trim().isEmpty()) ||
-                    (userCreationDTO.getEmail() != null && !userCreationDTO.getEmail().trim().isEmpty())) {
-
-                    Map<String, Object> errorResponse = new HashMap<>();
-                    errorResponse.put("error", "Lỗi validation");
-                    errorResponse.put("message", "KHÔNG THỂ TẠO TÀI KHOẢN " + userCreationDTO.getRoleName() + ": Username, password và email không được phép đối với tài khoản " + userCreationDTO.getRoleName() + ". Vui lòng bỏ trống các trường này.");
-
-                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
-                }
-            } else {
-                // Kiểm tra yêu cầu username cho các vai trò khác (ADMIN, SCHOOLNURSE, MANAGER)
-                if (userCreationDTO.getUsername() == null || userCreationDTO.getUsername().trim().isEmpty()) {
-                    Map<String, Object> errorResponse = new HashMap<>();
-                    errorResponse.put("error", "Lỗi validation");
-                    errorResponse.put("message", "Username là bắt buộc đối với vai trò " + userCreationDTO.getRoleName());
-
-                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
-                }
-
-                // Kiểm tra username đã tồn tại chưa
+            // Kiểm tra username nếu được cung cấp (thường sẽ auto-generate)
+            if (userCreationDTO.getUsername() != null && !userCreationDTO.getUsername().trim().isEmpty()) {
                 if (authService.usernameExists(userCreationDTO.getUsername())) {
                     Map<String, Object> errorResponse = new HashMap<>();
                     errorResponse.put("error", "Lỗi validation");
                     errorResponse.put("message", "Username '" + userCreationDTO.getUsername() + "' đã được sử dụng. Vui lòng chọn username khác.");
-
                     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
                 }
             }
 
             // Chuyển đổi DTO thành User entity
             User newUser = new User();
-            newUser.setUsername(userCreationDTO.getUsername());
-            newUser.setPassword(userCreationDTO.getPassword());
+            
+            // Only set username and password if they are provided (not null/empty)
+            // For staff roles without username/password, they will be auto-generated in AuthService
+            if (userCreationDTO.getUsername() != null && !userCreationDTO.getUsername().trim().isEmpty()) {
+                newUser.setUsername(userCreationDTO.getUsername());
+            }
+            if (userCreationDTO.getPassword() != null && !userCreationDTO.getPassword().trim().isEmpty()) {
+                newUser.setPassword(userCreationDTO.getPassword());
+            }
+            
             newUser.setFirstName(userCreationDTO.getFirstName());
             newUser.setLastName(userCreationDTO.getLastName());
             newUser.setDob(userCreationDTO.getDob());
@@ -146,8 +132,17 @@ public class AdminUserController {
             Map<String, Object> response = new HashMap<>();
             response.put("message", "Tạo người dùng thành công");
             response.put("userId", createdUser.getId());
+            response.put("username", createdUser.getUsername()); // Include generated username
             response.put("fullName", createdUser.getFullName());
             response.put("role", createdUser.getRole().getRoleName());
+            
+            // Add information about credential delivery for staff roles
+            String userRoleName = createdUser.getRole().getRoleName();
+            if ("ADMIN".equalsIgnoreCase(userRoleName) || "MANAGER".equalsIgnoreCase(userRoleName) || "SCHOOLNURSE".equalsIgnoreCase(userRoleName)) {
+                response.put("credentialsSent", true);
+                response.put("emailSentTo", createdUser.getEmail());
+                response.put("firstLogin", true);
+            }
 
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (IllegalArgumentException e) {

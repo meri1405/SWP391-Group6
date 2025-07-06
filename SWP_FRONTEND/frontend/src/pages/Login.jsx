@@ -17,6 +17,7 @@ import {
   getOTPRemainingTime,
   resetOTPTimer,
 } from "../utils/firebase";
+import FirstTimeLoginModal from "../components/FirstTimeLoginModal";
 import "../styles/Login.css";
 
 const Login = () => {
@@ -38,6 +39,8 @@ const Login = () => {
   });
   const [resendSuccess, setResendSuccess] = useState(false); // Track successful resend
   const [firebaseBillingEnabled, setFirebaseBillingEnabled] = useState(true); // Track Firebase billing status
+  const [showFirstTimeModal, setShowFirstTimeModal] = useState(false);
+  const [firstTimeLoginEmail, setFirstTimeLoginEmail] = useState("");
 
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -561,6 +564,14 @@ const Login = () => {
 
         const userData = await response.json();
 
+        // Check if this is a first-time login before proceeding
+        if (userData.firstLogin || userData.needPasswordChange) {
+          console.log("First-time login detected for user:", userData.email);
+          setFirstTimeLoginEmail(userData.email);
+          setShowFirstTimeModal(true);
+          return;
+        }
+
         // Add login method to track username/password login
         const userDataWithMethod = {
           ...userData,
@@ -661,6 +672,27 @@ const Login = () => {
       setErrors({ google: "Không thể kết nối đến server OAuth2." });
       setIndividualLoading("googleLogin", false);
     }
+  };
+
+  // Handlers for first-time login modal
+  const handleFirstTimeLoginComplete = () => {
+    setShowFirstTimeModal(false);
+    setFirstTimeLoginEmail("");
+    // Clear form fields
+    setUsername("");
+    setPassword("");
+    setErrors({});
+    // Show success message
+    alert("Đổi mật khẩu thành công! Vui lòng đăng nhập lại với mật khẩu mới.");
+  };
+
+  const handleFirstTimeLoginCancel = () => {
+    setShowFirstTimeModal(false);
+    setFirstTimeLoginEmail("");
+    // Clear form fields
+    setUsername("");
+    setPassword("");
+    setErrors({});
   };
 
   return (
@@ -902,6 +934,14 @@ const Login = () => {
       </div>
       {/* reCAPTCHA container for Firebase */}
       <div id="recaptcha-container"></div>
+      
+      {/* First Time Login Modal */}
+      <FirstTimeLoginModal
+        visible={showFirstTimeModal}
+        email={firstTimeLoginEmail}
+        onComplete={handleFirstTimeLoginComplete}
+        onCancel={handleFirstTimeLoginCancel}
+      />
     </div>
   );
 };

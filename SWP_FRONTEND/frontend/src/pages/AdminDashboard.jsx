@@ -585,12 +585,15 @@ const UserManagement = ({
                       được trùng lặp)
                     </li>
                     <li>
-                      Mật khẩu: Ít nhất 8 ký tự, độ mạnh từ 'Trung bình' trở lên
+                      Mật khẩu: Sẽ được tự động tạo (mật khẩu tạm thời)
                     </li>
                     <li>Ngày sinh: Tuổi từ 25-100</li>
                     <li>Giới tính: Bắt buộc chọn</li>
                     <li>Địa chỉ: 10-200 ký tự</li>
                   </ul>
+                  <div style={{ marginTop: "8px", color: "#faad14", fontSize: "12px" }}>
+                    <strong>Lưu ý:</strong> Người dùng sẽ được yêu cầu đổi mật khẩu và xác thực email khi đăng nhập lần đầu.
+                  </div>
                 </div>
               </div>
             </div>
@@ -600,8 +603,6 @@ const UserManagement = ({
               layout="vertical"
               initialValues={{
                 role: "SCHOOLNURSE",
-                username: "",
-                password: "",
                 email: "",
                 jobTitle: "",
                 firstName: "",
@@ -996,7 +997,7 @@ const UserManagement = ({
                   }}
                 </Form.Item>
 
-                {/* Conditional username field - only show for nurse, manager and admin roles */}
+                {/* Info message for staff roles about auto-generated credentials */}
                 <Form.Item
                   noStyle
                   shouldUpdate={(prevValues, currentValues) =>
@@ -1008,77 +1009,34 @@ const UserManagement = ({
                     return selectedRole === "SCHOOLNURSE" ||
                       selectedRole === "MANAGER" ||
                       selectedRole === "ADMIN" ? (
-                      <Form.Item
-                        label="Tên đăng nhập"
-                        name="username"
-                        rules={[
-                          {
-                            required: true,
-                            message: "Vui lòng nhập tên đăng nhập!",
-                          },
-                          {
-                            min: 3,
-                            message: "Tên đăng nhập phải có ít nhất 3 ký tự!",
-                          },
-                          {
-                            max: 30,
-                            message: "Tên đăng nhập không được quá 30 ký tự!",
-                          },
-                          {
-                            pattern: /^[a-zA-Z0-9_]+$/,
-                            message:
-                              "Tên đăng nhập chỉ được chứa chữ cái, số và dấu gạch dưới!",
-                          },
-                          {
-                            pattern: /^[a-zA-Z]/,
-                            message: "Tên đăng nhập phải bắt đầu bằng chữ cái!",
-                          },
-                          {
-                            validator: (_, value) => {
-                              if (value && value.includes(" ")) {
-                                return Promise.reject(
-                                  new Error(
-                                    "Tên đăng nhập không được chứa khoảng trắng!"
-                                  )
-                                );
-                              }
-                              if (value && /^[0-9]/.test(value)) {
-                                return Promise.reject(
-                                  new Error(
-                                    "Tên đăng nhập không được bắt đầu bằng số!"
-                                  )
-                                );
-                              }
-                              // Check for duplicate username
-                              if (value && modalMode === "add") {
-                                const existingUser = users.find(
-                                  (user) =>
-                                    user.username === value &&
-                                    user.id !== selectedUser?.id
-                                );
-                                if (existingUser) {
-                                  return Promise.reject(
-                                    new Error(
-                                      "Tên đăng nhập này đã được sử dụng bởi người dùng khác!"
-                                    )
-                                  );
-                                }
-                              }
-                              return Promise.resolve();
-                            },
-                          },
-                        ]}
+                      <div
+                        style={{
+                          marginBottom: "16px",
+                          padding: "16px",
+                          backgroundColor: "#e6f7ff",
+                          border: "1px solid #91d5ff",
+                          borderRadius: "8px",
+                        }}
                       >
-                        <Input
-                          placeholder="Nhập tên đăng nhập"
-                          autoComplete="off"
-                        />
-                      </Form.Item>
+                        <div style={{ 
+                          fontWeight: "600", 
+                          marginBottom: "8px",
+                          color: "#1890ff",
+                          fontSize: "14px"
+                        }}>
+                          🔐 Thông tin đăng nhập tự động
+                        </div>
+                        <div style={{ fontSize: "13px", color: "#1890ff", lineHeight: "1.5" }}>
+                          • Hệ thống sẽ tự động tạo tên đăng nhập và mật khẩu tạm thời<br/>
+                          • Thông tin đăng nhập sẽ được gửi qua email của người dùng<br/>
+                          • Người dùng phải đổi mật khẩu và xác thực email khi đăng nhập lần đầu
+                        </div>
+                      </div>
                     ) : null;
                   }}
                 </Form.Item>
 
-                {/* Conditional password field - only show for nurse, manager and admin roles */}
+                {/* Conditional password field - only show for edit mode */}
                 <Form.Item
                   noStyle
                   shouldUpdate={(prevValues, currentValues) =>
@@ -1087,21 +1045,13 @@ const UserManagement = ({
                 >
                   {({ getFieldValue }) => {
                     const selectedRole = getFieldValue("role");
-                    return selectedRole === "SCHOOLNURSE" ||
+                    return (selectedRole === "SCHOOLNURSE" ||
                       selectedRole === "MANAGER" ||
-                      selectedRole === "ADMIN" ? (
+                      selectedRole === "ADMIN") && modalMode === "edit" ? (
                       <Form.Item
-                        label={
-                          modalMode === "edit"
-                            ? "Mật khẩu mới (để trống nếu không đổi)"
-                            : "Mật khẩu"
-                        }
+                        label="Mật khẩu mới (để trống nếu không đổi)"
                         name="password"
                         rules={[
-                          {
-                            required: modalMode === "add",
-                            message: "Vui lòng nhập mật khẩu!",
-                          },
                           {
                             min: 8,
                             message: "Mật khẩu phải có ít nhất 8 ký tự!",
@@ -1146,16 +1096,11 @@ const UserManagement = ({
                       >
                         <div>
                           <Input.Password
-                            placeholder={
-                              modalMode === "edit"
-                                ? "Để trống nếu không đổi mật khẩu"
-                                : "Nhập mật khẩu"
-                            }
+                            placeholder="Để trống nếu không đổi mật khẩu"
                             onChange={(e) => setCurrentPassword(e.target.value)}
                             autoComplete="new-password"
                           />
                           {currentPassword &&
-                            modalMode === "add" &&
                             getPasswordStrength(currentPassword).feedback && (
                               <div style={{ marginTop: "8px" }}>
                                 <div
@@ -1897,8 +1842,6 @@ const AdminDashboard = () => {
           try {
             const initialValues = {
               role: "SCHOOLNURSE",
-              username: "",
-              password: "",
               email: "",
               jobTitle: "",
               firstName: "",
@@ -2052,34 +1995,42 @@ const AdminDashboard = () => {
 
     // Prepare the fields to update based on role
     const fieldsToUpdate = {
-      username: "",
-      password: "",
       email: "",
       jobTitle: "",
       dob: defaultDob, // Set appropriate default date based on role
       status: "ACTIVE", // Keep status as ACTIVE
     };
 
+    // For edit mode, also clear username and password
+    if (modalMode === "edit") {
+      fieldsToUpdate.username = "";
+      fieldsToUpdate.password = "";
+    }
+
     console.log("Clearing role-specific fields with proper defaults");
 
     // Set role-specific defaults
     if (newRole === "ADMIN") {
-      fieldsToUpdate.username = "";
-      fieldsToUpdate.password = "";
       fieldsToUpdate.email = "";
-      console.log("Set ADMIN defaults: username='', password='', email=''");
+      if (modalMode === "edit") {
+        fieldsToUpdate.username = "";
+        fieldsToUpdate.password = "";
+      }
+      console.log(`Set ADMIN defaults for ${modalMode} mode`);
     } else if (newRole === "SCHOOLNURSE") {
-      fieldsToUpdate.username = "";
-      fieldsToUpdate.password = "";
       fieldsToUpdate.email = "";
-      console.log(
-        "Set SCHOOLNURSE defaults: username='', password='', email=''"
-      );
+      if (modalMode === "edit") {
+        fieldsToUpdate.username = "";
+        fieldsToUpdate.password = "";
+      }
+      console.log(`Set SCHOOLNURSE defaults for ${modalMode} mode`);
     } else if (newRole === "MANAGER") {
-      fieldsToUpdate.username = "";
-      fieldsToUpdate.password = "";
       fieldsToUpdate.email = "";
-      console.log("Set MANAGER defaults: username='', password='', email=''");
+      if (modalMode === "edit") {
+        fieldsToUpdate.username = "";
+        fieldsToUpdate.password = "";
+      }
+      console.log(`Set MANAGER defaults for ${modalMode} mode`);
     }
 
     console.log("fieldsToUpdate before setFieldsValue:", fieldsToUpdate);
@@ -2159,10 +2110,8 @@ const AdminDashboard = () => {
           const defaultYear = currentYear - minAge;
           const defaultDob = dayjs().year(defaultYear).month(0).date(1); // January 1st of appropriate year
 
-          userFormInstance.setFieldsValue({
+          const fieldsToSet = {
             role: role,
-            username: "",
-            password: "",
             email: "",
             jobTitle: "",
             firstName: "",
@@ -2170,9 +2119,17 @@ const AdminDashboard = () => {
             phone: "",
             address: "",
             gender: undefined,
-            dob: defaultDob, // Set default date instead of null
+            dob: defaultDob,
             status: "ACTIVE",
-          });
+          };
+
+          // For edit mode, also set username and password
+          if (modalMode === "edit") {
+            fieldsToSet.username = "";
+            fieldsToSet.password = "";
+          }
+
+          userFormInstance.setFieldsValue(fieldsToSet);
 
           // Clear any validation errors from previous role
           setTimeout(() => {
@@ -2230,12 +2187,14 @@ const AdminDashboard = () => {
         values.role === "ADMIN" ||
         values.role === "MANAGER"
       ) {
-        if (!values.username || values.username.trim() === "") {
+        // For edit mode, username is required
+        if (modalMode === "edit" && (!values.username || values.username.trim() === "")) {
           message.error("Tên đăng nhập là bắt buộc cho vai trò " + values.role);
           return;
         }
-        if (!values.password || values.password.trim() === "") {
-          message.error("Mật khẩu là bắt buộc cho vai trò " + values.role);
+        // Only check password for edit mode, and only if provided
+        if (modalMode === "edit" && values.password && values.password.trim() === "") {
+          message.error("Mật khẩu không được để trống khi đang chỉnh sửa");
           return;
         }
         if (!values.email || values.email.trim() === "") {
@@ -2258,10 +2217,20 @@ const AdminDashboard = () => {
         phone: values.phone,
       };
 
-      // Add role-specific fields for all roles
+      // Add role-specific fields
       userData.email = values.email;
-      userData.username = values.username;
-      userData.password = values.password;
+      
+      // For add mode (new users), let backend auto-generate username and password
+      // For edit mode, include username and password if provided
+      if (modalMode === "edit") {
+        userData.username = values.username;
+        // Only update password if provided
+        if (values.password && values.password.trim() !== "") {
+          userData.password = values.password;
+        }
+      }
+      // For new users (add mode), don't send username/password - backend will auto-generate
+      
       userData.status = values.status;
 
       if (values.role === "SCHOOLNURSE") {
@@ -2290,7 +2259,7 @@ const AdminDashboard = () => {
             firstName: userData.firstName,
             lastName: userData.lastName,
             email: userData.email,
-            username: userData.username,
+            username: newUser.username || userData.username, // Use username from API response
             phone: userData.phone,
             roleName: userData.role,
             role: userData.role,
@@ -2316,13 +2285,26 @@ const AdminDashboard = () => {
           // Clear any existing notifications first to avoid overlapping
           api.destroy();
 
-          // Show simple success notification
+          // Show success notification with role-specific information
+          const isStaffRole = ["ADMIN", "MANAGER", "SCHOOLNURSE"].includes(userData.role);
+          let notificationMessage = `Đã thêm thành công ${userData.lastName} ${userData.firstName}`;
+          let notificationDescription = "";
+
+          if (isStaffRole && newUser.credentialsSent) {
+            notificationDescription = `Thông tin đăng nhập (Username: ${newUser.username}) đã được gửi đến email ${newUser.emailSentTo}. Người dùng sẽ cần đổi mật khẩu khi đăng nhập lần đầu.`;
+          } else if (isStaffRole) {
+            notificationDescription = `Username được tạo: ${newUser.username}. Thông tin đăng nhập sẽ được gửi qua email.`;
+          } else {
+            notificationDescription = "Người dùng đã được tạo thành công.";
+          }
+
           api.success({
-            message: `Đã thêm thành công ${userData.lastName} ${userData.firstName}`,
-            duration: 5,
+            message: notificationMessage,
+            description: notificationDescription,
+            duration: 12,
             style: {
               fontSize: "14px",
-              padding: "8px 16px",
+              padding: "12px 16px",
             },
           });
 
