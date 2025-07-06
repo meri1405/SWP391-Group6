@@ -95,6 +95,10 @@ public class User implements UserDetails, OAuth2User {
     @Column(name = "enabled", nullable = false)
     private Boolean enabled = true;
 
+    /** Đánh dấu người dùng cần đổi mật khẩu lần đầu - chỉ dành cho ADMIN, MANAGER, SCHOOLNURSE */
+    @Column(name = "first_login", nullable = false)
+    private Boolean firstLogin = false;
+
     /** Vai trò của người dùng - liên kết với bảng Role */
     @ManyToOne
     @JoinColumn(name = "roleID") // FK tới Role.id

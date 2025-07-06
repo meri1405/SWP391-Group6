@@ -70,4 +70,54 @@ public class EmailService implements IEmailService {
             return false;
         }
     }
-} 
+    
+    @Override
+    public boolean sendLoginCredentials(String to, String username, String password, String fullName) {
+        String subject = "[Y TẾ HỌC ĐƯỜNG] - Thông Tin Đăng Nhập Tài Khoản Mới";
+
+        String content = String.format("""
+            Kính chào %s,
+            
+            Chúc mừng! Tài khoản của bạn đã được tạo thành công trên Hệ Thống Quản Lý Y Tế Trường Học.
+            
+            THÔNG TIN ĐĂNG NHẬP:
+            • Tên đăng nhập: %s
+            • Mật khẩu tạm thời: %s
+            
+            HƯỚNG DẪN ĐĂNG NHẬP LẦN ĐẦU:
+            1. Truy cập hệ thống tại: [URL_HỆ_THỐNG]
+            2. Nhập tên đăng nhập và mật khẩu tạm thời ở trên
+            3. Hệ thống sẽ yêu cầu bạn đổi mật khẩu mới để đảm bảo an toàn
+            4. Nhập mã OTP được gửi đến email này để xác thực
+            5. Tạo mật khẩu mới theo yêu cầu bảo mật
+            
+            YÊU CẦU MẬT KHẨU MỚI:
+            • Ít nhất 8 ký tự, tối đa 50 ký tự
+            • Không chứa khoảng trắng
+            • Đạt độ mạnh "Trung bình" trở lên (cần ít nhất 3/5 tiêu chí):
+              - Chữ thường (a-z)
+              - Chữ hoa (A-Z)
+              - Số (0-9)
+              - Ký tự đặc biệt (@$!%%*?&)
+              - Độ dài tối thiểu
+            
+            LƯU Ý BẢO MẬT:
+            • Mật khẩu tạm thời này chỉ sử dụng cho lần đăng nhập đầu tiên
+            • Không chia sẻ thông tin đăng nhập với bất kỳ ai
+            • Sau khi đổi mật khẩu thành công, mật khẩu tạm thời sẽ không còn hiệu lực
+            • Nếu gặp khó khăn, vui lòng liên hệ quản trị viên hệ thống
+            
+            Cảm ơn bạn đã tham gia sử dụng Hệ Thống Quản Lý Y Tế Trường Học!
+            
+            Trân trọng,
+            Ban Quản Trị Hệ Thống
+            """, fullName, username, password);
+
+        try {
+            return sendSimpleEmail(to, subject, content);
+        } catch (Exception e) {
+            logger.error("Failed to send login credentials to {}: {}", to, e.getMessage());
+            return false;
+        }
+    }
+}
