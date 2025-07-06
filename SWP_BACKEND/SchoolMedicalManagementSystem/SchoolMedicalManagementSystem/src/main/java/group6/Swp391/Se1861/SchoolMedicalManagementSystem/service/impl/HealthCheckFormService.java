@@ -189,6 +189,11 @@ public class HealthCheckFormService implements IHealthCheckFormService {
     @Override
     @Transactional
     public HealthCheckForm createHealthCheckForm(HealthCheckCampaign campaign, Student student, User parent) {
+        // Check if student is disabled
+        if (student.isDisabled()) {
+            throw new IllegalArgumentException("Cannot create health check form for disabled student with id: " + student.getStudentID());
+        }
+        
         // Check if a form already exists for this campaign and student
         Optional<HealthCheckForm> existingForm = formRepository.findByCampaignAndStudent(campaign, student);
         if (existingForm.isPresent()) {

@@ -21,7 +21,6 @@ import {
   EyeOutlined,
   CheckCircleOutlined,
 } from "@ant-design/icons";
-import { managerVaccinationApi } from "../../api/vaccinationCampaignApi";
 import managerApi from "../../api/managerApi";
 import "../../styles/ManagerVaccination.css";
 
@@ -85,6 +84,7 @@ const ManagerVaccinationManagement = () => {
           page - 1,
           size
         );
+        console.log(response);
         setAllCampaigns(response.content || []);
         setPagination((prev) => ({
           ...prev,
@@ -148,6 +148,7 @@ const ManagerVaccinationManagement = () => {
       if (response.success) {
         message.success("Đánh dấu hoàn thành chiến dịch thành công!");
         fetchStatistics();
+        console.log(response);
         // Refresh current tab data
         if (activeTab === "pending") {
           fetchPendingCampaigns(pagination.current, pagination.pageSize);
@@ -278,7 +279,8 @@ const ManagerVaccinationManagement = () => {
       key: "ageRange",
       width: "12%",
       render: (_, record) => {
-        return record.minAge && record.maxAge
+        return (record.minAge !== undefined && record.minAge !== null && 
+                record.maxAge !== undefined && record.maxAge !== null)
           ? `${Math.floor(record.minAge / 12)} - ${Math.floor(
               record.maxAge / 12
             )} tuổi`

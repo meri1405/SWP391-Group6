@@ -62,7 +62,10 @@ public class SchoolNurseHealthProfileService implements ISchoolNurseHealthProfil
     @Override
     public List<HealthProfileDTO> getAllHealthProfiles() {
         List<HealthProfile> profiles = healthProfileRepository.findAll();
-        return profiles.stream().map(this::convertToBasicDTO).collect(Collectors.toList());
+        return profiles.stream()
+                .filter(profile -> profile.getStudent() != null && !profile.getStudent().isDisabled())
+                .map(this::convertToBasicDTO)
+                .collect(Collectors.toList());
     }
 
     /**
@@ -73,7 +76,10 @@ public class SchoolNurseHealthProfileService implements ISchoolNurseHealthProfil
     @Override
     public List<HealthProfileDTO> getHealthProfilesByStatus(ProfileStatus status) {
         List<HealthProfile> profiles = healthProfileRepository.findByStatus(status);
-        return profiles.stream().map(this::convertToBasicDTO).collect(Collectors.toList());
+        return profiles.stream()
+                .filter(profile -> profile.getStudent() != null && !profile.getStudent().isDisabled())
+                .map(this::convertToBasicDTO)
+                .collect(Collectors.toList());
     }
 
     /**
@@ -85,6 +91,12 @@ public class SchoolNurseHealthProfileService implements ISchoolNurseHealthProfil
     public HealthProfileDTO getHealthProfileById(Long profileId) {
         HealthProfile healthProfile = healthProfileRepository.findById(profileId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Health profile not found"));
+                
+        // Check if student is disabled
+        if (healthProfile.getStudent() != null && healthProfile.getStudent().isDisabled()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot access health profile of a disabled student");
+        }
+        
         return convertToDetailedDTO(healthProfile);
     }
 
@@ -411,6 +423,12 @@ public class SchoolNurseHealthProfileService implements ISchoolNurseHealthProfil
      */
     @Override
     public boolean hasApprovedHealthProfile(Long studentId) {
+        // Check if student is disabled
+        Student student = studentRepository.findById(studentId).orElse(null);
+        if (student == null || student.isDisabled()) {
+            return false;
+        }
+        
         return healthProfileRepository.existsByStudentStudentIDAndStatus(studentId, ProfileStatus.APPROVED);
     }
     
@@ -419,6 +437,14 @@ public class SchoolNurseHealthProfileService implements ISchoolNurseHealthProfil
      */
     @Override
     public HealthProfileDTO getApprovedHealthProfileByStudentId(Long studentId) {
+        // Check if student is disabled
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found"));
+                
+        if (student.isDisabled()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot access health profile of a disabled student");
+        }
+        
         HealthProfile healthProfile = healthProfileRepository
                 .findByStudentStudentIDAndStatus(studentId, ProfileStatus.APPROVED)
                 .orElse(null);
