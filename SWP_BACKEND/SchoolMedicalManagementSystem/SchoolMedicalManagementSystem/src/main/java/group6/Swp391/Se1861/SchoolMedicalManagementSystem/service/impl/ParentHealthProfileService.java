@@ -80,6 +80,11 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
         // Validate student exists
         Student student = studentRepository.findById(healthProfileDTO.getStudentId())
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
+                
+        // Check if student is disabled
+        if (student.isDisabled()) {
+            throw new BadRequestException("Cannot create health profile for a disabled student");
+        }
 
         // Validate parent is related to student        
         if (!isParentRelatedToStudent(parent, student)) {
@@ -278,6 +283,11 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
         HealthProfile healthProfile = healthProfileRepository.findById(profileId)
                 .orElseThrow(() -> new ResourceNotFoundException("Health profile not found"));
 
+        // Check if student is disabled
+        if (healthProfile.getStudent() != null && healthProfile.getStudent().isDisabled()) {
+            throw new BadRequestException("Cannot access health profile of a disabled student");
+        }
+
         // Validate parent is related to student
         if (!isParentRelatedToStudent(parent, healthProfile.getStudent())) {
             throw new ForbiddenAccessException("Parent is not associated with this student");
@@ -307,6 +317,11 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
         // Validate student exists
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
+
+        // Check if student is disabled
+        if (student.isDisabled()) {
+            throw new BadRequestException("Cannot access health profile of a disabled student");
+        }
 
         // Validate parent is related to student
         if (!isParentRelatedToStudent(parent, student)) {
@@ -345,6 +360,11 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
 
+        // Check if student is disabled
+        if (student.isDisabled()) {
+            throw new BadRequestException("Cannot access health profile of a disabled student");
+        }
+
         // Validate parent is related to student
         if (!isParentRelatedToStudent(parent, student)) {
             throw new ForbiddenAccessException("Parent is not associated with this student");
@@ -381,6 +401,11 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
         // Get health profile
         HealthProfile healthProfile = healthProfileRepository.findById(profileId)
                 .orElseThrow(() -> new ResourceNotFoundException("Health profile not found"));
+
+        // Check if student is disabled
+        if (healthProfile.getStudent() != null && healthProfile.getStudent().isDisabled()) {
+            throw new BadRequestException("Cannot update health profile of a disabled student");
+        }
 
         // Validate parent is related to student
         if (!isParentRelatedToStudent(parent, healthProfile.getStudent())) {
@@ -1148,6 +1173,11 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
             // Validate student exists
             Student student = studentRepository.findById(studentId)
                     .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
+
+            // Check if student is disabled
+            if (student.isDisabled()) {
+                return false;
+            }
 
             // Validate parent is related to student
             if (!isParentRelatedToStudent(parent, student)) {

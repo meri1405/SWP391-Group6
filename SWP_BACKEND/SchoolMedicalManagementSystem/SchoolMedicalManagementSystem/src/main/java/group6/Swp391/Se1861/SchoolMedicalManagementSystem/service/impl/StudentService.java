@@ -14,7 +14,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -55,7 +54,7 @@ public class StudentService implements IStudentService {
      */
     @Override
     public List<StudentDTO> getAllStudents() {
-        List<Student> students = studentRepository.findAllActiveWithParents();
+        List<Student> students = studentRepository.findAllWithParents();
         return students.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -706,7 +705,7 @@ public class StudentService implements IStudentService {
     
     @Override
     public List<StudentDTO> filterStudents(StudentFilterDTO filter) {
-        List<Student> students = studentRepository.findAllActiveWithParents();
+        List<Student> students = studentRepository.findAllWithParents();
         
         // Apply filters
         if (filter.getSearchName() != null && !filter.getSearchName().trim().isEmpty()) {

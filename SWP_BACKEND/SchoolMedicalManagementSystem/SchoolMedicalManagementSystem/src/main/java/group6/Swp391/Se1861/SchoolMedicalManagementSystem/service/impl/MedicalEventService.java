@@ -51,6 +51,11 @@ public class MedicalEventService implements IMedicalEventService {
         Student student = studentRepository.findById(requestDTO.getStudentId())
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found with id: " + requestDTO.getStudentId()));
 
+        // Check if student is disabled
+        if (student.isDisabled()) {
+            throw new IllegalArgumentException("Cannot create medical event for disabled student with id: " + student.getStudentID());
+        }
+
         // Find user who created the event
         User createdBy = userRepository.findById(createdById)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + createdById));
@@ -218,7 +223,9 @@ public class MedicalEventService implements IMedicalEventService {
 
     @Override
     public List<MedicalEventResponseDTO> getAllMedicalEvents() {
+        // Use a custom query to filter out events for disabled students
         return medicalEventRepository.findAll().stream()
+                .filter(event -> event.getStudent() != null && !event.getStudent().isDisabled())
                 .map(this::convertToResponseDTO)
                 .collect(Collectors.toList());
     }

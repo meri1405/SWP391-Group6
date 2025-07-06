@@ -246,7 +246,7 @@ public class VaccinationCampaignService implements IVaccinationCampaignService {
         }
 
         VaccinationRule rule = campaign.getVaccinationRule();
-        List<Student> allStudents = studentRepository.findAllWithParents();
+        List<Student> allStudents = studentRepository.findAllActiveWithParents();
 
         List<EligibleStudentsResponse.StudentVaccinationInfoDTO> eligibleStudents = new ArrayList<>();
         List<EligibleStudentsResponse.StudentVaccinationInfoDTO> ineligibleStudents = new ArrayList<>();
