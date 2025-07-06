@@ -41,7 +41,7 @@ const UserManagement = () => {
         <div className="section-header">
           <h2>Quản lý người dùng</h2>
           <Button
-            type="primary"
+            className="btn-add-user"
             icon={<PlusOutlined />}
             onClick={openAddUserModal}
             size="large"

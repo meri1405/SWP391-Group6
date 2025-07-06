@@ -63,9 +63,9 @@ const UserTable = ({
                   : "N/A"}
               </td>
               <td>
-                <Space size="small">
+                <div className="action-buttons">
                   <Button
-                    type="primary"
+                    className="btn-view"
                     icon={<EyeOutlined />}
                     size="small"
                     onClick={() => onViewUser(user)}
@@ -82,15 +82,14 @@ const UserTable = ({
                     okType={user.enabled ? "danger" : "primary"}
                   >
                     <Button
-                      type={user.enabled ? "primary" : "default"}
-                      danger={user.enabled}
+                      className={user.enabled ? "btn-delete" : "btn-view"}
                       icon={user.enabled ? <CloseOutlined /> : <SaveOutlined />}
                       size="small"
                       title={user.enabled ? "Vô hiệu hóa" : "Kích hoạt lại"}
                       loading={loading}
                     />
                   </Popconfirm>
-                </Space>
+                </div>
               </td>
             </tr>
           ))}

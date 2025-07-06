@@ -145,6 +145,7 @@ const AdminDashboard = () => {
 
   return (
     <Layout
+      className="admin-dashboard"
       style={{
         minHeight: 'calc(100vh - 140px)',
         background: '#f4f6fb',
