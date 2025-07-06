@@ -122,6 +122,20 @@ nurseApiClient.interceptors.response.use(
         );
         // Không chuyển hướng đến trang đăng nhập
       }
+      // Đặc biệt xử lý cho API medication requests - không đăng xuất
+      else if (error.config?.url?.includes("/medications/requests")) {
+        console.log(
+          "Authentication error for medication requests API - skipping logout"
+        );
+        // Không chuyển hướng đến trang đăng nhập
+      }
+      // Đặc biệt xử lý cho API medication schedules - không đăng xuất
+      else if (error.config?.url?.includes("/medications/schedules")) {
+        console.log(
+          "Authentication error for medication schedules API - skipping logout"
+        );
+        // Không chuyển hướng đến trang đăng nhập
+      }
       // Only redirect to login for non health-profile APIs
       // Health profiles have special handling with mock data
       else if (!error.config?.url?.includes("/health-profiles")) {
@@ -267,35 +281,6 @@ export const nurseApi = {
     }
   },
 
-  // Cập nhật hồ sơ sức khỏe
-  updateHealthProfile: async (profileId, healthProfileData) => {
-    try {
-      console.log(
-        `Updating health profile with ID: ${profileId}`,
-        healthProfileData
-      );
-      const token = getTokenFromStorage();
-      const authAxios = createAuthAxios(token);
-      const response = await authAxios.put(
-        `/api/nurse/health-profiles/${profileId}`,
-        healthProfileData
-      );
-      console.log("Update profile response:", response.data);
-
-      return {
-        success: true,
-        data: response.data,
-        message: "Cập nhật hồ sơ sức khỏe thành công",
-      };
-    } catch (error) {
-      console.error("Error updating health profile:", error);
-      return {
-        success: false,
-        message: error.response?.data?.message || "Không thể cập nhật hồ sơ",
-      };
-    }
-  },
-
   // Duyệt hồ sơ sức khỏe
   approveHealthProfile: async (profileId, nurseNote = "") => {
     try {
@@ -392,7 +377,15 @@ export const nurseApi = {
     customMessage = ""
   ) => {
     try {
+      console.log("Approving medication request API call:", {
+        requestId,
+        nurseNote,
+        customMessage,
+      });
+
       const token = getTokenFromStorage();
+      console.log("Token available:", !!token);
+
       const authAxios = createAuthAxios(token);
       const response = await authAxios.put(
         `/api/nurse/medications/requests/${requestId}/approve`,
@@ -401,18 +394,31 @@ export const nurseApi = {
           customMessage: customMessage,
         }
       );
+
+      console.log("Approve API response:", response.data);
+
       return {
         success: true,
         data: response.data,
-        message: "Yêu cầu thuốc đã được duyệt thành công",
+        message:
+          response.data.message || "Yêu cầu thuốc đã được duyệt thành công",
       };
     } catch (error) {
       console.error("Error approving medication request:", error);
-      // Mock approval for development
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // Log chi tiết lỗi
+      if (error.response) {
+        console.error("Error response data:", error.response.data);
+        console.error("Error response status:", error.response.status);
+        console.error("Error response headers:", error.response.headers);
+      }
+
+      // Trả về lỗi thật thay vì mock
       return {
-        success: true,
-        message: "Yêu cầu thuốc đã được duyệt thành công",
+        success: false,
+        message:
+          error.response?.data?.message || "Không thể duyệt yêu cầu thuốc",
+        error: error.response?.data || error.message,
       };
     }
   },
@@ -468,16 +474,75 @@ export const nurseApi = {
   // Medication Schedule Management
   getSchedulesByDate: async (params) => {
     try {
-      const response = await nurseApiClient.get(
+      console.log("Getting schedules by date with params:", params);
+
+      const token = getTokenFromStorage();
+      console.log("Token for schedules:", token ? "exists" : "missing");
+
+      if (!token) {
+        console.error("No token found for medication schedules");
+        return {
+          success: false,
+          message: "Không có token xác thực",
+        };
+      }
+
+      const authAxios = createAuthAxios(token);
+
+      // Thử các endpoint khác nhau
+      const endpoints = [
         "/api/nurse/medications/schedules",
-        { params }
-      );
-      return {
-        success: true,
-        data: response.data,
-      };
+        "/api/school-nurse/medications/schedules",
+        "/api/nurse/medication-schedules",
+        "/api/school-nurse/medication-schedules",
+      ];
+
+      let lastError = null;
+
+      for (const endpoint of endpoints) {
+        try {
+          console.log(`Trying endpoint: ${endpoint}`);
+          const response = await authAxios.get(endpoint, { params });
+          console.log(`Success with endpoint ${endpoint}:`, response.data);
+
+          return {
+            success: true,
+            data: response.data,
+          };
+        } catch (err) {
+          console.log(
+            `Failed with endpoint ${endpoint}:`,
+            err.response?.status
+          );
+          lastError = err;
+
+          // Nếu không phải 404, có thể là lỗi khác (401, 403, etc.)
+          if (err.response?.status !== 404) {
+            break;
+          }
+        }
+      }
+
+      // Nếu tất cả endpoints đều fail
+      throw lastError;
     } catch (error) {
       console.error("Error fetching schedules by date:", error);
+      console.error("Error details:", {
+        status: error.response?.status,
+        data: error.response?.data,
+        url: error.config?.url,
+      });
+
+      // Nếu lỗi 401 và không có data, trả về empty array
+      if (error.response?.status === 401) {
+        console.log("401 error - returning empty schedules array");
+        return {
+          success: true,
+          data: [],
+          message: "Không có quyền truy cập hoặc token hết hạn",
+        };
+      }
+
       return {
         success: false,
         message: error.response?.data?.message || "Không thể lấy lịch trình",
@@ -502,8 +567,101 @@ export const nurseApi = {
       };
     }
   },
+
+  // Get all medication schedules
+  getAllMedicationSchedules: async () => {
+    try {
+      console.log("Getting all medication schedules");
+
+      const token = getTokenFromStorage();
+      console.log("Token for schedules:", token ? "exists" : "missing");
+
+      if (!token) {
+        console.error("No token found for medication schedules");
+        return {
+          success: false,
+          message: "Không có token xác thực",
+        };
+      }
+
+      const authAxios = createAuthAxios(token);
+
+      // Thử các endpoint khác nhau cho việc lấy tất cả schedules
+      const endpoints = [
+        "/api/nurse/medications/schedules/all",
+        "/api/nurse/medications/schedules",
+        "/api/school-nurse/medications/schedules/all",
+        "/api/school-nurse/medications/schedules",
+        "/api/nurse/medication-schedules/all",
+        "/api/school-nurse/medication-schedules/all",
+      ];
+
+      let lastError = null;
+
+      for (const endpoint of endpoints) {
+        try {
+          console.log(`Trying endpoint: ${endpoint}`);
+          const response = await authAxios.get(endpoint);
+          console.log(`Success with endpoint ${endpoint}:`, response.data);
+
+          return {
+            success: true,
+            data: response.data,
+          };
+        } catch (err) {
+          console.log(
+            `Failed with endpoint ${endpoint}:`,
+            err.response?.status
+          );
+          lastError = err;
+
+          // Nếu không phải 404, có thể là lỗi khác (401, 403, etc.)
+          if (err.response?.status !== 404) {
+            break;
+          }
+        }
+      }
+
+      // Nếu tất cả endpoints đều fail
+      throw lastError;
+    } catch (error) {
+      console.error("Error fetching all medication schedules:", error);
+      console.error("Error details:", {
+        status: error.response?.status,
+        data: error.response?.data,
+        url: error.config?.url,
+      });
+
+      // Nếu lỗi 401 và không có data, trả về empty array
+      if (error.response?.status === 401) {
+        console.log("401 error - returning empty schedules array");
+        return {
+          success: true,
+          data: [],
+          message: "Không có quyền truy cập hoặc token hết hạn",
+        };
+      }
+
+      return {
+        success: false,
+        message: error.response?.data?.message || "Không thể lấy lịch trình",
+      };
+    }
+  },
+
   updateScheduleStatus: async (scheduleId, status, note = null) => {
     try {
+      console.log("Updating schedule status:", { scheduleId, status, note });
+
+      const token = getTokenFromStorage();
+      if (!token) {
+        return {
+          success: false,
+          message: "Không có token xác thực",
+        };
+      }
+
+      const authAxios = createAuthAxios(token);
       const requestBody = { status };
 
       // Only include note in request if it's provided and not empty
@@ -511,22 +669,32 @@ export const nurseApi = {
         requestBody.note = note;
       }
 
-      const response = await nurseApiClient.put(
+      const response = await authAxios.put(
         `/api/nurse/medications/schedules/${scheduleId}/status`,
         requestBody
       );
+
+      console.log("Update schedule status response:", response.data);
+
       return {
         success: true,
         data: response.data,
-        message: "Cập nhật trạng thái thành công",
+        message: response.data.message || "Cập nhật trạng thái thành công",
       };
     } catch (error) {
       console.error("Error updating schedule status:", error);
-      // Mock response for development
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      if (error.response?.status === 401) {
+        return {
+          success: false,
+          message: "Phiên đăng nhập đã hết hạn",
+        };
+      }
+
       return {
-        success: true,
-        message: "Cập nhật trạng thái thành công",
+        success: false,
+        message:
+          error.response?.data?.message || "Không thể cập nhật trạng thái",
       };
     }
   },

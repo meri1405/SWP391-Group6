@@ -19,4 +19,15 @@ public interface IEmailService {
      * @return true if email was sent successfully, false otherwise
      */
     boolean sendPasswordResetOtp(String to, String otp);
-} 
+
+    /**
+     * Send login credentials to new user
+     *
+     * @param to       recipient email address
+     * @param username the username
+     * @param password the temporary password
+     * @param fullName the user's full name
+     * @return true if email was sent successfully, false otherwise
+     */
+    boolean sendLoginCredentials(String to, String username, String password, String fullName);
+}

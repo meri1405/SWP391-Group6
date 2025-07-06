@@ -19,6 +19,7 @@ import java.time.DateTimeException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -37,6 +38,24 @@ public class MedicationScheduleService implements IMedicationScheduleService {
     private int overdueThresholdMinutes;
 
     private static final Logger log = LoggerFactory.getLogger(MedicationScheduleService.class);
+
+    // Date formatters for consistent date formatting in notifications
+    private static final DateTimeFormatter DATETIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm, dd/MM/yyyy");
+    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
+
+    /**
+     * Format LocalDateTime to HH:mm, dd/MM/yyyy
+     */
+    private String formatDateTime(LocalDateTime dateTime) {
+        return dateTime != null ? dateTime.format(DATETIME_FORMATTER) : "N/A";
+    }
+
+    /**
+     * Format LocalTime to HH:mm
+     */
+    private String formatTime(LocalTime time) {
+        return time != null ? time.format(TIME_FORMATTER) : "N/A";
+    }
 
     /**
      * Generate medication schedules for an item request
@@ -398,6 +417,41 @@ public class MedicationScheduleService implements IMedicationScheduleService {
     }
 
     /**
+     * Get all medication schedules for a specific nurse
+     * @param nurse The authenticated nurse
+     * @return List of medication schedule DTOs
+     */
+    @Override
+    public List<MedicationScheduleDTO> getAllSchedulesForNurse(User nurse) {
+        log.info("Getting all medication schedules for nurse: {} {}", nurse.getFirstName(), nurse.getLastName());
+        
+        // Get all schedules where the medication request was approved by this nurse
+        List<MedicationSchedule> schedules = medicationScheduleRepository.findByItemRequestMedicationRequestNurse(nurse);
+        
+        log.info("Found {} medication schedules for nurse", schedules.size());
+        return convertToScheduleDTOList(schedules);
+    }
+
+    /**
+     * Get medication schedules by status for a specific nurse
+     * @param status The medication status filter
+     * @param nurse The authenticated nurse
+     * @return List of medication schedule DTOs
+     */
+    @Override
+    public List<MedicationScheduleDTO> getSchedulesByStatusAndNurse(MedicationStatus status, User nurse) {
+        log.info("Getting medication schedules with status {} for nurse: {} {}", 
+                status, nurse.getFirstName(), nurse.getLastName());
+        
+        // Get schedules with specific status where the medication request was approved by this nurse
+        List<MedicationSchedule> schedules = medicationScheduleRepository
+                .findByStatusAndItemRequestMedicationRequestNurse(status, nurse);
+        
+        log.info("Found {} medication schedules with status {} for nurse", schedules.size(), status);
+        return convertToScheduleDTOList(schedules);
+    }
+
+    /**
      * Auto-mark medication schedules as SKIPPED if they are overdue based on configured threshold
      * This method is called by the scheduled task to automatically mark missed medication times
      * @return number of schedules marked as skipped
@@ -489,7 +543,7 @@ public class MedicationScheduleService implements IMedicationScheduleService {
         try {
             Student student = schedule.getItemRequest().getMedicationRequest().getStudent();
             String medicationName = schedule.getItemRequest().getItemName();
-            String scheduledTime = schedule.getScheduledTime().toString();
+            String scheduledTime = formatTime(schedule.getScheduledTime());
             
             String title = "Lịch uống thuốc bị bỏ lỡ";
             String message = String.format(

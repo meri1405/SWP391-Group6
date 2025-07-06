@@ -36,7 +36,6 @@ import dayjs from "dayjs";
 
 const { Option } = Select;
 const { TextArea } = Input;
-const { TabPane } = Tabs;
 
 const NotificationsSection = () => {
   const [form] = Form.useForm();
@@ -298,24 +297,25 @@ const NotificationsSection = () => {
           activeKey={activeTab}
           onChange={setActiveTab}
           style={{ marginBottom: 24 }}
-        >
-          <TabPane
-            tab={
-              <span>
-                <BellOutlined /> Đã gửi ({sentNotifications.length})
-              </span>
-            }
-            key="sent"
-          />
-          <TabPane
-            tab={
-              <span>
-                <EditOutlined /> Bản nháp ({draftNotifications.length})
-              </span>
-            }
-            key="drafts"
-          />
-        </Tabs>
+          items={[
+            {
+              key: "sent",
+              label: (
+                <span>
+                  <BellOutlined /> Đã gửi ({sentNotifications.length})
+                </span>
+              ),
+            },
+            {
+              key: "drafts",
+              label: (
+                <span>
+                  <EditOutlined /> Bản nháp ({draftNotifications.length})
+                </span>
+              ),
+            },
+          ]}
+        />
         <div
           style={{
             display: "flex",

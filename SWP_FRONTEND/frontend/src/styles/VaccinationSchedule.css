@@ -356,66 +356,105 @@
   background: #45a049;
 }
 
-/* Mobile responsive */
-@media (max-width: 768px) {
-  .vaccination-header {
-    padding: 20px 8px;
-    margin: 0 -8px;
-    width: calc(100% + 16px);
-    background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
-  }
-
-  .vaccination-header h2 {
-    font-size: 20px;
-  }
-
-  .tabs {
-    flex-direction: column;
-  }
-
-  .tab {
-    border-bottom: 1px solid #e0e0e0;
-    border-right: none;
-  }
-
-  .tab.active {
-    border-bottom-color: #e0e0e0;
-    border-left: 3px solid #4caf50;
-  }
-
-  .tab-content {
-    padding: 16px;
-  }
-
-  .card-actions {
-    flex-direction: column;
-  }
-
-  .modal {
-    width: 95%;
-    margin: 20px;
-  }
-
-  .modal-footer {
-    flex-direction: column;
-  }
+/* Loading and Error States */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: #666;
 }
 
-@media (max-width: 480px) {
-  .card-header {
-    flex-direction: column;
-    gap: 12px;
-    text-align: center;
-  }
-
-  .info-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-  }
+.loading-container i {
+  font-size: 32px;
+  color: #4caf50;
+  margin-bottom: 16px;
 }
 
-.content-body > .vaccination-container {
+.loading-container p {
+  font-size: 16px;
+  margin: 0;
+}
+
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: #f44336;
+}
+
+.error-container i {
+  font-size: 32px;
+  margin-bottom: 16px;
+}
+
+.error-container p {
+  font-size: 16px;
+  margin: 0 0 20px 0;
+  text-align: center;
+}
+
+.retry-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f44336;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.retry-btn:hover {
+  background: #d32f2f;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: #999;
+}
+
+.empty-state i {
+  font-size: 48px;
+  margin-bottom: 16px;
+  color: #ddd;
+}
+
+.empty-state p {
+  font-size: 16px;
+  margin: 0;
+}
+
+/* Update info button styles */
+.info-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #2196f3;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.3s ease;
+}
+
+.info-btn:hover {
+  background: #1976d2;
+}
+
+.vaccination-container {
   margin-top: 0 !important;
   padding-top: 0 !important;
 }

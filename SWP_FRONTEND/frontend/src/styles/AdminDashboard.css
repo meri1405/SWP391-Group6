@@ -114,14 +114,14 @@
   justify-content: space-between;
 }
 
-.search-bar {
+.admin-dashboard .search-bar {
   display: flex;
   gap: 8px;
   flex: 1;
   max-width: 500px;
 }
 
-.search-bar input {
+.admin-dashboard .search-bar input {
   flex: 1;
   padding: 8px 12px;
   border: 1px solid #d9d9d9;
@@ -129,7 +129,7 @@
   font-size: 14px;
 }
 
-.btn-search {
+.admin-dashboard .btn-search {
   background: #ff6b35;
   color: white;
   border: none;
@@ -140,18 +140,18 @@
   white-space: nowrap;
 }
 
-.btn-search:hover {
+.admin-dashboard .btn-search:hover {
   background: #e65a25;
 }
 
-.filter-bar {
+.admin-dashboard .filter-bar {
   display: flex;
   gap: 16px;
   align-items: center;
 }
 
-.role-filter,
-.status-filter {
+.admin-dashboard .role-filter,
+.admin-dashboard .status-filter {
   padding: 8px 12px;
   border: 1px solid #d9d9d9;
   border-radius: 6px;
@@ -161,8 +161,8 @@
   min-width: 180px;
 }
 
-.users-stats,
-.records-stats {
+.admin-dashboard .users-stats,
+.admin-dashboard .records-stats {
   margin-bottom: 16px;
   color: #666;
   font-size: 14px;

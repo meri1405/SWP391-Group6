@@ -71,6 +71,15 @@ public interface HealthCheckFormRepository extends JpaRepository<HealthCheckForm
     
     @Query("SELECT hcf FROM HealthCheckForm hcf WHERE " +
            "hcf.status = :status AND hcf.reminderSent = false AND " +
+           "hcf.sentAt < :reminderThreshold AND hcf.sentAt > :tooOldThreshold")
+    List<HealthCheckForm> findFormsNeedingReminder(
+        @Param("status") FormStatus status,
+        @Param("reminderThreshold") LocalDateTime reminderThreshold,
+        @Param("tooOldThreshold") LocalDateTime tooOldThreshold
+    );
+    
+    @Query("SELECT hcf FROM HealthCheckForm hcf WHERE " +
+           "hcf.status = :status AND hcf.reminderSent = false AND " +
            "hcf.sentAt < :reminderThreshold")
     List<HealthCheckForm> findFormsNeedingReminder(
         @Param("status") FormStatus status,

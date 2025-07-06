@@ -74,4 +74,8 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
     
     // Find active students by both age range and class name
     List<Student> findByDobBetweenAndClassNameAndIsDisabledFalse(LocalDate startDate, LocalDate endDate, String className);
+    
+    // Get distinct class names from active students
+    @Query("SELECT DISTINCT s.className FROM Student s WHERE s.isDisabled = false AND s.className IS NOT NULL ORDER BY s.className")
+    List<String> findDistinctClassNamesFromActiveStudents();
 }

@@ -1,0 +1,725 @@
+/* Settings Management Styles */
+.settings-management {
+  padding: 24px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  margin: 16px;
+}
+
+.settings-management .section-header {
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #f1f3f4;
+}
+
+.settings-management .section-header h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  color: #1f2937;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.settings-content {
+  max-width: 800px;
+}
+
+.settings-card {
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.settings-card .ant-card-head-title {
+  font-weight: 600;
+  font-size: 18px;
+  color: #1f2937;
+}
+
+.setting-item {
+  margin-bottom: 24px;
+}
+
+.setting-item:last-child {
+  margin-bottom: 0;
+}
+
+.setting-label {
+  display: block;
+  font-weight: 600;
+  font-size: 14px;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.setting-description {
+  font-size: 13px;
+  color: #6b7280;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+.setting-switch {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.switch-info {
+  flex: 1;
+}
+
+.settings-actions {
+  margin-top: 32px;
+  text-align: right;
+}
+
+/* User Management Styles - Original Style */
+.user-management {
+  padding: 24px;
+  background: transparent;
+}
+
+.user-management .section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.user-management .section-header h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+/* Search and Filter Styles - Scoped to Admin Dashboard */
+.user-management .filters-section,
+.admin-dashboard .filters-section {
+  background: transparent;
+  padding: 0;
+  margin-bottom: 20px;
+  border: none;
+  box-shadow: none;
+}
+
+.user-management .search-bar,
+.admin-dashboard .search-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  background: transparent;
+}
+
+.user-management .search-input-wrapper,
+.admin-dashboard .search-input-wrapper {
+  position: relative;
+  flex: 1;
+  max-width: 600px; /* Increased from 400px to make search bar wider */
+}
+
+.user-management .search-icon,
+.admin-dashboard .search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  z-index: 1;
+  font-size: 16px;
+}
+
+.user-management .search-input,
+.admin-dashboard .search-input {
+  width: 100%;
+  padding: 12px 16px 12px 40px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  background: #fff;
+  box-shadow: none;
+}
+
+.user-management .search-input:focus,
+.admin-dashboard .search-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.user-management .btn-search,
+.admin-dashboard .btn-search {
+  padding: 12px 24px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.user-management .btn-search:hover,
+.admin-dashboard .btn-search:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.user-management .filter-bar,
+.admin-dashboard .filter-bar {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.user-management .role-filter,
+.admin-dashboard .role-filter {
+  padding: 12px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 200px;
+}
+
+.user-management .role-filter:focus,
+.admin-dashboard .role-filter:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.user-management .users-stats,
+.admin-dashboard .users-stats {
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+/* Table Styles - Original Style */
+.table-container {
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e5e7eb;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.data-table th {
+  background: #f8fafc;
+  padding: 16px 12px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 13px;
+  color: #374151;
+  border-bottom: 2px solid #e5e7eb;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.data-table td {
+  padding: 16px 12px;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 14px;
+  color: #1f2937;
+  vertical-align: middle;
+}
+
+.data-table tr:hover {
+  background: #f9fafb;
+}
+
+.data-table tr:last-child td {
+  border-bottom: none;
+}
+
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.role-badge.admin {
+  background: #fee2e2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.role-badge.manager {
+  background: #fed7aa;
+  color: #ea580c;
+  border: 1px solid #fdba74;
+}
+
+.role-badge.schoolnurse {
+  background: #fef3c7;
+  color: #d97706;
+  border: 1px solid #fcd34d;
+}
+
+.role-badge.parent {
+  background: #dbeafe;
+  color: #2563eb;
+  border: 1px solid #93c5fd;
+}
+
+.status {
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status.active {
+  color: #059669;
+  background: #d1fae5;
+  border: 1px solid #a7f3d0;
+}
+
+.status.inactive {
+  color: #dc2626;
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+}
+
+.no-data {
+  padding: 60px 40px;
+  text-align: center;
+  color: #6b7280;
+  font-style: italic;
+  background: #f9fafb;
+}
+
+.no-data p {
+  margin: 0;
+  font-size: 16px;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .data-table {
+    font-size: 12px;
+  }
+  
+  .data-table th,
+  .data-table td {
+    padding: 12px 8px;
+  }
+  
+  .role-badge {
+    padding: 3px 8px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 768px) {
+  .user-management {
+    padding: 16px;
+  }
+  
+  .user-management .section-header {
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+  }
+  
+  .user-management .filters-section,
+  .admin-dashboard .filters-section {
+    padding: 0;
+  }
+  
+  .user-management .search-bar,
+  .admin-dashboard .search-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  
+  .user-management .search-input-wrapper,
+  .admin-dashboard .search-input-wrapper {
+    max-width: none;
+  }
+  
+  .user-management .filter-bar,
+  .admin-dashboard .filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .table-container {
+    overflow-x: auto;
+  }
+  
+  .data-table {
+    min-width: 800px;
+    font-size: 12px;
+  }
+  
+  .data-table th,
+  .data-table td {
+    padding: 8px 6px;
+    white-space: nowrap;
+  }
+  
+  .settings-management {
+    padding: 16px;
+    margin: 16px;
+  }
+  
+  .settings-actions {
+    text-align: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .user-management .section-header h2 {
+    font-size: 20px;
+  }
+  
+  .data-table th,
+  .data-table td {
+    padding: 6px 4px;
+    font-size: 11px;
+  }
+  
+  .role-badge {
+    padding: 2px 6px;
+    font-size: 10px;
+  }
+  
+  .status {
+    padding: 2px 6px;
+    font-size: 10px;
+  }
+}
+
+/* Button Styles - Scoped to admin dashboard */
+.admin-dashboard .ant-btn {
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.admin-dashboard .ant-btn-primary {
+  background: #10b981;
+  border-color: #10b981;
+}
+
+.admin-dashboard .ant-btn-primary:hover {
+  background: #059669;
+  border-color: #059669;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.admin-dashboard .ant-btn-danger {
+  background: #ef4444;
+  border-color: #ef4444;
+}
+
+.admin-dashboard .ant-btn-danger:hover {
+  background: #dc2626;
+  border-color: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+/* View/Info buttons - Blue */
+.admin-dashboard .btn-view,
+.admin-dashboard .ant-btn.btn-view {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: white;
+  min-width: 28px;
+  height: 28px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.admin-dashboard .btn-view:hover,
+.admin-dashboard .ant-btn.btn-view:hover {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+/* Edit buttons - Orange/Yellow */
+.admin-dashboard .btn-edit,
+.admin-dashboard .ant-btn.btn-edit {
+  background: #f59e0b;
+  border-color: #f59e0b;
+  color: white;
+}
+
+.admin-dashboard .btn-edit:hover,
+.admin-dashboard .ant-btn.btn-edit:hover {
+  background: #d97706;
+  border-color: #d97706;
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+/* Delete buttons - Red */
+.admin-dashboard .btn-delete,
+.admin-dashboard .ant-btn-danger {
+  background: #ef4444;
+  border-color: #ef4444;
+  color: white;
+  min-width: 28px;
+  height: 28px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.admin-dashboard .btn-delete:hover,
+.admin-dashboard .ant-btn-danger:hover {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+
+/* Add/Create buttons - Green */
+.admin-dashboard .btn-add,
+.admin-dashboard .btn-create,
+.admin-dashboard .ant-btn.btn-add,
+.admin-dashboard .ant-btn.btn-create {
+  background: #10b981;
+  border-color: #10b981;
+  color: white;
+}
+
+.admin-dashboard .btn-add:hover,
+.admin-dashboard .btn-create:hover,
+.admin-dashboard .ant-btn.btn-add:hover,
+.admin-dashboard .ant-btn.btn-create:hover {
+  background: #059669;
+  border-color: #059669;
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+/* Cancel/Secondary buttons - Gray */
+.admin-dashboard .btn-cancel,
+.admin-dashboard .ant-btn-default {
+  background: #6b7280;
+  border-color: #6b7280;
+  color: white;
+}
+
+.admin-dashboard .btn-cancel:hover,
+.admin-dashboard .ant-btn-default:hover {
+  background: #4b5563;
+  border-color: #4b5563;
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(107, 114, 128, 0.3);
+}
+
+/* Select Styles - Scoped to admin dashboard */
+.admin-dashboard .ant-select {
+  border-radius: 8px;
+}
+
+.admin-dashboard .ant-select-selector {
+  border-radius: 8px !important;
+  border: 2px solid #e5e7eb !important;
+  transition: all 0.2s ease;
+}
+
+.admin-dashboard .ant-select-focused .ant-select-selector {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+}
+
+/* Card Styles - Scoped to admin dashboard */
+.admin-dashboard .ant-card {
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.admin-dashboard .ant-card-head {
+  border-bottom: 2px solid #f1f3f4;
+}
+
+/* Modal Styles - Scoped to admin dashboard */
+.admin-dashboard .ant-modal {
+  border-radius: 12px;
+}
+
+.admin-dashboard .ant-modal-content {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.admin-dashboard .ant-modal-header {
+  border-bottom: 2px solid #f1f3f4;
+  padding: 20px 24px;
+}
+
+.admin-dashboard .ant-modal-body {
+  padding: 24px;
+}
+
+.admin-dashboard .ant-modal-footer {
+  border-top: 2px solid #f1f3f4;
+  padding: 16px 24px;
+}
+
+/* Form Styles - Scoped to admin dashboard */
+.admin-dashboard .ant-form-item-label > label {
+  font-weight: 600;
+  color: #374151;
+}
+
+.admin-dashboard .ant-input,
+.admin-dashboard .ant-input-password,
+.admin-dashboard .ant-select-selector,
+.admin-dashboard .ant-picker {
+  border-radius: 8px;
+  border: 2px solid #e5e7eb;
+  transition: all 0.2s ease;
+}
+
+.admin-dashboard .ant-input:focus,
+.admin-dashboard .ant-input-password:focus,
+.admin-dashboard .ant-input-focused,
+.admin-dashboard .ant-picker-focused {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Animation for smooth transitions */
+.user-management,
+.settings-management {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Action column buttons - specific styling for table actions */
+.admin-dashboard .data-table .action-buttons {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin-dashboard .data-table .btn-view,
+.admin-dashboard .data-table .ant-btn.btn-view {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: white;
+  min-width: 28px;
+  height: 28px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.admin-dashboard .data-table .btn-view:hover,
+.admin-dashboard .data-table .ant-btn.btn-view:hover {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.admin-dashboard .data-table .btn-delete,
+.admin-dashboard .data-table .ant-btn.btn-delete {
+  background: #ef4444;
+  border-color: #ef4444;
+  color: white;
+  min-width: 28px;
+  height: 28px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.admin-dashboard .data-table .btn-delete:hover,
+.admin-dashboard .data-table .ant-btn.btn-delete:hover {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+
+/* Keep Add button green but make it more distinct */
+.admin-dashboard .btn-add-user,
+.admin-dashboard .ant-btn.btn-add-user {
+  background: #10b981;
+  border-color: #10b981;
+  color: white;
+  padding: 8px 16px;
+  font-weight: 600;
+  border-radius: 8px;
+}
+
+.admin-dashboard .btn-add-user:hover,
+.admin-dashboard .ant-btn.btn-add-user:hover {
+  background: #059669;
+  border-color: #059669;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}

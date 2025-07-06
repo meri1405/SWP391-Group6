@@ -1,6 +1,7 @@
 package group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.MedicationSchedule;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.MedicationStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -17,6 +18,10 @@ public interface MedicationScheduleRepository extends JpaRepository<MedicationSc
     List<MedicationSchedule> findByScheduledDateAndStatus(LocalDate date, MedicationStatus status);
     List<MedicationSchedule> findByItemRequestId(Long itemRequestId);
     List<MedicationSchedule> findByItemRequestMedicationRequestId(Long medicationRequestId);
+    
+    // New methods for nurse-specific queries
+    List<MedicationSchedule> findByItemRequestMedicationRequestNurse(User nurse);
+    List<MedicationSchedule> findByStatusAndItemRequestMedicationRequestNurse(MedicationStatus status, User nurse);
     
     /**
      * Find all PENDING schedules that are overdue (more than 30 minutes past scheduled time)

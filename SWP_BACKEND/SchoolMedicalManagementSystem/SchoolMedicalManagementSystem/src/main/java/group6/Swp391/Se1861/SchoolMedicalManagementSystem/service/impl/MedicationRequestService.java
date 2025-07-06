@@ -115,7 +115,7 @@ public class MedicationRequestService implements IMedicationRequestService {
         savedRequest = medicationRequestRepository.save(savedRequest);
 
         // Convert back to DTO for response
-        return convertToDTO(savedRequest);
+        return convertToDTOWithScheduleTimes(savedRequest);
     }
 
     /**
@@ -127,7 +127,7 @@ public class MedicationRequestService implements IMedicationRequestService {
     public List<MedicationRequestDTO> getParentMedicationRequests(User parent) {
         List<MedicationRequest> requests = medicationRequestRepository.findByParent(parent);
         return requests.stream()
-                .map(this::convertToDTO)
+                .map(this::convertToDTOWithScheduleTimes)
                 .collect(Collectors.toList());
     }    /**
      * Get a specific medication request
@@ -169,7 +169,7 @@ public class MedicationRequestService implements IMedicationRequestService {
         // Schedules are already generated when parent creates request
         // No need to generate schedules again, just update the request status
 
-        return convertToDTO(medicationRequestRepository.save(request));
+        return convertToDTOWithScheduleTimes(medicationRequestRepository.save(request));
     }
 
     /**
@@ -195,7 +195,7 @@ public class MedicationRequestService implements IMedicationRequestService {
             medicationScheduleService.deleteSchedulesForItemRequest(itemRequest.getId());
         }
 
-        return convertToDTO(medicationRequestRepository.save(request));
+        return convertToDTOWithScheduleTimes(medicationRequestRepository.save(request));
     }    /**
      * Get all pending medication requests for nurse review
      * @return list of pending medication requests
@@ -204,46 +204,8 @@ public class MedicationRequestService implements IMedicationRequestService {
     public List<MedicationRequestDTO> getPendingMedicationRequests() {
         List<MedicationRequest> requests = medicationRequestRepository.findByStatus("PENDING");
         return requests.stream()
-                .map(this::convertToDTO)
+                .map(this::convertToDTOWithScheduleTimes)
                 .collect(Collectors.toList());
-    }    /**
-     * Auto-reject medication requests that are pending for more than 24 hours
-     * This method should be called by a scheduled job
-     * @return number of auto-rejected requests
-     */
-    @Transactional
-    @Override
-    public int autoRejectExpiredRequests() {
-        LocalDateTime cutoffDateTime = LocalDateTime.now().minusHours(24);
-        LocalDate cutoffDate = cutoffDateTime.toLocalDate();
-        
-        List<MedicationRequest> expiredRequests = medicationRequestRepository
-                .findByStatusAndRequestDateBefore("PENDING", cutoffDate);
-        
-        int rejectedCount = 0;
-        for (MedicationRequest request : expiredRequests) {
-            // Skip requests created less than 24 hours ago, even if they're from yesterday
-            if (request.getRequestDate().equals(cutoffDate)) {
-                // For requests created on the cutoff date, check if they're actually older than 24 hours
-                // This is a simplification since we don't have request time - in a real system, 
-                // you would store and check the exact timestamp
-                continue;
-            }
-            
-            request.setStatus("REJECTED");
-            request.setConfirm(true);
-            request.setNote("Tự động từ chối - Quá 24 giờ không được phê duyệt");
-            
-            // Delete all associated medication schedules
-            for (ItemRequest itemRequest : request.getItemRequests()) {
-                medicationScheduleService.deleteSchedulesForItemRequest(itemRequest.getId());
-            }
-            
-            medicationRequestRepository.save(request);
-            rejectedCount++;
-        }
-        
-        return rejectedCount;
     }
 
     /**
@@ -355,7 +317,7 @@ public class MedicationRequestService implements IMedicationRequestService {
         MedicationRequest savedRequest = medicationRequestRepository.save(request);
 
         // Convert back to DTO for response
-        return convertToDTO(savedRequest);
+        return convertToDTOWithScheduleTimes(savedRequest);
     }
 
     /**
@@ -421,7 +383,8 @@ public class MedicationRequestService implements IMedicationRequestService {
                     itemDTO.setId(item.getId());
                     itemDTO.setItemName(item.getItemName());
                     itemDTO.setPurpose(item.getPurpose());
-                    itemDTO.setItemType(item.getItemType());                    itemDTO.setDosage(item.getDosage());
+                    itemDTO.setItemType(item.getItemType());                    
+                    itemDTO.setDosage(item.getDosage());
                     itemDTO.setFrequency(item.getFrequency());
                     itemDTO.setNote(item.getNote());
                     itemDTO.setStartDate(item.getStartDate());

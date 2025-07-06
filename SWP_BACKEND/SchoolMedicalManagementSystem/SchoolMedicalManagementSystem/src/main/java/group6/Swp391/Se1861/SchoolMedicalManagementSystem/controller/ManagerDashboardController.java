@@ -140,6 +140,35 @@ public class ManagerDashboardController {
         }
     }
 
+    /**
+     * Get medical event statistics for manager dashboard
+     */
+    @GetMapping("/medical-events/statistics")
+    public ResponseEntity<Map<String, Object>> getMedicalEventStatisticsEndpoint(
+            @RequestParam(required = false) String period,
+            @RequestParam(required = false) String dateFrom,
+            @RequestParam(required = false) String dateTo) {
+        
+        Map<String, Object> stats = new HashMap<>();
+        
+        try {
+            // For now, return consistent sample data
+            // In a real implementation, you would filter by period, dateFrom, dateTo
+            stats.put("total", 89);
+            stats.put("emergency", 12);
+            stats.put("resolved", 76);
+            stats.put("pending", 13);
+            
+            return ResponseEntity.ok(stats);
+            
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "Error retrieving medical event statistics: " + e.getMessage());
+            return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
     // Helper methods
     private Map<String, Object> getVaccinationStatistics() {
         Map<String, Object> stats = new HashMap<>();

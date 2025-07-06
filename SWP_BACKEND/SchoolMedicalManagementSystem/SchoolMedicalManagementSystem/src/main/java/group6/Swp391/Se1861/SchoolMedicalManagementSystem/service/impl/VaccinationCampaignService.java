@@ -2,7 +2,6 @@ package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.*;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.*;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.ProfileStatus;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.*;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IVaccinationCampaignService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.INotificationService;
@@ -15,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Period;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -29,8 +29,25 @@ public class VaccinationCampaignService implements IVaccinationCampaignService {
     private final VaccinationHistoryRepository historyRepository;
     private final StudentRepository studentRepository;
     private final UserRepository userRepository;
-    private final HealthProfileRepository healthProfileRepository;
     private final INotificationService notificationService;
+
+    // Date formatter for consistent date formatting in notifications
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private static final DateTimeFormatter DATETIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm, dd/MM/yyyy");
+
+    /**
+     * Format LocalDate to dd/MM/yyyy
+     */
+    private String formatDate(LocalDate date) {
+        return date != null ? date.format(DATE_FORMATTER) : "N/A";
+    }
+
+    /**
+     * Format LocalDateTime to HH:mm, dd/MM/yyyy
+     */
+    private String formatDateTime(LocalDateTime dateTime) {
+        return dateTime != null ? dateTime.format(DATETIME_FORMATTER) : "N/A";
+    }
 
     @Override
     @Transactional
@@ -229,7 +246,7 @@ public class VaccinationCampaignService implements IVaccinationCampaignService {
         }
 
         VaccinationRule rule = campaign.getVaccinationRule();
-        List<Student> allStudents = studentRepository.findAllWithParents();
+        List<Student> allStudents = studentRepository.findAllActiveWithParents();
 
         List<EligibleStudentsResponse.StudentVaccinationInfoDTO> eligibleStudents = new ArrayList<>();
         List<EligibleStudentsResponse.StudentVaccinationInfoDTO> ineligibleStudents = new ArrayList<>();
@@ -484,7 +501,7 @@ public class VaccinationCampaignService implements IVaccinationCampaignService {
                         studentName,
                         vaccineName,
                         form.getLocation(),
-                        form.getScheduledDate() != null ? form.getScheduledDate().toString() : null,
+                        form.getScheduledDate() != null ? formatDateTime(form.getScheduledDate()) : null,
                         form
                 );
 
@@ -882,16 +899,12 @@ public class VaccinationCampaignService implements IVaccinationCampaignService {
             return;
         }
         
-        // Get the most recent approved health profile for the student
-        Optional<HealthProfile> healthProfileOpt = healthProfileRepository
-                .findTopByStudentAndStatusOrderByCreatedAtDesc(student, ProfileStatus.APPROVED);
-        
-        if (healthProfileOpt.isEmpty()) {
-            System.out.println("Warning: Cannot sync vaccination record to history - no approved health profile found for student: " + student.getStudentID());
+        // Get the student's health profile (one-to-one relationship)
+        HealthProfile healthProfile = student.getHealthProfile();
+        if (healthProfile == null) {
+            System.out.println("Warning: Cannot sync vaccination record to history - no health profile found for student: " + student.getStudentID());
             return;
         }
-        
-        HealthProfile healthProfile = healthProfileOpt.get();
         
         // Create VaccinationHistory entry
         VaccinationHistory history = new VaccinationHistory();

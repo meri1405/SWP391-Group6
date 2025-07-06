@@ -50,7 +50,7 @@ const RestockRequestForm = ({
   const [messageApi, contextHolder] = message.useMessage();
   const [submitting, setSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState("1");
-  
+
   // Unit conversion states
   const [unitsList, setUnitsList] = useState([]);
   const [convertibleUnits, setConvertibleUnits] = useState([]);
@@ -72,32 +72,38 @@ const RestockRequestForm = ({
   }, [messageApi]);
 
   // Fetch convertible units when base unit changes
-  const fetchConvertibleUnits = useCallback(async (baseUnit) => {
-    if (!baseUnit) {
-      setConvertibleUnits([]);
-      return;
-    }
-    
-    setLoadingUnits(true);
-    try {
-      const units = await unitConversionApi.getConvertibleUnits(baseUnit);
-      setConvertibleUnits(units);
-      console.log(`Convertible units for ${baseUnit}:`, units);
-      setLoadingUnits(false);
-    } catch (error) {
-      setLoadingUnits(false);
-      messageApi.error("Không thể tải danh sách đơn vị tương thích.");
-      console.error(`Error fetching convertible units for ${baseUnit}:`, error);
-    }
-  }, [messageApi]);
+  const fetchConvertibleUnits = useCallback(
+    async (baseUnit) => {
+      if (!baseUnit) {
+        setConvertibleUnits([]);
+        return;
+      }
+
+      setLoadingUnits(true);
+      try {
+        const units = await unitConversionApi.getConvertibleUnits(baseUnit);
+        setConvertibleUnits(units);
+        console.log(`Convertible units for ${baseUnit}:`, units);
+        setLoadingUnits(false);
+      } catch (error) {
+        setLoadingUnits(false);
+        messageApi.error("Không thể tải danh sách đơn vị tương thích.");
+        console.error(
+          `Error fetching convertible units for ${baseUnit}:`,
+          error
+        );
+      }
+    },
+    [messageApi]
+  );
 
   // Handle base unit change
   const handleBaseUnitChange = (value) => {
     fetchConvertibleUnits(value);
-    
+
     // Reset display unit field when base unit changes
     form.setFieldsValue({
-      newSupplyDisplayUnit: undefined
+      newSupplyDisplayUnit: undefined,
     });
   };
 
@@ -106,12 +112,14 @@ const RestockRequestForm = ({
     setLoading(true);
     try {
       const data = await medicalSupplyApi.getAllSupplies();
-      
+
       // Separate expired supplies
-      const expired = data.filter(supply => 
-        supply.expirationDate && dayjs(supply.expirationDate).isBefore(dayjs())
+      const expired = data.filter(
+        (supply) =>
+          supply.expirationDate &&
+          dayjs(supply.expirationDate).isBefore(dayjs())
       );
-      
+
       setSupplies(data);
       setExpiredSupplies(expired);
       setLoading(false);
@@ -124,7 +132,6 @@ const RestockRequestForm = ({
     }
   }, [messageApi]);
 
-
   // Load all medical supplies when modal opens
   useEffect(() => {
     if (visible) {
@@ -136,13 +143,18 @@ const RestockRequestForm = ({
         const items = selectedSupplies.map((supply) => ({
           medicalSupplyId: supply.id,
           requestedQuantity: supply.isLowStock
-            ? Math.max((supply.minStockLevelInBaseUnit || supply.minStockLevel || 0) - (supply.quantityInBaseUnit || supply.quantity || 0), 1)
+            ? Math.max(
+                (supply.minStockLevelInBaseUnit || supply.minStockLevel || 0) -
+                  (supply.quantityInBaseUnit || supply.quantity || 0),
+                1
+              )
             : 1,
           name: supply.name,
           currentQuantity: supply.quantityInBaseUnit || supply.quantity || 0,
-          unit: supply.displayUnit || supply.unit || 'unit',
-          baseUnit: supply.baseUnit || supply.unit || 'unit',
-          minStockLevel: supply.minStockLevelInBaseUnit || supply.minStockLevel || 0,
+          unit: supply.displayUnit || supply.unit || "unit",
+          baseUnit: supply.baseUnit || supply.unit || "unit",
+          minStockLevel:
+            supply.minStockLevelInBaseUnit || supply.minStockLevel || 0,
           notes: "",
           requestType: "EXISTING",
         }));
@@ -168,12 +180,12 @@ const RestockRequestForm = ({
       }
 
       // Validate only the required form fields
-      const values = await form.validateFields(['priority', 'reason']);
+      const values = await form.validateFields(["priority", "reason"]);
       console.log("[RestockRequestForm] Form values:", values);
       console.log("[RestockRequestForm] Request items:", requestItems);
 
       setSubmitting(true);
-      
+
       // Build the request data
       const requestData = {
         requestedBy: user.id,
@@ -186,7 +198,7 @@ const RestockRequestForm = ({
             requestType: item.requestType || "EXISTING",
             requestedDisplayQuantity: item.requestedQuantity,
             requestedDisplayUnit: item.unit || item.baseUnit,
-            notes: item.notes || ""
+            notes: item.notes || "",
           };
 
           if (item.requestType === "NEW") {
@@ -202,44 +214,50 @@ const RestockRequestForm = ({
               description: item.description || "",
               newExpirationDate: item.expirationDate,
               isDisabled: true,
-              createdById: user.id
+              createdById: user.id,
             };
           } else if (item.requestType === "EXPIRED") {
             return {
               ...baseItem,
               medicalSupplyId: item.medicalSupplyId,
               newExpirationDate: item.newExpirationDate,
-              originalSupplyId: item.medicalSupplyId
+              originalSupplyId: item.medicalSupplyId,
             };
           } else {
             return {
               ...baseItem,
-              medicalSupplyId: item.medicalSupplyId
+              medicalSupplyId: item.medicalSupplyId,
             };
           }
-        })
+        }),
       };
 
       try {
         // Refresh session before making the request
         const refreshResult = await refreshSession();
         if (!refreshResult) {
-          messageApi.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!");
+          messageApi.error(
+            "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!"
+          );
           return;
         }
         console.log("[RestockRequestForm] Session refreshed before submission");
 
         // Create the restock request
-        const createdRequest = await restockRequestApi.createExtendedRestockRequest(requestData);
-        console.log("[RestockRequestForm] Request created successfully:", createdRequest);
-        
+        const createdRequest =
+          await restockRequestApi.createExtendedRestockRequest(requestData);
+        console.log(
+          "[RestockRequestForm] Request created successfully:",
+          createdRequest
+        );
+
         // Show success message first
         messageApi.success("Tạo yêu cầu nhập kho thành công!");
 
         // Reset form and close modal
         form.resetFields();
         setRequestItems([]);
-        
+
         // Close modal and trigger success callback
         if (onSuccess) {
           onSuccess(createdRequest);
@@ -252,25 +270,34 @@ const RestockRequestForm = ({
           await refreshSession();
           await restockRequestApi.notifySubscribers();
         } catch (notifyError) {
-          console.error("[RestockRequestForm] Error notifying subscribers:", notifyError);
+          console.error(
+            "[RestockRequestForm] Error notifying subscribers:",
+            notifyError
+          );
           // Don't show error to user since the request was created successfully
         }
-
       } catch (error) {
         console.error("[RestockRequestForm] Error creating request:", error);
         if (error.response?.status === 401) {
-          messageApi.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!");
+          messageApi.error(
+            "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!"
+          );
           // Optionally redirect to login page or refresh token
           return;
         }
-        messageApi.error(error.response?.data?.message || "Có lỗi xảy ra khi tạo yêu cầu. Vui lòng thử lại.");
+        messageApi.error(
+          error.response?.data?.message ||
+            "Có lỗi xảy ra khi tạo yêu cầu. Vui lòng thử lại."
+        );
       }
     } catch (error) {
       console.error("[RestockRequestForm] Form validation error:", error);
       // Show which fields failed validation
       if (error.errorFields) {
-        error.errorFields.forEach(field => {
-          messageApi.error(`${field.name.join('.')} - ${field.errors.join(', ')}`);
+        error.errorFields.forEach((field) => {
+          messageApi.error(
+            `${field.name.join(".")} - ${field.errors.join(", ")}`
+          );
         });
       }
     } finally {
@@ -291,7 +318,7 @@ const RestockRequestForm = ({
       messageApi.error("Vui lòng chọn vật tư!");
       return;
     }
-    
+
     if (!newItemData.newItemQuantity || newItemData.newItemQuantity <= 0) {
       messageApi.error("Số lượng phải lớn hơn 0!");
       return;
@@ -320,10 +347,14 @@ const RestockRequestForm = ({
       medicalSupplyId: selectedSupply.id,
       requestedQuantity: newItemData.newItemQuantity,
       name: selectedSupply.name,
-      currentQuantity: selectedSupply.quantityInBaseUnit || selectedSupply.quantity || 0,
-      unit: selectedSupply.displayUnit || selectedSupply.unit || 'unit',
-      baseUnit: selectedSupply.baseUnit || selectedSupply.unit || 'unit',
-      minStockLevel: selectedSupply.minStockLevelInBaseUnit || selectedSupply.minStockLevel || 0,
+      currentQuantity:
+        selectedSupply.quantityInBaseUnit || selectedSupply.quantity || 0,
+      unit: selectedSupply.displayUnit || selectedSupply.unit || "unit",
+      baseUnit: selectedSupply.baseUnit || selectedSupply.unit || "unit",
+      minStockLevel:
+        selectedSupply.minStockLevelInBaseUnit ||
+        selectedSupply.minStockLevel ||
+        0,
       notes: newItemData.newItemNotes || "",
       requestType: "EXISTING",
     };
@@ -332,7 +363,7 @@ const RestockRequestForm = ({
     console.log("[RestockRequestForm] Adding new item:", newItem);
 
     // Add item to list
-    setRequestItems(prevItems => {
+    setRequestItems((prevItems) => {
       const newItems = [...prevItems, newItem];
       console.log("[RestockRequestForm] Updated items list:", newItems);
       return newItems;
@@ -348,43 +379,57 @@ const RestockRequestForm = ({
     // Show success message
     messageApi.success(`Đã thêm "${selectedSupply.name}" vào danh sách!`);
   };
-  
+
   // Add new supply (not in inventory yet)
   const addBrandNewSupply = async () => {
     try {
       // Get values from the main form since we're not using a separate form anymore
       const values = form.getFieldsValue([
-        'newSupplyName',
-        'newSupplyCategory',
-        'newSupplyBaseUnit',
-        'newSupplyDisplayUnit',
-        'newSupplyMinStockLevel',
-        'newSupplySupplier',
-        'newSupplyLocation',
-        'newSupplyDescription',
-        'newSupplyExpirationDate',
-        'newSupplyQuantity',
-        'newSupplyNotes'
+        "newSupplyName",
+        "newSupplyCategory",
+        "newSupplyBaseUnit",
+        "newSupplyDisplayUnit",
+        "newSupplyMinStockLevel",
+        "newSupplySupplier",
+        "newSupplyLocation",
+        "newSupplyDescription",
+        "newSupplyExpirationDate",
+        "newSupplyQuantity",
+        "newSupplyNotes",
       ]);
-      
+
       // Validate required fields manually
-      if (!values.newSupplyName || !values.newSupplyCategory || !values.newSupplyBaseUnit || !values.newSupplyMinStockLevel || !values.newSupplyQuantity) {
+      if (
+        !values.newSupplyName ||
+        !values.newSupplyCategory ||
+        !values.newSupplyBaseUnit ||
+        !values.newSupplyMinStockLevel ||
+        !values.newSupplyQuantity
+      ) {
         messageApi.error("Vui lòng điền đầy đủ thông tin vật tư mới!");
         return;
       }
-      
+
       // Validate that display unit is compatible with base unit
-      if (values.newSupplyDisplayUnit && convertibleUnits.indexOf(values.newSupplyDisplayUnit) === -1) {
-        messageApi.error("Đơn vị hiển thị không tương thích với đơn vị cơ bản!");
+      if (
+        values.newSupplyDisplayUnit &&
+        convertibleUnits.indexOf(values.newSupplyDisplayUnit) === -1
+      ) {
+        messageApi.error(
+          "Đơn vị hiển thị không tương thích với đơn vị cơ bản!"
+        );
         return;
       }
-      
+
       // Validate expiration date is in the future
-      if (values.newSupplyExpirationDate && dayjs(values.newSupplyExpirationDate).isBefore(dayjs())) {
+      if (
+        values.newSupplyExpirationDate &&
+        dayjs(values.newSupplyExpirationDate).isBefore(dayjs())
+      ) {
         messageApi.error("Ngày hết hạn phải là ngày trong tương lai!");
         return;
       }
-      
+
       // Create new item object
       const newSupplyItem = {
         name: values.newSupplyName,
@@ -395,16 +440,20 @@ const RestockRequestForm = ({
         supplier: values.newSupplySupplier,
         location: values.newSupplyLocation,
         description: values.newSupplyDescription || "",
-        expirationDate: values.newSupplyExpirationDate ? values.newSupplyExpirationDate.format('YYYY-MM-DD') : null,
+        expirationDate: values.newSupplyExpirationDate
+          ? values.newSupplyExpirationDate.format("YYYY-MM-DD")
+          : null,
         requestedQuantity: values.newSupplyQuantity,
         unit: values.newSupplyBaseUnit,
         notes: values.newSupplyNotes || "",
         requestType: "NEW",
       };
-      
+
       setRequestItems([...requestItems, newSupplyItem]);
-      messageApi.success(`Đã thêm vật tư mới "${values.newSupplyName}" vào yêu cầu!`);
-      
+      messageApi.success(
+        `Đã thêm vật tư mới "${values.newSupplyName}" vào yêu cầu!`
+      );
+
       // Clear fields
       form.setFieldsValue({
         newSupplyName: undefined,
@@ -417,66 +466,76 @@ const RestockRequestForm = ({
         newSupplyDescription: undefined,
         newSupplyExpirationDate: undefined,
         newSupplyQuantity: undefined,
-        newSupplyNotes: undefined
+        newSupplyNotes: undefined,
       });
     } catch (error) {
       console.error("Error adding new supply:", error);
       messageApi.error("Vui lòng điền đầy đủ thông tin vật tư mới!");
     }
   };
-  
+
   // Add expired supply replacement
   const addExpiredSupplyReplacement = async () => {
     try {
       // Get values from the main form
       const values = form.getFieldsValue([
-        'expiredSupplyId',
-        'expiredSupplyNewExpirationDate',
-        'expiredSupplyQuantity',
-        'expiredSupplyNotes'
+        "expiredSupplyId",
+        "expiredSupplyNewExpirationDate",
+        "expiredSupplyQuantity",
+        "expiredSupplyNotes",
       ]);
-      
+
       // Validate required fields manually
-      if (!values.expiredSupplyId || !values.expiredSupplyNewExpirationDate || !values.expiredSupplyQuantity) {
+      if (
+        !values.expiredSupplyId ||
+        !values.expiredSupplyNewExpirationDate ||
+        !values.expiredSupplyQuantity
+      ) {
         messageApi.error("Vui lòng điền đầy đủ thông tin vật tư thay thế!");
         return;
       }
-      
+
       // Validate new expiration date is in the future
       if (!dayjs(values.expiredSupplyNewExpirationDate).isAfter(dayjs())) {
         messageApi.error("Ngày hết hạn mới phải là ngày trong tương lai!");
         return;
       }
-      
+
       // Find the expired supply details
-      const expiredSupply = supplies.find(supply => supply.id === values.expiredSupplyId);
+      const expiredSupply = supplies.find(
+        (supply) => supply.id === values.expiredSupplyId
+      );
       if (!expiredSupply) {
         messageApi.error("Không tìm thấy thông tin vật tư hết hạn!");
         return;
       }
-      
+
       // Create expired supply replacement item
       const expiredSupplyItem = {
         medicalSupplyId: expiredSupply.id,
         name: expiredSupply.name,
-        currentQuantity: expiredSupply.quantityInBaseUnit || expiredSupply.quantity || 0,
-        unit: expiredSupply.displayUnit || expiredSupply.unit || 'unit',
-        baseUnit: expiredSupply.baseUnit || expiredSupply.unit || 'unit',
+        currentQuantity:
+          expiredSupply.quantityInBaseUnit || expiredSupply.quantity || 0,
+        unit: expiredSupply.displayUnit || expiredSupply.unit || "unit",
+        baseUnit: expiredSupply.baseUnit || expiredSupply.unit || "unit",
         requestedQuantity: values.expiredSupplyQuantity,
-        newExpirationDate: values.expiredSupplyNewExpirationDate.format('YYYY-MM-DD'),
+        newExpirationDate:
+          values.expiredSupplyNewExpirationDate.format("YYYY-MM-DD"),
         notes: values.expiredSupplyNotes || "",
         requestType: "EXPIRED",
       };
-      
+
       setRequestItems([...requestItems, expiredSupplyItem]);
-      messageApi.success(`Đã thêm vật phẩm thay thế "${expiredSupply.name}" vào yêu cầu!`);
-      
+      messageApi.success(
+        `Đã thêm vật phẩm thay thế "${expiredSupply.name}" vào yêu cầu!`
+      );
+
       // Clear fields
       form.setFieldsValue({
         expiredSupplyId: undefined,
         expiredSupplyNewExpirationDate: undefined,
         expiredSupplyQuantity: undefined,
-        expiredSupplyNotes: undefined
+        expiredSupplyNotes: undefined,
       });
     } catch (error) {
       console.error("Error adding expired supply replacement:", error);
@@ -516,7 +575,7 @@ const RestockRequestForm = ({
         return null;
     }
   };
-  
+
   // Get display text for request type
   const getRequestTypeText = (requestType) => {
     switch (requestType) {
@@ -540,7 +599,8 @@ const RestockRequestForm = ({
           {text}
           {record.requestType !== "EXISTING" && (
             <Tag color={record.requestType === "NEW" ? "green" : "orange"}>
-              {getRequestTypeIcon(record.requestType)} {getRequestTypeText(record.requestType)}
+              {getRequestTypeIcon(record.requestType)}{" "}
+              {getRequestTypeText(record.requestType)}
             </Tag>
           )}
         </Space>
@@ -553,7 +613,7 @@ const RestockRequestForm = ({
         if (record.requestType === "NEW") {
           return <Text type="secondary">Chưa có</Text>;
         }
-        
+
         return (
           <Space>
             {record.currentQuantity} {record.baseUnit}
@@ -586,15 +646,21 @@ const RestockRequestForm = ({
       key: "additionalInfo",
       render: (_, record) => {
         if (record.requestType === "NEW") {
-          return <Text type="secondary">Vật tư mới - {record.category || "Chưa phân loại"}</Text>;
+          return (
+            <Text type="secondary">
+              Vật tư mới - {record.category || "Chưa phân loại"}
+            </Text>
+          );
         }
-        
+
         if (record.requestType === "EXPIRED") {
-          return <Text type="secondary">Hạn mới: {record.newExpirationDate}</Text>;
+          return (
+            <Text type="secondary">Hạn mới: {record.newExpirationDate}</Text>
+          );
         }
-        
+
         return null;
-      }
+      },
     },
     {
       title: "Ghi chú",
@@ -627,15 +693,15 @@ const RestockRequestForm = ({
 
   // Filter available supplies (exclude already added ones)
   const availableSupplies = supplies.filter(
-    (supply) =>
-      !requestItems.some((item) => item.medicalSupplyId === supply.id)
+    (supply) => !requestItems.some((item) => item.medicalSupplyId === supply.id)
   );
-  
+
   // Filter available expired supplies
   const availableExpiredSupplies = expiredSupplies.filter(
     (supply) =>
-      !requestItems.some((item) => 
-        item.requestType === "EXPIRED" && item.medicalSupplyId === supply.id
+      !requestItems.some(
+        (item) =>
+          item.requestType === "EXPIRED" && item.medicalSupplyId === supply.id
       )
   );
 
@@ -661,7 +727,7 @@ const RestockRequestForm = ({
             Tạo yêu cầu
           </Button>,
         ]}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={form} layout="vertical">
           {/* Request Info */}
@@ -674,7 +740,7 @@ const RestockRequestForm = ({
                 style={{ flex: 1 }}
                 initialValue="MEDIUM"
                 rules={[
-                  { required: true, message: "Vui lòng chọn mức độ ưu tiên!" }
+                  { required: true, message: "Vui lòng chọn mức độ ưu tiên!" },
                 ]}
               >
                 <Select>
@@ -692,20 +758,17 @@ const RestockRequestForm = ({
                 rules={[
                   { required: true, message: "Vui lòng nhập lý do!" },
                   { whitespace: true, message: "Lý do không được để trống!" },
-                  { min: 3, message: "Lý do phải có ít nhất 3 ký tự!" }
+                  { min: 3, message: "Lý do phải có ít nhất 3 ký tự!" },
                 ]}
               >
-                <TextArea
-                  rows={2}
-                  placeholder="Nhập lý do cần nhập kho..."
-                />
+                <TextArea rows={2} placeholder="Nhập lý do cần nhập kho..." />
               </Form.Item>
             </div>
           </div>
 
           {/* Tabs for different types of items */}
-          <Tabs 
-            activeKey={activeTab} 
+          <Tabs
+            activeKey={activeTab}
             onChange={setActiveTab}
             items={[
               {
@@ -714,7 +777,14 @@ const RestockRequestForm = ({
                 children: (
                   <div style={{ marginBottom: 16 }}>
                     <Text strong>Thêm vật tư hiện có</Text>
-                    <div style={{ display: "flex", gap: 12, marginTop: 12, alignItems: "end" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 12,
+                        marginTop: 12,
+                        alignItems: "end",
+                      }}
+                    >
                       <Form.Item
                         name="newItemId"
                         label="Vật tư y tế"
@@ -724,7 +794,9 @@ const RestockRequestForm = ({
                           placeholder="Chọn vật tư y tế"
                           showSearch
                           filterOption={(input, option) =>
-                            option?.children?.toLowerCase().includes(input.toLowerCase())
+                            option?.children
+                              ?.toLowerCase()
+                              .includes(input.toLowerCase())
                           }
                           loading={loading}
                         >
@@ -732,13 +804,22 @@ const RestockRequestForm = ({
                             <Option key={supply.id} value={supply.id}>
                               <Space>
                                 {supply.name}
-                                {(supply.quantityInBaseUnit || supply.quantity || 0) < (supply.minStockLevelInBaseUnit || supply.minStockLevel || 0) && (
+                                {(supply.quantityInBaseUnit ||
+                                  supply.quantity ||
+                                  0) <
+                                  (supply.minStockLevelInBaseUnit ||
+                                    supply.minStockLevel ||
+                                    0) && (
                                   <Tag color="orange" size="small">
                                     Thiếu hàng
                                   </Tag>
                                 )}
                                 <Text type="secondary">
-                                  ({supply.quantityInBaseUnit || supply.quantity || 0} {supply.baseUnit || supply.unit || 'unit'})
+                                  (
+                                  {supply.quantityInBaseUnit ||
+                                    supply.quantity ||
+                                    0}{" "}
+                                  {supply.baseUnit || supply.unit || "unit"})
                                 </Text>
                               </Space>
                             </Option>
@@ -777,7 +858,7 @@ const RestockRequestForm = ({
                       </Form.Item>
                     </div>
                   </div>
-                )
+                ),
               },
               {
                 key: "2",
@@ -785,84 +866,111 @@ const RestockRequestForm = ({
                 children: (
                   <div style={{ marginBottom: 16 }}>
                     <Text strong>Thêm vật tư mới vào hệ thống</Text>
-                    <Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
-                      Sử dụng khi bạn muốn thêm một loại vật tư chưa có trong hệ thống
+                    <Text
+                      type="secondary"
+                      style={{ display: "block", marginBottom: 16 }}
+                    >
+                      Sử dụng khi bạn muốn thêm một loại vật tư chưa có trong hệ
+                      thống
                     </Text>
-                    
+
                     <div className="new-supply-form">
                       <div style={{ display: "flex", gap: 16 }}>
                         <div style={{ flex: 1 }}>
                           <Form.Item
                             name="newSupplyName"
                             label="Tên vật tư"
-                            rules={[{ required: true, message: "Vui lòng nhập tên vật tư!" }]}
+                            rules={[
+                              {
+                                required: true,
+                                message: "Vui lòng nhập tên vật tư!",
+                              },
+                            ]}
                           >
                             <Input placeholder="Nhập tên vật tư..." />
                           </Form.Item>
-                          
+
                           <Form.Item
                             name="newSupplyCategory"
                             label="Danh mục"
-                            rules={[{ required: true, message: "Vui lòng nhập danh mục!" }]}
+                            rules={[
+                              {
+                                required: true,
+                                message: "Vui lòng nhập danh mục!",
+                              },
+                            ]}
                           >
                             <Input placeholder="Nhập danh mục..." />
                           </Form.Item>
-                          
+
                           <Form.Item
                             name="newSupplySupplier"
                             label="Nhà cung cấp"
                           >
                             <Input placeholder="Nhập nhà cung cấp..." />
                           </Form.Item>
-                          
-                          <Form.Item
-                            name="newSupplyLocation"
-                            label="Vị trí"
-                          >
+
+                          <Form.Item name="newSupplyLocation" label="Vị trí">
                             <Input placeholder="Nhập vị trí lưu trữ..." />
                           </Form.Item>
                         </div>
-                        
+
                         <div style={{ flex: 1 }}>
                           <Form.Item
                             name="newSupplyBaseUnit"
                             label="Đơn vị cơ bản"
-                            rules={[{ required: true, message: "Vui lòng chọn đơn vị cơ bản!" }]}
+                            rules={[
+                              {
+                                required: true,
+                                message: "Vui lòng chọn đơn vị cơ bản!",
+                              },
+                            ]}
                           >
-                            <Select 
-                              placeholder="Chọn đơn vị cơ bản..." 
+                            <Select
+                              placeholder="Chọn đơn vị cơ bản..."
                               loading={loadingUnits}
                               onChange={handleBaseUnitChange}
                             >
-                              {unitsList.map(unit => (
-                                <Option key={unit} value={unit}>{unit}</Option>
+                              {unitsList.map((unit) => (
+                                <Option key={unit} value={unit}>
+                                  {unit}
+                                </Option>
                               ))}
                             </Select>
                           </Form.Item>
-                          
+
                           <Form.Item
                             name="newSupplyDisplayUnit"
                             label="Đơn vị hiển thị"
                           >
-                            <Select 
+                            <Select
                               placeholder="Chọn đơn vị hiển thị..."
                               loading={loadingUnits}
-                              disabled={!form.getFieldValue("newSupplyBaseUnit")}
+                              disabled={
+                                !form.getFieldValue("newSupplyBaseUnit")
+                              }
                             >
-                              {convertibleUnits.map(unit => (
-                                <Option key={unit} value={unit}>{unit}</Option>
+                              {convertibleUnits.map((unit) => (
+                                <Option key={unit} value={unit}>
+                                  {unit}
+                                </Option>
                               ))}
                             </Select>
                           </Form.Item>
-                          
+
                           <Form.Item
                             name="newSupplyMinStockLevel"
                             label="Mức tồn kho tối thiểu"
-                            rules={[{ required: true, message: "Vui lòng nhập mức tồn kho tối thiểu!" }]}
+                            rules={[
+                              {
+                                required: true,
+                                message: "Vui lòng nhập mức tồn kho tối thiểu!",
+                              },
+                            ]}
                           >
                             <InputNumber min={0} style={{ width: "100%" }} />
                           </Form.Item>
-                          
+
                           <Form.Item
                             name="newSupplyExpirationDate"
                             label="Ngày hết hạn"
@@ -870,7 +978,9 @@ const RestockRequestForm = ({
                               {
                                 validator: async (_, value) => {
                                   if (value && dayjs(value).isBefore(dayjs())) {
-                                    throw new Error('Ngày hết hạn phải là ngày trong tương lai!');
+                                    throw new Error(
+                                      "Ngày hết hạn phải là ngày trong tương lai!"
+                                    );
                                   }
                                 },
                               },
@@ -880,24 +990,26 @@ const RestockRequestForm = ({
                           </Form.Item>
                         </div>
                       </div>
-                      
-                      <Form.Item
-                        name="newSupplyDescription"
-                        label="Mô tả"
-                      >
+
+                      <Form.Item name="newSupplyDescription" label="Mô tả">
                         <TextArea rows={2} placeholder="Nhập mô tả vật tư..." />
                       </Form.Item>
-                      
+
                       <div style={{ display: "flex", gap: 16 }}>
                         <Form.Item
                           name="newSupplyQuantity"
                           label="Số lượng yêu cầu"
-                          rules={[{ required: true, message: "Vui lòng nhập số lượng!" }]}
+                          rules={[
+                            {
+                              required: true,
+                              message: "Vui lòng nhập số lượng!",
+                            },
+                          ]}
                           style={{ flex: 1 }}
                         >
                           <InputNumber min={1} style={{ width: "100%" }} />
                         </Form.Item>
-                        
+
                         <Form.Item
                           name="newSupplyNotes"
                           label="Ghi chú"
@@ -906,8 +1018,8 @@ const RestockRequestForm = ({
                           <Input placeholder="Thêm ghi chú..." />
                         </Form.Item>
                       </div>
-                      
-                      <Button 
+
+                      <Button
                         type="primary"
                         icon={<FileAddOutlined />}
                         onClick={addBrandNewSupply}
@@ -916,7 +1028,7 @@ const RestockRequestForm = ({
                       </Button>
                     </div>
                   </div>
-                )
+                ),
               },
               {
                 key: "3",
@@ -924,21 +1036,32 @@ const RestockRequestForm = ({
                 children: (
                   <div style={{ marginBottom: 16 }}>
                     <Text strong>Thay thế vật tư hết hạn</Text>
-                    <Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
-                      Sử dụng khi bạn muốn thay thế vật tư đã hết hạn bằng một lô mới
+                    <Text
+                      type="secondary"
+                      style={{ display: "block", marginBottom: 16 }}
+                    >
+                      Sử dụng khi bạn muốn thay thế vật tư đã hết hạn bằng một
+                      lô mới
                     </Text>
-                    
+
                     <div className="expired-supply-form">
                       <Form.Item
                         name="expiredSupplyId"
                         label="Chọn vật tư hết hạn"
-                        rules={[{ required: true, message: "Vui lòng chọn vật tư hết hạn!" }]}
+                        rules={[
+                          {
+                            required: true,
+                            message: "Vui lòng chọn vật tư hết hạn!",
+                          },
+                        ]}
                       >
                         <Select
                           placeholder="Chọn vật tư hết hạn cần thay thế"
                           showSearch
                           filterOption={(input, option) =>
-                            option?.children?.toLowerCase().includes(input.toLowerCase())
+                            option?.children
+                              ?.toLowerCase()
+                              .includes(input.toLowerCase())
                           }
                         >
                           {availableExpiredSupplies.map((supply) => (
@@ -949,24 +1072,33 @@ const RestockRequestForm = ({
                                   Hết hạn: {supply.expirationDate}
                                 </Tag>
                                 <Text type="secondary">
-                                  ({supply.quantityInBaseUnit || supply.quantity || 0} {supply.baseUnit || supply.unit || 'unit'})
+                                  (
+                                  {supply.quantityInBaseUnit ||
+                                    supply.quantity ||
+                                    0}{" "}
+                                  {supply.baseUnit || supply.unit || "unit"})
                                 </Text>
                               </Space>
                             </Option>
                           ))}
                         </Select>
                       </Form.Item>
-                      
+
                       <div style={{ display: "flex", gap: 16 }}>
                         <Form.Item
                           name="expiredSupplyNewExpirationDate"
                           label="Ngày hết hạn mới"
                           rules={[
-                            { required: true, message: "Vui lòng chọn ngày hết hạn mới!" },
+                            {
+                              required: true,
+                              message: "Vui lòng chọn ngày hết hạn mới!",
+                            },
                             {
                               validator: async (_, value) => {
                                 if (value && dayjs(value).isBefore(dayjs())) {
-                                  throw new Error('Ngày hết hạn mới phải là ngày trong tương lai!');
+                                  throw new Error(
+                                    "Ngày hết hạn mới phải là ngày trong tương lai!"
+                                  );
                                 }
                               },
                             },
@@ -975,19 +1107,26 @@ const RestockRequestForm = ({
                         >
                           <DatePicker style={{ width: "100%" }} />
                         </Form.Item>
-                        
+
                         <Form.Item
                           name="expiredSupplyQuantity"
                           label="Số lượng yêu cầu"
                           rules={[
-                            { required: true, message: "Vui lòng nhập số lượng!" },
-                            { type: 'number', min: 1, message: "Số lượng phải lớn hơn 0!" }
+                            {
+                              required: true,
+                              message: "Vui lòng nhập số lượng!",
+                            },
+                            {
+                              type: "number",
+                              min: 1,
+                              message: "Số lượng phải lớn hơn 0!",
+                            },
                           ]}
                           style={{ flex: 1 }}
                         >
                           <InputNumber min={1} style={{ width: "100%" }} />
                         </Form.Item>
-                        
+
                         <Form.Item
                           name="expiredSupplyNotes"
                           label="Ghi chú"
@@ -996,8 +1135,8 @@ const RestockRequestForm = ({
                           <Input placeholder="Thêm ghi chú..." />
                         </Form.Item>
                       </div>
-                      
-                      <Button 
+
+                      <Button
                         type="primary"
                         icon={<ReloadOutlined />}
                         onClick={addExpiredSupplyReplacement}
@@ -1006,8 +1145,8 @@ const RestockRequestForm = ({
                       </Button>
                     </div>
                   </div>
-                )
-              }
+                ),
+              },
             ]}
           />
 
@@ -1015,12 +1154,18 @@ const RestockRequestForm = ({
           <div style={{ marginTop: 24 }}>
             <Divider orientation="left">
               <Space>
-                <Text strong>Danh sách vật tư đã thêm</Text> 
+                <Text strong>Danh sách vật tư đã thêm</Text>
                 <Tag color="blue">{requestItems.length}</Tag>
               </Space>
             </Divider>
 
-            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                marginBottom: 12,
+              }}
+            >
               <Space>
                 <Tag color="green">
                   <FileAddOutlined /> Vật tư mới
@@ -1030,7 +1175,7 @@ const RestockRequestForm = ({
                 </Tag>
               </Space>
             </div>
-            
+
             {requestItems.length === 0 ? (
               <div
                 style={{
@@ -1040,7 +1185,7 @@ const RestockRequestForm = ({
                   marginTop: 12,
                   border: "1px dashed #d9d9d9",
                   borderRadius: "8px",
-                  backgroundColor: "#fafafa"
+                  backgroundColor: "#fafafa",
                 }}
               >
                 <InboxOutlined style={{ fontSize: 48, marginBottom: 16 }} />

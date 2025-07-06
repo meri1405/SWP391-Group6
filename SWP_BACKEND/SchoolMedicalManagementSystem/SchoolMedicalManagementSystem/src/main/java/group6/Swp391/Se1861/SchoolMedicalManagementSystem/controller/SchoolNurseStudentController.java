@@ -149,4 +149,18 @@ public class SchoolNurseStudentController {
             return ResponseEntity.status(500).build();
         }
     }
+
+    /**
+     * Get available class names for health check campaign forms
+     */
+    @GetMapping("/available-classes")
+    @PreAuthorize("hasRole('SCHOOLNURSE')")
+    public ResponseEntity<List<String>> getAvailableClassNames() {
+        try {
+            List<String> classNames = studentService.getAvailableClassNames();
+            return ResponseEntity.ok(classNames);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build();
+        }
+    }
 }

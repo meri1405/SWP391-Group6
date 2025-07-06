@@ -36,7 +36,7 @@ import dayjs from "dayjs";
 
 const { Option } = Select;
 const { TextArea } = Input;
-const { TabPane } = Tabs;
+
 const { Title, Text } = Typography;
 
 const InventorySection = () => {
@@ -1269,20 +1269,24 @@ const InventorySection = () => {
             marginBottom: 16,
           }}
         >
-          <Tabs activeKey={activeTab} onChange={setActiveTab}>
-            <TabPane
-              tab={<span>Thuốc ({medicines.length})</span>}
-              key="medicines"
-            />
-            <TabPane
-              tab={<span>Vật tư ({supplies.length})</span>}
-              key="supplies"
-            />
-            <TabPane
-              tab={<span>Yêu cầu bổ sung ({restockRequests.length})</span>}
-              key="requests"
-            />
-          </Tabs>
+          <Tabs
+            activeKey={activeTab}
+            onChange={setActiveTab}
+            items={[
+              {
+                key: "medicines",
+                label: <span>Thuốc ({medicines.length})</span>,
+              },
+              {
+                key: "supplies",
+                label: <span>Vật tư ({supplies.length})</span>,
+              },
+              {
+                key: "requests",
+                label: <span>Yêu cầu bổ sung ({restockRequests.length})</span>,
+              },
+            ]}
+          />
           {activeTab !== "requests" ? (
             <Space>
               <Button

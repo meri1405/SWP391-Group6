@@ -21,7 +21,7 @@ public class SystemSettingsServiceImpl implements SystemSettingsService {
     // Constructor with default values
     public SystemSettingsServiceImpl() {
         // Initialize with default values
-        settings.put("systemName", "Hệ Thống Quản Lý Y Tế Học Đường");
+        settings.put("systemName", "Y Tế Học Đường");
         settings.put("contactEmail", "admin@school-health.com");
         settings.put("twoFactorAuth", true);
         settings.put("activityLogging", true);

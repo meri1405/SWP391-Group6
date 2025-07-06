@@ -6,7 +6,6 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.MedicalSupplyUsage
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.exception.ResourceNotFoundException;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.*;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.EventType;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.ProfileStatus;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.SeverityLevel;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.*;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IMedicalEventService;
@@ -18,6 +17,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -33,7 +33,16 @@ public class MedicalEventService implements IMedicalEventService {
     private final StudentRepository studentRepository;
     private final UserRepository userRepository;
     private final INotificationService notificationService;
-    private final HealthProfileRepository healthProfileRepository;
+
+    // Date formatter for consistent date formatting in notifications
+    private static final DateTimeFormatter DATETIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm, dd/MM/yyyy");
+
+    /**
+     * Format LocalDateTime to HH:mm, dd/MM/yyyy
+     */
+    private String formatDateTime(LocalDateTime dateTime) {
+        return dateTime != null ? dateTime.format(DATETIME_FORMATTER) : "N/A";
+    }
 
     @Override
     @Transactional
@@ -41,6 +50,11 @@ public class MedicalEventService implements IMedicalEventService {
         // Find student
         Student student = studentRepository.findById(requestDTO.getStudentId())
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found with id: " + requestDTO.getStudentId()));
+
+        // Check if student is disabled
+        if (student.isDisabled()) {
+            throw new IllegalArgumentException("Cannot create medical event for disabled student with id: " + student.getStudentID());
+        }
 
         // Find user who created the event
         User createdBy = userRepository.findById(createdById)
@@ -57,9 +71,11 @@ public class MedicalEventService implements IMedicalEventService {
         medicalEvent.setStudent(student);
         medicalEvent.setCreatedBy(createdBy);
 
-        // Find the student's most recent APPROVED health profile and associate the event with it
-        HealthProfile healthProfile = healthProfileRepository.findTopByStudentAndStatusOrderByCreatedAtDesc(student, ProfileStatus.APPROVED)
-                .orElseThrow(() -> new ResourceNotFoundException("No approved health profile found for student id: " + student.getStudentID()));
+        // Get the student's health profile (one-to-one relationship)
+        HealthProfile healthProfile = student.getHealthProfile();
+        if (healthProfile == null) {
+            throw new ResourceNotFoundException("No health profile found for student id: " + student.getStudentID());
+        }
 
         medicalEvent.setHealthProfile(healthProfile);
 
@@ -146,17 +162,17 @@ public class MedicalEventService implements IMedicalEventService {
         if (parent != null) {
             String title = "Cảnh Báo Sự Kiện Y Tế: " + student.getFirstName() + " " + student.getLastName();
             StringBuilder message = new StringBuilder();
-            message.append("Con của bạn đã gặp phải một sự kiện y tế \n");
-            message.append("Loại: ").append(translateEventType(medicalEvent.getEventType())).append("\n");
-            message.append("Mức độ nghiêm trọng: ").append(translateSeverityLevel(medicalEvent.getSeverityLevel())).append("\n");
-            message.append("Thời gian: ").append(medicalEvent.getOccurrenceTime()).append("\n");
-            message.append("Địa điểm: ").append(medicalEvent.getLocation()).append("\n");
+            message.append("<p>Con của bạn đã gặp phải một sự kiện y tế</p>");
+            message.append("<p><strong>Loại:</strong> ").append(translateEventType(medicalEvent.getEventType())).append("</p>");
+            message.append("<p><strong>Mức độ nghiêm trọng:</strong> ").append(translateSeverityLevel(medicalEvent.getSeverityLevel())).append("</p>");
+            message.append("<p><strong>Thời gian:</strong> ").append(formatDateTime(medicalEvent.getOccurrenceTime())).append("</p>");
+            message.append("<p><strong>Địa điểm:</strong> ").append(medicalEvent.getLocation()).append("</p>");
 
             if (medicalEvent.getFirstAidActions() != null && !medicalEvent.getFirstAidActions().isEmpty()) {
-                message.append("Sơ cứu đã thực hiện: ").append(medicalEvent.getFirstAidActions()).append("\n");
+                message.append("<p><strong>Sơ cứu đã thực hiện:</strong> ").append(medicalEvent.getFirstAidActions()).append("</p>");
             }
 
-            message.append("Vui lòng phản hồi hoặc liên hệ với y tá trường để biết thêm thông tin.");
+            message.append("<p>Vui lòng liên hệ với y tá trường để biết thêm thông tin.</p>");
 
             // Create notification using the correct method from INotificationService
             notificationService.createMedicalEventNotification(
@@ -207,7 +223,9 @@ public class MedicalEventService implements IMedicalEventService {
 
     @Override
     public List<MedicalEventResponseDTO> getAllMedicalEvents() {
+        // Use a custom query to filter out events for disabled students
         return medicalEventRepository.findAll().stream()
+                .filter(event -> event.getStudent() != null && !event.getStudent().isDisabled())
                 .map(this::convertToResponseDTO)
                 .collect(Collectors.toList());
     }
@@ -284,10 +302,10 @@ public class MedicalEventService implements IMedicalEventService {
         if (parent != null) {
             String title = "Cập Nhật Sự Kiện Y Tế: " + student.getFirstName() + " " + student.getLastName();
             StringBuilder message = new StringBuilder();
-            message.append("Sự kiện y tế của con bạn đã được xử lý bởi đội ngũ y tế.\n");
-            message.append("Loại: ").append(translateEventType(medicalEvent.getEventType())).append("\n");
-            message.append("Xử lý lúc: ").append(medicalEvent.getProcessedTime()).append("\n");
-            message.append("Xử lý bởi: ").append(medicalEvent.getProcessedBy().getFullName()).append("\n");
+            message.append("<p>Sự kiện y tế của con bạn đã được xử lý bởi đội ngũ y tế.</p>");
+            message.append("<p><strong>Loại:</strong> ").append(translateEventType(medicalEvent.getEventType())).append("</p>");
+            message.append("<p><strong>Xử lý lúc:</strong> ").append(formatDateTime(medicalEvent.getProcessedTime())).append("</p>");
+            message.append("<p><strong>Xử lý bởi:</strong> ").append(medicalEvent.getProcessedBy().getFullName()).append("</p>");
 
             // Create notification using the correct method from INotificationService
             notificationService.createMedicalEventNotification(

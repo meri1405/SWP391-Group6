@@ -24,11 +24,6 @@ public interface ISchoolNurseHealthProfileService {
     HealthProfileDTO getHealthProfileById(Long profileId);
 
     /**
-     * Update health profile (school nurse can modify profiles)
-     */
-    HealthProfileDTO updateHealthProfile(Long nurseId, Long profileId, HealthProfileDTO healthProfileDTO);
-
-    /**
      * Approve health profile
      */
     HealthProfileDTO approveHealthProfile(Long nurseId, Long profileId, String nurseNote);
@@ -47,4 +42,14 @@ public interface ISchoolNurseHealthProfileService {
      * Convert entity to DTO
      */
     HealthProfileDTO convertToDetailedDTO(HealthProfile healthProfile);
+    
+    /**
+     * Check if student has approved health profile
+     */
+    boolean hasApprovedHealthProfile(Long studentId);
+    
+    /**
+     * Get approved health profile by student ID
+     */
+    HealthProfileDTO getApprovedHealthProfileByStudentId(Long studentId);
 }

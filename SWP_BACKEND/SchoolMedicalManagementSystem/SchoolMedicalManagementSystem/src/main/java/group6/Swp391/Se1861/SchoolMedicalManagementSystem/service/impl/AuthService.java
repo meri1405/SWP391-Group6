@@ -6,6 +6,7 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.RoleRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.UserRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IAuthService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IEmailService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IOtpService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.util.JwtUtil;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.utils.PhoneValidator;
@@ -22,6 +23,8 @@ import org.springframework.security.oauth2.client.authentication.OAuth2Authentic
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.time.Period;
 import java.util.Map;
 import java.util.Optional;
 
@@ -33,6 +36,7 @@ public class AuthService implements IAuthService {
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
     private final IOtpService otpService;
+    private final IEmailService emailService;
     private final AuthenticationManager authenticationManager;
 
     @Autowired
@@ -42,12 +46,14 @@ public class AuthService implements IAuthService {
             JwtUtil jwtUtil,
             PasswordEncoder passwordEncoder,
             OtpService otpService,
+            IEmailService emailService,
             @Lazy AuthenticationManager authenticationManager) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.jwtUtil = jwtUtil;
         this.passwordEncoder = passwordEncoder;
         this.otpService = otpService;
+        this.emailService = emailService;
         this.authenticationManager = authenticationManager;
     }
 
@@ -60,9 +66,30 @@ public class AuthService implements IAuthService {
                 new UsernamePasswordAuthenticationToken(username, password));
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
-        String jwt = jwtUtil.generateToken(authentication);
-
+        
         User user = (User) authentication.getPrincipal();
+        
+        // Check if this is a first-time login for staff roles
+        String roleName = user.getRole().getRoleName();
+        boolean isStaffRole = "ADMIN".equals(roleName) || "MANAGER".equals(roleName) || "SCHOOLNURSE".equals(roleName);
+        
+        if (isStaffRole && user.getFirstLogin() != null && user.getFirstLogin()) {
+            // Return special response indicating first-time login
+            return new AuthResponse(
+                    null, // No JWT token until password is changed
+                    user.getId(),
+                    user.getUsername(),
+                    user.getFirstName(),
+                    user.getLastName(),
+                    user.getEmail(),
+                    user.getRole().getRoleName(),
+                    true, // firstLogin flag
+                    true  // needPasswordChange flag
+            );
+        }
+        
+        // Normal login flow - generate JWT token
+        String jwt = jwtUtil.generateToken(authentication);
 
         return new AuthResponse(
                 jwt,
@@ -256,6 +283,13 @@ public class AuthService implements IAuthService {
      */
     @Override
     public User createUserByAdmin(User user, String roleName) {
+        // Validate that Admin can only create staff roles
+        if (!"ADMIN".equalsIgnoreCase(roleName) && 
+            !"MANAGER".equalsIgnoreCase(roleName) && 
+            !"SCHOOLNURSE".equalsIgnoreCase(roleName)) {
+            throw new IllegalArgumentException("Admin can only create staff accounts (ADMIN, MANAGER, SCHOOLNURSE)");
+        }
+
         // Find the requested role
         Role role = roleRepository.findByRoleName(roleName)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid role: " + roleName));
@@ -263,85 +297,108 @@ public class AuthService implements IAuthService {
         user.setRole(role);
 
         // Apply role-specific validation and constraints
-        validateUserByRole(user, roleName);        // Encode password for roles that need authentication (not PARENT or STUDENT)
-        if (!"PARENT".equalsIgnoreCase(roleName) && !"STUDENT".equalsIgnoreCase(roleName) && user.getPassword() != null) {
-            user.setPassword(encodePassword(user.getPassword()));
-        }
+        validateUserByRole(user, roleName);
+
+        // Auto-generate credentials for all staff roles
+        String username = generateUsername(roleName, user.getFirstName(), user.getLastName());
+        String tempPassword = generateTemporaryPassword();
+        
+        user.setUsername(username);
+        user.setPassword(encodePassword(tempPassword));
+        user.setFirstLogin(true); // Force password change on first login
 
         // Preprocess and save the user
-        return saveUser(user);
+        User savedUser = saveUser(user);
+        
+        // Send login credentials via email
+        if (user.getEmail() != null) {
+            try {
+                boolean emailSent = emailService.sendLoginCredentials(
+                    user.getEmail(), 
+                    user.getUsername(), 
+                    tempPassword, 
+                    user.getFullName()
+                );
+                if (!emailSent) {
+                    // Log warning but don't fail user creation
+                    System.err.println("Warning: Failed to send login credentials email to " + user.getEmail());
+                }
+            } catch (Exception e) {
+                // Log error but don't fail user creation
+                System.err.println("Error sending login credentials email: " + e.getMessage());
+            }
+        }
+        
+        return savedUser;
     }
 
     /**
-     * Validates user data based on role-specific constraints
+     * Validates user data for staff roles only
      *
      * @param user     The user to validate
-     * @param roleName The role name
+     * @param roleName The role name (must be ADMIN, MANAGER, or SCHOOLNURSE)
      * @throws IllegalArgumentException if validation fails
      */
     private void validateUserByRole(User user, String roleName) {
-        // Common validations for all users
-        // Phone number is required for all users except STUDENT
-        if (!"STUDENT".equalsIgnoreCase(roleName) && (user.getPhone() == null || user.getPhone().trim().isEmpty())) {
+        // Ensure only staff roles are validated
+        if (!"ADMIN".equalsIgnoreCase(roleName) && 
+            !"MANAGER".equalsIgnoreCase(roleName) && 
+            !"SCHOOLNURSE".equalsIgnoreCase(roleName)) {
+            throw new IllegalArgumentException("Invalid role for admin management: " + roleName);
+        }
+
+        // Common validations for staff roles
+        if (user.getPhone() == null || user.getPhone().trim().isEmpty()) {
             throw new IllegalArgumentException("Số điện thoại là bắt buộc cho vai trò " + roleName);
         }
         
-        // For STUDENT role, phone number is optional
-        if ("STUDENT".equalsIgnoreCase(roleName) && user.getPhone() != null && !user.getPhone().trim().isEmpty()) {
-            String phoneError = PhoneValidator.validatePhone(user.getPhone());
-            if (phoneError != null) {
-                throw new IllegalArgumentException(phoneError + " (học sinh)");
-            }
-        }
-        
-        // For non-STUDENT roles, validate phone format if provided
-        if (!"STUDENT".equalsIgnoreCase(roleName) && user.getPhone() != null && !user.getPhone().trim().isEmpty()) {
-            String phoneError = PhoneValidator.validatePhone(user.getPhone());
-            if (phoneError != null) {
-                throw new IllegalArgumentException(phoneError + " (" + roleName + ")");
-            }
+        // Validate phone format
+        String phoneError = PhoneValidator.validatePhone(user.getPhone());
+        if (phoneError != null) {
+            throw new IllegalArgumentException(phoneError + " (" + roleName + ")");
         }
 
         if (user.getFirstName() == null || user.getFirstName().trim().isEmpty()) {
-            throw new IllegalArgumentException("First name is required for all users");
+            throw new IllegalArgumentException("Tên là bắt buộc cho tất cả nhân viên");
         }
 
         if (user.getLastName() == null || user.getLastName().trim().isEmpty()) {
-            throw new IllegalArgumentException("Last name is required for all users");
+            throw new IllegalArgumentException("Họ là bắt buộc cho tất cả nhân viên");
         }
 
         if (user.getDob() == null) {
-            throw new IllegalArgumentException("Date of birth is required for all users");
+            throw new IllegalArgumentException("Ngày sinh là bắt buộc cho tất cả nhân viên");
+        }
+
+        // Age validation - minimum age is 25 for all staff roles
+        LocalDate today = LocalDate.now();
+        LocalDate birthDate = user.getDob();
+        int age = Period.between(birthDate, today).getYears();
+        
+        if (age < 25) {
+            throw new IllegalArgumentException("Tuổi tối thiểu cho vai trò " + roleName + " là 25 tuổi");
+        }
+        
+        if (age > 65) {
+            throw new IllegalArgumentException("Tuổi tối đa cho vai trò " + roleName + " là 65 tuổi");
         }
 
         if (user.getGender() == null || user.getGender().trim().isEmpty()) {
-            throw new IllegalArgumentException("Gender is required for all users");
+            throw new IllegalArgumentException("Giới tính là bắt buộc cho tất cả nhân viên");
         }
 
         if (user.getAddress() == null || user.getAddress().trim().isEmpty()) {
-            throw new IllegalArgumentException("Address is required for all users");
-        }        if (user.getRole() == null) {
-            throw new IllegalArgumentException("Role is required for all users");
+            throw new IllegalArgumentException("Địa chỉ là bắt buộc cho tất cả nhân viên");
         }
 
-        // Job title is required for all users except STUDENT
-        if (!"STUDENT".equalsIgnoreCase(roleName) && (user.getJobTitle() == null || user.getJobTitle().trim().isEmpty())) {
-            throw new IllegalArgumentException("Job title is required for " + roleName + " role");
+        if (user.getRole() == null) {
+            throw new IllegalArgumentException("Vai trò là bắt buộc cho tất cả nhân viên");
         }
 
-        // Username, password, and email are not required for PARENT and STUDENT roles
-        if (!"PARENT".equalsIgnoreCase(roleName) && !"STUDENT".equalsIgnoreCase(roleName) && user.getUsername() == null) {
-            throw new IllegalArgumentException("Username is required for " + roleName + " role");
+        // Email is required for all staff roles (for credential delivery)
+        if (user.getEmail() == null || user.getEmail().trim().isEmpty()) {
+            throw new IllegalArgumentException("Email là bắt buộc cho vai trò " + roleName + " để gửi thông tin đăng nhập");
         }
-
-        if (!"PARENT".equalsIgnoreCase(roleName) && !"STUDENT".equalsIgnoreCase(roleName) && user.getPassword() == null) {
-            throw new IllegalArgumentException("Password is required for " + roleName + " role");
-        }
-
-        if (!"PARENT".equalsIgnoreCase(roleName) && !"STUDENT".equalsIgnoreCase(roleName) && user.getEmail() == null) {
-            throw new IllegalArgumentException("Email is required for " + roleName + " role");
-        }
-
     }
 
     /**
@@ -397,5 +454,66 @@ public class AuthService implements IAuthService {
             // This can be implemented in JwtUtil
             jwtUtil.invalidateToken(token);
         }
+    }
+    
+    /**
+     * Generate unique username based on role and user info
+     */
+    private String generateUsername(String roleName, String firstName, String lastName) {
+        String rolePrefix = switch (roleName.toUpperCase()) {
+            case "ADMIN" -> "admin";
+            case "MANAGER" -> "mgr";
+            case "SCHOOLNURSE" -> "nurse";
+            default -> "user";
+        };
+        
+        // Create base username from name
+        String baseName = (firstName.toLowerCase().replaceAll("[^a-z]", "") + 
+                          lastName.toLowerCase().replaceAll("[^a-z]", "")).substring(0, 
+                          Math.min(8, (firstName + lastName).replaceAll("[^a-zA-Z]", "").length()));
+        
+        String baseUsername = rolePrefix + "_" + baseName;
+        String username = baseUsername;
+        int counter = 1;
+        
+        // Ensure username is unique
+        while (userRepository.findByUsername(username).isPresent()) {
+            username = baseUsername + counter;
+            counter++;
+        }
+        
+        return username;
+    }
+    
+    /**
+     * Generate temporary password
+     */
+    private String generateTemporaryPassword() {
+        // Generate a secure temporary password: 8 characters with mix of letters, numbers and special chars
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@$!%*?&";
+        StringBuilder password = new StringBuilder();
+        java.security.SecureRandom random = new java.security.SecureRandom();
+        
+        // Ensure at least one character from each category
+        password.append((char) (random.nextInt(26) + 'A')); // uppercase
+        password.append((char) (random.nextInt(26) + 'a')); // lowercase
+        password.append((char) (random.nextInt(10) + '0')); // digit
+        password.append("@$!%*?&".charAt(random.nextInt(7))); // special char
+        
+        // Fill the rest randomly
+        for (int i = 4; i < 10; i++) {
+            password.append(chars.charAt(random.nextInt(chars.length())));
+        }
+        
+        // Shuffle the password
+        char[] passwordArray = password.toString().toCharArray();
+        for (int i = passwordArray.length - 1; i > 0; i--) {
+            int j = random.nextInt(i + 1);
+            char temp = passwordArray[i];
+            passwordArray[i] = passwordArray[j];
+            passwordArray[j] = temp;
+        }
+        
+        return new String(passwordArray);
     }
 }

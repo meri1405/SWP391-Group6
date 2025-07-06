@@ -167,6 +167,23 @@ export const parentApi = {
     }
   },
 
+  getHealthProfileByStudentId: async (
+    studentId,
+    token = getTokenFromStorage()
+  ) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.get(
+        `/api/parent/students/${studentId}/health-profile`
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching health profile by student ID:", error);
+      throw error;
+    }
+  },
+
+  // Backward compatibility: returns array for legacy code
   getHealthProfilesByStudentId: async (
     studentId,
     token = getTokenFromStorage()
@@ -179,6 +196,42 @@ export const parentApi = {
       return response.data;
     } catch (error) {
       console.error("Error fetching health profiles by student ID:", error);
+      throw error;
+    }
+  },
+
+  getApprovedHealthProfileByStudentId: async (
+    studentId,
+    token = getTokenFromStorage()
+  ) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.get(
+        `/api/parent/students/${studentId}/health-profile/approved`
+      );
+      return response.data;
+    } catch (error) {
+      console.error(
+        "Error fetching approved health profile by student ID:",
+        error
+      );
+      throw error;
+    }
+  },
+
+  // Get approved health profiles for a student (returns array)
+  getApprovedHealthProfiles: async (
+    studentId,
+    token = getTokenFromStorage()
+  ) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.get(
+        `/api/parent/students/${studentId}/health-profiles/approved`
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching approved health profiles:", error);
       throw error;
     }
   },
@@ -379,48 +432,7 @@ export const parentApi = {
     }
   },
 
-  // Get approved health profiles for student
-  getApprovedHealthProfiles: async (studentId, token) => {
-    try {
-      const authAxios = createAuthAxios(token);
-      const response = await authAxios.get(
-        `/api/parent/students/${studentId}/health-profiles/approved`
-      );
-      return response.data;
-    } catch (error) {
-      console.error("Error fetching approved health profiles:", error);
 
-      // Mock approved profiles for development
-      return [
-        {
-          id: 1,
-          weight: 45.5,
-          height: 160.0,
-          note: "Học sinh khỏe mạnh",
-          status: "APPROVED",
-          nurseNote: "Hồ sơ đã được kiểm tra và duyệt",
-          schoolNurseFullName: "Nguyễn Thị Mai",
-          createdAt: "2024-01-15T10:30:00Z",
-          updatedAt: "2024-01-20T14:20:00Z",
-          allergies: [
-            {
-              id: 1,
-              allergen: "Phấn hoa",
-              severity: "MILD",
-              symptoms: "Hắt hơi, chảy nước mũ",
-              onsetDate: "2023-03-15",
-            },
-          ],
-          chronicDiseases: [],
-          infectiousDiseases: [],
-          treatments: [],
-          vaccinationHistory: [],
-          vision: [],
-          hearing: [],
-        },
-      ];
-    }
-  },
   // Notification endpoints
   getAllNotifications: async (token = getTokenFromStorage(), limit = null) => {
     try {
@@ -567,10 +579,15 @@ export const parentApi = {
   getStudentsWithHealthProfileStatus: async (token = getTokenFromStorage()) => {
     try {
       const authAxios = createAuthAxios(token);
-      const response = await authAxios.get('/api/parent/students/health-profile-status');
+      const response = await authAxios.get(
+        "/api/parent/students/health-profile-status"
+      );
       return response.data;
     } catch (error) {
-      console.error('Error fetching students with health profile status:', error);
+      console.error(
+        "Error fetching students with health profile status:",
+        error
+      );
       throw error;
     }
   },
@@ -579,10 +596,12 @@ export const parentApi = {
   getStudentsMissingHealthProfiles: async (token = getTokenFromStorage()) => {
     try {
       const authAxios = createAuthAxios(token);
-      const response = await authAxios.get('/api/parent/students/missing-health-profiles');
+      const response = await authAxios.get(
+        "/api/parent/students/missing-health-profiles"
+      );
       return response.data;
     } catch (error) {
-      console.error('Error fetching students missing health profiles:', error);
+      console.error("Error fetching students missing health profiles:", error);
       throw error;
     }
   },
@@ -591,36 +610,52 @@ export const parentApi = {
   getHealthCheckFormById: async (formId, token = getTokenFromStorage()) => {
     try {
       const authAxios = createAuthAxios(token);
-      const response = await authAxios.get(`/api/parent/health-check-forms/${formId}`);
+      const response = await authAxios.get(
+        `/api/parent/health-check-forms/${formId}`
+      );
       return response.data;
     } catch (error) {
-      console.error('Error fetching health check form:', error);
+      console.error("Error fetching health check form:", error);
       throw error;
     }
   },
 
-  confirmHealthCheckForm: async (formId, notes = '', token = getTokenFromStorage()) => {
+  confirmHealthCheckForm: async (
+    formId,
+    notes = "",
+    token = getTokenFromStorage()
+  ) => {
     try {
       const authAxios = createAuthAxios(token);
-      const response = await authAxios.post(`/api/parent/health-check-forms/${formId}/confirm`, {
-        parentNote: notes
-      });
+      const response = await authAxios.post(
+        `/api/parent/health-check-forms/${formId}/confirm`,
+        {
+          parentNote: notes,
+        }
+      );
       return response.data;
     } catch (error) {
-      console.error('Error confirming health check form:', error);
+      console.error("Error confirming health check form:", error);
       throw error;
     }
   },
 
-  declineHealthCheckForm: async (formId, notes = '', token = getTokenFromStorage()) => {
+  declineHealthCheckForm: async (
+    formId,
+    notes = "",
+    token = getTokenFromStorage()
+  ) => {
     try {
       const authAxios = createAuthAxios(token);
-      const response = await authAxios.post(`/api/parent/health-check-forms/${formId}/decline`, {
-        parentNote: notes
-      });
+      const response = await authAxios.post(
+        `/api/parent/health-check-forms/${formId}/decline`,
+        {
+          parentNote: notes,
+        }
+      );
       return response.data;
     } catch (error) {
-      console.error('Error declining health check form:', error);
+      console.error("Error declining health check form:", error);
       throw error;
     }
   },
@@ -629,13 +664,74 @@ export const parentApi = {
   getHealthCheckForms: async (token = getTokenFromStorage()) => {
     try {
       const authAxios = createAuthAxios(token);
-      const response = await authAxios.get('/api/parent/health-check-forms');
+      const response = await authAxios.get("/api/parent/health-check-forms");
       return response.data;
     } catch (error) {
-      console.error('Error fetching health check forms:', error);
+      console.error("Error fetching health check forms:", error);
       throw error;
     }
   },
 
-  
+  // Get vaccination history from students' health profiles
+  getVaccinationHistory: async (token = getTokenFromStorage()) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      
+      // Get students with health profile status
+      const studentsResponse = await authAxios.get("/api/parent/students/health-profile-status");
+      const students = studentsResponse.data?.data || [];
+      
+      // Collect vaccination history from all students
+      const allVaccinationHistory = [];
+      
+      for (const student of students) {
+        if (student.healthProfileId) {
+          try {
+            // Get the health profile which includes vaccination history
+            const profileResponse = await authAxios.get(`/api/parent/health-profiles/${student.healthProfileId}`);
+            const healthProfile = profileResponse.data;
+            
+            if (healthProfile.vaccinationHistory && healthProfile.vaccinationHistory.length > 0) {
+              // Add student info to each vaccination record
+              const studentVaccinations = healthProfile.vaccinationHistory.map(vaccination => ({
+                ...vaccination,
+                studentId: student.id,
+                studentName: student.fullName,
+                studentCode: student.studentCode
+              }));
+              allVaccinationHistory.push(...studentVaccinations);
+            }
+          } catch (profileError) {
+            console.error(`Error fetching health profile for student ${student.id}:`, profileError);
+            // Continue with other students even if one fails
+          }
+        }
+      }
+      
+      return allVaccinationHistory;
+    } catch (error) {
+      console.error("Error fetching vaccination history:", error);
+      throw error;
+    }
+  },
+
+  // Get confirmed vaccination forms (upcoming vaccinations)
+  getConfirmedVaccinationForms: async (token = getTokenFromStorage()) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.get("/api/parent/vaccination-forms");
+      const forms = response.data || [];
+      
+      // Filter for confirmed forms that are in the future
+      const confirmedForms = forms.filter(form => {
+        return form.confirmationStatus === 'CONFIRMED' && 
+               new Date(form.scheduledDate) > new Date();
+      });
+      
+      return confirmedForms;
+    } catch (error) {
+      console.error("Error fetching confirmed vaccination forms:", error);
+      throw error;
+    }
+  },
 };

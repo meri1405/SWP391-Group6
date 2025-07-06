@@ -311,18 +311,6 @@ const SchoolNurseDashboard = () => {
     window.history.pushState(null, "", newUrl);
   };
 
-  const getBreadcrumbItems = () => {
-    const currentItem = menuItems.find((item) => item.key === activeSection);
-    return [
-      {
-        title: "Dashboard",
-      },
-      {
-        title: currentItem?.label || "Tổng quan",
-      },
-    ];
-  };
-
   useEffect(() => {
     console.log("Auth check:", {
       isAuthenticated,
@@ -697,10 +685,6 @@ const SchoolNurseDashboard = () => {
       <Layout style={{ marginLeft: 0 }}>
         <Header className="nurse-header">
           <div style={{ flex: 1 }}>
-            <Breadcrumb
-              items={getBreadcrumbItems()}
-              style={{ fontSize: 14, marginBottom: 4 }}
-            />
             <h1 className="nurse-header-title">
               Bảng điều khiển Y tá Trường học
             </h1>

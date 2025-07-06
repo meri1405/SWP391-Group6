@@ -19,6 +19,8 @@ public class AuthResponse {
     private String lastName;
     private String email;
     private String roleName;
+    private Boolean firstLogin;
+    private Boolean needPasswordChange;
 
     public AuthResponse(String token, Long id, String username, String firstName, String lastName, String email, String roleName) {
         this.token = token;
@@ -28,5 +30,19 @@ public class AuthResponse {
         this.lastName = lastName;
         this.email = email;
         this.roleName = roleName;
+        this.firstLogin = false;
+        this.needPasswordChange = false;
+    }
+
+    public AuthResponse(String token, Long id, String username, String firstName, String lastName, String email, String roleName, Boolean firstLogin, Boolean needPasswordChange) {
+        this.token = token;
+        this.id = id;
+        this.username = username;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.email = email;
+        this.roleName = roleName;
+        this.firstLogin = firstLogin;
+        this.needPasswordChange = needPasswordChange;
     }
 }

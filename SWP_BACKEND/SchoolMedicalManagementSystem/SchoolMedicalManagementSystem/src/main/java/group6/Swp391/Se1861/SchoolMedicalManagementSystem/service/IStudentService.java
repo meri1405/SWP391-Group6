@@ -2,12 +2,14 @@ package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.ParentDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.StudentDTO;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.StudentFilterDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.StudentWithParentsCreationDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.StudentWithParentsCreationResponseDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.Student;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public interface IStudentService {
@@ -90,4 +92,31 @@ public interface IStudentService {
      * @return list of eligible students
      */
     List<StudentDTO> getEligibleStudentsForClasses(Set<String> classNames, Integer minAge, Integer maxAge);
+    
+    /**
+     * Filter students based on multiple criteria
+     * @param filter the filter criteria containing searchName, className, birthPlace, birthYear
+     * @return list of filtered students
+     */
+    List<StudentDTO> filterStudents(StudentFilterDTO filter);
+
+    /**
+     * Get students with their health profile status for a parent
+     * @param parent the parent user
+     * @return list of student information with health profile status
+     */
+    List<Map<String, Object>> getStudentsWithHealthProfileStatus(User parent);
+
+    /**
+     * Get students missing health profiles for a parent
+     * @param parent the parent user
+     * @return list of students without health profiles
+     */
+    List<Map<String, Object>> getStudentsMissingHealthProfiles(User parent);
+
+    /**
+     * Get all available class names from active students
+     * @return list of distinct class names sorted alphabetically
+     */
+    List<String> getAvailableClassNames();
 }
