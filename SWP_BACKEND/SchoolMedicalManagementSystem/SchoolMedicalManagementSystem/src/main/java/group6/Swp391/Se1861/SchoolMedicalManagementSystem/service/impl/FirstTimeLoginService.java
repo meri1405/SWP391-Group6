@@ -109,7 +109,7 @@ public class FirstTimeLoginService implements IFirstTimeLoginService {
             otpTokenRepository.save(otpToken);
 
             // Gửi email chứa OTP
-            String subject = "Mã OTP đổi mật khẩu lần đầu - Hệ thống quản lý y tế học đường";
+            String subject = "Mã OTP đổi mật khẩu lần đầu - Y tế học đường";
             String content = buildOtpEmailContent(user.getFullName(), otpCode, OTP_EXPIRY_MINUTES);
             
             emailService.sendSimpleEmail(request.getEmail(), subject, content);

@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Form, message, notification } from 'antd';
+import { Form, message } from 'antd';
 import { getAllUsers, createUser, toggleUserStatus } from '../api/adminApi';
 import { USER_ROLES } from '../constants/userRoles';
 
@@ -18,7 +18,6 @@ export const useUserManagement = () => {
   const [isUserFormMounted, setIsUserFormMounted] = useState(false);
   
   const [userFormInstance] = Form.useForm();
-  const [api, contextHolder] = notification.useNotification();
 
   // Filter users based on search term and role
   const filteredUsers = users.filter(user => {
@@ -33,11 +32,7 @@ export const useUserManagement = () => {
     return matchesSearch && matchesRole;
   });
 
-  // Debug logging
-  console.log('Current users array:', users);
-  console.log('Search term:', searchTerm);
-  console.log('Filter role:', filterRole);
-  console.log('Filtered users:', filteredUsers);
+
 
   // Reset user form
   const resetUserForm = useCallback(() => {
@@ -218,7 +213,6 @@ export const useUserManagement = () => {
     selectedRoleForNewUser,
     isUserFormMounted,
     userFormInstance,
-    contextHolder,
 
     // Actions
     setSearchTerm,
