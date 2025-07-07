@@ -161,7 +161,6 @@ const RecordResultsTab = ({ campaign, campaignId, onRefreshData }) => {
               if (categoryData.visionLeftWithGlass !== undefined) mappedData.visionLeftWithGlass = categoryData.visionLeftWithGlass;
               if (categoryData.visionRightWithGlass !== undefined) mappedData.visionRightWithGlass = categoryData.visionRightWithGlass;
               if (categoryData.visionDescription) mappedData.visionDescription = categoryData.visionDescription;
-              if (categoryData.colorVision) mappedData.colorVision = categoryData.colorVision;
               if (categoryData.eyeMovement) mappedData.eyeMovement = categoryData.eyeMovement;
               if (categoryData.eyePressure !== undefined) mappedData.eyePressure = categoryData.eyePressure;
               if (categoryData.needsGlasses !== undefined) mappedData.needsGlasses = categoryData.needsGlasses;
@@ -351,7 +350,6 @@ const RecordResultsTab = ({ campaign, campaignId, onRefreshData }) => {
           visionRightWithGlass: '',
           visionDescription: '',
           doctorName: '',
-          colorVision: 'NORMAL',
           eyeMovement: 'NORMAL',
           eyePressure: '',
           needsGlasses: false,
@@ -538,73 +536,6 @@ const RecordResultsTab = ({ campaign, campaignId, onRefreshData }) => {
             size="small"
             className="h-full"
           >
-            <Space direction="vertical" style={{ width: '100%' }}>
-              <div>
-                <Text strong>Thị lực màu</Text>
-                <Select
-                  value={categoryData.colorVision}
-                  onChange={(value) => handleInputChange('VISION', 'colorVision', value)}
-                  style={{ width: '100%', marginTop: 4 }}
-                >
-                  <Option value="NORMAL">Bình thường</Option>
-                  <Option value="COLORBLIND_RED_GREEN">Mù màu đỏ-xanh</Option>
-                  <Option value="COLORBLIND_BLUE_YELLOW">Mù màu xanh-vàng</Option>
-                  <Option value="PARTIAL_COLORBLIND">Yếu màu</Option>
-                </Select>
-              </div>
-              
-              <div>
-                <Text strong>Vận động mắt</Text>
-                <Select
-                  value={categoryData.eyeMovement}
-                  onChange={(value) => handleInputChange('VISION', 'eyeMovement', value)}
-                  style={{ width: '100%', marginTop: 4 }}
-                >
-                  <Option value="NORMAL">Bình thường</Option>
-                  <Option value="LIMITED">Hạn chế</Option>
-                  <Option value="STRABISMUS">Lác mắt</Option>
-                  <Option value="NYSTAGMUS">Rung giật nhãn cầu</Option>
-                </Select>
-              </div>
-              
-              <div>
-                <Text strong>Nhãn áp (mmHg)</Text>
-                <InputNumber
-                  min={0}
-                  max={50}
-                  value={categoryData.eyePressure}
-                  onChange={(value) => handleInputChange('VISION', 'eyePressure', value)}
-                  placeholder="Ví dụ: 15"
-                  style={{ width: '100%', marginTop: 4 }}
-                />
-              </div>
-              
-              <div>
-                <Text strong>Tên bác sĩ khám</Text>
-                <Input
-                  value={categoryData.doctorName}
-                  onChange={(e) => handleInputChange('VISION', 'doctorName', e.target.value)}
-                  placeholder="Nhập tên bác sĩ thực hiện khám"
-                  style={{ width: '100%', marginTop: 4 }}
-                />
-              </div>
-              
-              <Divider style={{ margin: '12px 0' }} />
-              
-              <Checkbox
-                checked={categoryData.needsGlasses}
-                onChange={(e) => handleInputChange('VISION', 'needsGlasses', e.target.checked)}
-              >
-                <Text>Cần đeo kính</Text>
-              </Checkbox>
-              
-              <Checkbox
-                checked={categoryData.isAbnormal}
-                onChange={(e) => handleInputChange('VISION', 'isAbnormal', e.target.checked)}
-              >
-                <Text style={{ color: '#d32f2f' }}>Bất thường</Text>
-              </Checkbox>
-            </Space>
           </Card>
         </Col>
 

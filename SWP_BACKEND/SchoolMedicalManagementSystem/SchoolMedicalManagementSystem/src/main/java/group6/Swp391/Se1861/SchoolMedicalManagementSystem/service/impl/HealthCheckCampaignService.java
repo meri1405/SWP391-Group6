@@ -25,8 +25,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.stream.Collectors;
 import java.util.stream.Collectors;
 
 @Service
@@ -313,8 +313,8 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
         HealthCheckCampaign savedCampaign = campaignRepository.save(campaign);
 
         // Notify manager about campaign completion
-        // Count completed students based on confirmed forms or other logic
-        int completedStudentCount = savedCampaign.getConfirmedCount(); // Adjust this based on your business logic
+        // Count students who actually took the health check (have results)
+        int completedStudentCount = (int) healthCheckResultRepository.countDistinctStudentsByCampaign(savedCampaign);
         notificationService.notifyManagerAboutHealthCheckCampaignCompletion(savedCampaign, completedStudentCount);
 
         return savedCampaign;
@@ -1305,7 +1305,6 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
                         categoryData.put("visionDescription", vision.getVisionDescription());
                         categoryData.put("doctorName", vision.getDoctorName());
                         categoryData.put("dateOfExamination", vision.getDateOfExamination());
-                        categoryData.put("colorVision", vision.getColorVision());
                         categoryData.put("eyeMovement", vision.getEyeMovement());
                         categoryData.put("eyePressure", vision.getEyePressure());
                         categoryData.put("needsGlasses", vision.isNeedsGlasses());
@@ -1415,6 +1414,179 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
         }
         
         return categoryData;
+    }
+
+    /**
+     * Send health check result notifications to parents after campaign completion
+     */
+    @Override
+    @Transactional
+    public int sendHealthCheckResultNotificationsToParents(Long campaignId, List<Long> studentIds, String notificationContent, boolean useDefaultTemplate) {
+        // Get the campaign and validate it's completed
+        HealthCheckCampaign campaign = getCampaignModelById(campaignId);
+        if (campaign.getStatus() != CampaignStatus.COMPLETED) {
+            throw new RuntimeException("Campaign must be COMPLETED to send result notifications");
+        }
+
+        // Get confirmed forms for this campaign
+        List<HealthCheckForm> confirmedForms = healthCheckFormRepository
+            .findByCampaignAndStatus(campaign, FormStatus.CONFIRMED);
+
+        if (confirmedForms.isEmpty()) {
+            throw new RuntimeException("No confirmed forms found for this campaign");
+        }
+
+        // Filter forms based on studentIds if provided
+        List<HealthCheckForm> formsToNotify = confirmedForms;
+        if (studentIds != null && !studentIds.isEmpty()) {
+            formsToNotify = confirmedForms.stream()
+                .filter(form -> studentIds.contains(form.getStudent().getStudentID()))
+                .collect(Collectors.toList());
+        }
+
+        int notificationsSent = 0;
+
+        for (HealthCheckForm form : formsToNotify) {
+            try {
+                Student student = form.getStudent();
+                User parent = form.getParent();
+
+                // Verify parent is valid and confirmed this form
+                if (parent == null || !parent.isEnabled() || !parent.getRole().getRoleName().equals("PARENT")) {
+                    System.out.println("SKIP: Invalid parent for student " + student.getStudentID());
+                    continue;
+                }
+
+                String finalNotificationContent;
+                if (useDefaultTemplate) {
+                    // Generate auto-generated content based on results
+                    finalNotificationContent = generateDefaultResultNotificationContent(student, campaign);
+                } else {
+                    // Use custom content, but add student-specific information
+                    finalNotificationContent = customizeNotificationContent(notificationContent, student, campaign);
+                }
+
+                // Create notification
+                Notification notification = new Notification();
+                notification.setTitle("KẾT QUẢ KHÁM SỨC KHỎE - " + student.getFullName().toUpperCase());
+                notification.setMessage(finalNotificationContent);
+                notification.setNotificationType("HEALTH_CHECK_RESULT");
+                notification.setRecipient(parent);
+                notification.setHealthCheckCampaign(campaign);
+                notification.setHealthCheckForm(form);
+
+                notificationRepository.save(notification);
+                notificationsSent++;
+
+                System.out.println("SENT: Health check result notification to parent of student " + student.getStudentID());
+
+            } catch (Exception e) {
+                System.err.println("ERROR: Failed to send notification for student " + form.getStudent().getStudentID() + ": " + e.getMessage());
+            }
+        }
+
+        System.out.println("Total health check result notifications sent: " + notificationsSent);
+        return notificationsSent;
+    }
+
+    /**
+     * Generate default notification content based on student's health check results
+     */
+    private String generateDefaultResultNotificationContent(Student student, HealthCheckCampaign campaign) {
+        StringBuilder content = new StringBuilder();
+        
+        content.append("<div style='font-family: Arial, sans-serif; line-height: 1.6; color: #333;'>");
+        content.append("<h3 style='color: #007bff; border-bottom: 2px solid #007bff; padding-bottom: 5px;'>");
+        content.append("KẾT QUẢ KHÁM SỨC KHỎE</h3>");
+        
+        content.append("<p><strong>Kính gửi Quý phụ huynh,</strong></p>");
+        content.append("<p>Nhà trường xin thông báo kết quả khám sức khỏe của học sinh <strong>");
+        content.append(student.getFullName()).append("</strong> trong đợt khám \"<strong>");
+        content.append(campaign.getName()).append("</strong>\".</p>");
+
+        // Get health check results for this student
+        List<HealthCheckResult> results = healthCheckResultRepository.findByStudentAndForm_Campaign(student, campaign);
+        
+        if (!results.isEmpty()) {
+            content.append("<div style='background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;'>");
+            content.append("<h4 style='margin-top: 0; color: #007bff;'>Thông tin khám:</h4>");
+            
+            // Add basic measurements
+            HealthCheckResult firstResult = results.get(0);
+            if (firstResult.getWeight() > 0) {
+                content.append("<p><strong>Cân nặng:</strong> ").append(firstResult.getWeight()).append(" kg</p>");
+            }
+            if (firstResult.getHeight() > 0) {
+                content.append("<p><strong>Chiều cao:</strong> ").append(firstResult.getHeight()).append(" cm</p>");
+            }
+            if (firstResult.getBmi() != null) {
+                content.append("<p><strong>BMI:</strong> ").append(String.format("%.2f", firstResult.getBmi())).append("</p>");
+            }
+            
+            // Add category-specific results
+            boolean hasAbnormalResults = false;
+            for (HealthCheckResult result : results) {
+                if (result.isAbnormal()) {
+                    hasAbnormalResults = true;
+                    content.append("<p><strong>").append(getCategoryDisplayName(result.getCategory()))
+                           .append(":</strong> Có bất thường - ").append(result.getResultNotes() != null ? result.getResultNotes() : "")
+                           .append("</p>");
+                    if (result.getRecommendations() != null && !result.getRecommendations().isEmpty()) {
+                        content.append("<p><em>Khuyến nghị:</em> ").append(result.getRecommendations()).append("</p>");
+                    }
+                }
+            }
+            
+            if (!hasAbnormalResults) {
+                content.append("<p style='color: #28a745; font-weight: bold;'>✓ Kết quả khám tổng thể: Bình thường</p>");
+            }
+            
+            content.append("</div>");
+        }
+
+        content.append("<p>Quý phụ huynh có thể liên hệ với nhà trường để được tư vấn thêm về kết quả khám sức khỏe của con em.</p>");
+        content.append("<p style='margin-top: 20px;'><em>Trân trọng,<br/>");
+        content.append("Ban Giám hiệu Nhà trường</em></p>");
+        content.append("</div>");
+
+        return content.toString();
+    }
+
+    /**
+     * Customize notification content with student-specific information
+     */
+    private String customizeNotificationContent(String content, Student student, HealthCheckCampaign campaign) {
+        if (content == null || content.isEmpty()) {
+            return generateDefaultResultNotificationContent(student, campaign);
+        }
+
+        // Replace placeholders in custom content
+        String customizedContent = content
+            .replace("{{studentName}}", student.getFullName())
+            .replace("{{campaignName}}", campaign.getName())
+            .replace("{{className}}", student.getClassName() != null ? student.getClassName() : "");
+
+        // Wrap in basic styling if not already styled
+        if (!content.contains("<div") && !content.contains("<html")) {
+            return "<div style='font-family: Arial, sans-serif; line-height: 1.6; color: #333;'>" 
+                   + customizedContent + "</div>";
+        }
+
+        return customizedContent;
+    }
+
+    /**
+     * Get display name for health check category
+     */
+    private String getCategoryDisplayName(HealthCheckCategory category) {
+        switch (category) {
+            case VISION: return "Mắt";
+            case HEARING: return "Tai";
+            case ORAL: return "Răng miệng";
+            case SKIN: return "Da";
+            case RESPIRATORY: return "Hô hấp";
+            default: return category.toString();
+        }
     }
 
     /**

@@ -265,16 +265,6 @@ public interface INotificationService {
     void notifyManagerAboutHealthCheckCampaignCompletion(HealthCheckCampaign campaign, int completedStudentCount);
     
     /**
-     * Send abnormal health check result notification to parent
-     */
-    NotificationDTO sendAbnormalHealthCheckResultToParent(
-            User parent,
-            String studentName,
-            String abnormalFindings,
-            String recommendations,
-            HealthCheckCampaign campaign);
-    
-    /**
      * Send completion reminder to nurse
      */
     void sendHealthCheckCampaignCompletionReminder(HealthCheckCampaign campaign);
@@ -322,4 +312,14 @@ public interface INotificationService {
      * @param creator The creator of the campaign to notify
      */
     void sendCampaignAutoRejectionNotification(HealthCheckCampaign campaign, User creator);
+
+    /**
+     * Send health check results to a parent
+     * @param parent The parent user to notify
+     * @param student The student whose results are being sent
+     * @param campaign The health check campaign
+     * @param messageContent The detailed message content with results
+     */
+    NotificationDTO sendHealthCheckResultToParent(User parent, Student student, HealthCheckCampaign campaign, String messageContent);
+
 }

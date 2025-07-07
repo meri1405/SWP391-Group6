@@ -67,4 +67,15 @@ public interface IHealthCheckCampaignService {
     List<Map<String, Object>> getCampaignResults(Long campaignId);
     
     int calculateTargetCount(Integer minAge, Integer maxAge, Set<String> targetClasses);
+    
+    /**
+     * Send health check result notifications to parents after campaign completion
+     * 
+     * @param campaignId The campaign ID
+     * @param studentIds The list of student IDs to send notifications for (if null or empty, send to all confirmed students)
+     * @param notificationContent The custom notification content (HTML format supported)
+     * @param useDefaultTemplate Whether to use auto-generated default template instead of custom content
+     * @return The number of notifications sent
+     */
+    int sendHealthCheckResultNotificationsToParents(Long campaignId, List<Long> studentIds, String notificationContent, boolean useDefaultTemplate);
 }

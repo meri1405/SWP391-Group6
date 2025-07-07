@@ -60,6 +60,9 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
     @Query("SELECT DISTINCT s FROM Student s LEFT JOIN FETCH s.father LEFT JOIN FETCH s.mother WHERE s.isDisabled = false")
     List<Student> findAllActiveWithParents();
     
+    // Find all active students
+    List<Student> findByIsDisabledFalse();
+    
     // Find active students by date of birth between two dates (for age filtering)
     List<Student> findByDobBetweenAndIsDisabledFalse(LocalDate startDate, LocalDate endDate);
     

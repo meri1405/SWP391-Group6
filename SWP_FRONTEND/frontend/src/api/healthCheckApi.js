@@ -573,6 +573,31 @@ export const healthCheckApi = {
       throw error;
     }
   },
+
+  /**
+   * Send health check result notifications to parents
+   * @param {number} campaignId - Campaign ID
+   * @param {Array} studentIds - List of student IDs to send notifications for (optional)
+   * @param {string} notificationContent - Custom notification content (HTML supported)
+   * @param {boolean} useDefaultTemplate - Whether to use auto-generated template
+   * @returns {Promise} Response with sent count
+   */
+  sendHealthCheckResultNotifications: async (campaignId, studentIds, notificationContent, useDefaultTemplate) => {
+    try {
+      const response = await healthCheckApiClient.post(
+        `/nurse/health-check-campaigns/${campaignId}/send-result-notifications`,
+        { 
+          studentIds: studentIds || [],
+          notificationContent: notificationContent || "",
+          useDefaultTemplate: useDefaultTemplate || false
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error(`Error sending health check result notifications for campaign ${campaignId}:`, error);
+      throw error;
+    }
+  },
 };
 
 export default healthCheckApi;

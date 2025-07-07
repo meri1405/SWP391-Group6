@@ -39,9 +39,6 @@ public class Vision {
     @Column(name = "doctorName", nullable = true)
     private String doctorName;
 
-    @Column(name = "colorVision", nullable = true)
-    private String colorVision;
-
     @Column(name = "eyeMovement", nullable = true)
     private String eyeMovement;
 
@@ -60,5 +57,9 @@ public class Vision {
     @ManyToOne
     @JoinColumn(name = "healthProfileId", nullable = false)
     private HealthProfile healthProfile;
+
+    @ManyToOne
+    @JoinColumn(name = "healthCheckResultId", nullable = true)
+    private HealthCheckResult healthCheckResult;
 
 }

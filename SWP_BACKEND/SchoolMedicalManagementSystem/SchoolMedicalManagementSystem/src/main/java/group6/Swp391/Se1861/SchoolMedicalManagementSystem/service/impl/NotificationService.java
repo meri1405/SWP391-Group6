@@ -1300,41 +1300,43 @@ public class NotificationService implements INotificationService {
     }
     
     /**
-     * Send abnormal health check result notification to parent
+     * Send health check results to a parent
+     * @param parent The parent user to notify
+     * @param student The student whose results are being sent
+     * @param campaign The health check campaign
+     * @param messageContent The detailed message content with results
      */
     @Transactional
     @Override
-    public NotificationDTO sendAbnormalHealthCheckResultToParent(
+    public NotificationDTO sendHealthCheckResultToParent(
             User parent,
-            String studentName,
-            String abnormalFindings,
-            String recommendations,
-            HealthCheckCampaign campaign) {
+            Student student,
+            HealthCheckCampaign campaign,
+            String messageContent) {
         
-        String title = "KẾT QUẢ KHÁM SỨC KHỎE CẦN QUAN TÂM";
-        String message = "<p><strong>Kính gửi phụ huynh,</strong></p>" +
-                        "<p>Kết quả khám sức khỏe của học sinh <strong>" + studentName + "</strong> trong chiến dịch '<strong>" + 
-                        campaign.getName() + "</strong>' có một số dấu hiệu cần quan tâm:</p>" +
-                        "<p><strong>Phát hiện:</strong> " + abnormalFindings + "</p>";
+        String title = "KẾT QUẢ KHÁM SỨC KHỎE";
+        String message = messageContent;
         
-        if (recommendations != null && !recommendations.trim().isEmpty()) {
-            message += "<p><strong>Khuyến nghị:</strong> " + recommendations + "</p>";
+        if (message == null || message.trim().isEmpty()) {
+            // Generate default message if none provided
+            message = "<p><strong>Kính gửi phụ huynh,</strong></p>" +
+                     "<p>Kết quả khám sức khỏe của học sinh <strong>" + student.getFullName() + "</strong> " +
+                     "trong chiến dịch '<strong>" + campaign.getName() + "</strong>' đã hoàn thành.</p>" +
+                     "<p>Vui lòng liên hệ với y tá trường nếu bạn có bất kỳ câu hỏi nào.</p>" +
+                     "<p><em>Trân trọng,<br>Y tá trường</em></p>";
         }
-        
-        message += "<p>Vui lòng liên hệ với y tá trường hoặc đưa con đến cơ sở y tế để được tư vấn và kiểm tra thêm.</p>" +
-                  "<p><em>Trân trọng,<br>Y tá trường</em></p>";
         
         Notification notification = new Notification();
         notification.setTitle(title);
         notification.setMessage(message);
-        notification.setNotificationType("HEALTH_CHECK_ABNORMAL_RESULT");
+        notification.setNotificationType("HEALTH_CHECK_RESULT");
         notification.setRecipient(parent);
         notification.setHealthCheckCampaign(campaign);
         
         Notification savedNotification = notificationRepository.save(notification);
         NotificationDTO notificationDTO = convertToDTO(savedNotification);
         
-        // Send real-time notification via WebSocket with high priority
+        // Send real-time notification via WebSocket
         try {
             if (parent.getUsername() != null) {
                 messagingTemplate.convertAndSendToUser(
