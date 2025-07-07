@@ -559,26 +559,13 @@
 }
 
 .student-report-info {
+  margin-top: 20px;
   margin-bottom: 30px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-
-.info-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.info-row .label {
-  font-weight: 600;
-  color: #333;
-  min-width: 100px;
-}
-
-.info-row .value {
-  color: #666;
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e8e8e8;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .examination-table {
@@ -588,8 +575,9 @@
 .exam-results-table {
   width: 100%;
   border-collapse: collapse;
-  border: 1px solid #d9d9d9;
-  font-size: 14px;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-top: 20px;
 }
 
 .exam-results-table th {
@@ -681,4 +669,109 @@
     align-items: flex-start;
     gap: 12px;
   }
+}
+
+.campaign-info-section,
+.health-metrics-section,
+.category-results-section {
+  margin-top: 30px;
+  padding: 20px;
+  background: #fafafa;
+  border-radius: 8px;
+  border: 1px solid #e8e8e8;
+}
+
+.campaign-info-section h3,
+.health-metrics-section h3,
+.category-results-section h3 {
+  margin: 0 0 20px 0;
+  color: #1890ff;
+  font-size: 18px;
+  border-bottom: 1px solid #e8e8e8;
+  padding-bottom: 10px;
+}
+
+.info-row {
+  display: flex;
+  margin-bottom: 12px;
+  padding: 8px 0;
+  border-bottom: 1px dotted #f0f0f0;
+  flex-wrap: wrap;
+}
+
+.info-row .label {
+  flex: 0 0 150px;
+  font-weight: 500;
+  color: #333;
+}
+
+.info-row .value {
+  flex: 1;
+  color: #666;
+}
+
+.info-row .conclusion {
+  min-width: 100px;
+  text-align: center;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+  margin-left: auto;
+}
+
+.info-row .conclusion.status-normal {
+  background-color: #f6ffed;
+  color: #52c41a;
+  border: 1px solid #b7eb8f;
+}
+
+.info-row .conclusion.status-abnormal {
+  background-color: #fff2f0;
+  color: #f5222d;
+  border: 1px solid #ffccc7;
+}
+
+.info-row .conclusion.status-attention {
+  background-color: #fffbe6;
+  color: #faad14;
+  border: 1px solid #ffe58f;
+}
+
+.detail-row {
+  margin-left: 30px;
+  display: flex;
+  margin-bottom: 10px;
+  padding: 6px 0;
+  border-bottom: 1px dotted #f0f0f0;
+}
+
+.detail-row .label {
+  flex: 0 0 120px;
+  font-weight: 500;
+  color: #666;
+  font-style: italic;
+}
+
+.detail-row .value {
+  flex: 1;
+  color: #666;
+}
+
+.category-result {
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.category-result:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.no-detailed-results {
+  padding: 20px;
+  text-align: center;
+  color: #666;
+  font-style: italic;
 }
