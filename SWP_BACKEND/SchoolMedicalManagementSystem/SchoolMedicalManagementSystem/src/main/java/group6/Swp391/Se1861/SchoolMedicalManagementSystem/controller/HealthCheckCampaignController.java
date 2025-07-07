@@ -352,6 +352,57 @@ public class HealthCheckCampaignController {
             return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
         }
     }
+
+    /**
+     * Send health check results to parent(s)
+     * 
+     * @param campaignId The ID of the health check campaign
+     * @param request The request containing the student IDs and optional custom message
+     * @param nurse The authenticated nurse user
+     * @return Map with counts of notifications sent
+     */
+    @PostMapping("/{campaignId}/send-results")
+    public ResponseEntity<Map<String, Object>> sendHealthCheckResults(
+            @PathVariable Long campaignId,
+            @RequestBody SendHealthCheckResultsRequest request,
+            @AuthenticationPrincipal User nurse) {
+        
+        try {
+            // Get the campaign
+            HealthCheckCampaign campaign = campaignService.getCampaignModelById(campaignId);
+            
+            // Check if campaign is completed or in progress
+            if (campaign.getStatus() != CampaignStatus.COMPLETED && 
+                campaign.getStatus() != CampaignStatus.IN_PROGRESS) {
+                return new ResponseEntity<>(
+                    Map.of("error", "Campaign must be completed or in progress to send results"),
+                    HttpStatus.BAD_REQUEST);
+            }
+            
+            // Send results to parents
+            int sentCount = campaignService.sendHealthCheckResultsToParents(
+                campaign, 
+                request.getStudentIds(),
+                request.getCustomMessage());
+            
+            // Return success response
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("sentCount", sentCount);
+            response.put("message", "Health check results sent successfully to " + sentCount + " parents");
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(
+                Map.of("error", e.getMessage()),
+                HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
+            return new ResponseEntity<>(
+                Map.of("error", "Failed to send health check results: " + e.getMessage()),
+                HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
 }
 
 /**

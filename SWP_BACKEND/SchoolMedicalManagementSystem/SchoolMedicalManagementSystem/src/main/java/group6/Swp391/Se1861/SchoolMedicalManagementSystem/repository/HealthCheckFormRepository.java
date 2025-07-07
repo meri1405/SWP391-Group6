@@ -93,4 +93,9 @@ public interface HealthCheckFormRepository extends JpaRepository<HealthCheckForm
     // Find forms by campaign ID and confirmation status
     @Query("SELECT hcf FROM HealthCheckForm hcf WHERE hcf.campaign.id = :campaignId AND hcf.status = 'CONFIRMED'")
     List<HealthCheckForm> findByCampaignIdAndConfirmed(@Param("campaignId") Long campaignId, @Param("confirmed") boolean confirmed);
+    
+    // Additional methods for sending health check results
+    List<HealthCheckForm> findByCampaignIdAndStatus(Long campaignId, FormStatus status);
+    
+    Optional<HealthCheckForm> findByCampaignIdAndStudentStudentID(Long campaignId, Long studentId);
 }

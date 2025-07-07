@@ -6,6 +6,10 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Getter
@@ -77,4 +81,20 @@ public class HealthCheckResult {
 
     @Column(name = "managerNotified", nullable = false)
     private boolean managerNotified = false;
+
+    // One-to-Many relationships with category-specific results
+    @OneToMany(mappedBy = "healthCheckResult", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Vision> visionResults = new ArrayList<>();
+
+    @OneToMany(mappedBy = "healthCheckResult", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Hearing> hearingResults = new ArrayList<>();
+
+    @OneToMany(mappedBy = "healthCheckResult", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Oral> oralResults = new ArrayList<>();
+
+    @OneToMany(mappedBy = "healthCheckResult", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Skin> skinResults = new ArrayList<>();
+
+    @OneToMany(mappedBy = "healthCheckResult", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Respiratory> respiratoryResults = new ArrayList<>();
 }

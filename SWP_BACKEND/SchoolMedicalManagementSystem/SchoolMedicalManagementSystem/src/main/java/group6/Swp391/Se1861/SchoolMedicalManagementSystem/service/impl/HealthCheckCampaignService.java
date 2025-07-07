@@ -25,8 +25,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.stream.Collectors;
 import java.util.stream.Collectors;
 
 @Service
@@ -313,8 +313,8 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
         HealthCheckCampaign savedCampaign = campaignRepository.save(campaign);
 
         // Notify manager about campaign completion
-        // Count completed students based on confirmed forms or other logic
-        int completedStudentCount = savedCampaign.getConfirmedCount(); // Adjust this based on your business logic
+        // Count students who actually took the health check (have results)
+        int completedStudentCount = (int) healthCheckResultRepository.countDistinctStudentsByCampaign(savedCampaign);
         notificationService.notifyManagerAboutHealthCheckCampaignCompletion(savedCampaign, completedStudentCount);
 
         return savedCampaign;

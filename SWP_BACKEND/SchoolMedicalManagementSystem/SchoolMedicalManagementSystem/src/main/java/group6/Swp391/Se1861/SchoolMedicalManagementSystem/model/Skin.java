@@ -78,4 +78,8 @@ public class Skin {
 
     @Column(name = "followUpDate", nullable = true)
     private LocalDate followUpDate;
+
+    @ManyToOne
+    @JoinColumn(name = "healthCheckResultId", nullable = true)
+    private HealthCheckResult healthCheckResult;
 }

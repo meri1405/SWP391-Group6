@@ -35,6 +35,7 @@ import { healthCheckApi, CAMPAIGN_STATUS_LABELS, HEALTH_CHECK_CATEGORY_LABELS } 
 import NotificationModal from './NotificationModal';
 import ScheduleModal from './ScheduleModal';
 import RecordResultsTab from './RecordResultsTab';
+import SendResultsModal from './SendResultsModal';
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -47,12 +48,26 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
   const [confirmModal, setConfirmModal] = useState({ visible: false, action: null, title: '', message: '' });
   const [eligibleStudents, setEligibleStudents] = useState([]);
   const [studentsLoading, setStudentsLoading] = useState(false);
+
+  // Handle tab change and fetch results when results tab is activated
+  const handleTabChange = (key) => {
+    setActiveTab(key);
+    
+    // Auto-fetch results when results tab is activated
+    if (key === 'results' && campaign && 
+        (campaign.status === 'IN_PROGRESS' || campaign.status === 'COMPLETED')) {
+      console.log('Results tab activated - fetching results...');
+      fetchResults();
+    }
+  };
   const [notificationSent, setNotificationSent] = useState(false);
   const [sendingNotification, setSendingNotification] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(null);
   const [notificationModal, setNotificationModal] = useState({ visible: false });
   const [scheduleModal, setScheduleModal] = useState({ visible: false });
+  const [sendResultsModal, setSendResultsModal] = useState({ visible: false });
   const [scheduling, setScheduling] = useState(false);
+  const [sendingResults, setSendingResults] = useState(false);
   
   // Use refs to prevent duplicate API calls and track component mount state
   const isMounted = useRef(true);
@@ -375,6 +390,29 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
     executeScheduleCampaign(scheduleData);
   };
 
+  // Send results modal handlers
+  const showSendResultsModal = () => {
+    setSendResultsModal({ visible: true });
+  };
+
+  const handleSendResultsModalCancel = () => {
+    setSendResultsModal({ visible: false });
+  };
+
+  const handleSendResults = async (studentIds, customMessage) => {
+    setSendingResults(true);
+    try {
+      const result = await healthCheckApi.sendHealthCheckResults(campaignId, studentIds, customMessage);
+      message.success(`Đã gửi kết quả khám sức khỏe cho ${result.sentCount} phụ huynh`);
+      setSendResultsModal({ visible: false });
+    } catch (error) {
+      console.error('Error sending health check results:', error);
+      message.error('Không thể gửi kết quả khám sức khỏe. Vui lòng thử lại sau.');
+    } finally {
+      setSendingResults(false);
+    }
+  };
+
   const getActionButtons = () => {
     if (!campaign) return null;
 
@@ -419,7 +457,8 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
         );
         break;
       }
-      case 'IN_PROGRESS': {
+      case 'IN_PROGRESS': {       
+        
         buttons.push(
           <Button 
             key="complete" 
@@ -458,6 +497,21 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
       );
     }
     
+    // Add Send Results button for IN_PROGRESS and COMPLETED campaigns
+    if (['IN_PROGRESS', 'COMPLETED'].includes(campaign.status)) {
+      buttons.push(
+        <Button 
+          key="sendResults" 
+          type="primary"
+          style={{ marginLeft: 8 }}
+          icon={<SendOutlined />} 
+          onClick={showSendResultsModal}
+        >
+          Gửi kết quả
+        </Button>
+      );
+    }
+
     return buttons;
   };
 
@@ -496,6 +550,36 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
     }
   };
 
+  // Transform backend results data for table display
+  const transformResultsForTable = (resultsData) => {
+    const flattenedResults = [];
+    
+    resultsData.forEach((studentData) => {
+      const { fullName, className, results = {} } = studentData;
+      
+      // Create a row for each category that has results
+      Object.entries(results).forEach(([category, categoryData]) => {
+        flattenedResults.push({
+          id: `${studentData.studentID}-${category}`,
+          studentName: fullName,
+          className: className,
+          category: HEALTH_CHECK_CATEGORY_LABELS[category] || category,
+          status: categoryData.status,
+          isAbnormal: categoryData.isAbnormal,
+          resultNotes: categoryData.resultNotes,
+          recommendations: categoryData.recommendations,
+          createdAt: categoryData.performedAt,
+          weight: categoryData.weight,
+          height: categoryData.height,
+          bmi: categoryData.bmi,
+          nurseName: categoryData.nurseName
+        });
+      });
+    });
+    
+    return flattenedResults;
+  };
+
   const resultColumns = [
     {
       title: 'STT',
@@ -507,29 +591,64 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
       title: 'Tên học sinh',
       dataIndex: 'studentName',
       key: 'studentName',
+      width: 150,
+    },
+    {
+      title: 'Lớp',
+      dataIndex: 'className',
+      key: 'className',
+      width: 80,
     },
     {
       title: 'Loại khám',
       dataIndex: 'category',
       key: 'category',
+      width: 120,
     },
     {
       title: 'Trạng thái',
       dataIndex: 'status',
       key: 'status',
+      width: 100,
       render: (status) => getResultStatusTag(status),
+    },
+    {
+      title: 'Bất thường',
+      dataIndex: 'isAbnormal',
+      key: 'isAbnormal',
+      width: 90,
+      render: (isAbnormal) => (
+        <Tag color={isAbnormal ? 'red' : 'green'}>
+          {isAbnormal ? 'Có' : 'Không'}
+        </Tag>
+      ),
     },
     {
       title: 'Ghi chú',
       dataIndex: 'resultNotes',
       key: 'resultNotes',
       ellipsis: true,
+      width: 150,
+    },
+    {
+      title: 'Khuyến nghị',
+      dataIndex: 'recommendations',
+      key: 'recommendations',
+      ellipsis: true,
+      width: 150,
+    },
+    {
+      title: 'Y tá thực hiện',
+      dataIndex: 'nurseName',
+      key: 'nurseName',
+      width: 120,
     },
     {
       title: 'Thời gian',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      render: (date) => dayjs(date).format('DD/MM/YYYY HH:mm'),
+      width: 130,
+      render: (date) => date ? dayjs(date).format('DD/MM/YYYY HH:mm') : '',
     }
   ];
 
@@ -688,10 +807,9 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
             {getActionButtons()}
           </Space>
         }
-      >
-        <Tabs 
-          activeKey={activeTab} 
-          onChange={setActiveTab}
+      >        <Tabs
+          activeKey={activeTab}
+          onChange={handleTabChange}
           items={[
             {
               key: 'info',
@@ -905,9 +1023,10 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
                   
                   <Table 
                     columns={resultColumns} 
-                    dataSource={results.map(result => ({ ...result, key: result.id }))} 
+                    dataSource={transformResultsForTable(results).map(result => ({ ...result, key: result.id }))} 
                     loading={resultsLoading}
                     pagination={{ pageSize: 10 }}
+                    scroll={{ x: 1200 }}
                   />
                 </div>
               )
@@ -930,17 +1049,36 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
         visible={notificationModal.visible}
         onCancel={handleNotificationModalCancel}
         onConfirm={handleNotificationModalConfirm}
+        title="Gửi thông báo khám sức khỏe"
+        message="Bạn có chắc chắn muốn gửi thông báo khám sức khỏe đến phụ huynh học sinh trong đợt khám này?"
+        customMessagePlaceholder="Nhập nội dung thông báo tùy chỉnh (tuỳ chọn)"
         loading={sendingNotification}
         studentCount={eligibleStudents.length}
         campaignName={campaign?.name || ''}
       />
 
-      <ScheduleModal
+      {/* Schedule modal - schedule the health check campaign */}
+      <ScheduleModal 
         visible={scheduleModal.visible}
         onCancel={handleScheduleModalCancel}
         onConfirm={handleScheduleModalConfirm}
+        title="Lên lịch khám sức khỏe"
+        initialValues={campaign.timeSlot ? {
+          date: dayjs(campaign.timeSlot.start),
+          time: dayjs(campaign.timeSlot.start).format('HH:mm'),
+          duration: campaign.timeSlot.duration || 60,
+        } : null}
         loading={scheduling}
         confirmedCount={campaign?.confirmedCount || 0}
+      />
+
+      <SendResultsModal
+        visible={sendResultsModal.visible}
+        onCancel={handleSendResultsModalCancel}
+        onConfirm={handleSendResults}
+        loading={sendingResults}
+        students={results}
+        campaignName={campaign?.name || ''}
       />
     </>
   );

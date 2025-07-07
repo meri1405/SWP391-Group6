@@ -288,9 +288,9 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
               validateTrigger="onSubmit"
               rules={[
                 {
-                  validator: (_, value, { getFieldValue }) => {
-                    const maxAge = getFieldValue('maxAge');
-                    const targetClasses = getFieldValue('targetClasses') || [];
+                  validator: (_, value) => {
+                    const maxAge = form.getFieldValue('maxAge');
+                    const targetClasses = form.getFieldValue('targetClasses') || [];
                     
                     // Nếu không có targetClasses và không có maxAge, yêu cầu cả hai
                     if ((!targetClasses || targetClasses.length === 0) && !maxAge && !value) {
@@ -327,9 +327,9 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
               validateTrigger="onSubmit"
               rules={[
                 {
-                  validator: (_, value, { getFieldValue }) => {
-                    const minAge = getFieldValue('minAge');
-                    const targetClasses = getFieldValue('targetClasses') || [];
+                  validator: (_, value) => {
+                    const minAge = form.getFieldValue('minAge');
+                    const targetClasses = form.getFieldValue('targetClasses') || [];
                     
                     // Nếu không có targetClasses và không có minAge, yêu cầu cả hai
                     if ((!targetClasses || targetClasses.length === 0) && !minAge && !value) {
@@ -370,9 +370,9 @@ const HealthCheckCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
               validateTrigger="onSubmit"
               rules={[
                 {
-                  validator: (_, value, { getFieldValue }) => {
-                    const minAge = getFieldValue('minAge');
-                    const maxAge = getFieldValue('maxAge');
+                  validator: (_, value) => {
+                    const minAge = form.getFieldValue('minAge');
+                    const maxAge = form.getFieldValue('maxAge');
                     
                     // Phải có ít nhất một trong hai: age range hoặc target classes
                     if (!minAge && !maxAge && (!value || value.length === 0)) {

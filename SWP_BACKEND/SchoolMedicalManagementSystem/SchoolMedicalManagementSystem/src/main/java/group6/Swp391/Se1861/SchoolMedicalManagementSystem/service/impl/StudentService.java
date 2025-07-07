@@ -605,12 +605,36 @@ public class StudentService implements IStudentService {
 
     @Override
     public List<StudentDTO> getStudentsByAgeRange(int minAge, int maxAge) {
-        java.time.LocalDate now = java.time.LocalDate.now();
-        java.time.LocalDate minDob = now.minusYears(maxAge);  // Older students (smaller date)
-        java.time.LocalDate maxDob = now.minusYears(minAge);  // Younger students (larger date)
+        System.out.println("=== getStudentsByAgeRange DEBUG ===");
+        System.out.println("Input minAge: " + minAge + ", maxAge: " + maxAge);
         
-        List<Student> students = studentRepository.findByDobBetweenAndIsDisabledFalse(minDob, maxDob);
-        return students.stream()
+        int currentYear = java.time.LocalDate.now().getYear();
+        int minBirthYear = currentYear - maxAge;  // Older students
+        int maxBirthYear = currentYear - minAge;  // Younger students
+        
+        System.out.println("Current year: " + currentYear);
+        System.out.println("Min birth year: " + minBirthYear + " (for age " + maxAge + ")");
+        System.out.println("Max birth year: " + maxBirthYear + " (for age " + minAge + ")");
+        
+        // Get all active students
+        List<Student> allStudents = studentRepository.findByIsDisabledFalse();
+        System.out.println("Total active students: " + allStudents.size());
+        
+        // Filter by birth year
+        List<Student> filteredStudents = allStudents.stream()
+                .filter(student -> {
+                    int birthYear = student.getDob().getYear();
+                    boolean isEligible = birthYear >= minBirthYear && birthYear <= maxBirthYear;
+                    System.out.println("Student: " + student.getFirstName() + " " + student.getLastName() + 
+                                     ", Birth year: " + birthYear + ", Age: " + (currentYear - birthYear) + 
+                                     ", Eligible: " + isEligible);
+                    return isEligible;
+                })
+                .collect(Collectors.toList());
+        
+        System.out.println("Filtered students count: " + filteredStudents.size());
+        
+        return filteredStudents.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
@@ -625,12 +649,36 @@ public class StudentService implements IStudentService {
     
     @Override
     public List<StudentDTO> getStudentsByAgeRangeAndClass(int minAge, int maxAge, String className) {
-        java.time.LocalDate now = java.time.LocalDate.now();
-        java.time.LocalDate minDob = now.minusYears(maxAge);  // Older students (smaller date)
-        java.time.LocalDate maxDob = now.minusYears(minAge);  // Younger students (larger date)
+        System.out.println("=== getStudentsByAgeRangeAndClass DEBUG ===");
+        System.out.println("Input minAge: " + minAge + ", maxAge: " + maxAge + ", className: " + className);
         
-        List<Student> students = studentRepository.findByDobBetweenAndClassNameAndIsDisabledFalse(minDob, maxDob, className);
-        return students.stream()
+        int currentYear = java.time.LocalDate.now().getYear();
+        int minBirthYear = currentYear - maxAge;  // Older students
+        int maxBirthYear = currentYear - minAge;  // Younger students
+        
+        System.out.println("Current year: " + currentYear);
+        System.out.println("Min birth year: " + minBirthYear + " (for age " + maxAge + ")");
+        System.out.println("Max birth year: " + maxBirthYear + " (for age " + minAge + ")");
+        
+        // Get students by class name first
+        List<Student> studentsInClass = studentRepository.findByClassNameAndIsDisabledFalse(className);
+        System.out.println("Students in class " + className + ": " + studentsInClass.size());
+        
+        // Filter by birth year
+        List<Student> filteredStudents = studentsInClass.stream()
+                .filter(student -> {
+                    int birthYear = student.getDob().getYear();
+                    boolean isEligible = birthYear >= minBirthYear && birthYear <= maxBirthYear;
+                    System.out.println("Student: " + student.getFirstName() + " " + student.getLastName() + 
+                                     ", Birth year: " + birthYear + ", Age: " + (currentYear - birthYear) + 
+                                     ", Eligible: " + isEligible);
+                    return isEligible;
+                })
+                .collect(Collectors.toList());
+        
+        System.out.println("Filtered students count: " + filteredStudents.size());
+        
+        return filteredStudents.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
@@ -672,11 +720,33 @@ public class StudentService implements IStudentService {
         // Logic 3: Lớp cụ thể + có độ tuổi → lọc theo các lớp và độ tuổi
         if (!isAllSchool && hasAgeRange) {
             System.out.println("Using Logic 3: Specific classes + age range");
-            java.time.LocalDate now = java.time.LocalDate.now();
-            java.time.LocalDate minDob = now.minusYears(maxAge);
-            java.time.LocalDate maxDob = now.minusYears(minAge);
+            int currentYear = java.time.LocalDate.now().getYear();
+            int minBirthYear = currentYear - maxAge;
+            int maxBirthYear = currentYear - minAge;
             
-            List<Student> students = studentRepository.findByDobBetweenAndClassNameInAndIsDisabledFalse(minDob, maxDob, classNames);
+            System.out.println("Current year: " + currentYear);
+            System.out.println("Min birth year: " + minBirthYear + " (for age " + maxAge + ")");
+            System.out.println("Max birth year: " + maxBirthYear + " (for age " + minAge + ")");
+            
+            // Get all students in the specified classes first
+            List<Student> allStudentsInClasses = studentRepository.findByClassNameInAndIsDisabledFalse(classNames);
+            System.out.println("Found " + allStudentsInClasses.size() + " students in classes: " + classNames);
+            
+            // Filter by birth year
+            List<Student> students = allStudentsInClasses.stream()
+                    .filter(student -> {
+                        int birthYear = student.getDob().getYear();
+                        boolean eligible = birthYear >= minBirthYear && birthYear <= maxBirthYear;
+                        System.out.println("Student: " + student.getFirstName() + " " + student.getLastName() + 
+                                         ", Birth year: " + birthYear + 
+                                         ", Class: " + student.getClassName() + 
+                                         ", Eligible: " + eligible);
+                        return eligible;
+                    })
+                    .collect(Collectors.toList());
+            
+            System.out.println("Final filtered students: " + students.size());
+            
             return students.stream()
                     .map(this::convertToDTO)
                     .collect(Collectors.toList());

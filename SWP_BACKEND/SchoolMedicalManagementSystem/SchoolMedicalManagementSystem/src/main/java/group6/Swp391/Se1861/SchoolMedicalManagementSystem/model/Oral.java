@@ -60,4 +60,8 @@ public class Oral {
     @ManyToOne
     @JoinColumn(name = "healthProfileId", nullable = false)
     private HealthProfile healthProfile;
+
+    @ManyToOne
+    @JoinColumn(name = "healthCheckResultId", nullable = true)
+    private HealthCheckResult healthCheckResult;
 }
