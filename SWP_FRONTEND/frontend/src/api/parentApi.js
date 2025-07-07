@@ -734,4 +734,31 @@ export const parentApi = {
       throw error;
     }
   },
+
+  // Health Check Results endpoints
+  getHealthCheckResults: async (campaignId, studentId, token = getTokenFromStorage()) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.get(
+        `/api/parent/health-check/campaigns/${campaignId}/students/${studentId}/results`
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching health check results:", error);
+      throw error;
+    }
+  },
+
+  getAllHealthCheckResultsForStudent: async (studentId, token = getTokenFromStorage()) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.get(
+        `/api/parent/health-check/students/${studentId}/results`
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching all health check results for student:", error);
+      throw error;
+    }
+  },
 };

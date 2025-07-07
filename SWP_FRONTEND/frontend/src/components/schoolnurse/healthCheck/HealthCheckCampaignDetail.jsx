@@ -399,15 +399,20 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
     setSendResultsModal({ visible: false });
   };
 
-  const handleSendResults = async (studentIds, customMessage) => {
+  const handleSendResults = async (studentIds, notificationContent, useDefaultTemplate) => {
     setSendingResults(true);
     try {
-      const result = await healthCheckApi.sendHealthCheckResults(campaignId, studentIds, customMessage);
-      message.success(`Đã gửi kết quả khám sức khỏe cho ${result.sentCount} phụ huynh`);
+      const result = await healthCheckApi.sendHealthCheckResultNotifications(
+        campaignId, 
+        studentIds, 
+        notificationContent, 
+        useDefaultTemplate
+      );
+      message.success(`Đã gửi thông báo kết quả khám sức khỏe cho ${result.sentCount} phụ huynh`);
       setSendResultsModal({ visible: false });
     } catch (error) {
-      console.error('Error sending health check results:', error);
-      message.error('Không thể gửi kết quả khám sức khỏe. Vui lòng thử lại sau.');
+      console.error('Error sending health check result notifications:', error);
+      message.error('Không thể gửi thông báo kết quả khám sức khỏe. Vui lòng thử lại sau.');
     } finally {
       setSendingResults(false);
     }
@@ -497,8 +502,8 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
       );
     }
     
-    // Add Send Results button for IN_PROGRESS and COMPLETED campaigns
-    if (['IN_PROGRESS', 'COMPLETED'].includes(campaign.status)) {
+    // Add Send Results button only for COMPLETED campaigns
+    if (campaign.status === 'COMPLETED') {
       buttons.push(
         <Button 
           key="sendResults" 
@@ -507,7 +512,7 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
           icon={<SendOutlined />} 
           onClick={showSendResultsModal}
         >
-          Gửi kết quả
+          Gửi thông báo kết quả
         </Button>
       );
     }

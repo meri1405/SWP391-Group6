@@ -8,7 +8,6 @@ import webSocketService from "../../../services/webSocketService";
 import { VaccinationFormModal } from "../vaccinations";
 import "../../../styles/Notifications.css";
 import { HealthCheckFormModal } from "../health";
-
 const Notifications = ({ role = "parent" }) => {
   const [filter, setFilter] = useState("all");
   const [notifications, setNotifications] = useState([]);
@@ -150,6 +149,17 @@ const Notifications = ({ role = "parent" }) => {
       titleLower.includes("health examination") ||
       messageLower.includes("health examination")
     ) {
+      // Check if this is a health check result notification
+      if (
+        titleLower.includes("kết quả") ||
+        messageLower.includes("kết quả") ||
+        titleLower.includes("result") ||
+        messageLower.includes("result") ||
+        titleLower.includes("kết quả khám") ||
+        messageLower.includes("kết quả khám")
+      ) {
+        return "health-check-result";
+      }
       return "health";
     }
 
@@ -495,6 +505,7 @@ const Notifications = ({ role = "parent" }) => {
         console.log("Health check form modal disabled for role:", role);
       }
     } 
+    // Note: Removed health check result modal logic - health check results don't have "Xem chi tiết" button
 
     // Mark as read when action is taken
     if (!notification.read) {
@@ -703,6 +714,7 @@ const Notifications = ({ role = "parent" }) => {
                   <span>{formatVietnameseDate(notification.date)}</span>
                 </div>
               </div>
+              
               <div className="notification-actions">
                 {!notification.read && (
                   <button
@@ -712,7 +724,9 @@ const Notifications = ({ role = "parent" }) => {
                     Đánh dấu đã đọc
                   </button>
                 )}
-                {notification.actionRequired && role === "parent" && (
+                {notification.actionRequired && 
+                 role === "parent" && 
+                 getNotificationType(notification) !== "health-check-result" && (
                   <button
                     className="action-btn primary"
                     onClick={() => confirmAction(notification)}

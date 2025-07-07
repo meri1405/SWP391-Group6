@@ -357,39 +357,46 @@ public class HealthCheckCampaignController {
      * Send health check results to parent(s)
      * 
      * @param campaignId The ID of the health check campaign
-     * @param request The request containing the student IDs and optional custom message
+     * @param request The request containing the student IDs and custom message
      * @param nurse The authenticated nurse user
      * @return Map with counts of notifications sent
      */
-    @PostMapping("/{campaignId}/send-results")
-    public ResponseEntity<Map<String, Object>> sendHealthCheckResults(
+    @PostMapping("/{campaignId}/send-result-notifications")
+    public ResponseEntity<Map<String, Object>> sendHealthCheckResultNotifications(
             @PathVariable Long campaignId,
-            @RequestBody SendHealthCheckResultsRequest request,
+            @RequestBody HealthCheckResultNotificationRequest request,
             @AuthenticationPrincipal User nurse) {
         
         try {
             // Get the campaign
             HealthCheckCampaign campaign = campaignService.getCampaignModelById(campaignId);
             
-            // Check if campaign is completed or in progress
-            if (campaign.getStatus() != CampaignStatus.COMPLETED && 
-                campaign.getStatus() != CampaignStatus.IN_PROGRESS) {
+            // Check if campaign is completed
+            if (campaign.getStatus() != CampaignStatus.COMPLETED) {
                 return new ResponseEntity<>(
-                    Map.of("error", "Campaign must be completed or in progress to send results"),
+                    Map.of("error", "Campaign must be completed to send result notifications"),
                     HttpStatus.BAD_REQUEST);
             }
             
-            // Send results to parents
-            int sentCount = campaignService.sendHealthCheckResultsToParents(
-                campaign, 
+            // Validate nurse is the creator of the campaign
+            if (!campaign.getCreatedBy().getId().equals(nurse.getId())) {
+                return new ResponseEntity<>(
+                    Map.of("error", "Only the campaign creator can send result notifications"),
+                    HttpStatus.FORBIDDEN);
+            }
+            
+            // Send result notifications to parents
+            int sentCount = campaignService.sendHealthCheckResultNotificationsToParents(
+                campaignId, 
                 request.getStudentIds(),
-                request.getCustomMessage());
+                request.getNotificationContent(),
+                request.isUseDefaultTemplate());
             
             // Return success response
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("sentCount", sentCount);
-            response.put("message", "Health check results sent successfully to " + sentCount + " parents");
+            response.put("message", "Health check result notifications sent successfully to " + sentCount + " parents");
             
             return ResponseEntity.ok(response);
             
@@ -399,7 +406,7 @@ public class HealthCheckCampaignController {
                 HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
             return new ResponseEntity<>(
-                Map.of("error", "Failed to send health check results: " + e.getMessage()),
+                Map.of("error", "Failed to send health check result notifications: " + e.getMessage()),
                 HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }

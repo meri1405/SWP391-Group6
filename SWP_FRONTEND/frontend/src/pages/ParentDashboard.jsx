@@ -12,6 +12,7 @@ import {
   UserOutlined,
   LeftOutlined,
   RightOutlined,
+  ExperimentOutlined,
 } from "@ant-design/icons";
 import Overview from "../components/dashboard/parent/Overview";
 import "../styles/SidebarTrigger.css";
@@ -22,6 +23,7 @@ import Profile from "../components/dashboard/parent/Profile";
 import HealthProfileDeclaration from "../components/dashboard/parent/HealthProfileDeclaration";
 import ApprovedHealthProfile from "../components/dashboard/parent/ApprovedHealthProfile";
 import MissingHealthProfileModal from "../components/dashboard/parent/MissingHealthProfileModal";
+import HealthCheckResults from "../components/dashboard/parent/HealthCheckResults";
 import { parentApi } from "../api/parentApi";
 
 const { Header, Sider, Content } = Layout;
@@ -62,6 +64,12 @@ const ParentDashboard = () => {
       key: "health-history",
       icon: <FileTextOutlined />,
       label: "Tiền sử sức khỏe",
+      disabled: studentsMissingHealthProfile.length > 0,
+    },
+    {
+      key: "health-check-results",
+      icon: <ExperimentOutlined />,
+      label: "Kết quả khám sức khỏe",
       disabled: studentsMissingHealthProfile.length > 0,
     },
     {
@@ -199,7 +207,7 @@ const ParentDashboard = () => {
         "overview",
         "notifications",
         "health-history",
-        "physical-mental",
+        "health-check-results",
         "medication",
         "vaccination",
         "profile",
@@ -271,6 +279,8 @@ const ParentDashboard = () => {
         return <HealthProfileDeclaration onProfileCreated={refreshMissingHealthProfiles} />;
       case "health-history":
         return <ApprovedHealthProfile userInfo={userInfo} />;
+      case "health-check-results":
+        return <HealthCheckResults userInfo={userInfo} />;
       case "medication":
         return <MedicationManagement userInfo={userInfo} />;
       case "vaccination":

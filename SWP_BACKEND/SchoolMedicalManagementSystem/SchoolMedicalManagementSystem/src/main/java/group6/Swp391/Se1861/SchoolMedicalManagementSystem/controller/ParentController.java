@@ -3,11 +3,15 @@ package group6.Swp391.Se1861.SchoolMedicalManagementSystem.controller;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.Student;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.MedicationSchedule;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.HealthCheckResult;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.HealthCheckCampaign;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.MedicationStatus;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.UserRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.StudentRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.HealthProfileRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.MedicationScheduleRepository;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.HealthCheckResultRepository;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.HealthCheckCampaignRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IMedicationScheduleService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -51,6 +55,12 @@ public class ParentController {
     
     @Autowired
     private MedicationScheduleRepository medicationScheduleRepository;
+    
+    @Autowired
+    private HealthCheckResultRepository healthCheckResultRepository;
+    
+    @Autowired
+    private HealthCheckCampaignRepository healthCheckCampaignRepository;
     
     @Autowired
     private IMedicationScheduleService medicationScheduleService;
