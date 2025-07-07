@@ -19,7 +19,8 @@ const HealthCheckResults = () => {
       setError(null);
       const token = getToken();
       const response = await parentApi.getAllHealthCheckResultsForStudent(studentId, token);
-      
+      console.log(response);
+
       // Handle new response structure with campaignResults
       const campaignResults = response.campaignResults || [];
       setHealthCheckResults(campaignResults);
@@ -105,20 +106,13 @@ const HealthCheckResults = () => {
   };
 
   const getCategoryValue = (category, result) => {
-    switch (category) {
-      case "VISION":
-        return result.visionDetails ? "2 mắt 10/10" : "Chưa có thông tin";
-      case "HEARING":
-        return result.hearingDetails ? "Không viêm" : "Chưa có thông tin";
-      case "ORAL":
-        return result.oralDetails ? "Sâu 1 răng" : "Chưa có thông tin";
-      case "SKIN":
-        return result.skinDetails ? "Bình thường" : "Chưa có thông tin";
-      case "RESPIRATORY":
-        return result.respiratoryDetails ? "Bình thường" : "Chưa có thông tin";
-      default:
-        return "Chưa có thông tin";
+    // Check if we have recommendations or notes to display
+    if (result.recommendations) {
+      return result.recommendations;
     }
+    
+    // If no specific details are available, return a generic message
+    return result.resultNotes || "Bình thường";
   };
 
   const getStatusClass = (status) => {
@@ -164,6 +158,133 @@ const HealthCheckResults = () => {
       default:
         return category || "Khác";
     }
+  };
+
+  // Format detail key names to be more readable
+  const formatDetailKey = (key) => {
+    switch (key) {
+      // Vision fields
+      case 'visionLeft': return 'Mắt trái';
+      case 'visionRight': return 'Mắt phải';
+      case 'visionLeftWithGlass': return 'Mắt trái (với kính)';
+      case 'visionRightWithGlass': return 'Mắt phải (với kính)';
+      case 'needsGlasses': return 'Cần đeo kính';
+      case 'visionDescription': return 'Mô tả thị lực';
+      case 'eyeMovement': return 'Chuyển động mắt';
+      case 'eyePressure': return 'Áp lực mắt';
+      // Hearing fields
+      case 'leftEar': return 'Tai trái';
+      case 'rightEar': return 'Tai phải';
+      case 'hearingAcuity': return 'Độ nhạy thính giác';
+      case 'tympanometry': return 'Đo nhĩ lượng';
+      case 'earWaxPresent': return 'Có ráy tai';
+      case 'earInfection': return 'Nhiễm trùng tai';
+      // Oral fields
+      case 'teethCondition': return 'Tình trạng răng';
+      case 'gumsCondition': return 'Tình trạng nướu';
+      case 'tongueCondition': return 'Tình trạng lưỡi';
+      case 'oralHygiene': return 'Vệ sinh răng miệng';
+      case 'cavitiesCount': return 'Số răng sâu';
+      case 'plaquePresent': return 'Có mảng bám';
+      case 'gingivitis': return 'Viêm nướu';
+      case 'mouthUlcers': return 'Loét miệng';
+      // Skin fields
+      case 'skinColor': return 'Màu da';
+      case 'skinTone': return 'Tông da';
+      case 'rashes': return 'Phát ban';
+      case 'lesions': return 'Tổn thương';
+      case 'dryness': return 'Khô da';
+      case 'skinCondition': return 'Tình trạng da';
+      case 'hasAllergies': return 'Có dị ứng';
+      case 'eczema': return 'Chàm';
+      case 'psoriasis': return 'Vẩy nến';
+      case 'skinInfection': return 'Nhiễm trùng da';
+      case 'allergies': return 'Dị ứng';
+      case 'acne': return 'Mụn trứng cá';
+      case 'scars': return 'Sẹo';
+      case 'birthmarks': return 'Nốt ruồi/bớt';
+      case 'treatment': return 'Điều trị';
+      case 'followUpDate': return 'Ngày tái khám';
+      // Respiratory fields
+      case 'breathingRate': return 'Nhịp thở';
+      case 'breathingSound': return 'Âm thở';
+      case 'wheezing': return 'Thở khò khè';
+      case 'cough': return 'Ho';
+      case 'breathingDifficulty': return 'Khó thở';
+      case 'oxygenSaturation': return 'Độ bão hòa oxy';
+      case 'chestExpansion': return 'Độ giãn nở lồng ngực';
+      case 'lungSounds': return 'Âm phổi';
+      case 'asthmaHistory': return 'Tiền sử hen suyễn';
+      case 'allergicRhinitis': return 'Viêm mũi dị ứng';
+      // Common fields
+      case 'doctorName': return 'Bác sĩ thực hiện';
+      case 'dateOfExamination': return 'Ngày khám';
+      case 'description': return 'Mô tả';
+      case 'recommendations': return 'Khuyến nghị';
+      case 'isAbnormal': return 'Bất thường';
+      case 'id': return 'ID';
+      default: return key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1');
+    }
+  };
+
+  // Helper function to format JSON details
+  const formatDetails = (details) => {
+    if (!details || typeof details !== 'object') {
+      return 'Không có thông tin chi tiết';
+    }
+    
+    try {
+      if (Array.isArray(details)) {
+        return details.map((item, index) => (
+          <div key={index} className="detail-item">
+            {Object.entries(item).map(([key, value]) => (
+              <div key={key}>
+                <strong>{formatDetailKey(key)}:</strong> {formatValue(key, value)}
+              </div>
+            ))}
+          </div>
+        ));
+      } else {
+        return Object.entries(details).map(([key, value]) => (
+          <div key={key}>
+            <strong>{formatDetailKey(key)}:</strong> {formatValue(key, value)}
+          </div>
+        ));
+      }
+    } catch (error) {
+      console.error('Error formatting details:', error);
+      return 'Lỗi hiển thị chi tiết';
+    }
+  };
+
+  // Helper function to format values based on their type
+  const formatValue = (key, value) => {
+    if (value === null || value === undefined) return 'N/A';
+    
+    // Format boolean values
+    if (typeof value === 'boolean') {
+      if (key.startsWith('is') || 
+          key.includes('Present') || 
+          key.includes('has') ||
+          ['rashes', 'lesions', 'dryness', 'wheezing', 'cough', 
+           'breathingDifficulty', 'needsGlasses', 'gingivitis', 
+           'mouthUlcers', 'eczema', 'psoriasis', 'skinInfection',
+           'allergies', 'acne', 'scars', 'birthmarks', 
+           'asthmaHistory', 'allergicRhinitis'].includes(key)) {
+        return value ? 'Có' : 'Không';
+      }
+    }
+    
+    // Format date values
+    if (key.includes('Date') && typeof value === 'string' && (value.includes('-') || value.includes('/'))) {
+      try {
+        return new Date(value).toLocaleDateString('vi-VN');
+      } catch {
+        return value;
+      }
+    }
+    
+    return value.toString();
   };
 
   if (loading && students.length === 0) {
@@ -297,11 +418,11 @@ const HealthCheckResults = () => {
             <div className="student-report-info">
               <div className="info-row">
                 <span className="label">Họ tên:</span>
-                <span className="value">{selectedStudent.firstName} {selectedStudent.lastName}</span>
+                <span className="value">{selectedStudent.name}</span>
               </div>
               <div className="info-row">
-                <span className="label">Mã học sinh:</span>
-                <span className="value">{selectedStudent.studentID}</span>
+                <span className="label">Ngày tháng năm sinh:</span>
+                <span className="value">{selectedStudent?.dateOfBirth ? formatDate(selectedStudent?.dateOfBirth) : "N/A"}</span>
               </div>
               <div className="info-row">
                 <span className="label">Lớp:</span>
@@ -313,42 +434,147 @@ const HealthCheckResults = () => {
               </div>
             </div>
 
+            <div className="campaign-info-section">
+              <h3>Thông Tin Chiến Dịch</h3>
+              <div className="info-row">
+                <span className="label">Tên chiến dịch:</span>
+                <span className="value">{selectedResult.campaign.name}</span>
+              </div>
+              <div className="info-row">
+                <span className="label">Mô tả:</span>
+                <span className="value">{selectedResult.campaign.description || "Không có mô tả"}</span>
+              </div>
+              <div className="info-row">
+                <span className="label">Thời gian:</span>
+                <span className="value">{formatDate(selectedResult.campaign.startDate)} - {formatDate(selectedResult.campaign.endDate)}</span>
+              </div>
+              <div className="info-row">
+                <span className="label">Địa điểm:</span>
+                <span className="value">{selectedResult.campaign.location || "Chưa có thông tin"}</span>
+              </div>
+            </div>
+
+            <div className="health-metrics-section">
+              <h3>Chỉ Số Sức Khỏe</h3>
+              {selectedResult.overallResults?.height && (
+                <div className="info-row">
+                  <span className="label">Chiều cao:</span>
+                  <span className="value">{selectedResult.overallResults.height} cm</span>
+                  <span className="conclusion">Bình thường</span>
+                </div>
+              )}
+              {selectedResult.overallResults?.weight && (
+                <div className="info-row">
+                  <span className="label">Cân nặng:</span>
+                  <span className="value">{selectedResult.overallResults.weight} kg</span>
+                  <span className="conclusion">Bình thường</span>
+                </div>
+              )}
+              {selectedResult.overallResults?.bmi && (
+                <div className="info-row">
+                  <span className="label">BMI:</span>
+                  <span className="value">{selectedResult.overallResults.bmi.toFixed(1)}</span>
+                  <span className="conclusion">Bình thường</span>
+                </div>
+              )}
+            </div>
+            {console.log(selectedResult.categoryResults)}
+
             {selectedResult.categoryResults && Object.keys(selectedResult.categoryResults).length > 0 && (
-              <div className="examination-table">
-                <table className="exam-results-table">
-                  <thead>
-                    <tr>
-                      <th>Hạng mục</th>
-                      <th>Giá trị</th>
-                      <th>Kết luận</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selectedResult.overallResults?.height && (
-                      <tr>
-                        <td>Chiều cao</td>
-                        <td>{selectedResult.overallResults.height} cm</td>
-                        <td>Bình thường</td>
-                      </tr>
+              <div className="category-results-section">
+                <h3>Kết Quả Khám Chi Tiết</h3>
+                {Object.entries(selectedResult.categoryResults).map(([resultId, result]) => (
+                  <div key={resultId} className="category-result">
+                    <div className="info-row">
+                      <span className="label">{getCategoryText(result.category)}:</span>
+                      <span className="value">{getCategoryValue(result.category, result)}</span>
+                      <span className={`conclusion ${getStatusClass(result.status)}`}>
+                        {getStatusText(result.status)}
+                      </span>
+                    </div>
+                    
+                    {result.resultNotes && (
+                      <div className="detail-row">
+                        <span className="label">Ghi chú:</span>
+                        <span className="value">{result.resultNotes}</span>
+                      </div>
                     )}
-                    {selectedResult.overallResults?.weight && (
-                      <tr>
-                        <td>Cân nặng</td>
-                        <td>{selectedResult.overallResults.weight} kg</td>
-                        <td>Bình thường</td>
-                      </tr>
+                    
+                    {result.recommendations && (
+                      <div className="detail-row">
+                        <span className="label">Khuyến nghị:</span>
+                        <span className="value">{result.recommendations}</span>
+                      </div>
                     )}
-                    {Object.entries(selectedResult.categoryResults).map(([category, result]) => (
-                      <tr key={category}>
-                        <td>{getCategoryText(category)}</td>
-                        <td>{getCategoryValue(category, result)}</td>
-                        <td className={getStatusClass(result.status)}>
-                          {getStatusText(result.status)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+
+                    {/* Add any other specific fields that might be in the data */}
+                    {result.performedAt && (
+                      <div className="detail-row">
+                        <span className="label">Ngày thực hiện:</span>
+                        <span className="value">{formatDateTime(result.performedAt)}</span>
+                      </div>
+                    )}
+                    
+                    {result.nurseName && (
+                      <div className="detail-row">
+                        <span className="label">Y tá thực hiện:</span>
+                        <span className="value">{result.nurseName}</span>
+                      </div>
+                    )}
+
+                    {/* Display specific details based on category */}
+                    {result.category === "VISION" && result.visionDetails && (
+                      <div className="detail-row">
+                        <span className="label">Chi tiết thị lực:</span>
+                        <span className="value">
+                          {formatDetails(result.visionDetails)}
+                        </span>
+                      </div>
+                    )}
+
+                    {result.category === "HEARING" && result.hearingDetails && (
+                      <div className="detail-row">
+                        <span className="label">Chi tiết thính lực:</span>
+                        <span className="value">
+                          {formatDetails(result.hearingDetails)}
+                        </span>
+                      </div>
+                    )}
+
+                    {result.category === "ORAL" && result.oralDetails && (
+                      <div className="detail-row">
+                        <span className="label">Chi tiết răng miệng:</span>
+                        <span className="value">
+                          {formatDetails(result.oralDetails)}
+                        </span>
+                      </div>
+                    )}
+
+                    {result.category === "SKIN" && result.skinDetails && (
+                      <div className="detail-row">
+                        <span className="label">Chi tiết da liễu:</span>
+                        <span className="value">
+                          {formatDetails(result.skinDetails)}
+                        </span>
+                      </div>
+                    )}
+
+                    {result.category === "RESPIRATORY" && result.respiratoryDetails && (
+                      <div className="detail-row">
+                        <span className="label">Chi tiết hô hấp:</span>
+                        <span className="value">
+                          {formatDetails(result.respiratoryDetails)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {(!selectedResult.categoryResults || Object.keys(selectedResult.categoryResults).length === 0) && (
+              <div className="no-detailed-results">
+                <p>Chưa có kết quả chi tiết cho đợt khám này.</p>
               </div>
             )}
           </div>
@@ -417,10 +643,10 @@ const HealthCheckResults = () => {
               {/* Category results section */}
               {campaignResult.categoryResults && Object.keys(campaignResult.categoryResults).length > 0 && (
                 <div className="results-grid">
-                  {Object.entries(campaignResult.categoryResults).map(([category, result]) => (
-                    <div key={category} className="result-card">
+                  {Object.entries(campaignResult.categoryResults).map(([resultId, result]) => (
+                    <div key={resultId} className="result-card">
                       <div className="result-header">
-                        <h4>{getCategoryText(category)}</h4>
+                        <h4>{getCategoryText(result.category)}</h4>
                         <span 
                           className="status-badge" 
                           style={{ backgroundColor: getStatusColor(result.status) }}
@@ -445,74 +671,47 @@ const HealthCheckResults = () => {
                         )}
 
                         {/* Category-specific details */}
-                        {result.visionDetails && (
+                        {result.category === "VISION" && result.visionDetails && (
                           <div className="category-details">
                             <label>Chi tiết thị lực:</label>
                             <div className="details-content">
-                              {result.visionDetails.map((detail, index) => (
-                                <div key={index} className="detail-item">
-                                  <span>Mắt trái: {detail.visionLeft || 'N/A'}</span>
-                                  <span>Mắt phải: {detail.visionRight || 'N/A'}</span>
-                                  {detail.needsGlasses && <span className="needs-glasses">Cần đeo kính</span>}
-                                </div>
-                              ))}
+                              {formatDetails(result.visionDetails)}
                             </div>
                           </div>
                         )}
 
-                        {result.hearingDetails && (
+                        {result.category === "HEARING" && result.hearingDetails && (
                           <div className="category-details">
                             <label>Chi tiết thính lực:</label>
                             <div className="details-content">
-                              {result.hearingDetails.map((detail, index) => (
-                                <div key={index} className="detail-item">
-                                  <span>Tai trái: {detail.leftEar || 'N/A'}</span>
-                                  <span>Tai phải: {detail.rightEar || 'N/A'}</span>
-                                </div>
-                              ))}
+                              {formatDetails(result.hearingDetails)}
                             </div>
                           </div>
                         )}
 
-                        {result.oralDetails && (
+                        {result.category === "ORAL" && result.oralDetails && (
                           <div className="category-details">
                             <label>Chi tiết răng miệng:</label>
                             <div className="details-content">
-                              {result.oralDetails.map((detail, index) => (
-                                <div key={index} className="detail-item">
-                                  <span>Tình trạng răng: {detail.teethCondition || 'N/A'}</span>
-                                  <span>Tình trạng nướu: {detail.gumsCondition || 'N/A'}</span>
-                                  {detail.cavitiesCount > 0 && <span>Số răng sâu: {detail.cavitiesCount}</span>}
-                                </div>
-                              ))}
+                              {formatDetails(result.oralDetails)}
                             </div>
                           </div>
                         )}
 
-                        {result.skinDetails && (
+                        {result.category === "SKIN" && result.skinDetails && (
                           <div className="category-details">
                             <label>Chi tiết da liễu:</label>
                             <div className="details-content">
-                              {result.skinDetails.map((detail, index) => (
-                                <div key={index} className="detail-item">
-                                  <span>Tình trạng da: {detail.skinCondition || 'N/A'}</span>
-                                  {detail.hasAllergies && <span className="has-allergies">Có dị ứng</span>}
-                                </div>
-                              ))}
+                              {formatDetails(result.skinDetails)}
                             </div>
                           </div>
                         )}
 
-                        {result.respiratoryDetails && (
+                        {result.category === "RESPIRATORY" && result.respiratoryDetails && (
                           <div className="category-details">
                             <label>Chi tiết hô hấp:</label>
                             <div className="details-content">
-                              {result.respiratoryDetails.map((detail, index) => (
-                                <div key={index} className="detail-item">
-                                  <span>Nhịp thở: {detail.breathingRate || 'N/A'}</span>
-                                  <span>Tình trạng phổi: {detail.lungCondition || 'N/A'}</span>
-                                </div>
-                              ))}
+                              {formatDetails(result.respiratoryDetails)}
                             </div>
                           </div>
                         )}
