@@ -1,18 +1,12 @@
 package group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto;
 
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.HealthCheckCampaign;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.HealthCheckResult;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.Student;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.Vision;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.Hearing;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.Oral;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.Skin;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.Respiratory;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,6 +35,8 @@ public class HealthCheckResultDTO {
     private Map<String, Object> dentalResults;
     private Map<String, Object> heightWeightResults;
     private Map<String, Object> hearingResults;
+    private Map<String, Object> skinResults;
+    private Map<String, Object> respiratoryResults;
     private Map<String, Object> generalHealthResults;
     
     // Additional information
@@ -60,7 +56,7 @@ public class HealthCheckResultDTO {
         dto.setStudentClass(student.getClassName());
         // Calculate age from date of birth
         if (student.getDob() != null) {
-            dto.setStudentAge(java.time.Period.between(student.getDob(), java.time.LocalDate.now()).getYears());
+            dto.setStudentAge(java.time.Period.between(student.getDob(), LocalDate.now()).getYears());
         }
         
         // Set campaign information
@@ -73,125 +69,169 @@ public class HealthCheckResultDTO {
         dto.setDentalResults(new HashMap<>());
         dto.setHeightWeightResults(new HashMap<>());
         dto.setHearingResults(new HashMap<>());
+        dto.setSkinResults(new HashMap<>());
+        dto.setRespiratoryResults(new HashMap<>());
         dto.setGeneralHealthResults(new HashMap<>());
         
         // Process results by category
         for (HealthCheckResult result : results) {
             String category = result.getCategory().toString();
             
-            // Add basic measurements for all results
-            Map<String, Object> categoryResults = getCategoryResults(dto, category);
-            
-            // Add weight and height to height_weight category
-            if ("VISION".equals(category)) {
-                // Vision-specific results from linked Vision table
-                if (!result.getVisionResults().isEmpty()) {
-                    Vision vision = result.getVisionResults().get(0);
-                    categoryResults.put("Thị lực mắt trái", vision.getVisionLeft() + "/10");
-                    categoryResults.put("Thị lực mắt phải", vision.getVisionRight() + "/10");
-                    if (vision.getVisionLeftWithGlass() > 0) {
-                        categoryResults.put("Thị lực mắt trái (có kính)", vision.getVisionLeftWithGlass() + "/10");
-                    }
-                    if (vision.getVisionRightWithGlass() > 0) {
-                        categoryResults.put("Thị lực mắt phải (có kính)", vision.getVisionRightWithGlass() + "/10");
-                    }
-                }
-                categoryResults.put("Kết quả", result.getStatus().toString());
-            } else if ("HEARING".equals(category)) {
-                // Hearing-specific results from linked Hearing table
-                if (!result.getHearingResults().isEmpty()) {
-                    Hearing hearing = result.getHearingResults().get(0);
-                    categoryResults.put("Thính lực tai trái", hearing.getLeftEar());
-                    categoryResults.put("Thính lực tai phải", hearing.getRightEar());
-                    if (hearing.getHearingAcuity() != null) {
-                        categoryResults.put("Độ nhạy thính giác", hearing.getHearingAcuity());
-                    }
-                    if (hearing.getTympanometry() != null) {
-                        categoryResults.put("Đo thính lực màng nhĩ", hearing.getTympanometry());
-                    }
-                }
-                categoryResults.put("Kết quả", result.getStatus().toString());
-            } else if ("ORAL".equals(category)) {
-                // Oral-specific results from linked Oral table
-                if (!result.getOralResults().isEmpty()) {
-                    Oral oral = result.getOralResults().get(0);
-                    categoryResults.put("Răng", oral.getTeethCondition());
-                    categoryResults.put("Nướu", oral.getGumsCondition());
-                    categoryResults.put("Lưỡi", oral.getTongueCondition());
-                    if (oral.getOralHygiene() != null) {
-                        categoryResults.put("Vệ sinh răng miệng", oral.getOralHygiene());
-                    }
-                    categoryResults.put("Số sâu răng", String.valueOf(oral.getCavitiesCount()));
-                }
-                categoryResults.put("Kết quả", result.getStatus().toString());
-            } else if ("SKIN".equals(category)) {
-                // Skin-specific results from linked Skin table
-                if (!result.getSkinResults().isEmpty()) {
-                    Skin skin = result.getSkinResults().get(0);
-                    categoryResults.put("Màu da", skin.getSkinColor());
-                    categoryResults.put("Phát ban", skin.isRashes() ? "Có" : "Không");
-                    categoryResults.put("Tổn thương da", skin.isLesions() ? "Có" : "Không");
-                    categoryResults.put("Chàm", skin.isEczema() ? "Có" : "Không");
-                    categoryResults.put("Khô da", skin.isDryness() ? "Có" : "Không");
-                }
-                categoryResults.put("Kết quả", result.getStatus().toString());
-            } else if ("RESPIRATORY".equals(category)) {
-                // Respiratory-specific results from linked Respiratory table
-                if (!result.getRespiratoryResults().isEmpty()) {
-                    Respiratory respiratory = result.getRespiratoryResults().get(0);
-                    categoryResults.put("Tần số thở", String.valueOf(respiratory.getBreathingRate()));
-                    categoryResults.put("Âm thanh thở", respiratory.getBreathingSound());
-                    categoryResults.put("Khó thở", respiratory.isBreathingDifficulty() ? "Có" : "Không");
-                    categoryResults.put("Ho", respiratory.isCough() ? "Có" : "Không");
-                    categoryResults.put("Thở khò khè", respiratory.isWheezing() ? "Có" : "Không");
-                    if (respiratory.getOxygenSaturation() != null) {
-                        categoryResults.put("Độ bão hòa oxy", respiratory.getOxygenSaturation() + "%");
-                    }
-                }
-                categoryResults.put("Kết quả", result.getStatus().toString());
-            } else {
-                // For other categories, add weight and height
-                categoryResults.put("Cân nặng", result.getWeight() + " kg");
-                categoryResults.put("Chiều cao", result.getHeight() + " cm");
-                if (result.getBmi() != null) {
-                    categoryResults.put("BMI", String.format("%.2f", result.getBmi()));
-                }
+            // Add basic measurements to heightWeightResults
+            dto.getHeightWeightResults().put("Cân nặng", result.getWeight() + " kg");
+            dto.getHeightWeightResults().put("Chiều cao", result.getHeight() + " cm");
+            if (result.getBmi() != null) {
+                dto.getHeightWeightResults().put("BMI", String.format("%.2f", result.getBmi()));
             }
             
-            // Add notes and recommendations
+            // Process category-specific results using OneToOne relationships
+            switch (category) {
+                case "VISION":
+                    // Vision-specific results
+                    Map<String, Object> visionResults = dto.getVisionResults();
+                    Vision vision = result.getVision();
+                    if (vision != null) {
+                        visionResults.put("Thị lực mắt trái", vision.getVisionLeft() + "/10");
+                        visionResults.put("Thị lực mắt phải", vision.getVisionRight() + "/10");
+                        if (vision.getVisionLeftWithGlass() > 0) {
+                            visionResults.put("Thị lực mắt trái (có kính)", vision.getVisionLeftWithGlass() + "/10");
+                        }
+                        if (vision.getVisionRightWithGlass() > 0) {
+                            visionResults.put("Thị lực mắt phải (có kính)", vision.getVisionRightWithGlass() + "/10");
+                        }
+                        if (vision.isNeedsGlasses()) {
+                            visionResults.put("Cần đeo kính", "Có");
+                        }
+                        if (vision.getVisionDescription() != null) {
+                            visionResults.put("Mô tả", vision.getVisionDescription());
+                        }
+                        if (vision.getRecommendations() != null) {
+                            visionResults.put("Khuyến nghị", vision.getRecommendations());
+                            dto.setRecommendations(vision.getRecommendations());
+                        }
+                        visionResults.put("Trạng thái", vision.isAbnormal() ? "Cần theo dõi" : "Bình thường");
+                    }
+                    visionResults.put("Kết quả", result.getStatus().toString());
+                    break;
+                    
+                case "HEARING":
+                    // Hearing-specific results
+                    Map<String, Object> hearingResults = dto.getHearingResults();
+                    Hearing hearing = result.getHearing();
+                    if (hearing != null) {
+                        hearingResults.put("Thính lực tai trái", hearing.getLeftEar());
+                        hearingResults.put("Thính lực tai phải", hearing.getRightEar());
+                        if (hearing.getDescription() != null) {
+                            hearingResults.put("Mô tả", hearing.getDescription());
+                        }
+                        if (hearing.getRecommendations() != null) {
+                            hearingResults.put("Khuyến nghị", hearing.getRecommendations());
+                            dto.setRecommendations(hearing.getRecommendations());
+                        }
+                        hearingResults.put("Trạng thái", hearing.isAbnormal() ? "Cần theo dõi" : "Bình thường");
+                    }
+                    hearingResults.put("Kết quả", result.getStatus().toString());
+                    break;
+                    
+                case "ORAL":
+                    // Oral-specific results
+                    Map<String, Object> dentalResults = dto.getDentalResults();
+                    Oral oral = result.getOral();
+                    if (oral != null) {
+                        dentalResults.put("Răng", oral.getTeethCondition());
+                        dentalResults.put("Nướu", oral.getGumsCondition());
+                        dentalResults.put("Lưỡi", oral.getTongueCondition());
+                        if (oral.getDescription() != null) {
+                            dentalResults.put("Mô tả", oral.getDescription());
+                        }
+                        if (oral.getRecommendations() != null) {
+                            dentalResults.put("Khuyến nghị", oral.getRecommendations());
+                            dto.setRecommendations(oral.getRecommendations());
+                        }
+                        dentalResults.put("Trạng thái", oral.isAbnormal() ? "Cần theo dõi" : "Bình thường");
+                    }
+                    dentalResults.put("Kết quả", result.getStatus().toString());
+                    break;
+                    
+                case "SKIN":
+                    // Skin-specific results
+                    Map<String, Object> skinResults = dto.getSkinResults();
+                    Skin skin = result.getSkin();
+                    if (skin != null) {
+                        skinResults.put("Màu da", skin.getSkinColor());
+                        skinResults.put("Phát ban", skin.isRashes() ? "Có" : "Không");
+                        skinResults.put("Tổn thương da", skin.isLesions() ? "Có" : "Không");
+                        skinResults.put("Chàm", skin.isEczema() ? "Có" : "Không");
+                        skinResults.put("Khô da", skin.isDryness() ? "Có" : "Không");
+                        if (skin.getDescription() != null) {
+                            skinResults.put("Mô tả", skin.getDescription());
+                        }
+                        if (skin.getTreatment() != null) {
+                            skinResults.put("Điều trị", skin.getTreatment());
+                        }
+                        if (skin.getRecommendations() != null) {
+                            skinResults.put("Khuyến nghị", skin.getRecommendations());
+                            dto.setRecommendations(skin.getRecommendations());
+                        }
+                        skinResults.put("Trạng thái", skin.isAbnormal() ? "Cần theo dõi" : "Bình thường");
+                    }
+                    skinResults.put("Kết quả", result.getStatus().toString());
+                    break;
+                    
+                case "RESPIRATORY":
+                    // Respiratory-specific results
+                    Map<String, Object> respiratoryResults = dto.getRespiratoryResults();
+                    Respiratory respiratory = result.getRespiratory();
+                    if (respiratory != null) {
+                        respiratoryResults.put("Tần số thở", String.valueOf(respiratory.getBreathingRate()));
+                        respiratoryResults.put("Âm thanh thở", respiratory.getBreathingSound());
+                        respiratoryResults.put("Khó thở", respiratory.isBreathingDifficulty() ? "Có" : "Không");
+                        respiratoryResults.put("Ho", respiratory.isCough() ? "Có" : "Không");
+                        respiratoryResults.put("Thở khò khè", respiratory.isWheezing() ? "Có" : "Không");
+                        // Note: oxygenSaturation and treatment are not in the Respiratory model
+                        // but they are in the DTO, so we'll skip them here
+                        if (respiratory.getDescription() != null) {
+                            respiratoryResults.put("Mô tả", respiratory.getDescription());
+                        }
+                        if (respiratory.getRecommendations() != null) {
+                            respiratoryResults.put("Khuyến nghị", respiratory.getRecommendations());
+                            dto.setRecommendations(respiratory.getRecommendations());
+                        }
+                        respiratoryResults.put("Trạng thái", respiratory.isAbnormal() ? "Cần theo dõi" : "Bình thường");
+                    }
+                    respiratoryResults.put("Kết quả", result.getStatus().toString());
+                    break;
+                    
+                default:
+                    // For other categories, add basic info to general results
+                    Map<String, Object> generalResults = dto.getGeneralHealthResults();
+                    generalResults.put("Cân nặng", result.getWeight() + " kg");
+                    generalResults.put("Chiều cao", result.getHeight() + " cm");
+                    if (result.getBmi() != null) {
+                        generalResults.put("BMI", String.format("%.2f", result.getBmi()));
+                    }
+                    if (result.getResultNotes() != null && !result.getResultNotes().isEmpty()) {
+                        generalResults.put("Ghi chú", result.getResultNotes());
+                    }
+                    if (result.getRecommendations() != null && !result.getRecommendations().isEmpty()) {
+                        generalResults.put("Khuyến nghị", result.getRecommendations());
+                        dto.setRecommendations(result.getRecommendations());
+                    }
+                    generalResults.put("Trạng thái", result.isAbnormal() ? "Cần theo dõi" : "Bình thường");
+                    break;
+            }
+            
+            // Add notes and recommendations from the result
             if (result.getResultNotes() != null && !result.getResultNotes().isEmpty()) {
-                categoryResults.put("Ghi chú", result.getResultNotes());
+                dto.setConclusions(result.getResultNotes());
             }
             
-            if (result.getRecommendations() != null && !result.getRecommendations().isEmpty()) {
+            if (result.getRecommendations() != null && !result.getRecommendations().isEmpty() && dto.getRecommendations() == null) {
                 dto.setRecommendations(result.getRecommendations());
-            }
-            
-            // Check for abnormal status
-            if (result.isAbnormal()) {
-                categoryResults.put("Trạng thái", "Cần theo dõi");
-            } else {
-                categoryResults.put("Trạng thái", "Bình thường");
             }
         }
         
         return dto;
-    }
-    
-    /**
-     * Helper method to get the appropriate category results map
-     */
-    private static Map<String, Object> getCategoryResults(HealthCheckResultDTO dto, String category) {
-        switch (category.toLowerCase()) {
-            case "vision":
-                return dto.getVisionResults();
-            case "oral":
-                return dto.getDentalResults();
-            case "hearing":
-                return dto.getHearingResults();
-            default:
-                return dto.getGeneralHealthResults();
-        }
     }
     
     /**
@@ -254,6 +294,28 @@ public class HealthCheckResultDTO {
             html.append("<h3>Kiểm tra thính lực:</h3>");
             html.append("<ul>");
             for (Map.Entry<String, Object> entry : hearingResults.entrySet()) {
+                html.append("<li><strong>").append(entry.getKey()).append(":</strong> ");
+                html.append(entry.getValue()).append("</li>");
+            }
+            html.append("</ul>");
+        }
+        
+        // Skin results
+        if (!skinResults.isEmpty()) {
+            html.append("<h3>Kiểm tra da:</h3>");
+            html.append("<ul>");
+            for (Map.Entry<String, Object> entry : skinResults.entrySet()) {
+                html.append("<li><strong>").append(entry.getKey()).append(":</strong> ");
+                html.append(entry.getValue()).append("</li>");
+            }
+            html.append("</ul>");
+        }
+        
+        // Respiratory results
+        if (!respiratoryResults.isEmpty()) {
+            html.append("<h3>Kiểm tra hô hấp:</h3>");
+            html.append("<ul>");
+            for (Map.Entry<String, Object> entry : respiratoryResults.entrySet()) {
                 html.append("<li><strong>").append(entry.getKey()).append(":</strong> ");
                 html.append(entry.getValue()).append("</li>");
             }

@@ -33,18 +33,6 @@ public class Hearing {
     @Column(name = "doctorName", nullable = true)
     private String doctorName;
 
-    @Column(name = "hearingAcuity", nullable = true)
-    private String hearingAcuity;
-
-    @Column(name = "tympanometry", nullable = true)
-    private String tympanometry;
-
-    @Column(name = "earWaxPresent", nullable = false)
-    private boolean earWaxPresent;
-
-    @Column(name = "earInfection", nullable = false)
-    private boolean earInfection;
-
     @Column(name = "isAbnormal", nullable = false)
     private boolean isAbnormal;
 
@@ -55,7 +43,7 @@ public class Hearing {
     @JoinColumn(name = "healthProfileId", nullable = false)
     private HealthProfile healthProfile;
 
-    @ManyToOne
+    @OneToOne
     @JoinColumn(name = "healthCheckResultId", nullable = true)
     private HealthCheckResult healthCheckResult;
 }

@@ -124,28 +124,28 @@ public class ParentHealthCheckController {
                 // Add category-specific details
                 switch (category) {
                     case VISION:
-                        if (!result.getVisionResults().isEmpty()) {
-                            categoryData.put("visionDetails", result.getVisionResults());
+                        if (result.getVision() != null) {
+                            categoryData.put("visionDetails", result.getVision());
                         }
                         break;
                     case HEARING:
-                        if (!result.getHearingResults().isEmpty()) {
-                            categoryData.put("hearingDetails", result.getHearingResults());
+                        if (result.getHearing() != null) {
+                            categoryData.put("hearingDetails", result.getHearing());
                         }
                         break;
                     case ORAL:
-                        if (!result.getOralResults().isEmpty()) {
-                            categoryData.put("oralDetails", result.getOralResults());
+                        if (result.getOral() != null) {
+                            categoryData.put("oralDetails", result.getOral());
                         }
                         break;
                     case SKIN:
-                        if (!result.getSkinResults().isEmpty()) {
-                            categoryData.put("skinDetails", result.getSkinResults());
+                        if (result.getSkin() != null) {
+                            categoryData.put("skinDetails", result.getSkin());
                         }
                         break;
                     case RESPIRATORY:
-                        if (!result.getRespiratoryResults().isEmpty()) {
-                            categoryData.put("respiratoryDetails", result.getRespiratoryResults());
+                        if (result.getRespiratory() != null) {
+                            categoryData.put("respiratoryDetails", result.getRespiratory());
                         }
                         break;
                 }
@@ -285,28 +285,28 @@ public class ParentHealthCheckController {
                 HealthCheckCategory category = result.getCategory();
                 switch (category) {
                     case VISION:
-                        if (!result.getVisionResults().isEmpty()) {
-                            categoryData.put("visionDetails", result.getVisionResults());
+                        if (result.getVision() != null) {
+                            categoryData.put("visionDetails", result.getVision());
                         }
                         break;
                     case HEARING:
-                        if (!result.getHearingResults().isEmpty()) {
-                            categoryData.put("hearingDetails", result.getHearingResults());
+                        if (result.getHearing() != null) {
+                            categoryData.put("hearingDetails", result.getHearing());
                         }
                         break;
                     case ORAL:
-                        if (!result.getOralResults().isEmpty()) {
-                            categoryData.put("oralDetails", result.getOralResults());
+                        if (result.getOral() != null) {
+                            categoryData.put("oralDetails", result.getOral());
                         }
                         break;
                     case SKIN:
-                        if (!result.getSkinResults().isEmpty()) {
-                            categoryData.put("skinDetails", result.getSkinResults());
+                        if (result.getSkin() != null) {
+                            categoryData.put("skinDetails", result.getSkin());
                         }
                         break;
                     case RESPIRATORY:
-                        if (!result.getRespiratoryResults().isEmpty()) {
-                            categoryData.put("respiratoryDetails", result.getRespiratoryResults());
+                        if (result.getRespiratory() != null) {
+                            categoryData.put("respiratoryDetails", result.getRespiratory());
                         }
                         break;
                 }

@@ -6,10 +6,6 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.List;
 
 @Entity
 @Getter
@@ -24,7 +20,7 @@ public class HealthCheckResult {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
+    @OneToOne
     @JoinColumn(name = "formId", nullable = false)
     private HealthCheckForm form;
 
@@ -82,19 +78,19 @@ public class HealthCheckResult {
     @Column(name = "managerNotified", nullable = false)
     private boolean managerNotified = false;
 
-    // One-to-Many relationships with category-specific results
-    @OneToMany(mappedBy = "healthCheckResult", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<Vision> visionResults = new ArrayList<>();
+    // One-to-One relationships with category-specific results
+    @OneToOne(mappedBy = "healthCheckResult", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Vision vision;
 
-    @OneToMany(mappedBy = "healthCheckResult", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<Hearing> hearingResults = new ArrayList<>();
+    @OneToOne(mappedBy = "healthCheckResult", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Hearing hearing;
 
-    @OneToMany(mappedBy = "healthCheckResult", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<Oral> oralResults = new ArrayList<>();
+    @OneToOne(mappedBy = "healthCheckResult", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Oral oral;
 
-    @OneToMany(mappedBy = "healthCheckResult", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<Skin> skinResults = new ArrayList<>();
+    @OneToOne(mappedBy = "healthCheckResult", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Skin skin;
 
-    @OneToMany(mappedBy = "healthCheckResult", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<Respiratory> respiratoryResults = new ArrayList<>();
+    @OneToOne(mappedBy = "healthCheckResult", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Respiratory respiratory;
 }

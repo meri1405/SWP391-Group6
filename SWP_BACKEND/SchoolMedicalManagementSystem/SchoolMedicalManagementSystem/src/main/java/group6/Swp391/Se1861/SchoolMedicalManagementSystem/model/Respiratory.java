@@ -39,41 +39,20 @@ public class Respiratory {
     @Column(name = "dateOfExamination", nullable = false)
     private LocalDate dateOfExamination;
 
-    @Column(name = "doctorName", nullable = true)
-    private String doctorName;
-
     @Column(name = "isAbnormal", nullable = false)
     private boolean isAbnormal;
-
-    @Column(name = "oxygenSaturation", nullable = true)
-    private Integer oxygenSaturation;
-
-    @Column(name = "chestExpansion", nullable = true)
-    private String chestExpansion;
-
-    @Column(name = "lungSounds", nullable = true)
-    private String lungSounds;
-
-    @Column(name = "asthmaHistory", nullable = false)
-    private boolean asthmaHistory;
-
-    @Column(name = "allergicRhinitis", nullable = false)
-    private boolean allergicRhinitis;
 
     @Column(name = "recommendations", nullable = true)
     private String recommendations;
 
-    @Column(name = "treatment", nullable = true)
-    private String treatment;
-
-    @Column(name = "followUpDate", nullable = true)
-    private LocalDate followUpDate;
+    @Column(name = "doctorName", nullable = true)
+    private String doctorName;
 
     @ManyToOne
     @JoinColumn(name = "healthProfileId", nullable = false)
     private HealthProfile healthProfile;
 
-    @ManyToOne
+    @OneToOne
     @JoinColumn(name = "healthCheckResultId", nullable = true)
     private HealthCheckResult healthCheckResult;
 }
