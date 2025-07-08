@@ -30,38 +30,23 @@ public class Oral {
     @Column(name = "description", nullable = true)
     private String description;
 
-    @Column(name = "dateOfExamination", nullable = false)
+    @Column(name = "dateOfExamination", nullable = true)
     private LocalDate dateOfExamination;
 
     @Column(name = "doctorName", nullable = true)
     private String doctorName;
 
-    @Column(name = "isAbnormal", nullable = false)
-    private boolean isAbnormal;
-
-    @Column(name = "oralHygiene", nullable = true)
-    private String oralHygiene;
-
-    @Column(name = "cavitiesCount", nullable = false)
-    private int cavitiesCount;
-
-    @Column(name = "plaquePresent", nullable = false)
-    private boolean plaquePresent;
-
-    @Column(name = "gingivitis", nullable = false)
-    private boolean gingivitis;
-
-    @Column(name = "mouthUlcers", nullable = false)
-    private boolean mouthUlcers;
-
     @Column(name = "recommendations", nullable = true)
     private String recommendations;
+
+    @Column(name = "isAbnormal", nullable = false)
+    private boolean isAbnormal;
 
     @ManyToOne
     @JoinColumn(name = "healthProfileId", nullable = false)
     private HealthProfile healthProfile;
-
-    @ManyToOne
+    
+    @OneToOne
     @JoinColumn(name = "healthCheckResultId", nullable = true)
     private HealthCheckResult healthCheckResult;
 }

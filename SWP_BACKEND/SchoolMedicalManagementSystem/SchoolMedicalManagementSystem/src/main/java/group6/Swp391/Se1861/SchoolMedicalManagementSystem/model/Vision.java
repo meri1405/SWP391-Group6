@@ -58,7 +58,7 @@ public class Vision {
     @JoinColumn(name = "healthProfileId", nullable = false)
     private HealthProfile healthProfile;
 
-    @ManyToOne
+    @OneToOne
     @JoinColumn(name = "healthCheckResultId", nullable = true)
     private HealthCheckResult healthCheckResult;
 

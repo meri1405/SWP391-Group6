@@ -965,12 +965,11 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
             healthCheckResult.setResultNotes(notes);
             healthCheckResult.setRecommendations(recommendations);
             
-            // Save to category-specific table and get the ID
-            Long categoryResultId = saveCategorySpecificResult(category, categoryData, healthProfile, examinationDate);
-            healthCheckResult.setCategoryResultId(categoryResultId);
-            
-            // Save the main health check result
+            // First save the health check result to get its ID
             HealthCheckResult savedResult = healthCheckResultRepository.save(healthCheckResult);
+            
+            // Save category-specific result with reference back to the saved health check result
+            saveCategorySpecificResult(category, categoryData, healthProfile, examinationDate, savedResult);
             
             System.out.println("DEBUG: Saved health check result for student " + student.getStudentID() + ", category: " + category + ", ID: " + savedResult.getId());
         }
@@ -1015,13 +1014,14 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
         return ResultStatus.MINOR_CONCERN;
     }
     
-    private Long saveCategorySpecificResult(HealthCheckCategory category, Map<String, Object> categoryData, 
-                                          HealthProfile healthProfile, LocalDate examinationDate) {
+    private void saveCategorySpecificResult(HealthCheckCategory category, Map<String, Object> categoryData, 
+                                          HealthProfile healthProfile, LocalDate examinationDate,
+                                          HealthCheckResult healthCheckResult) {
         switch (category) {
             case VISION:
                 Vision vision = new Vision();
-                // Set health profile to satisfy database constraint, but actual link is in HealthCheckResult
                 vision.setHealthProfile(healthProfile);
+                vision.setHealthCheckResult(healthCheckResult); // Set the reference back to health check result
                 vision.setVisionLeft(getIntValue(categoryData, "visionLeft"));
                 vision.setVisionRight(getIntValue(categoryData, "visionRight"));
                 vision.setVisionLeftWithGlass(getIntValue(categoryData, "visionLeftWithGlass"));
@@ -1029,27 +1029,45 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
                 vision.setVisionDescription(getStringValue(categoryData, "visionDescription"));
                 vision.setDoctorName(getStringValue(categoryData, "doctorName"));
                 vision.setDateOfExamination(examinationDate);
+                vision.setAbnormal(getBooleanValue(categoryData, "isAbnormal"));
+                vision.setRecommendations(getStringValue(categoryData, "recommendations"));
                 Vision savedVision = visionRepository.save(vision);
+                
+                // Update the health check result with the category result ID
+                healthCheckResult.setCategoryResultId(savedVision.getId());
+                // Set the OneToOne relationship
+                healthCheckResult.setVision(savedVision);
+                healthCheckResultRepository.save(healthCheckResult);
+                
                 System.out.println("DEBUG: Saved vision result with ID " + savedVision.getId());
-                return savedVision.getId();
+                break;
                 
             case HEARING:
                 Hearing hearing = new Hearing();
-                // Set health profile to satisfy database constraint, but actual link is in HealthCheckResult
                 hearing.setHealthProfile(healthProfile);
+                hearing.setHealthCheckResult(healthCheckResult); // Set the reference back to health check result
                 hearing.setLeftEar(getIntValue(categoryData, "leftEar"));
                 hearing.setRightEar(getIntValue(categoryData, "rightEar"));
                 hearing.setDescription(getStringValue(categoryData, "description"));
                 hearing.setDoctorName(getStringValue(categoryData, "doctorName"));
                 hearing.setDateOfExamination(examinationDate);
+                hearing.setAbnormal(getBooleanValue(categoryData, "isAbnormal"));
+                hearing.setRecommendations(getStringValue(categoryData, "recommendations"));
                 Hearing savedHearing = hearingRepository.save(hearing);
+                
+                // Update the health check result with the category result ID
+                healthCheckResult.setCategoryResultId(savedHearing.getId());
+                // Set the OneToOne relationship
+                healthCheckResult.setHearing(savedHearing);
+                healthCheckResultRepository.save(healthCheckResult);
+                
                 System.out.println("DEBUG: Saved hearing result with ID " + savedHearing.getId());
-                return savedHearing.getId();
+                break;
                 
             case ORAL:
                 Oral oral = new Oral();
-                // Set health profile to satisfy database constraint, but actual link is in HealthCheckResult
                 oral.setHealthProfile(healthProfile);
+                oral.setHealthCheckResult(healthCheckResult); // Set the reference back to health check result
                 oral.setTeethCondition(getStringValue(categoryData, "teethCondition"));
                 oral.setGumsCondition(getStringValue(categoryData, "gumsCondition"));
                 oral.setTongueCondition(getStringValue(categoryData, "tongueCondition"));
@@ -1057,14 +1075,22 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
                 oral.setDoctorName(getStringValue(categoryData, "doctorName"));
                 oral.setAbnormal(getBooleanValue(categoryData, "isAbnormal"));
                 oral.setDateOfExamination(examinationDate);
+                oral.setRecommendations(getStringValue(categoryData, "recommendations"));
                 Oral savedOral = oralRepository.save(oral);
+                
+                // Update the health check result with the category result ID
+                healthCheckResult.setCategoryResultId(savedOral.getId());
+                // Set the OneToOne relationship
+                healthCheckResult.setOral(savedOral);
+                healthCheckResultRepository.save(healthCheckResult);
+                
                 System.out.println("DEBUG: Saved oral result with ID " + savedOral.getId());
-                return savedOral.getId();
+                break;
                 
             case SKIN:
                 Skin skin = new Skin();
-                // Set health profile to satisfy database constraint, but actual link is in HealthCheckResult
                 skin.setHealthProfile(healthProfile);
+                skin.setHealthCheckResult(healthCheckResult); // Set the reference back to health check result
                 skin.setSkinColor(getStringValue(categoryData, "skinColor"));
                 skin.setRashes(getBooleanValue(categoryData, "rashes"));
                 skin.setLesions(getBooleanValue(categoryData, "lesions"));
@@ -1078,41 +1104,50 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
                 skin.setAbnormal(getBooleanValue(categoryData, "isAbnormal"));
                 skin.setDoctorName(getStringValue(categoryData, "doctorName"));
                 skin.setDateOfExamination(examinationDate);
+                skin.setRecommendations(getStringValue(categoryData, "recommendations"));
                 String followUpDateStr = getStringValue(categoryData, "followUpDate");
                 if (followUpDateStr != null && !followUpDateStr.isEmpty()) {
                     skin.setFollowUpDate(LocalDate.parse(followUpDateStr));
                 }
                 Skin savedSkin = skinRepository.save(skin);
+                
+                // Update the health check result with the category result ID
+                healthCheckResult.setCategoryResultId(savedSkin.getId());
+                // Set the OneToOne relationship
+                healthCheckResult.setSkin(savedSkin);
+                healthCheckResultRepository.save(healthCheckResult);
+                
                 System.out.println("DEBUG: Saved skin result with ID " + savedSkin.getId());
-                return savedSkin.getId();
+                break;
                 
             case RESPIRATORY:
                 Respiratory respiratory = new Respiratory();
-                // Set health profile to satisfy database constraint, but actual link is in HealthCheckResult
                 respiratory.setHealthProfile(healthProfile);
+                respiratory.setHealthCheckResult(healthCheckResult); // Set the reference back to health check result
                 respiratory.setBreathingRate(getIntValue(categoryData, "breathingRate"));
                 respiratory.setBreathingSound(getStringValue(categoryData, "breathingSound"));
                 respiratory.setWheezing(getBooleanValue(categoryData, "wheezing"));
                 respiratory.setCough(getBooleanValue(categoryData, "cough"));
                 respiratory.setBreathingDifficulty(getBooleanValue(categoryData, "breathingDifficulty"));
-                Integer oxygenSat = getIntegerValue(categoryData, "oxygenSaturation");
-                respiratory.setOxygenSaturation(oxygenSat);
-                respiratory.setTreatment(getStringValue(categoryData, "treatment"));
                 respiratory.setDescription(getStringValue(categoryData, "description"));
                 respiratory.setAbnormal(getBooleanValue(categoryData, "isAbnormal"));
                 respiratory.setDoctorName(getStringValue(categoryData, "doctorName"));
                 respiratory.setDateOfExamination(examinationDate);
-                String followUpDateStr2 = getStringValue(categoryData, "followUpDate");
-                if (followUpDateStr2 != null && !followUpDateStr2.isEmpty()) {
-                    respiratory.setFollowUpDate(LocalDate.parse(followUpDateStr2));
-                }
+                respiratory.setRecommendations(getStringValue(categoryData, "recommendations"));
                 Respiratory savedRespiratory = respiratoryRepository.save(respiratory);
+                
+                // Update the health check result with the category result ID
+                healthCheckResult.setCategoryResultId(savedRespiratory.getId());
+                // Set the OneToOne relationship
+                healthCheckResult.setRespiratory(savedRespiratory);
+                healthCheckResultRepository.save(healthCheckResult);
+                
                 System.out.println("DEBUG: Saved respiratory result with ID " + savedRespiratory.getId());
-                return savedRespiratory.getId();
+                break;
                 
             default:
                 System.out.println("WARNING: Unknown category: " + category);
-                return null;
+                break;
         }
     }
     
@@ -1294,9 +1329,8 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
         try {
             switch (category) {
                 case VISION:
-                    Optional<Vision> visionOpt = visionRepository.findById(categoryResultId);
-                    if (visionOpt.isPresent()) {
-                        Vision vision = visionOpt.get();
+                    if (result.getVision() != null) {
+                        Vision vision = result.getVision();
                         categoryData.put("id", vision.getId());
                         categoryData.put("visionLeft", vision.getVisionLeft());
                         categoryData.put("visionRight", vision.getVisionRight());
@@ -1305,8 +1339,6 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
                         categoryData.put("visionDescription", vision.getVisionDescription());
                         categoryData.put("doctorName", vision.getDoctorName());
                         categoryData.put("dateOfExamination", vision.getDateOfExamination());
-                        categoryData.put("eyeMovement", vision.getEyeMovement());
-                        categoryData.put("eyePressure", vision.getEyePressure());
                         categoryData.put("needsGlasses", vision.isNeedsGlasses());
                         categoryData.put("isAbnormal", vision.isAbnormal());
                         categoryData.put("recommendations", vision.getRecommendations());
@@ -1314,28 +1346,22 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
                     break;
                     
                 case HEARING:
-                    Optional<Hearing> hearingOpt = hearingRepository.findById(categoryResultId);
-                    if (hearingOpt.isPresent()) {
-                        Hearing hearing = hearingOpt.get();
+                    if (result.getHearing() != null) {
+                        Hearing hearing = result.getHearing();
                         categoryData.put("id", hearing.getId());
                         categoryData.put("leftEar", hearing.getLeftEar());
                         categoryData.put("rightEar", hearing.getRightEar());
                         categoryData.put("description", hearing.getDescription());
                         categoryData.put("doctorName", hearing.getDoctorName());
                         categoryData.put("dateOfExamination", hearing.getDateOfExamination());
-                        categoryData.put("hearingAcuity", hearing.getHearingAcuity());
-                        categoryData.put("tympanometry", hearing.getTympanometry());
-                        categoryData.put("earWaxPresent", hearing.isEarWaxPresent());
-                        categoryData.put("earInfection", hearing.isEarInfection());
                         categoryData.put("isAbnormal", hearing.isAbnormal());
                         categoryData.put("recommendations", hearing.getRecommendations());
                     }
                     break;
                     
                 case ORAL:
-                    Optional<Oral> oralOpt = oralRepository.findById(categoryResultId);
-                    if (oralOpt.isPresent()) {
-                        Oral oral = oralOpt.get();
+                    if (result.getOral() != null) {
+                        Oral oral = result.getOral();
                         categoryData.put("id", oral.getId());
                         categoryData.put("teethCondition", oral.getTeethCondition());
                         categoryData.put("gumsCondition", oral.getGumsCondition());
@@ -1343,20 +1369,14 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
                         categoryData.put("description", oral.getDescription());
                         categoryData.put("doctorName", oral.getDoctorName());
                         categoryData.put("dateOfExamination", oral.getDateOfExamination());
-                        categoryData.put("oralHygiene", oral.getOralHygiene());
-                        categoryData.put("cavitiesCount", oral.getCavitiesCount());
-                        categoryData.put("plaquePresent", oral.isPlaquePresent());
-                        categoryData.put("gingivitis", oral.isGingivitis());
-                        categoryData.put("mouthUlcers", oral.isMouthUlcers());
                         categoryData.put("isAbnormal", oral.isAbnormal());
                         categoryData.put("recommendations", oral.getRecommendations());
                     }
                     break;
                     
                 case SKIN:
-                    Optional<Skin> skinOpt = skinRepository.findById(categoryResultId);
-                    if (skinOpt.isPresent()) {
-                        Skin skin = skinOpt.get();
+                    if (result.getSkin() != null) {
+                        Skin skin = result.getSkin();
                         categoryData.put("id", skin.getId());
                         categoryData.put("skinColor", skin.getSkinColor());
                         categoryData.put("rashes", skin.isRashes());
@@ -1366,10 +1386,6 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
                         categoryData.put("psoriasis", skin.isPsoriasis());
                         categoryData.put("skinInfection", skin.isSkinInfection());
                         categoryData.put("allergies", skin.isAllergies());
-                        categoryData.put("acne", skin.isAcne());
-                        categoryData.put("scars", skin.isScars());
-                        categoryData.put("birthmarks", skin.isBirthmarks());
-                        categoryData.put("skinTone", skin.getSkinTone());
                         categoryData.put("description", skin.getDescription());
                         categoryData.put("treatment", skin.getTreatment());
                         categoryData.put("doctorName", skin.getDoctorName());
@@ -1381,27 +1397,19 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
                     break;
                     
                 case RESPIRATORY:
-                    Optional<Respiratory> respiratoryOpt = respiratoryRepository.findById(categoryResultId);
-                    if (respiratoryOpt.isPresent()) {
-                        Respiratory respiratory = respiratoryOpt.get();
+                    if (result.getRespiratory() != null) {
+                        Respiratory respiratory = result.getRespiratory();
                         categoryData.put("id", respiratory.getId());
                         categoryData.put("breathingRate", respiratory.getBreathingRate());
                         categoryData.put("breathingSound", respiratory.getBreathingSound());
                         categoryData.put("wheezing", respiratory.isWheezing());
                         categoryData.put("cough", respiratory.isCough());
                         categoryData.put("breathingDifficulty", respiratory.isBreathingDifficulty());
-                        categoryData.put("oxygenSaturation", respiratory.getOxygenSaturation());
-                        categoryData.put("chestExpansion", respiratory.getChestExpansion());
-                        categoryData.put("lungSounds", respiratory.getLungSounds());
-                        categoryData.put("asthmaHistory", respiratory.isAsthmaHistory());
-                        categoryData.put("allergicRhinitis", respiratory.isAllergicRhinitis());
-                        categoryData.put("treatment", respiratory.getTreatment());
                         categoryData.put("description", respiratory.getDescription());
                         categoryData.put("doctorName", respiratory.getDoctorName());
                         categoryData.put("isAbnormal", respiratory.isAbnormal());
                         categoryData.put("recommendations", respiratory.getRecommendations());
                         categoryData.put("dateOfExamination", respiratory.getDateOfExamination());
-                        categoryData.put("followUpDate", respiratory.getFollowUpDate());
                     }
                     break;
                     

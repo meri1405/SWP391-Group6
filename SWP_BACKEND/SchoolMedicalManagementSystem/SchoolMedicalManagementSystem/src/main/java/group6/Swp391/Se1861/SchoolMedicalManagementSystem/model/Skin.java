@@ -36,9 +36,6 @@ public class Skin {
     @Column(name = "dateOfExamination", nullable = false)
     private LocalDate dateOfExamination;
 
-    @Column(name = "doctorName", nullable = true)
-    private String doctorName;
-
     @Column(name = "isAbnormal", nullable = false)
     private boolean isAbnormal;
 
@@ -58,28 +55,19 @@ public class Skin {
     @Column(name = "allergies", nullable = false)
     private boolean allergies;
 
-    @Column(name = "acne", nullable = false)
-    private boolean acne;
-
-    @Column(name = "scars", nullable = false)
-    private boolean scars;
-
-    @Column(name = "birthmarks", nullable = false)
-    private boolean birthmarks;
-
-    @Column(name = "skinTone", nullable = true)
-    private String skinTone;
-
-    @Column(name = "recommendations", nullable = true)
-    private String recommendations;
-
     @Column(name = "treatment", nullable = true)
     private String treatment;
 
     @Column(name = "followUpDate", nullable = true)
     private LocalDate followUpDate;
 
-    @ManyToOne
+    @Column(name = "recommendations", nullable = true)
+    private String recommendations;
+
+    @Column(name = "doctorName", nullable = true)
+    private String doctorName;
+
+    @OneToOne
     @JoinColumn(name = "healthCheckResultId", nullable = true)
     private HealthCheckResult healthCheckResult;
 }
