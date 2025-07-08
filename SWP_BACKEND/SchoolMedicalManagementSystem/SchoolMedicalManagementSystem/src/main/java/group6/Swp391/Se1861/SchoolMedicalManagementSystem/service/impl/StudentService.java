@@ -159,63 +159,63 @@ public class StudentService implements IStudentService {
         if (request.getStudents() == null || request.getStudents().isEmpty()) {
             throw new IllegalArgumentException("Danh sách học sinh không được rỗng");
         }
-        
+
         if (!request.hasAnyParent()) {
             throw new IllegalArgumentException("Phải có ít nhất một phụ huynh (cha hoặc mẹ)");
         }
-        
+
         // Validate all students data
         for (StudentCreationDTO studentDto : request.getStudents()) {
             validateStudentData(studentDto);
         }
-        
+
         // Validate parent data
         validateParentData(request.getFather());
         validateParentData(request.getMother());
-        
+
         // Validate only one parent can have system access
         validateSingleParentAccess(request);
-        
+
         // Get PARENT role
         Role parentRole = roleRepository.findByRoleName("PARENT")
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy role PARENT"));
-        
+
         // Find or create father
         User father = null;
         if (request.getFather() != null) {
             father = findOrCreateParent(request.getFather(), parentRole);
         }
-        
+
         // Find or create mother
         User mother = null;
         if (request.getMother() != null) {
             mother = findOrCreateParent(request.getMother(), parentRole);
         }
-        
+
         // Create students
         List<Student> createdStudents = new ArrayList<>();
         for (StudentCreationDTO studentDto : request.getStudents()) {
             Student student = createStudent(studentDto, father, mother);
             createdStudents.add(student);
         }
-        
+
         // Save all students
         createdStudents = studentRepository.saveAll(createdStudents);
-        
+
         // Prepare response
         StudentWithParentsCreationResponseDTO response = new StudentWithParentsCreationResponseDTO();
         response.setStudents(createdStudents.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList()));
-        
+
         if (father != null) {
             response.setFather(convertUserToParentDTO(father));
         }
-        
+
         if (mother != null) {
             response.setMother(convertUserToParentDTO(mother));
         }
-        
+
         int studentCount = createdStudents.size();
         String parentInfo = "";
         if (request.hasBothParents()) {
@@ -225,12 +225,12 @@ public class StudentService implements IStudentService {
         } else {
             parentInfo = "mẹ";
         }
-        
+
         response.setMessage(String.format("Tạo thành công %d học sinh và %s", studentCount, parentInfo));
-        
+
         return response;
     }
-    
+
     /**
      * Validate that only one parent can have system access (enabled = true)
      */
@@ -239,7 +239,7 @@ public class StudentService implements IStudentService {
         if (request.getFather() != null && request.getMother() != null) {
             Boolean fatherEnabled = request.getFather().getEnabled();
             Boolean motherEnabled = request.getMother().getEnabled();
-            
+
             // If both are true, disable mother
             if (Boolean.TRUE.equals(fatherEnabled) && Boolean.TRUE.equals(motherEnabled)) {
                 request.getMother().setEnabled(false);
@@ -247,7 +247,7 @@ public class StudentService implements IStudentService {
             }
         }
     }
-    
+
     /**
      * Find existing parent by phone or create new one
      * This prevents duplicate parents when multiple students have the same parent
@@ -255,79 +255,79 @@ public class StudentService implements IStudentService {
     private User findOrCreateParent(ParentCreationDTO parentDto, Role parentRole) {
         // Try to find existing parent by phone
         Optional<User> existingParent = userRepository.findByPhone(parentDto.getPhone());
-        
+
         if (existingParent.isPresent()) {
             User parent = existingParent.get();
-            
+
             // Verify it's actually a parent
             if (!parent.getRole().getRoleName().equals("PARENT")) {
                 throw new IllegalArgumentException("Số điện thoại " + parentDto.getPhone() + " đã được sử dụng bởi tài khoản khác");
             }
-            
+
             // Validate that name matches if parent exists
             validateExistingParentName(parent, parentDto);
-            
+
             // Update parent information if needed (optional)
             updateParentIfNeeded(parent, parentDto);
-            
+
             return parent;
         } else {
             // Create new parent
             return createParentUser(parentDto, parentRole);
         }
     }
-    
+
     /**
      * Validate that existing parent has matching name
      */
     private void validateExistingParentName(User existingParent, ParentCreationDTO parentDto) {
         String existingFullName = (existingParent.getLastName() + " " + existingParent.getFirstName()).trim();
         String newFullName = (parentDto.getLastName() + " " + parentDto.getFirstName()).trim();
-        
+
         if (!existingFullName.equalsIgnoreCase(newFullName)) {
             throw new IllegalArgumentException("Số điện thoại " + parentDto.getPhone() + 
                 " đã được sử dụng bởi phụ huynh khác với tên: " + existingFullName + 
                 ". Vui lòng kiểm tra lại thông tin họ tên phụ huynh.");
         }
     }
-    
+
     /**
      * Update parent information if needed when found existing parent
      */
     private void updateParentIfNeeded(User parent, ParentCreationDTO parentDto) {
         boolean needsUpdate = false;
-        
+
         // Update basic info if different and not null
         if (parentDto.getFirstName() != null && !parentDto.getFirstName().equals(parent.getFirstName())) {
             parent.setFirstName(parentDto.getFirstName());
             needsUpdate = true;
         }
-        
+
         if (parentDto.getLastName() != null && !parentDto.getLastName().equals(parent.getLastName())) {
             parent.setLastName(parentDto.getLastName());
             needsUpdate = true;
         }
-        
+
         if (parentDto.getGender() != null && !parentDto.getGender().equals(parent.getGender())) {
             parent.setGender(parentDto.getGender());
             needsUpdate = true;
         }
-        
+
         if (parentDto.getJobTitle() != null && !parentDto.getJobTitle().equals(parent.getJobTitle())) {
             parent.setJobTitle(parentDto.getJobTitle());
             needsUpdate = true;
         }
-        
+
         if (parentDto.getAddress() != null && !parentDto.getAddress().equals(parent.getAddress())) {
             parent.setAddress(parentDto.getAddress());
             needsUpdate = true;
         }
-        
+
         if (parentDto.getDob() != null && !parentDto.getDob().equals(parent.getDob())) {
             parent.setDob(parentDto.getDob());
             needsUpdate = true;
         }
-        
+
         if (needsUpdate) {
             userRepository.save(parent);
         }
@@ -357,6 +357,7 @@ public class StudentService implements IStudentService {
         parent.setUsername(parentDto.getPhone());
         parent.setPassword(null);
         parent.setEmail(null);
+        parent.setFirstLogin(false); // Parents don't need to change password on first login
 
         return userRepository.save(parent);
     }
@@ -431,7 +432,7 @@ public class StudentService implements IStudentService {
         }
     }
 
-    
+
     /**
      * Helper method to disable parent accounts if they only have one child
      * @param student the student being disabled
@@ -474,7 +475,7 @@ public class StudentService implements IStudentService {
         dto.setEnabled(user.getEnabled());
         return dto;
     }
-    
+
     /**
      * Validate student data for both form and Excel input
      */
@@ -483,39 +484,39 @@ public class StudentService implements IStudentService {
         if (studentDto.getFirstName() == null || studentDto.getFirstName().trim().isEmpty()) {
             throw new IllegalArgumentException("Tên học sinh là bắt buộc");
         }
-        
+
         if (studentDto.getLastName() == null || studentDto.getLastName().trim().isEmpty()) {
             throw new IllegalArgumentException("Họ học sinh là bắt buộc");
         }
-        
+
         if (studentDto.getDob() == null) {
             throw new IllegalArgumentException("Ngày sinh học sinh là bắt buộc");
         }
-        
+
         if (studentDto.getGender() == null || studentDto.getGender().trim().isEmpty()) {
             throw new IllegalArgumentException("Giới tính học sinh là bắt buộc");
         }
-        
+
         if (studentDto.getClassName() == null || studentDto.getClassName().trim().isEmpty()) {
             throw new IllegalArgumentException("Lớp là bắt buộc");
         }
-        
+
         if (studentDto.getBirthPlace() == null || studentDto.getBirthPlace().trim().isEmpty()) {
             throw new IllegalArgumentException("Nơi sinh là bắt buộc");
         }
-        
+
         if (studentDto.getAddress() == null || studentDto.getAddress().trim().isEmpty()) {
             throw new IllegalArgumentException("Địa chỉ học sinh là bắt buộc");
         }
-        
+
         // Always set citizenship to "Việt Nam" regardless of input
         studentDto.setCitizenship("Việt Nam");
-        
+
         // Validate gender
         if (!studentDto.getGender().equals("M") && !studentDto.getGender().equals("F")) {
             throw new IllegalArgumentException("Giới tính học sinh phải là 'M' hoặc 'F'");
         }
-        
+
         // Validate age (5-12 years old)
         validateStudentAge(studentDto.getDob());
     }
@@ -527,10 +528,10 @@ public class StudentService implements IStudentService {
         if (dateOfBirth == null) {
             throw new IllegalArgumentException("Ngày sinh học sinh không được để trống");
         }
-        
+
         java.time.LocalDate currentDate = java.time.LocalDate.now();
         int age = currentDate.getYear() - dateOfBirth.getYear();
-        
+
         if (age > 12) {
             throw new IllegalArgumentException("Học sinh phải dưới hoặc bằng 12 tuổi. Tuổi hiện tại: " + age);
         }
@@ -539,7 +540,7 @@ public class StudentService implements IStudentService {
             throw new IllegalArgumentException("Học sinh phải ít nhất 2 tuổi. Tuổi hiện tại: " + age);
         }
     }
-    
+
     /**
      * Validate parent data
      */
@@ -547,33 +548,33 @@ public class StudentService implements IStudentService {
         if (parentDto == null) {
             return; // Parent is optional
         }
-        
+
         // If parent data is provided, phone is required
         if (parentDto.getPhone() == null || parentDto.getPhone().trim().isEmpty()) {
             throw new IllegalArgumentException("Số điện thoại phụ huynh là bắt buộc khi có thông tin phụ huynh");
         }
-        
+
         // Name is required when phone is provided
         if (parentDto.getFirstName() == null || parentDto.getFirstName().trim().isEmpty()) {
             throw new IllegalArgumentException("Tên phụ huynh là bắt buộc khi có số điện thoại phụ huynh");
         }
-        
+
         if (parentDto.getLastName() == null || parentDto.getLastName().trim().isEmpty()) {
             throw new IllegalArgumentException("Họ phụ huynh là bắt buộc khi có số điện thoại phụ huynh");
         }
-        
+
         // Validate phone number format (10 digits with valid Vietnamese prefix)
         String phone = parentDto.getPhone().trim();
         String phoneError = PhoneValidator.validatePhone(phone);
         if (phoneError != null) {
             throw new IllegalArgumentException(phoneError);
         }
-        
+
         // Validate parent age if DOB is provided - must be at least 18 years old
         if (parentDto.getDob() != null) {
             validateParentAge(parentDto.getDob());
         }
-        
+
         // Validate gender if provided
         if (parentDto.getGender() != null && !parentDto.getGender().trim().isEmpty()) {
             if (!parentDto.getGender().equals("M") && !parentDto.getGender().equals("F")) {
@@ -581,7 +582,7 @@ public class StudentService implements IStudentService {
             }
         }
     }
-    
+
     /**
      * Validate parent age - must be at least 18 years old
      * Age calculation is based on year only, not specific birth date
@@ -590,14 +591,14 @@ public class StudentService implements IStudentService {
         if (dateOfBirth == null) {
             return; // DOB is optional for parents
         }
-        
+
         java.time.LocalDate currentDate = java.time.LocalDate.now();
         int age = currentDate.getYear() - dateOfBirth.getYear();
-        
+
         if (age < 18) {
             throw new IllegalArgumentException("Phụ huynh phải ít nhất 18 tuổi. Tuổi hiện tại: " + age);
         }
-        
+
         if (age > 100) {
             throw new IllegalArgumentException("Tuổi phụ huynh không hợp lệ. Tuổi hiện tại: " + age);
         }
@@ -607,19 +608,19 @@ public class StudentService implements IStudentService {
     public List<StudentDTO> getStudentsByAgeRange(int minAge, int maxAge) {
         System.out.println("=== getStudentsByAgeRange DEBUG ===");
         System.out.println("Input minAge: " + minAge + ", maxAge: " + maxAge);
-        
+
         int currentYear = java.time.LocalDate.now().getYear();
         int minBirthYear = currentYear - maxAge;  // Older students
         int maxBirthYear = currentYear - minAge;  // Younger students
-        
+
         System.out.println("Current year: " + currentYear);
         System.out.println("Min birth year: " + minBirthYear + " (for age " + maxAge + ")");
         System.out.println("Max birth year: " + maxBirthYear + " (for age " + minAge + ")");
-        
+
         // Get all active students
         List<Student> allStudents = studentRepository.findByIsDisabledFalse();
         System.out.println("Total active students: " + allStudents.size());
-        
+
         // Filter by birth year
         List<Student> filteredStudents = allStudents.stream()
                 .filter(student -> {
@@ -631,14 +632,14 @@ public class StudentService implements IStudentService {
                     return isEligible;
                 })
                 .collect(Collectors.toList());
-        
+
         System.out.println("Filtered students count: " + filteredStudents.size());
-        
+
         return filteredStudents.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
-    
+
     @Override
     public List<StudentDTO> getStudentsByClassName(String className) {
         List<Student> students = studentRepository.findByClassNameAndIsDisabledFalse(className);
@@ -646,24 +647,24 @@ public class StudentService implements IStudentService {
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
-    
+
     @Override
     public List<StudentDTO> getStudentsByAgeRangeAndClass(int minAge, int maxAge, String className) {
         System.out.println("=== getStudentsByAgeRangeAndClass DEBUG ===");
         System.out.println("Input minAge: " + minAge + ", maxAge: " + maxAge + ", className: " + className);
-        
+
         int currentYear = java.time.LocalDate.now().getYear();
         int minBirthYear = currentYear - maxAge;  // Older students
         int maxBirthYear = currentYear - minAge;  // Younger students
-        
+
         System.out.println("Current year: " + currentYear);
         System.out.println("Min birth year: " + minBirthYear + " (for age " + maxAge + ")");
         System.out.println("Max birth year: " + maxBirthYear + " (for age " + minAge + ")");
-        
+
         // Get students by class name first
         List<Student> studentsInClass = studentRepository.findByClassNameAndIsDisabledFalse(className);
         System.out.println("Students in class " + className + ": " + studentsInClass.size());
-        
+
         // Filter by birth year
         List<Student> filteredStudents = studentsInClass.stream()
                 .filter(student -> {
@@ -675,9 +676,9 @@ public class StudentService implements IStudentService {
                     return isEligible;
                 })
                 .collect(Collectors.toList());
-        
+
         System.out.println("Filtered students count: " + filteredStudents.size());
-        
+
         return filteredStudents.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -688,7 +689,7 @@ public class StudentService implements IStudentService {
         System.out.println("=== DEBUG STUDENT SERVICE ===");
         System.out.println("Input classNames: " + classNames);
         System.out.println("Input minAge: " + minAge + ", maxAge: " + maxAge);
-        
+
         // Handle null or empty classNames
         if (classNames == null || classNames.isEmpty()) {
             System.out.println("Class names is null or empty, returning empty list");
@@ -700,9 +701,9 @@ public class StudentService implements IStudentService {
                 .anyMatch(className -> "toàn trường".equalsIgnoreCase(className) || 
                                      "toan truong".equalsIgnoreCase(className) ||
                                      "all".equalsIgnoreCase(className));
-        
+
         boolean hasAgeRange = minAge != null && maxAge != null;
-        
+
         System.out.println("isAllSchool: " + isAllSchool + ", hasAgeRange: " + hasAgeRange);
 
         // Logic 1: Toàn trường + có độ tuổi → lọc theo độ tuổi
@@ -710,28 +711,28 @@ public class StudentService implements IStudentService {
             System.out.println("Using Logic 1: All school + age range");
             return getStudentsByAgeRange(minAge, maxAge);
         }
-        
+
         // Logic 2: Toàn trường + không có độ tuổi → lấy tất cả
         if (isAllSchool && !hasAgeRange) {
             System.out.println("Using Logic 2: All school + no age range");
             return getAllStudents();
         }
-        
+
         // Logic 3: Lớp cụ thể + có độ tuổi → lọc theo các lớp và độ tuổi
         if (!isAllSchool && hasAgeRange) {
             System.out.println("Using Logic 3: Specific classes + age range");
             int currentYear = java.time.LocalDate.now().getYear();
             int minBirthYear = currentYear - maxAge;
             int maxBirthYear = currentYear - minAge;
-            
+
             System.out.println("Current year: " + currentYear);
             System.out.println("Min birth year: " + minBirthYear + " (for age " + maxAge + ")");
             System.out.println("Max birth year: " + maxBirthYear + " (for age " + minAge + ")");
-            
+
             // Get all students in the specified classes first
             List<Student> allStudentsInClasses = studentRepository.findByClassNameInAndIsDisabledFalse(classNames);
             System.out.println("Found " + allStudentsInClasses.size() + " students in classes: " + classNames);
-            
+
             // Filter by birth year
             List<Student> students = allStudentsInClasses.stream()
                     .filter(student -> {
@@ -744,14 +745,14 @@ public class StudentService implements IStudentService {
                         return eligible;
                     })
                     .collect(Collectors.toList());
-            
+
             System.out.println("Final filtered students: " + students.size());
-            
+
             return students.stream()
                     .map(this::convertToDTO)
                     .collect(Collectors.toList());
         }
-        
+
         // Logic 4: Lớp cụ thể + không có độ tuổi → lọc theo các lớp
         if (!isAllSchool && !hasAgeRange) {
             System.out.println("Using Logic 4: Specific classes + no age range");
@@ -772,11 +773,11 @@ public class StudentService implements IStudentService {
         System.out.println("No logic matched, returning empty list");
         return new ArrayList<>();
     }
-    
+
     @Override
     public List<StudentDTO> filterStudents(StudentFilterDTO filter) {
         List<Student> students = studentRepository.findAllWithParents();
-        
+
         // Apply filters
         if (filter.getSearchName() != null && !filter.getSearchName().trim().isEmpty()) {
             String searchName = filter.getSearchName().toLowerCase().trim();
@@ -787,27 +788,27 @@ public class StudentService implements IStudentService {
                     })
                     .collect(Collectors.toList());
         }
-        
+
         if (filter.getClassName() != null && !filter.getClassName().trim().isEmpty()) {
             students = students.stream()
                     .filter(student -> student.getClassName().equals(filter.getClassName()))
                     .collect(Collectors.toList());
         }
-        
+
         if (filter.getBirthPlace() != null && !filter.getBirthPlace().trim().isEmpty()) {
             students = students.stream()
                     .filter(student -> student.getBirthPlace() != null && 
                                      student.getBirthPlace().equals(filter.getBirthPlace()))
                     .collect(Collectors.toList());
         }
-        
+
         if (filter.getBirthYear() != null) {
             students = students.stream()
                     .filter(student -> student.getDob() != null && 
                                      student.getDob().getYear() == filter.getBirthYear())
                     .collect(Collectors.toList());
         }
-        
+
         // Convert to DTOs
         return students.stream()
                 .map(this::convertToDTO)
@@ -817,7 +818,7 @@ public class StudentService implements IStudentService {
     @Override
     public List<Map<String, Object>> getStudentsWithHealthProfileStatus(User parent) {
         List<Student> students = studentRepository.findByParent(parent);
-        
+
         return students.stream()
                 .map(StudentMapper::toHealthProfileStatusMap)
                 .collect(Collectors.toList());
@@ -826,7 +827,7 @@ public class StudentService implements IStudentService {
     @Override
     public List<Map<String, Object>> getStudentsMissingHealthProfiles(User parent) {
         List<Student> students = studentRepository.findByParent(parent);
-        
+
         return students.stream()
                 .filter(student -> student.getHealthProfile() == null)
                 .map(StudentMapper::toBasicInfoMap)

@@ -66,13 +66,13 @@ public class AuthService implements IAuthService {
                 new UsernamePasswordAuthenticationToken(username, password));
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
-        
+
         User user = (User) authentication.getPrincipal();
-        
+
         // Check if this is a first-time login for staff roles
         String roleName = user.getRole().getRoleName();
         boolean isStaffRole = "ADMIN".equals(roleName) || "MANAGER".equals(roleName) || "SCHOOLNURSE".equals(roleName);
-        
+
         if (isStaffRole && user.getFirstLogin() != null && user.getFirstLogin()) {
             // Return special response indicating first-time login
             return new AuthResponse(
@@ -87,7 +87,7 @@ public class AuthService implements IAuthService {
                     true  // needPasswordChange flag
             );
         }
-        
+
         // Normal login flow - generate JWT token
         String jwt = jwtUtil.generateToken(authentication);
 
@@ -112,7 +112,7 @@ public class AuthService implements IAuthService {
     @Override
     public AuthResponse authenticateWithOtp(String phoneNumber, String otp) {
         boolean isValid;
-        
+
         // Special handling for Firebase verification
         if ("FIREBASE_VERIFIED".equals(otp)) {
             isValid = true; // Already verified by Firebase ID token
@@ -140,7 +140,7 @@ public class AuthService implements IAuthService {
                 "", // Password not needed for JWT generation
                 user.getAuthorities()
         );
-        
+
         Authentication authentication = new UsernamePasswordAuthenticationToken(
                 user, null, user.getAuthorities());
         SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -199,12 +199,12 @@ public class AuthService implements IAuthService {
         Optional<User> existingUserByEmail = userRepository.findByEmail(email);
         if (existingUserByEmail.isPresent()) {
             User existingUser = existingUserByEmail.get();
-            
+
             // Check if user is enabled
             if (!existingUser.isEnabled()) {
                 throw new BadCredentialsException("Account is disabled");
             }
-            
+
             // Set attributes in memory (these won't be persisted to DB)
             existingUser.setAttributes(attributes);
             return existingUser;
@@ -241,6 +241,8 @@ public class AuthService implements IAuthService {
             user.setUsername(user.getPhone()); // Use phone as username for PARENT
             user.setPassword(null);
             user.setEmail(null);
+            // Parents don't need to change password on first login
+            user.setFirstLogin(false);
         } else {
             // For non-PARENT roles, check if email is already in use
             if (user.getEmail() != null && !user.getEmail().isEmpty()) {
@@ -254,6 +256,11 @@ public class AuthService implements IAuthService {
             if (password != null && !password.isEmpty() && !password.startsWith("$2a$")) {
                 // Password is not yet encoded (doesn't start with BCrypt prefix)
                 user.setPassword(encodePassword(password));
+            }
+
+            // For new users with non-PARENT roles, set firstLogin to true if not explicitly set
+            if (user.getId() == null && user.getFirstLogin() == null) {
+                user.setFirstLogin(true); // Force password change on first login for staff roles
             }
         }
 
@@ -302,14 +309,14 @@ public class AuthService implements IAuthService {
         // Auto-generate credentials for all staff roles
         String username = generateUsername(roleName, user.getFirstName(), user.getLastName());
         String tempPassword = generateTemporaryPassword();
-        
+
         user.setUsername(username);
         user.setPassword(encodePassword(tempPassword));
         user.setFirstLogin(true); // Force password change on first login
 
         // Preprocess and save the user
         User savedUser = saveUser(user);
-        
+
         // Send login credentials via email
         if (user.getEmail() != null) {
             try {
@@ -328,7 +335,7 @@ public class AuthService implements IAuthService {
                 System.err.println("Error sending login credentials email: " + e.getMessage());
             }
         }
-        
+
         return savedUser;
     }
 
@@ -351,7 +358,7 @@ public class AuthService implements IAuthService {
         if (user.getPhone() == null || user.getPhone().trim().isEmpty()) {
             throw new IllegalArgumentException("Số điện thoại là bắt buộc cho vai trò " + roleName);
         }
-        
+
         // Validate phone format
         String phoneError = PhoneValidator.validatePhone(user.getPhone());
         if (phoneError != null) {
@@ -374,11 +381,11 @@ public class AuthService implements IAuthService {
         LocalDate today = LocalDate.now();
         LocalDate birthDate = user.getDob();
         int age = Period.between(birthDate, today).getYears();
-        
+
         if (age < 25) {
             throw new IllegalArgumentException("Tuổi tối thiểu cho vai trò " + roleName + " là 25 tuổi");
         }
-        
+
         if (age > 65) {
             throw new IllegalArgumentException("Tuổi tối đa cho vai trò " + roleName + " là 65 tuổi");
         }
@@ -455,7 +462,7 @@ public class AuthService implements IAuthService {
             jwtUtil.invalidateToken(token);
         }
     }
-    
+
     /**
      * Generate unique username based on role and user info
      */
@@ -466,25 +473,25 @@ public class AuthService implements IAuthService {
             case "SCHOOLNURSE" -> "nurse";
             default -> "user";
         };
-        
+
         // Create base username from name
         String baseName = (firstName.toLowerCase().replaceAll("[^a-z]", "") + 
                           lastName.toLowerCase().replaceAll("[^a-z]", "")).substring(0, 
                           Math.min(8, (firstName + lastName).replaceAll("[^a-zA-Z]", "").length()));
-        
+
         String baseUsername = rolePrefix + "_" + baseName;
         String username = baseUsername;
         int counter = 1;
-        
+
         // Ensure username is unique
         while (userRepository.findByUsername(username).isPresent()) {
             username = baseUsername + counter;
             counter++;
         }
-        
+
         return username;
     }
-    
+
     /**
      * Generate temporary password
      */
@@ -493,18 +500,18 @@ public class AuthService implements IAuthService {
         String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@$!%*?&";
         StringBuilder password = new StringBuilder();
         java.security.SecureRandom random = new java.security.SecureRandom();
-        
+
         // Ensure at least one character from each category
         password.append((char) (random.nextInt(26) + 'A')); // uppercase
         password.append((char) (random.nextInt(26) + 'a')); // lowercase
         password.append((char) (random.nextInt(10) + '0')); // digit
         password.append("@$!%*?&".charAt(random.nextInt(7))); // special char
-        
+
         // Fill the rest randomly
         for (int i = 4; i < 10; i++) {
             password.append(chars.charAt(random.nextInt(chars.length())));
         }
-        
+
         // Shuffle the password
         char[] passwordArray = password.toString().toCharArray();
         for (int i = passwordArray.length - 1; i > 0; i--) {
@@ -513,7 +520,7 @@ public class AuthService implements IAuthService {
             passwordArray[i] = passwordArray[j];
             passwordArray[j] = temp;
         }
-        
+
         return new String(passwordArray);
     }
 }

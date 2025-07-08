@@ -36,7 +36,7 @@ public class SchoolMedicalManagementSystemApplication {
 
 		@Autowired
 		private JdbcTemplate jdbcTemplate;
- 
+
 		/**
 		 * Hàm chạy khi ứng dụng khởi động
 		 * Khởi tạo các vai trò và tài khoản admin mặc định
@@ -106,10 +106,10 @@ public class SchoolMedicalManagementSystemApplication {
 						System.err.println("Lỗi số điện thoại admin: " + errorMsg);
 						phone = "0981234567"; // Thử với đầu số Viettel khác
 					}
-					
+
 					jdbcTemplate.update(
-						"INSERT INTO users (username, password, first_name, last_name, dob, gender, phone, email, address, job_title, created_date, last_modified_date, enabled, roleid) " +
-						"VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), ?, ?)",
+						"INSERT INTO users (username, password, first_name, last_name, dob, gender, phone, email, address, job_title, created_date, last_modified_date, enabled, roleid, first_login) " +
+						"VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), ?, ?, ?)",
 						"admin",
 						"$2a$10$7AioByOIfY4xxdtvy2x4u.qoB4IIV0zYuXBVEoZYeOAYVV67Yqkuy", // Mã hash BCrypt cho admin123
 						"System",
@@ -121,7 +121,8 @@ public class SchoolMedicalManagementSystemApplication {
 							"123 Main St, City, Country",
 							"System Admin",
 							true, // Đã kích hoạt
-							1 // Giả sử roleid của ADMIN là 1
+							1, // Giả sử roleid của ADMIN là 1
+							false // Không yêu cầu đổi mật khẩu lần đầu
 					);
 					System.out.println("Tạo tài khoản admin thành công");
 				} else {
@@ -134,5 +135,3 @@ public class SchoolMedicalManagementSystemApplication {
 		}
 	}
 }
-
-
