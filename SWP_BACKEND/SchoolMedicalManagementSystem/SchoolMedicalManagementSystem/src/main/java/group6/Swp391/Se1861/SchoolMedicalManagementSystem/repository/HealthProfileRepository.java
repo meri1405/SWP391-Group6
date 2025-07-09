@@ -74,4 +74,8 @@ public interface HealthProfileRepository extends JpaRepository<HealthProfile, Lo
     // Find health profile by student ID and status
     @Query("SELECT hp FROM HealthProfile hp WHERE hp.student.studentID = :studentId AND hp.status = :status")
     Optional<HealthProfile> findByStudentStudentIDAndStatus(@Param("studentId") Long studentId, @Param("status") ProfileStatus status);
+
+    // Find health profiles with events
+    @Query("SELECT DISTINCT hp FROM HealthProfile hp LEFT JOIN FETCH hp.events WHERE hp.student.studentID = :studentId")
+    Optional<HealthProfile> findByStudentStudentIDWithEvents(@Param("studentId") Long studentId);
 }

@@ -1,6 +1,7 @@
 package group6.Swp391.Se1861.SchoolMedicalManagementSystem.controller;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.HealthProfileDTO;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.StudentDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.ProfileStatus;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.ISchoolNurseHealthProfileService;
@@ -130,6 +131,24 @@ public class SchoolNurseHealthProfileController {
     }
 
     /**
+     * Get students without health profiles
+     * @param user authenticated school nurse user
+     * @return list of students without health profiles
+     */
+    @GetMapping("/students-without-profiles")
+    public ResponseEntity<List<StudentDTO>> getStudentsWithoutHealthProfiles(
+            @AuthenticationPrincipal User user) {
+
+        // Verify user has SCHOOLNURSE role
+        if (user == null || !user.getRole().getRoleName().equals("SCHOOLNURSE")) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only school nurses can access this information");
+        }
+
+        List<StudentDTO> students = schoolNurseHealthProfileService.getStudentsWithoutHealthProfiles();
+        return ResponseEntity.ok(students);
+    }
+
+    /**
      * Test endpoint for authentication 
      * @param user authenticated user
      * @return success message
@@ -151,4 +170,4 @@ public class SchoolNurseHealthProfileController {
             "message", "Authentication successful"
         ));
     }
-} 
+}

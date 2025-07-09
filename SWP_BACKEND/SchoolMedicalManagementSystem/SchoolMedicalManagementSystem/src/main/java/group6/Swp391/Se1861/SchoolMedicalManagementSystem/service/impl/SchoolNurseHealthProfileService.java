@@ -6,6 +6,7 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.ProfileSta
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.*;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.INotificationService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.ISchoolNurseHealthProfileService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IHealthProfileEventService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -48,6 +49,9 @@ public class SchoolNurseHealthProfileService implements ISchoolNurseHealthProfil
 
     @Autowired
     private HearingRepository hearingRepository;
+
+    @Autowired
+    private IHealthProfileEventService healthProfileEventService;
 
     @Autowired
     private VaccinationHistoryRepository vaccinationHistoryRepository;
@@ -127,14 +131,18 @@ public class SchoolNurseHealthProfileService implements ISchoolNurseHealthProfil
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, 
                 "Only health profiles in PENDING status can be approved. Current status: " + healthProfile.getStatus());
         }        // Update profile status and nurse information
+        String oldStatus = healthProfile.getStatus().toString();
         healthProfile.setStatus(ProfileStatus.APPROVED);
-        healthProfile.setNurse(nurse);
         // Set nurse note separately, don't mix with parent note
+        String oldNurseNote = healthProfile.getNurseNote();
         healthProfile.setNurseNote(nurseNote != null && !nurseNote.trim().isEmpty() ? nurseNote.trim() : null);
         healthProfile.setUpdatedAt(LocalDate.now());
 
         // Save approved profile
         HealthProfile approvedProfile = healthProfileRepository.save(healthProfile);
+
+        // Log the approval event using the new method
+        healthProfileEventService.logApproveEvent(approvedProfile, nurse, nurseNote);
 
         // Send notification to parent using NotificationService
         if (approvedProfile.getParent() != null) {
@@ -190,15 +198,19 @@ public class SchoolNurseHealthProfileService implements ISchoolNurseHealthProfil
         }
 
         // Update profile status and nurse information
+        String oldStatus = healthProfile.getStatus().toString();
         healthProfile.setStatus(ProfileStatus.REJECTED);
-        healthProfile.setNurse(nurse);
 
         // Set nurse note separately for rejection reason
+        String oldNurseNote = healthProfile.getNurseNote();
         healthProfile.setNurseNote(nurseNote != null && !nurseNote.trim().isEmpty() ? nurseNote.trim() : null);
         healthProfile.setUpdatedAt(LocalDate.now());
 
         // Save rejected profile
         HealthProfile rejectedProfile = healthProfileRepository.save(healthProfile);
+
+        // Log the rejection event using the new method
+        healthProfileEventService.logRejectEvent(rejectedProfile, nurse, nurseNote);
 
         // Send notification to parent using NotificationService
         if (rejectedProfile.getParent() != null) {
@@ -234,6 +246,7 @@ public class SchoolNurseHealthProfileService implements ISchoolNurseHealthProfil
         dto.setBloodType(healthProfile.getBloodType());
         dto.setStatus(healthProfile.getStatus());
         dto.setNote(healthProfile.getNote());
+        dto.setNurseNote(healthProfile.getNurseNote());
 
         // Initialize additionalFields if needed
         Map<String, Object> additionalFields = new HashMap<>();
@@ -267,13 +280,6 @@ public class SchoolNurseHealthProfileService implements ISchoolNurseHealthProfil
             additionalFields.put("parent", parentDTO);
         }
 
-        if (healthProfile.getNurse() != null) {
-            dto.setNurseId(healthProfile.getNurse().getId());
-
-            // Add nurse full name to additional fields
-            additionalFields.put("schoolNurseFullName", 
-                healthProfile.getNurse().getLastName() + " " + healthProfile.getNurse().getFirstName());
-        }
 
         // Set additional fields if any were added
         if (!additionalFields.isEmpty()) {
@@ -450,5 +456,32 @@ public class SchoolNurseHealthProfileService implements ISchoolNurseHealthProfil
                 .orElse(null);
         
         return healthProfile != null ? convertToBasicDTO(healthProfile) : null;
+    }
+    
+    /**
+     * Get students without health profiles
+     */
+    @Override
+    public List<StudentDTO> getStudentsWithoutHealthProfiles() {
+        List<Student> students = studentRepository.findStudentsWithoutHealthProfiles();
+        return students.stream()
+                .map(this::convertStudentToDTO)
+                .collect(Collectors.toList());
+    }
+    
+    /**
+     * Convert Student entity to StudentDTO
+     */
+    private StudentDTO convertStudentToDTO(Student student) {
+        StudentDTO dto = new StudentDTO();
+        dto.setStudentID(student.getStudentID());
+        dto.setFirstName(student.getFirstName());
+        dto.setLastName(student.getLastName());
+        dto.setDob(student.getDob());
+        dto.setGender(student.getGender());
+        dto.setAddress(student.getAddress());
+        dto.setClassName(student.getClassName());
+        
+        return dto;
     }
 }

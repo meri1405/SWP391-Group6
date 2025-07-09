@@ -142,11 +142,6 @@ public class User implements UserDetails, OAuth2User {
     @JsonIgnore  // Ngăn vòng lặp khi serialize JSON
     private List<VaccinationRecord> createdVaccinationRecords;
 
-    /** Danh sách hồ sơ sức khỏe do y tá quản lý - dành cho SCHOOLNURSE */
-    @OneToMany(mappedBy = "nurse", cascade = CascadeType.ALL)
-    @JsonIgnore  // Ngăn vòng lặp khi serialize JSON
-    private List<HealthProfile> healthProfilesNurse;
-
     /** Danh sách hồ sơ sức khỏe do phụ huynh quản lý - dành cho PARENT */
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL)
     @JsonIgnore  // Ngăn vòng lặp khi serialize JSON

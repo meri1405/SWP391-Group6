@@ -10,7 +10,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -20,15 +19,6 @@ public class ParentStudentController {
 
     @Autowired
     private IStudentService studentService;
-
-    /**
-     * Get all students associated with the authenticated parent
-     */
-    @GetMapping
-    public ResponseEntity<List<StudentDTO>> getMyStudents(@AuthenticationPrincipal User parent) {
-        List<StudentDTO> students = studentService.getStudentsByParent(parent);
-        return ResponseEntity.ok(students);
-    }
 
     /**
      * Get specific student details (only if parent has access)
@@ -43,23 +33,5 @@ public class ParentStudentController {
 
         StudentDTO student = studentService.getStudentById(studentId);
         return ResponseUtils.success(student);
-    }
-
-    /**
-     * Get all students with their health profile status
-     */
-    @GetMapping("/health-profile-status")
-    public ResponseEntity<Map<String, Object>> getStudentsWithHealthProfileStatus(@AuthenticationPrincipal User parent) {
-        List<Map<String, Object>> studentList = studentService.getStudentsWithHealthProfileStatus(parent);
-        return ResponseUtils.success(studentList);
-    }
-
-    /**
-     * Get students missing health profiles
-     */
-    @GetMapping("/missing-health-profiles")
-    public ResponseEntity<Map<String, Object>> getStudentsMissingHealthProfiles(@AuthenticationPrincipal User parent) {
-        List<Map<String, Object>> studentsMissingProfile = studentService.getStudentsMissingHealthProfiles(parent);
-        return ResponseUtils.success(studentsMissingProfile);
     }
 }

@@ -30,9 +30,10 @@ public class HealthProfileDTO {
     @Positive(message = "Student ID must be a positive number")
     private Long studentId;
     
-    private Long nurseId;
-
     private Long parentId;
+    
+    // Event tracking
+    private List<HealthProfileEventDTO> events;
 
     // Lists to hold the related health information
     private List<AllergiesDTO> allergies;
