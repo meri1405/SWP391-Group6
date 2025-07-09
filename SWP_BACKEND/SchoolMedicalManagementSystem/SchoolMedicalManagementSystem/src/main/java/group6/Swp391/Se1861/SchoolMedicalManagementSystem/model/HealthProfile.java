@@ -54,12 +54,11 @@ public class HealthProfile {
     private Student student;
 
     @ManyToOne
-    @JoinColumn(name = "nurseId")
-    private User nurse;
-
-    @ManyToOne
     @JoinColumn(name = "parentId")
     private User parent;
+
+    @OneToMany(mappedBy = "healthProfile", cascade = CascadeType.ALL)
+    private Set<HealthProfileEvent> events = new HashSet<>();
 
     @OneToMany(mappedBy = "healthProfile", cascade = CascadeType.ALL)
     private Set<Allergies> allergies;

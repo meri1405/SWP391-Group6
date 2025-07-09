@@ -21,6 +21,7 @@ import {
   Empty,
   Badge,
   Collapse,
+  Select,
 } from "antd";
 import {
   EyeOutlined,
@@ -32,8 +33,12 @@ import {
   CalendarOutlined,
   AudioOutlined,
   FileSearchOutlined,
+  HistoryOutlined,
+  UserOutlined,
+  FilterOutlined,
 } from "@ant-design/icons";
 import { nurseApi } from "../../api/nurseApi";
+import HealthProfileEventsModal from "../common/HealthProfileEventsModal";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 
@@ -43,6 +48,7 @@ dayjs.extend(relativeTime);
 const { TextArea } = Input;
 const { Title, Text } = Typography;
 const { Panel } = Collapse;
+const { Option } = Select;
 
 const NurseHealthProfiles = () => {
   const [healthProfiles, setHealthProfiles] = useState([]);
@@ -57,6 +63,16 @@ const NurseHealthProfiles = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [activeTabKey, setActiveTabKey] = useState("pending");
+  
+  // New state for events modal and students without profiles
+  const [eventsModalVisible, setEventsModalVisible] = useState(false);
+  const [selectedProfileForEvents, setSelectedProfileForEvents] = useState(null);
+  const [studentsWithoutProfiles, setStudentsWithoutProfiles] = useState([]);
+  const [studentsLoading, setStudentsLoading] = useState(false);
+  
+  // Additional filters for approved profiles
+  const [classNameFilter, setClassNameFilter] = useState("");
+  const [searchText, setSearchText] = useState("");
   // Load health profiles
   const loadHealthProfiles = useCallback(async () => {
     try {
@@ -142,6 +158,32 @@ const NurseHealthProfiles = () => {
     loadHealthProfiles();
   }, [statusFilter, loadHealthProfiles]);
 
+  // Load students without health profiles
+  const loadStudentsWithoutProfiles = useCallback(async () => {
+    try {
+      setStudentsLoading(true);
+      console.log("Loading students without health profiles");
+
+      const response = await nurseApi.getStudentsWithoutHealthProfiles();
+      console.log("Students without profiles response:", response);
+
+      if (response.success) {
+        setStudentsWithoutProfiles(response.data || []);
+        message.success("Đã tải danh sách học sinh chưa có hồ sơ sức khỏe");
+      } else {
+        console.error("Failed to load students without profiles:", response.message);
+        message.error(response.message || "Không thể tải danh sách học sinh chưa có hồ sơ sức khỏe.");
+        setStudentsWithoutProfiles([]);
+      }
+    } catch (error) {
+      console.error("Unexpected error loading students without profiles:", error);
+      message.error("Không thể tải danh sách học sinh chưa có hồ sơ sức khỏe. Vui lòng thử lại sau.");
+      setStudentsWithoutProfiles([]);
+    } finally {
+      setStudentsLoading(false);
+    }
+  }, []);
+
   const handleTabChange = (key) => {
     setActiveTabKey(key);
 
@@ -155,9 +197,19 @@ const NurseHealthProfiles = () => {
       case "rejected":
         setStatusFilter("REJECTED");
         break;
+      case "no-profiles":
+        // Load students without profiles when this tab is selected
+        loadStudentsWithoutProfiles();
+        break;
       default:
         setStatusFilter(null);
     }
+  };
+
+  // Handle viewing event logs
+  const handleViewEvents = (profile) => {
+    setSelectedProfileForEvents(profile);
+    setEventsModalVisible(true);
   };
 
   // Table columns
@@ -177,6 +229,12 @@ const NurseHealthProfiles = () => {
             </div>
           </div>
         );
+      },
+      filteredValue: searchText ? [searchText] : null,
+      onFilter: (value, record) => {
+        const student = record.additionalFields?.student;
+        const fullName = `${student?.firstName || ""} ${student?.lastName || ""}`.toLowerCase();
+        return fullName.includes(value.toLowerCase());
       },
     },
     {
@@ -253,6 +311,14 @@ const NurseHealthProfiles = () => {
               onClick={() => handleViewDetail(record)}
             />
           </Tooltip>
+          <Tooltip title="Xem lịch sử">
+            <Button
+              type="link"
+              icon={<HistoryOutlined />}
+              style={{ color: "#1890ff" }}
+              onClick={() => handleViewEvents(record)}
+            />
+          </Tooltip>
           {record.status === "PENDING" && (
             <>
               <Tooltip title="Duyệt">
@@ -277,6 +343,83 @@ const NurseHealthProfiles = () => {
       ),
     },
   ];
+
+  // Students without profiles table columns
+  const studentsColumns = [
+    {
+      title: "Mã học sinh",
+      dataIndex: "studentID",
+      key: "studentID",
+      sorter: (a, b) => a.studentID.localeCompare(b.studentID),
+    },
+    {
+      title: "Họ và tên",
+      key: "fullName",
+      render: (_, record) => `${record.lastName} ${record.firstName}`,
+      sorter: (a, b) => {
+        const nameA = `${a.lastName} ${a.firstName}`;
+        const nameB = `${b.lastName} ${b.firstName}`;
+        return nameA.localeCompare(nameB);
+      },
+    },
+    {
+      title: "Lớp",
+      dataIndex: "className",
+      key: "className",
+      sorter: (a, b) => (a.className || "").localeCompare(b.className || ""),
+      filteredValue: classNameFilter ? [classNameFilter] : null,
+      onFilter: (value, record) => record.className === value,
+    },
+    {
+      title: "Ngày sinh",
+      dataIndex: "dob",
+      key: "dob",
+      render: (date) => date ? dayjs(date).format("DD/MM/YYYY") : "N/A",
+      sorter: (a, b) => dayjs(a.dob).unix() - dayjs(b.dob).unix(),
+    },
+    {
+      title: "Giới tính",
+      dataIndex: "gender",
+      key: "gender",
+      render: (gender) => gender === "MALE" ? "Nam" : gender === "FEMALE" ? "Nữ" : "N/A",
+    },
+    {
+      title: "Địa chỉ",
+      dataIndex: "address",
+      key: "address",
+      ellipsis: true,
+    },
+  ];
+
+  // Get unique class names for filter
+  const getUniqueClassNames = () => {
+    const classNames = healthProfiles
+      .map(profile => profile.additionalFields?.student?.className)
+      .filter(className => className);
+    return [...new Set(classNames)].sort();
+  };
+
+  // Filter health profiles based on search and class filter
+  const getFilteredProfiles = () => {
+    return healthProfiles.filter(profile => {
+      const student = profile.additionalFields?.student;
+      
+      // Search filter
+      if (searchText) {
+        const fullName = `${student?.firstName || ""} ${student?.lastName || ""}`.toLowerCase();
+        if (!fullName.includes(searchText.toLowerCase())) {
+          return false;
+        }
+      }
+      
+      // Class filter
+      if (classNameFilter && student?.className !== classNameFilter) {
+        return false;
+      }
+      
+      return true;
+    });
+  };
 
   // Handlers
   const handleViewDetail = async (profile) => {
@@ -736,13 +879,37 @@ const NurseHealthProfiles = () => {
           activeKey={activeTabKey}
           onChange={handleTabChange}
           tabBarExtraContent={
-            <Button
-              onClick={loadHealthProfiles}
-              loading={loading}
-              type="primary"
-            >
-              Làm mới
-            </Button>
+            <Space>
+              {(activeTabKey === "approved" || activeTabKey === "pending" || activeTabKey === "rejected") && (
+                <>
+                  <Input.Search
+                    placeholder="Tìm kiếm theo tên học sinh"
+                    value={searchText}
+                    onChange={(e) => setSearchText(e.target.value)}
+                    style={{ width: 200 }}
+                    allowClear
+                  />
+                  <Select
+                    placeholder="Lọc theo lớp"
+                    value={classNameFilter}
+                    onChange={setClassNameFilter}
+                    style={{ width: 120 }}
+                    allowClear
+                  >
+                    {getUniqueClassNames().map(className => (
+                      <Option key={className} value={className}>{className}</Option>
+                    ))}
+                  </Select>
+                </>
+              )}
+              <Button
+                onClick={activeTabKey === "no-profiles" ? loadStudentsWithoutProfiles : loadHealthProfiles}
+                loading={activeTabKey === "no-profiles" ? studentsLoading : loading}
+                type="primary"
+              >
+                Làm mới
+              </Button>
+            </Space>
           }
           items={[
             {
@@ -758,7 +925,7 @@ const NurseHealthProfiles = () => {
               children: (
                 <Table
                   columns={columns}
-                  dataSource={healthProfiles}
+                  dataSource={getFilteredProfiles()}
                   rowKey="id"
                   loading={loading}
                   pagination={{ pageSize: 10 }}
@@ -774,7 +941,7 @@ const NurseHealthProfiles = () => {
               children: (
                 <Table
                   columns={columns}
-                  dataSource={healthProfiles}
+                  dataSource={getFilteredProfiles()}
                   rowKey="id"
                   loading={loading}
                   pagination={{ pageSize: 10 }}
@@ -788,12 +955,32 @@ const NurseHealthProfiles = () => {
               children: (
                 <Table
                   columns={columns}
-                  dataSource={healthProfiles}
+                  dataSource={getFilteredProfiles()}
                   rowKey="id"
                   loading={loading}
                   pagination={{ pageSize: 10 }}
                   locale={{
                     emptyText: "Không có hồ sơ sức khỏe đã từ chối nào",
+                  }}
+                />
+              ),
+            },
+            {
+              key: "no-profiles",
+              label: (
+                <span>
+                  <UserOutlined /> Chưa có hồ sơ
+                </span>
+              ),
+              children: (
+                <Table
+                  columns={studentsColumns}
+                  dataSource={studentsWithoutProfiles}
+                  rowKey="studentID"
+                  loading={studentsLoading}
+                  pagination={{ pageSize: 10 }}
+                  locale={{
+                    emptyText: "Tất cả học sinh đều đã có hồ sơ sức khỏe",
                   }}
                 />
               ),
@@ -900,15 +1087,14 @@ const NurseHealthProfiles = () => {
                     : "Từ chối"}
                 </Tag>
               </Descriptions.Item>
-              {selectedProfile.status === "APPROVED" &&
-                selectedProfile.additionalFields?.schoolNurseFullName && (
-                  <Descriptions.Item label="Y tá duyệt" span={2}>
-                    {selectedProfile.additionalFields.schoolNurseFullName}
-                  </Descriptions.Item>
-                )}
               <Descriptions.Item label="Ghi chú" span={3}>
                 {selectedProfile.note || "Không có ghi chú"}
               </Descriptions.Item>
+              {selectedProfile.nurseNote && (
+                <Descriptions.Item label="Ghi chú của Y tá" span={3}>
+                  {selectedProfile.nurseNote}
+                </Descriptions.Item>
+              )}
             </Descriptions>
 
             <Divider />
@@ -1100,6 +1286,15 @@ const NurseHealthProfiles = () => {
           </Form.Item>
         </Form>
       </Modal>
+
+      {/* Health Profile Events Modal */}
+      <HealthProfileEventsModal
+        visible={eventsModalVisible}
+        onCancel={() => setEventsModalVisible(false)}
+        healthProfileId={selectedProfileForEvents?.id}
+        title={`Lịch sử thay đổi - ${selectedProfileForEvents?.additionalFields?.student?.lastName} ${selectedProfileForEvents?.additionalFields?.student?.firstName}`}
+        useNurseApi={true}
+      />
     </div>
   );
 };

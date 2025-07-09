@@ -7,6 +7,7 @@ import { USER_ROLES } from '../constants/userRoles';
  * Custom hook for user management functionality
  */
 export const useUserManagement = () => {
+  const [messageApi, contextHolder] = message.useMessage();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -73,17 +74,17 @@ export const useUserManagement = () => {
         console.log('Users set successfully:', data.length, 'users');
       } else {
         console.error('Data is not an array:', data);
-        message.error('Định dạng dữ liệu người dùng không hợp lệ');
+        messageApi.error('Định dạng dữ liệu người dùng không hợp lệ');
         setUsers([]);
       }
     } catch (error) {
       console.error('Error loading users:', error);
-      message.error('Có lỗi xảy ra khi tải danh sách người dùng');
+      messageApi.error('Có lỗi xảy ra khi tải danh sách người dùng');
       setUsers([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [messageApi]);
 
   // Open add user modal
   const openAddUserModal = useCallback(() => {
@@ -124,27 +125,28 @@ export const useUserManagement = () => {
 
         const response = await createUser(userData);
         
-        if (response?.success) {
-          message.success('Thêm người dùng thành công!');
+        // Success if we get a response without error (createUser already handles HTTP errors)
+        if (response) {
+          messageApi.success(`Tạo người dùng thành công! Email đã được gửi đến: ${response.emailSentTo || userData.email}`);
           setShowUserModal(false);
           setSelectedRoleForNewUser('');
           resetUserForm();
           await loadUsers();
         } else {
-          message.error(response?.message || 'Có lỗi xảy ra khi thêm người dùng');
+          messageApi.error('Có lỗi xảy ra khi thêm người dùng');
         }
       }
     } catch (error) {
       if (error.errorFields) {
-        message.error('Vui lòng kiểm tra lại thông tin đã nhập');
+        messageApi.error('Vui lòng kiểm tra lại thông tin đã nhập');
       } else {
         console.error('Error saving user:', error);
-        message.error('Có lỗi xảy ra khi lưu thông tin người dùng');
+        messageApi.error('Có lỗi xảy ra khi lưu thông tin người dùng');
       }
     } finally {
       setLoading(false);
     }
-  }, [modalMode, selectedRoleForNewUser, userFormInstance, loadUsers, resetUserForm]);
+  }, [modalMode, selectedRoleForNewUser, userFormInstance, loadUsers, resetUserForm, messageApi]);
 
   // Handle delete/toggle user status
   const handleDeleteUser = useCallback(async (user) => {
@@ -154,18 +156,18 @@ export const useUserManagement = () => {
       
       if (response?.success) {
         const action = user.enabled ? 'vô hiệu hóa' : 'kích hoạt lại';
-        message.success(`${action} người dùng thành công!`);
+        messageApi.success(`${action} người dùng thành công!`);
         await loadUsers();
       } else {
-        message.error(response?.message || 'Có lỗi xảy ra khi thay đổi trạng thái người dùng');
+        messageApi.error(response?.message || 'Có lỗi xảy ra khi thay đổi trạng thái người dùng');
       }
     } catch (error) {
       console.error('Error toggling user status:', error);
-      message.error('Có lỗi xảy ra khi thay đổi trạng thái người dùng');
+      messageApi.error('Có lỗi xảy ra khi thay đổi trạng thái người dùng');
     } finally {
       setLoading(false);
     }
-  }, [loadUsers]);
+  }, [loadUsers, messageApi]);
 
   // Close modal handler
   const closeModal = useCallback(() => {
@@ -213,6 +215,7 @@ export const useUserManagement = () => {
     selectedRoleForNewUser,
     isUserFormMounted,
     userFormInstance,
+    contextHolder,
 
     // Actions
     setSearchTerm,

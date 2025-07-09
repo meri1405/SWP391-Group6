@@ -31,6 +31,9 @@ export * from "./healthCheckApi";
 // Student APIs
 export * from "./studentApi";
 
+// Health Profile Event APIs
+export * from "./healthProfileEventApi";
+
 // ==================== LEGACY SUPPORT ====================
 // Provide legacy imports to ensure backward compatibility
 

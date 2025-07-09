@@ -317,8 +317,11 @@ export const nurseApi = {
       // Đảm bảo có lý do từ chối
       const rejectionReason = reason ? reason.trim() : "Hồ sơ không hợp lệ";
 
+      const token = getTokenFromStorage();
+      const authAxios = createAuthAxios(token);
+
       // Gửi cả reason và nurseNote để đảm bảo tương thích với backend
-      const response = await nurseApiClient.put(
+      const response = await authAxios.put(
         `/api/nurse/health-profiles/${profileId}/reject`,
         {
           reason: rejectionReason,
@@ -340,19 +343,12 @@ export const nurseApi = {
       if (error.response) {
         console.error("Error response data:", error.response.data);
         console.error("Error response status:", error.response.status);
-
-        // Nếu lỗi 401 và không phải do WebSocket, không tự động đăng xuất
-        if (error.response.status === 401) {
-          console.log(
-            "Authentication error when rejecting profile - using mock data"
-          );
-        }
       }
 
-      // Mock data fallback khi lỗi API
-      console.log(
-        `Providing mock rejection response for health profile ID: ${profileId}`
-      );
+      return {
+        success: false,
+        message: error.response?.data?.message || "Không thể từ chối hồ sơ",
+      };
     }
   },
 
@@ -908,6 +904,93 @@ export const nurseApi = {
     } catch (error) {
       console.error("Error getting my completion requests:", error);
       throw error;
+    }
+  },
+
+  // Get students without health profiles
+  getStudentsWithoutHealthProfiles: async () => {
+    try {
+      const token = getTokenFromStorage();
+      if (!token) {
+        throw new Error("No authentication token found");
+      }
+
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.get(
+        `/api/nurse/health-profiles/students-without-profiles`
+      );
+
+      console.log("Students without health profiles:", response.data);
+      return {
+        success: true,
+        data: response.data,
+        message: "Students without health profiles loaded successfully"
+      };
+    } catch (error) {
+      console.error("Error getting students without health profiles:", error);
+      return {
+        success: false,
+        data: [],
+        message: error.response?.data?.message || "Failed to load students without health profiles"
+      };
+    }
+  },
+
+  // Get health profile events
+  getHealthProfileEvents: async (healthProfileId) => {
+    try {
+      const token = getTokenFromStorage();
+      if (!token) {
+        throw new Error("No authentication token found");
+      }
+
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.get(
+        `/api/health-profile-events/health-profile/${healthProfileId}`
+      );
+
+      console.log("Health profile events:", response.data);
+      return {
+        success: true,
+        data: response.data,
+        message: "Health profile events loaded successfully"
+      };
+    } catch (error) {
+      console.error("Error getting health profile events:", error);
+      return {
+        success: false,
+        data: [],
+        message: error.response?.data?.message || "Failed to load health profile events"
+      };
+    }
+  },
+
+  // Get recent health profile events
+  getRecentHealthProfileEvents: async (healthProfileId, limit = 10) => {
+    try {
+      const token = getTokenFromStorage();
+      if (!token) {
+        throw new Error("No authentication token found");
+      }
+
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.get(
+        `/api/health-profile-events/health-profile/${healthProfileId}/recent?limit=${limit}`
+      );
+
+      console.log("Recent health profile events:", response.data);
+      return {
+        success: true,
+        data: response.data,
+        message: "Recent health profile events loaded successfully"
+      };
+    } catch (error) {
+      console.error("Error getting recent health profile events:", error);
+      return {
+        success: false,
+        data: [],
+        message: error.response?.data?.message || "Failed to load recent health profile events"
+      };
     }
   },
 };

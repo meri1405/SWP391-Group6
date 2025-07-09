@@ -9,6 +9,7 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.ProfileSta
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.*;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.INotificationService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IParentHealthProfileService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IHealthProfileEventService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -54,6 +55,9 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
 
     @Autowired
     private INotificationService notificationService;
+
+    @Autowired
+    private IHealthProfileEventService healthProfileEventService;
 
     /**
      * Create a health profile for a child by a parent
@@ -116,6 +120,9 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
 
         // Save health profile
         HealthProfile savedProfile = healthProfileRepository.save(healthProfile);
+        
+        // Log the creation event
+        healthProfileEventService.logCreateEvent(savedProfile, parent);
 
         // Create and save allergies if provided
         if (healthProfileDTO.getAllergies() != null) {
@@ -433,13 +440,15 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
             healthProfile.getStatus() == ProfileStatus.REJECTED) {
             healthProfile.setStatus(ProfileStatus.PENDING);
             // Clear nurse note since it will need re-review
-            nurse = healthProfile.getNurse();
             healthProfile.setNurseNote(null);
-            healthProfile.setNurse(null);
         }
 
         // Save updated profile
         HealthProfile updatedProfile = healthProfileRepository.save(healthProfile);
+        
+        // Log the update event
+        healthProfileEventService.logUpdateEvent(updatedProfile, parent, "basic_info", 
+                "Profile basic information", "Profile updated by parent");
 
         // Update allergies if provided
         if (healthProfileDTO.getAllergies() != null) {
@@ -901,15 +910,27 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
         dto.setNurseNote(healthProfile.getNurseNote());
         dto.setStudentId(healthProfile.getStudent().getStudentID());
 
-
-
-        if (healthProfile.getNurse() != null) {
-            dto.setNurseId(healthProfile.getNurse().getId());
-
-        }
-
         if (healthProfile.getParent() != null) {
             dto.setParentId(healthProfile.getParent().getId());
+        }
+        
+        // Add event history if available
+        if (healthProfile.getEvents() != null && !healthProfile.getEvents().isEmpty()) {
+            dto.setEvents(healthProfile.getEvents().stream()
+                    .map(event -> {
+                        HealthProfileEventDTO eventDTO = new HealthProfileEventDTO();
+                        eventDTO.setId(event.getId());
+                        eventDTO.setHealthProfileId(event.getHealthProfile().getId());
+                        eventDTO.setModifiedByUserId(event.getModifiedByUser().getId());
+                        eventDTO.setModifiedByUserName(event.getModifiedByUser().getFullName());
+                        eventDTO.setActionType(event.getActionType());
+                        eventDTO.setFieldChanged(event.getFieldChanged());
+                        eventDTO.setOldValue(event.getOldValue());
+                        eventDTO.setNewValue(event.getNewValue());
+                        eventDTO.setModifiedAt(event.getModifiedAt());
+                        return eventDTO;
+                    })
+                    .collect(Collectors.toList()));
         }
 
         return dto;
@@ -935,13 +956,6 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
         dto.setStudentId(healthProfile.getStudent().getStudentID());
 
         Map<String, Object> additionalFields = new HashMap<>();
-        if (healthProfile.getNurse() != null) {
-            dto.setNurseId(healthProfile.getNurse().getId());
-            // Add nurse full name to additional fields
-            additionalFields.put("schoolNurseFullName",
-                    healthProfile.getNurse().getLastName() + " " + healthProfile.getNurse().getFirstName());
-
-        }
 
         // Set additional fields if any were added
         if (!additionalFields.isEmpty()) {

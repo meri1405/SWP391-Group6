@@ -1,6 +1,7 @@
 package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.HealthProfileDTO;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.StudentDTO;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.HealthProfile;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.ProfileStatus;
 
@@ -52,4 +53,9 @@ public interface ISchoolNurseHealthProfileService {
      * Get approved health profile by student ID
      */
     HealthProfileDTO getApprovedHealthProfileByStudentId(Long studentId);
+    
+    /**
+     * Get students without health profiles
+     */
+    List<StudentDTO> getStudentsWithoutHealthProfiles();
 }

@@ -5,8 +5,7 @@ import {
   validateVietnameseName, 
   validateVietnamesePhone, 
   validateEmail, 
-  validateAddress, 
-  validateUsername 
+  validateAddress
 } from '../../utils/formValidation';
 import { getMinAgeForRole, getMaxAgeForRole, ROLE_LABELS } from '../../constants/userRoles';
 
@@ -76,20 +75,6 @@ const UserForm = ({
 
     if (modalMode === 'add' && checkDuplicate(value, 'email')) {
       return Promise.reject(new Error('Email này đã được sử dụng!'));
-    }
-
-    return Promise.resolve();
-  };
-
-  // Username validation with duplicate check
-  const validateUsernameWithDuplicate = (_, value) => {
-    const usernameValidation = validateUsername(value);
-    if (!usernameValidation.isValid) {
-      return Promise.reject(new Error(usernameValidation.message));
-    }
-
-    if (modalMode === 'add' && checkDuplicate(value, 'username')) {
-      return Promise.reject(new Error('Tên đăng nhập này đã được sử dụng!'));
     }
 
     return Promise.resolve();
@@ -255,21 +240,6 @@ const UserForm = ({
               placeholder="Nhập email" 
               autoComplete="off" 
               type="email"
-            />
-          </Form.Item>
-
-          {/* Username */}
-          <Form.Item
-            label="Tên đăng nhập"
-            name="username"
-            rules={[
-              { required: true, message: 'Vui lòng nhập tên đăng nhập!' },
-              { validator: validateUsernameWithDuplicate }
-            ]}
-          >
-            <Input 
-              placeholder="Nhập tên đăng nhập" 
-              autoComplete="off"
             />
           </Form.Item>
 

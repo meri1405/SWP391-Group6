@@ -81,4 +81,9 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
     // Get distinct class names from active students
     @Query("SELECT DISTINCT s.className FROM Student s WHERE s.isDisabled = false AND s.className IS NOT NULL ORDER BY s.className")
     List<String> findDistinctClassNamesFromActiveStudents();
+    
+    // Find students without health profiles
+    @Query("SELECT s FROM Student s WHERE s.isDisabled = false AND s.studentID NOT IN " +
+           "(SELECT hp.student.studentID FROM HealthProfile hp WHERE hp.student.studentID IS NOT NULL)")
+    List<Student> findStudentsWithoutHealthProfiles();
 }
