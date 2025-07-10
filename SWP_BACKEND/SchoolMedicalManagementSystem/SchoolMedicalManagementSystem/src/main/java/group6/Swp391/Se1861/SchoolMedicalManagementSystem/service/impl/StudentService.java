@@ -123,6 +123,7 @@ public class StudentService implements IStudentService {
         dto.setDob(student.getDob());
         dto.setGender(student.getGender());
         dto.setClassName(student.getClassName());
+        dto.setSchoolYear(student.getSchoolYear());
         dto.setBirthPlace(student.getBirthPlace());
         dto.setAddress(student.getAddress());
         dto.setCitizenship(student.getCitizenship());
@@ -372,6 +373,7 @@ public class StudentService implements IStudentService {
         student.setDob(studentDto.getDob());
         student.setGender(studentDto.getGender());
         student.setClassName(studentDto.getClassName());
+        student.setSchoolYear(studentDto.getSchoolYear());
         student.setBirthPlace(studentDto.getBirthPlace());
         student.setAddress(studentDto.getAddress());
         student.setCitizenship(studentDto.getCitizenship());
@@ -626,7 +628,7 @@ public class StudentService implements IStudentService {
                 .filter(student -> {
                     int birthYear = student.getDob().getYear();
                     boolean isEligible = birthYear >= minBirthYear && birthYear <= maxBirthYear;
-                    System.out.println("Student: " + student.getFirstName() + " " + student.getLastName() + 
+                    System.out.println("Student: " + student.getFullName() + 
                                      ", Birth year: " + birthYear + ", Age: " + (currentYear - birthYear) + 
                                      ", Eligible: " + isEligible);
                     return isEligible;
@@ -670,7 +672,7 @@ public class StudentService implements IStudentService {
                 .filter(student -> {
                     int birthYear = student.getDob().getYear();
                     boolean isEligible = birthYear >= minBirthYear && birthYear <= maxBirthYear;
-                    System.out.println("Student: " + student.getFirstName() + " " + student.getLastName() + 
+                    System.out.println("Student: " + student.getFullName() + 
                                      ", Birth year: " + birthYear + ", Age: " + (currentYear - birthYear) + 
                                      ", Eligible: " + isEligible);
                     return isEligible;
@@ -738,7 +740,7 @@ public class StudentService implements IStudentService {
                     .filter(student -> {
                         int birthYear = student.getDob().getYear();
                         boolean eligible = birthYear >= minBirthYear && birthYear <= maxBirthYear;
-                        System.out.println("Student: " + student.getFirstName() + " " + student.getLastName() + 
+                        System.out.println("Student: " + student.getFullName() + 
                                          ", Birth year: " + birthYear + 
                                          ", Class: " + student.getClassName() + 
                                          ", Eligible: " + eligible);
@@ -783,7 +785,7 @@ public class StudentService implements IStudentService {
             String searchName = filter.getSearchName().toLowerCase().trim();
             students = students.stream()
                     .filter(student -> {
-                        String fullName = (student.getLastName() + " " + student.getFirstName()).toLowerCase();
+                        String fullName = (student.getFullName()).toLowerCase();
                         return fullName.contains(searchName);
                     })
                     .collect(Collectors.toList());
@@ -792,6 +794,13 @@ public class StudentService implements IStudentService {
         if (filter.getClassName() != null && !filter.getClassName().trim().isEmpty()) {
             students = students.stream()
                     .filter(student -> student.getClassName().equals(filter.getClassName()))
+                    .collect(Collectors.toList());
+        }
+
+        if (filter.getSchoolYear() != null && !filter.getSchoolYear().trim().isEmpty()) {
+            students = students.stream()
+                    .filter(student -> student.getSchoolYear() != null && 
+                                     student.getSchoolYear().equals(filter.getSchoolYear()))
                     .collect(Collectors.toList());
         }
 

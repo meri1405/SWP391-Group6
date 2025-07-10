@@ -15,6 +15,7 @@ public class StudentDTO {
     private String firstName;
     private String lastName;
     private String className;
+    private String schoolYear;
     private int age;
     private LocalDate dob;
     private String gender;

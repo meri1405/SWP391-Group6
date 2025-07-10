@@ -402,10 +402,11 @@ public class VaccinationCampaignService implements IVaccinationCampaignService {
     private EligibleStudentsResponse.StudentVaccinationInfoDTO createStudentVaccinationInfo(Student student, VaccinationRule rule) {
         EligibleStudentsResponse.StudentVaccinationInfoDTO dto = new EligibleStudentsResponse.StudentVaccinationInfoDTO();
         dto.setStudentId(student.getStudentID());
-        dto.setStudentFullName(student.getFirstName() + " " + student.getLastName());
+        dto.setStudentFullName(student.getFullName());
         dto.setStudentCode(student.getStudentID().toString()); // Assuming studentID is used as code
         dto.setAgeInMonths(calculateAgeInMonths(student.getDob()));
         dto.setClassName(student.getClassName());
+        dto.setSchoolYear(student.getSchoolYear());
         
         // Set ineligibility reason if applicable
         if (!isStudentEligible(student, rule)) {
@@ -471,7 +472,7 @@ public class VaccinationCampaignService implements IVaccinationCampaignService {
         // Find all users with MANAGER role
         List<User> managers = userRepository.findByRole_RoleName("MANAGER");
           for (User manager : managers) {
-            String creatorName = campaign.getCreatedBy().getFirstName() + " " + campaign.getCreatedBy().getLastName();
+            String creatorName = campaign.getCreatedBy().getFullName();
             notificationService.createCampaignApprovalRequestNotification(
                     manager,
                     campaign.getName(),
@@ -675,7 +676,7 @@ public class VaccinationCampaignService implements IVaccinationCampaignService {
         requestDTO.setCampaignId(campaignId);
         requestDTO.setCampaignName(campaign.getName());
         requestDTO.setNurseUsername(nurse.getUsername());
-        requestDTO.setNurseName(nurse.getFirstName() + " " + nurse.getLastName());
+        requestDTO.setNurseName(nurse.getFullName());
         requestDTO.setRequestReason(requestReason != null ? requestReason : "Yêu cầu hoàn thành chiến dịch tiêm chủng");
         requestDTO.setCompletionNotes(completionNotes);
         requestDTO.setRequestDate(LocalDateTime.now());
@@ -691,7 +692,7 @@ public class VaccinationCampaignService implements IVaccinationCampaignService {
         // Send notification to managers for approval
         List<User> managers = userRepository.findByRole_RoleName("MANAGER");
         for (User manager : managers) {
-            String nurseName = nurse.getFirstName() + " " + nurse.getLastName();
+            String nurseName = nurse.getFullName();
             String message = String.format("Y tá %s yêu cầu hoàn thành chiến dịch '%s'", nurseName, campaign.getName());
             
             try {
@@ -931,7 +932,7 @@ public class VaccinationCampaignService implements IVaccinationCampaignService {
         List<User> managers = userRepository.findByRole_RoleName("MANAGER");
         
         for (User manager : managers) {
-            String nurseName = campaign.getCreatedBy().getFirstName() + " " + campaign.getCreatedBy().getLastName();
+            String nurseName = campaign.getCreatedBy().getFullName();
             String message = String.format("Chiến dịch '%s' của Y tá %s %s", 
                 campaign.getName(), nurseName, statusMessage);
             

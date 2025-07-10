@@ -10,15 +10,17 @@ import lombok.NoArgsConstructor;
 public class StudentFilterDTO {
     private String searchName;      // Tìm kiếm theo tên (firstName hoặc lastName)
     private String className;       // Lọc theo lớp học
+    private String schoolYear;      // Lọc theo năm học
     private String birthPlace;      // Lọc theo nơi sinh
     private Integer birthYear;      // Lọc theo năm sinh
     private Integer page;           // Trang hiện tại (pagination)
     private Integer size;           // Số lượng item per page
     
     // Constructor for convenience
-    public StudentFilterDTO(String searchName, String className, String birthPlace, Integer birthYear) {
+    public StudentFilterDTO(String searchName, String className, String schoolYear, String birthPlace, Integer birthYear) {
         this.searchName = searchName;
         this.className = className;
+        this.schoolYear = schoolYear;
         this.birthPlace = birthPlace;
         this.birthYear = birthYear;
         this.page = 0;

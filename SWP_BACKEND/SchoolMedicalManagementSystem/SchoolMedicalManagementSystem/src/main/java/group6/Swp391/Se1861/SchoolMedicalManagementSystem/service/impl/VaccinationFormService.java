@@ -95,7 +95,7 @@ public class VaccinationFormService implements IVaccinationFormService {
         form.setParentNotes(parentNotes);        form = formRepository.save(form);
 
         // Notify nurse about decline
-        String studentName = form.getStudent().getFirstName() + " " + form.getStudent().getLastName();
+        String studentName = form.getStudent().getFullName();
         notificationService.createVaccinationFormDeclineNotification(
                 form.getCreatedBy(),
                 studentName,
@@ -132,7 +132,7 @@ public class VaccinationFormService implements IVaccinationFormService {
             form.setConfirmationStatus(VaccinationForm.ConfirmationStatus.EXPIRED);
             
             // Notify nurse about expired form
-            String studentName = form.getStudent().getFirstName() + " " + form.getStudent().getLastName();
+            String studentName = form.getStudent().getFullName();
             notificationService.createVaccinationFormExpiryNotification(
                     form.getCreatedBy(),
                     studentName
@@ -169,21 +169,22 @@ public class VaccinationFormService implements IVaccinationFormService {
         
         if (form.getStudent() != null) {
             dto.setStudentId(form.getStudent().getStudentID());
-            dto.setStudentFullName(form.getStudent().getFirstName() + " " + form.getStudent().getLastName());
+            dto.setStudentFullName(form.getStudent().getFullName());
             dto.setStudentCode(form.getStudent().getStudentID().toString());
             dto.setStudentClassName(form.getStudent().getClassName());
+            dto.setSchoolYear(form.getStudent().getSchoolYear());
         }
         
         if (form.getParent() != null) {
             dto.setParentId(form.getParent().getId());
-            dto.setParentFullName(form.getParent().getFirstName() + " " + form.getParent().getLastName());
+            dto.setParentFullName(form.getParent().getFullName());
             dto.setParentEmail(form.getParent().getEmail());
             dto.setParentPhone(form.getParent().getPhone());
         }
         
         if (form.getCreatedBy() != null) {
             dto.setCreatedById(form.getCreatedBy().getId());
-            dto.setCreatedByName(form.getCreatedBy().getFirstName() + " " + form.getCreatedBy().getLastName());
+            dto.setCreatedByName(form.getCreatedBy().getFullName());
         }
         
         return dto;

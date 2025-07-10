@@ -201,7 +201,7 @@ public class CampaignCompletionService implements ICampaignCompletionService {
         dto.setCampaignId(request.getCampaign().getId());
         dto.setCampaignName(request.getCampaign().getName());
         dto.setNurseUsername(request.getRequestedBy().getUsername());
-        dto.setNurseName(request.getRequestedBy().getFirstName() + " " + request.getRequestedBy().getLastName());
+        dto.setNurseName(request.getRequestedBy().getFullName());
         dto.setRequestReason(request.getRequestReason());
         dto.setCompletionNotes(request.getCompletionNotes());
         dto.setRequestDate(request.getRequestDate());
@@ -209,7 +209,7 @@ public class CampaignCompletionService implements ICampaignCompletionService {
         dto.setStatus(request.getStatus().name());
         if (request.getReviewedBy() != null) {
             dto.setReviewerUsername(request.getReviewedBy().getUsername());
-            dto.setReviewerName(request.getReviewedBy().getFirstName() + " " + request.getReviewedBy().getLastName());
+            dto.setReviewerName(request.getReviewedBy().getFullName());
         }
         dto.setReviewNotes(request.getReviewNotes());
         dto.setTotalStudents(request.getTotalStudents());

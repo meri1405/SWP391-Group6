@@ -418,9 +418,14 @@ public class NotificationService implements INotificationService {
             VaccinationCampaign campaign,
             User completedBy) {
         
-        String title = "CHIẾN DỊCH ĐÃ HOÀN THÀNH";
-        String message = "<p>Chiến dịch tiêm chủng '<strong>" + campaign.getName() + "</strong>' đã được hoàn thành bởi <strong>" + 
-                        completedBy.getUsername() + "</strong> vào ngày <strong>" + formatDateTime(LocalDateTime.now()) + "</strong></p>";
+        String title = "Thông báo hoàn tất chiến dịch tiêm chủng";
+
+        String message = "<p>Kính gửi ban giám hiệu nhà trường,</p>" +
+            "<p>Chiến dịch tiêm chủng <strong>\"" + campaign.getName() + "\"</strong> đã được hoàn tất thành công bởi nhân sự <strong>" +
+            completedBy.getFullName() + "</strong> vào ngày <strong>" + formatDateTime(LocalDateTime.now()) + "</strong>.</p>" +
+            "<p>Toàn bộ thông tin liên quan đến chiến dịch đã được cập nhật vào hệ thống.</p>" +
+            "<p>Trân trọng,</p>" +
+            "<p><em>Hệ thống Quản lý Y Tế Học đường (SMMS)</em></p>";
         String notificationType = "CAMPAIGN_COMPLETED";
         
         return createGeneralNotification(recipient, title, message, notificationType);
@@ -513,8 +518,14 @@ public class NotificationService implements INotificationService {
             String studentName,
             String vaccineName) {
         
-        String title = "XÁC NHẬN ĐỒNG Ý TIÊM CHỦNG";
-        String message = "<p>Phụ huynh đã xác nhận tiêm chủng cho <strong>" + studentName + "</strong> - <strong>" + vaccineName + "</strong></p>";
+        String title = "Xác nhận đồng ý tiêm chủng";
+
+        String message = "<p>Kính gửi quý cán bộ y tế,</p>" +
+        "<p>Phụ huynh đã xác nhận đồng ý cho học sinh <strong>" + studentName + "</strong> tham gia tiêm chủng với loại vắc-xin <strong>" +
+        vaccineName + "</strong>.</p>" +
+        "<p>Thông tin xác nhận đã được ghi nhận trong hệ thống.</p>" +
+        "<p>Trân trọng,</p>" +
+        "<p><em>Hệ thống Quản lý Y Tế Học đường (SMMS)</em></p>";
         String notificationType = "VACCINATION_CONSENT_CONFIRMED";
         
         return createGeneralNotification(recipient, title, message, notificationType);
@@ -531,11 +542,18 @@ public class NotificationService implements INotificationService {
             String vaccineName,
             String reason) {
         
-        String title = "TỪ CHỐI TIÊM CHỦNG";
-        String message = "<p>Phụ huynh đã từ chối tiêm vắc-xin cho <strong>" + studentName + "</strong> - <strong>" + vaccineName + "</strong></p>";
+        String title = "Thông báo từ chối tiêm chủng";
+
+        String message = "<p>Kính gửi Quý cán bộ y tế,</p>" +
+        "<p>Phụ huynh đã từ chối tiêm vắc-xin <strong>" + vaccineName + "</strong> cho học sinh <strong>" + studentName + "</strong>.</p>";
+
         if (reason != null && !reason.trim().isEmpty()) {
-            message += "<p><strong>Lý do:</strong> " + reason + "</p>";
+            message += "<p><strong>Lý do từ chối:</strong> " + reason + "</p>";
         }
+
+        message += "<p>Thông tin này đã được hệ thống ghi nhận để phục vụ theo dõi và xử lý phù hợp.</p>" +
+           "<p>Trân trọng,</p>" +
+           "<p><em>Hệ thống Quản lý Y Tế Học đường (SMMS)</em></p>";
         String notificationType = "VACCINATION_CONSENT_DECLINED";
         
         return createGeneralNotification(recipient, title, message, notificationType);
@@ -550,8 +568,13 @@ public class NotificationService implements INotificationService {
             User recipient,
             String studentName) {
         
-        String title = "PHIẾU TIÊM CHỦNG HẾT HẠN";
-        String message = "<p>Mẫu đơn đồng ý tiêm chủng cho <strong>" + studentName + "</strong> đã quá thời hạn xác nhận</p>";
+        String title = "Thông báo phiếu tiêm chủng hết hạn";
+
+        String message = "<p>Kính gửi Quý phụ huynh,</p>" +
+        "<p>Hệ thống xin thông báo rằng mẫu đơn đồng ý tiêm chủng dành cho học sinh <strong>" + studentName + "</strong> đã quá thời hạn xác nhận.</p>" +
+        "<p>Quý phụ huynh vui lòng liên hệ với nhà trường hoặc cán bộ y tế để được hỗ trợ nếu vẫn có nhu cầu đăng ký tiêm chủng.</p>" +
+        "<p>Trân trọng,</p>" +
+        "<p><em>Hệ thống Quản lý Y Tế Học đường (SMMS)</em></p>";
         String notificationType = "VACCINATION_CONSENT_EXPIRED";
         return createGeneralNotification(recipient, title, message, notificationType);
     }
@@ -566,8 +589,14 @@ public class NotificationService implements INotificationService {
             String campaignName,
             String approverName) {
         
-        String title = "CHIẾN DỊCH ĐÃ ĐƯỢC CHẤP NHẬN";
-        String message = "<p>Chiến dịch tiêm chủng của bạn '<strong>" + campaignName + "</strong>' đã được chấp nhận bởi <strong>" + approverName + "</strong></p>";
+        String title = "Thông báo phê duyệt chiến dịch tiêm chủng";
+
+        String message = "<p>Kính gửi quý cán bộ y tế,</p>" +
+        "<p>Chiến dịch tiêm chủng <strong>\"" + campaignName + "\"</strong> do Quý vị khởi tạo đã được chính thức phê duyệt bởi <strong>" +
+        approverName + "</strong>.</p>" +
+        "<p>Quý vị có thể tiến hành các bước tiếp theo theo đúng quy trình được quy định trong hệ thống.</p>" +
+        "<p>Trân trọng,</p>" +
+        "<p><em>Hệ thống Quản lý Y Tế Học đường (SMMS)</em></p>";
         String notificationType = "CAMPAIGN_APPROVAL";
         
         return createGeneralNotification(recipient, title, message, notificationType);
@@ -583,9 +612,15 @@ public class NotificationService implements INotificationService {
             String campaignName,
             String reason) {
         
-        String title = "CHIẾN DỊCH ĐÃ BỊ TỪ CHỐI";
-        String message = "<p>Chiến dịch tiêm chủng của bạn '<strong>" + campaignName + "</strong>' đã bị từ chối.</p>" +
-                        "<p><strong>Lý do:</strong> " + reason + "</p>";
+        String title = "Thông báo từ chối chiến dịch tiêm chủng";
+
+        String message = "<p>Kính gửi quý cán bộ y tế,</p>" +
+        "<p>Chiến dịch tiêm chủng <strong>\"" + campaignName + "\"</strong> do Quý vị khởi tạo đã không được phê duyệt.</p>" +
+        "<p><strong>Lý do từ chối:</strong> " + reason + "</p>" +
+        "<p>Quý vị vui lòng rà soát lại nội dung chiến dịch và điều chỉnh nếu cần thiết trước khi gửi lại để xét duyệt.</p>" +
+        "<p>Trân trọng,</p>" +
+        "<p><em>Hệ thống Quản lý Y Tế Học đường (SMMS)</em></p>";
+
         String notificationType = "CAMPAIGN_REJECTION";
         
         return createGeneralNotification(recipient, title, message, notificationType);
@@ -601,8 +636,15 @@ public class NotificationService implements INotificationService {
             String campaignName,
             String creatorName) {
         
-        String title = "CHIẾN DỊCH CHỜ PHÊ DUYỆT";
-        String message = "<p>Một chiến dịch tiêm chủng mới '<strong>" + campaignName + "</strong>' được tạo bởi <strong>" + creatorName + "</strong> đang chờ duyệt.</p>";
+        String title = "Thông báo chiến dịch chờ phê duyệt";
+
+        String message = "<p>Kính gửi Ban Giám Hiệu nhà trường,</p>" +
+        "<p>Một chiến dịch tiêm chủng mới với tiêu đề <strong>\"" + campaignName + "\"</strong> được khởi tạo bởi <strong>" +
+        creatorName + "</strong> hiện đang chờ được phê duyệt.</p>" +
+        "<p>Quý vị vui lòng truy cập hệ thống để xem xét và thực hiện phê duyệt nếu phù hợp.</p>" +
+        "<p>Trân trọng,</p>" +
+        "<p><em>Hệ thống Quản lý Sức khỏe Học đường (SMMS)</em></p>";
+
         String notificationType = "CAMPAIGN_APPROVAL_REQUEST";
         
         return createGeneralNotification(recipient, title, message, notificationType);
@@ -621,15 +663,23 @@ public class NotificationService implements INotificationService {
             String scheduledDate,
             VaccinationForm vaccinationForm) {
 
-        String title = "XÁC NHẬN ĐỒNG Ý TIÊM CHỦNG";
-        String message = "<p>Vui lòng xem xét và xác nhận tiêm chủng cho <strong>" + studentName + "</strong> - <strong>" + vaccineName + "</strong>";
+        String title = "Yêu cầu xác nhận tiêm chủng";
+
+        String message = "<p>Kính gửi Quý phụ huynh,</p>" +
+        "<p>Hệ thống trân trọng đề nghị Quý phụ huynh vui lòng xem xét và xác nhận việc tiêm chủng cho học sinh <strong>" +
+        studentName + "</strong> với loại vắc-xin <strong>" + vaccineName + "</strong>";
+
         if (location != null && !location.trim().isEmpty()) {
-            message += " tại <strong>" + location + "</strong>";
+            message += " tại địa điểm <strong>" + location + "</strong>";
         }
         if (scheduledDate != null && !scheduledDate.trim().isEmpty()) {
-            message += " vào <strong>" + scheduledDate + "</strong>";
+            message += " vào thời gian <strong>" + scheduledDate + "</strong>";
         }
-        message += "</p>";
+
+        message += ".</p>" +
+        "<p>Quý phụ huynh vui lòng thực hiện xác nhận trước thời hạn quy định để đảm bảo quyền lợi cho học sinh.</p>" +
+        "<p>Trân trọng,</p>" +
+        "<p><em>Hệ thống Quản lý Y Tế Học đường (SMMS)</em></p>";
         String notificationType = "VACCINATION_CONSENT_REQUIRED";
         
         Notification notification = new Notification();
@@ -927,18 +977,9 @@ public class NotificationService implements INotificationService {
     @Transactional
     @Override
     public void notifyManagersAboutCampaignCompletionRequest(CampaignCompletionRequest request) {
-        System.out.println("DEBUG: NotificationService - Creating notification for completion request ID: " + request.getId());
-        System.out.println("DEBUG: NotificationService - Campaign name: " + request.getCampaign().getName());
-        System.out.println("DEBUG: NotificationService - Request status: " + request.getStatus());
-        
-        // Ensure the request is properly managed within this transaction
-        System.out.println("DEBUG: NotificationService - Request object class: " + request.getClass().getSimpleName());
-        System.out.println("DEBUG: NotificationService - Request ID before notification creation: " + request.getId());
-        
         // Find all manager users
         List<User> managers = userRepository.findByRole_RoleName("ROLE_MANAGER");
-        System.out.println("DEBUG: NotificationService - Found " + managers.size() + " managers");
-        
+
         for (User manager : managers) {
             try {
                 // Create new notification with manual title and message that includes the notification type in title
@@ -956,19 +997,9 @@ public class NotificationService implements INotificationService {
                 notification.setRecipient(manager);
                 
                 // Make sure to set the completion request reference properly
-                System.out.println("DEBUG: NotificationService - Setting campaignCompletionRequest with ID: " + request.getId());
                 notification.setCampaignCompletionRequest(request);
                 
-                System.out.println("DEBUG: NotificationService - Before save - notification.getCampaignCompletionRequest() = " + 
-                                 (notification.getCampaignCompletionRequest() != null ? 
-                                  notification.getCampaignCompletionRequest().getId() : "NULL"));
-                
                 Notification savedNotification = notificationRepository.saveAndFlush(notification);
-                
-                System.out.println("DEBUG: NotificationService - After saveAndFlush - notification ID: " + savedNotification.getId());
-                System.out.println("DEBUG: NotificationService - After saveAndFlush - linked completion request ID: " + 
-                                 (savedNotification.getCampaignCompletionRequest() != null ? 
-                                  savedNotification.getCampaignCompletionRequest().getId() : "NULL"));
                 
                 // Send WebSocket notification - directly create DTO with manual fields
                 NotificationDTO notificationDTO = new NotificationDTO();
@@ -1541,9 +1572,9 @@ public class NotificationService implements INotificationService {
                 "<li><strong>Mã mẫu:</strong> %d</li>" +
                 "<li><strong>Ngày phản hồi:</strong> %s</li>" +
                 "</ul>",
-                parent.getFirstName(), parent.getLastName(),
+                parent.getLastName(), parent.getFirstName(),
                 actionText.equals("confirmed") ? "xác nhận" : "từ chối",
-                student.getFirstName(), student.getLastName(),
+                student.getLastName(), student.getFirstName(),
                 student.getClassName() != null ? student.getClassName() : "N/A",
                 campaign.getName(),
                 form.getId(),

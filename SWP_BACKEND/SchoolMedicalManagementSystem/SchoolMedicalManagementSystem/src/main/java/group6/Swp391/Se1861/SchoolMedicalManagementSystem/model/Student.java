@@ -36,6 +36,9 @@ public class Student {
     @Column(name = "className", nullable = false)
     private String className;
 
+    @Column(name = "schoolYear", nullable = false)
+    private String schoolYear;
+
     @Column(name = "birthPlace", nullable = false)
     private String birthPlace;
 
@@ -75,7 +78,7 @@ public class Student {
      */
     public User getParent() {
         // Return mother as the primary contact if available
-        if (mother != null) {
+        if (mother != null && mother.isEnabled()) {
             return mother;
         }
         // Otherwise return father

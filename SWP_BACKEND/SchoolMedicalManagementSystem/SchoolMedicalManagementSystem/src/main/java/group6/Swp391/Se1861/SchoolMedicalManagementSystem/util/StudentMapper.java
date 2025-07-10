@@ -19,6 +19,7 @@ public class StudentMapper {
         studentInfo.put("firstName", student.getFirstName());
         studentInfo.put("lastName", student.getLastName());
         studentInfo.put("className", student.getClassName());
+        studentInfo.put("schoolYear", student.getSchoolYear());
         studentInfo.put("gender", student.getGender());
         studentInfo.put("dateOfBirth", student.getDob());
         return studentInfo;

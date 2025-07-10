@@ -38,6 +38,8 @@ public class VaccinationRecordDTO {
     private Long studentId;
     private String studentFullName;
     private String studentCode;
+    private String studentClassName;
+    private String schoolYear;
     
     // Campaign info
     private Long campaignId;

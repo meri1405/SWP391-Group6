@@ -15,6 +15,7 @@ public class StudentHealthCheckDTO {
     private String studentCode;
     private String fullName;
     private String className;
+    private String schoolYear;
     private LocalDate dob;
     private String gender;
     private String ageDisplay; // Format: "X tuổi Y tháng (Z tháng)"
@@ -25,12 +26,13 @@ public class StudentHealthCheckDTO {
     
     // Constructor for students without health check form
     public StudentHealthCheckDTO(Long studentId, String studentCode, String fullName, 
-                                String className, LocalDate dob, String gender, 
+                                String className, String schoolYear, LocalDate dob, String gender, 
                                 String ageDisplay, boolean hasParent) {
         this.studentId = studentId;
         this.studentCode = studentCode;
         this.fullName = fullName;
         this.className = className;
+        this.schoolYear = schoolYear;
         this.dob = dob;
         this.gender = gender;
         this.ageDisplay = ageDisplay;
@@ -42,12 +44,13 @@ public class StudentHealthCheckDTO {
     
     // Constructor for students with health check form
     public StudentHealthCheckDTO(Long studentId, String studentCode, String fullName, 
-                                String className, LocalDate dob, String gender, 
+                                String className, String schoolYear, LocalDate dob, String gender, 
                                 String ageDisplay, FormStatus status, Long formId, boolean hasParent) {
         this.studentId = studentId;
         this.studentCode = studentCode;
         this.fullName = fullName;
         this.className = className;
+        this.schoolYear = schoolYear;
         this.dob = dob;
         this.gender = gender;
         this.ageDisplay = ageDisplay;

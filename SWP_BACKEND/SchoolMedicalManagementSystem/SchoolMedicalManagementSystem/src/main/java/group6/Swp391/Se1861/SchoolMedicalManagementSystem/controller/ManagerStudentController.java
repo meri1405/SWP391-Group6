@@ -79,6 +79,7 @@ public class ManagerStudentController {
      * 
      * @param searchName Tìm kiếm theo tên học sinh
      * @param className Lọc theo lớp học
+     * @param schoolYear Lọc theo năm học
      * @param birthPlace Lọc theo nơi sinh
      * @param birthYear Lọc theo năm sinh
      * @return Danh sách học sinh được lọc
@@ -87,12 +88,14 @@ public class ManagerStudentController {
     public ResponseEntity<?> filterStudents(
             @RequestParam(required = false) String searchName,
             @RequestParam(required = false) String className,
+            @RequestParam(required = false) String schoolYear,
             @RequestParam(required = false) String birthPlace,
             @RequestParam(required = false) Integer birthYear) {
         try {
             StudentFilterDTO filter = new StudentFilterDTO();
             filter.setSearchName(searchName);
             filter.setClassName(className);
+            filter.setSchoolYear(schoolYear);
             filter.setBirthPlace(birthPlace);
             filter.setBirthYear(birthYear);
             

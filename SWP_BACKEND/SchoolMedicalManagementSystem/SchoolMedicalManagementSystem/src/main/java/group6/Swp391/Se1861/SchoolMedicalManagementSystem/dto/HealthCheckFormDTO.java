@@ -39,6 +39,7 @@ public class HealthCheckFormDTO {
     private Long studentId;
     private String studentFullName;
     private String studentClassName;
+    private String schoolYear;
     private String studentDateOfBirth;
     
     // Parent info

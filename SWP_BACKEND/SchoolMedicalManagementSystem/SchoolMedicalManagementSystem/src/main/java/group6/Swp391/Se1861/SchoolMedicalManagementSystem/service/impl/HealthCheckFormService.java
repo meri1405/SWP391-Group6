@@ -309,6 +309,7 @@ public class HealthCheckFormService implements IHealthCheckFormService {
             dto.setStudentId(student.getStudentID()); // Use getStudentID instead of getId
             dto.setStudentFullName(student.getFullName());
             dto.setStudentClassName(student.getClassName());
+            dto.setSchoolYear(student.getSchoolYear());
             if (student.getDob() != null) {
                 dto.setStudentDateOfBirth(student.getDob().toString()); // Use getDob instead of getDateOfBirth
             }

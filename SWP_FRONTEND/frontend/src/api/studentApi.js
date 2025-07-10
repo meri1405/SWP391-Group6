@@ -68,6 +68,7 @@ export const getAllStudents = async () => {
  * @param {Object} filterParams - Các tham số lọc
  * @param {string} [filterParams.searchName] - Tên học sinh cần tìm
  * @param {string} [filterParams.className] - Lớp học
+ * @param {string} [filterParams.schoolYear] - Năm học
  * @param {string} [filterParams.birthPlace] - Nơi sinh
  * @param {number} [filterParams.birthYear] - Năm sinh
  * @returns {Promise<Array>} Danh sách học sinh được lọc
@@ -82,6 +83,9 @@ export const filterStudents = async (filterParams = {}) => {
     }
     if (filterParams.className?.trim()) {
       queryParams.append("className", filterParams.className.trim());
+    }
+    if (filterParams.schoolYear?.trim()) {
+      queryParams.append("schoolYear", filterParams.schoolYear.trim());
     }
     if (filterParams.birthPlace?.trim()) {
       queryParams.append("birthPlace", filterParams.birthPlace.trim());
