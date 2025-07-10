@@ -9,6 +9,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.PostConstruct;
+import java.util.TimeZone;
+
 /**
  * Lớp chính của ứng dụng Quản lý Y tế Trường học
  * - Khởi tạo ứng dụng Spring Boot
@@ -20,10 +23,24 @@ import org.springframework.stereotype.Component;
 public class SchoolMedicalManagementSystemApplication {
 
 	/**
+	 * Thiết lập múi giờ mặc định cho toàn bộ ứng dụng
+	 * Đảm bảo tất cả các thao tác thời gian sử dụng múi giờ Việt Nam
+	 */
+	@PostConstruct
+	public void setTimezone() {
+		TimeZone.setDefault(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"));
+		System.setProperty("user.timezone", "Asia/Ho_Chi_Minh");
+	}
+
+	/**
 	 * Hàm main - điểm khởi đầu của ứng dụng
 	 * Khởi chạy ứng dụng Spring Boot
 	 */
 	public static void main(String[] args) {
+		// Đặt múi giờ trước khi khởi động ứng dụng
+		TimeZone.setDefault(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"));
+		System.setProperty("user.timezone", "Asia/Ho_Chi_Minh");
+		
 		SpringApplication.run(SchoolMedicalManagementSystemApplication.class, args);
 	}
 

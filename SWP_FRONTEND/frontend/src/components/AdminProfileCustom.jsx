@@ -45,15 +45,15 @@ const AdminProfileCustom = ({ userInfo: initialUserInfo, onProfileUpdate }) => {
 
         // Update form data with all available information
         setFormData({
-          firstName: profileData.firstName || "",
-          lastName: profileData.lastName || "",
-          email: profileData.email || "",
-          phone: profileData.phone || "",
-          address: profileData.address || "",
-          jobTitle: profileData.jobTitle || "Quản trị viên",
-          username: profileData.username || "",
-          dob: profileData.dob || profileData.dateOfBirth || "",
-          gender: profileData.gender || "",
+          firstName: profileData.data.firstName || "",
+          lastName: profileData.data.lastName || "",
+          email: profileData.data.email || "",
+          phone: profileData.data.phone || "",
+          address: profileData.data.address || "",
+          jobTitle: profileData.data.jobTitle || "Quản trị viên",
+          username: profileData.data.username || "",
+          dob: profileData.data.dob || profileData.data.dateOfBirth || "",
+          gender: profileData.data.gender || "",
         });
 
         console.log("Updated formData with profile:", {

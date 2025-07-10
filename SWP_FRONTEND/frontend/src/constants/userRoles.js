@@ -30,6 +30,13 @@ export const ROLE_DESCRIPTIONS = {
   [USER_ROLES.PARENT]: 'Theo dõi sức khỏe con em'
 };
 
+export const ROLE_JOB_TITLES = {
+  [USER_ROLES.ADMIN]: 'Quản trị viên hệ thống',
+  [USER_ROLES.MANAGER]: 'Quản lý',
+  [USER_ROLES.SCHOOLNURSE]: 'Y tá trường học',
+  [USER_ROLES.PARENT]: 'Phụ huynh học sinh'
+};
+
 /**
  * Get minimum age for a role
  * @param {string} role - User role
@@ -72,4 +79,13 @@ export const getMaxAgeForRole = (role) => {
  */
 export const isStaffRole = (role) => {
   return [USER_ROLES.ADMIN, USER_ROLES.MANAGER, USER_ROLES.SCHOOLNURSE].includes(role);
+};
+
+/**
+ * Get job title for a role
+ * @param {string} role - User role
+ * @returns {string} - Job title
+ */
+export const getJobTitleForRole = (role) => {
+  return ROLE_JOB_TITLES[role] || '';
 };
