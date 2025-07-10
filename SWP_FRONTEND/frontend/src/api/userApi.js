@@ -137,16 +137,16 @@ export const sendOtpForPasswordChange = async (email) => {
   }
 };
 
-export const verifyOtpAndChangePassword = async (email, otp, newPassword) => {
+export const verifyOtpAndChangePasswordWithUsername = async (email, otp, newPassword, newUsername) => {
   try {
     const response = await fetch(
-      `${API_BASE_URL}/auth/verify-otp-change-password`,
+      `${API_BASE_URL}/auth/verify-otp-change-password-username`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email, otp, newPassword }),
+        body: JSON.stringify({ email, otp, newPassword, newUsername }),
       }
     );
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useSystemSettings } from "../contexts/SystemSettingsContext";
@@ -17,6 +17,8 @@ import {
   getOTPRemainingTime,
   resetOTPTimer,
 } from "../utils/firebase";
+import { checkFirstLogin } from "../api/userApi";
+import { handleOAuth2Error } from "../utils/errorHandling";
 import FirstTimeLoginModal from "../components/FirstTimeLoginModal";
 import "../styles/Login.css";
 
@@ -41,24 +43,62 @@ const Login = () => {
   const [firebaseBillingEnabled, setFirebaseBillingEnabled] = useState(true); // Track Firebase billing status
   const [showFirstTimeModal, setShowFirstTimeModal] = useState(false);
   const [firstTimeLoginEmail, setFirstTimeLoginEmail] = useState("");
+  const [firstTimeLoginUsername, setFirstTimeLoginUsername] = useState("");
+  const [isGoogleFirstTimeLogin, setIsGoogleFirstTimeLogin] = useState(false);
 
   const { login } = useAuth();
   const navigate = useNavigate();
-  const { settings } = useSystemSettings(); // Check for OAuth2 error messages from URL parameters
+  const { settings } = useSystemSettings();
+
+  // Handle first-time login from Google OAuth
+  const handleGoogleFirstTimeLogin = useCallback(async (email) => {
+    try {
+      // Clear URL parameters
+      navigate("/login", { replace: true });
+      
+      // Call checkFirstLogin API to get current username
+      const firstLoginResponse = await checkFirstLogin(email);
+      if (firstLoginResponse.ok && firstLoginResponse.data?.requiresFirstTimeLogin) {
+        setFirstTimeLoginEmail(email);
+        setFirstTimeLoginUsername(firstLoginResponse.data.currentUsername || "");
+        setIsGoogleFirstTimeLogin(true);
+        setShowFirstTimeModal(true);
+      } else {
+        // If API call fails, still show modal but without username
+        setFirstTimeLoginEmail(email);
+        setFirstTimeLoginUsername("");
+        setIsGoogleFirstTimeLogin(true);
+        setShowFirstTimeModal(true);
+      }
+    } catch (error) {
+      console.error("Error handling Google first-time login:", error);
+      // Show modal even if there's an error
+      setFirstTimeLoginEmail(email);
+      setFirstTimeLoginUsername("");
+      setIsGoogleFirstTimeLogin(true);
+      setShowFirstTimeModal(true);
+    }
+  }, [navigate]);
+
+  // Check for OAuth2 error messages from URL parameters
   useEffect(() => {
     const error = searchParams.get("error");
+    const firstTimeLogin = searchParams.get("firstTimeLogin");
+    const email = searchParams.get("email");
+    
     if (error) {
-      setErrors({ google: decodeURIComponent(error) });
-
-      // Clear the error parameter from URL after a short delay
-      setTimeout(() => {
-        navigate("/login", { replace: true });
-      }, 100);
+      // Use the error handling utility for better UX
+      handleOAuth2Error(navigate, decodeURIComponent(error));
+      return;
+    } else if (firstTimeLogin === "true" && email) {
+      // Handle first-time login from Google OAuth
+      console.log("First-time login detected from Google OAuth for email:", email);
+      handleGoogleFirstTimeLogin(email);
     } else {
       // Clear Google errors if no error in URL
       setErrors((prev) => ({ ...prev, google: undefined }));
     }
-  }, [searchParams, navigate]);
+  }, [searchParams, navigate, handleGoogleFirstTimeLogin]);
 
   // Clear all errors when component mounts
   useEffect(() => {
@@ -567,7 +607,24 @@ const Login = () => {
         // Check if this is a first-time login before proceeding
         if (userData.firstLogin || userData.needPasswordChange) {
           console.log("First-time login detected for user:", userData.email);
+          
+          try {
+            // Call checkFirstLogin API to get current username
+            const firstLoginResponse = await checkFirstLogin(userData.email);          if (firstLoginResponse.ok && firstLoginResponse.data?.requiresFirstTimeLogin) {
+            setFirstTimeLoginEmail(userData.email);
+            setFirstTimeLoginUsername(firstLoginResponse.data.currentUsername || "");
+            setIsGoogleFirstTimeLogin(false);
+            setShowFirstTimeModal(true);
+            return;
+          }
+          } catch (error) {
+            console.error("Error checking first login:", error);
+          }
+          
+          // Fallback to old behavior if API call fails
           setFirstTimeLoginEmail(userData.email);
+          setFirstTimeLoginUsername("");
+          setIsGoogleFirstTimeLogin(false);
           setShowFirstTimeModal(true);
           return;
         }
@@ -661,7 +718,7 @@ const Login = () => {
       // Build absolute URL for OAuth
       const oauthUrl = API_ENDPOINTS.auth.googleOAuth.startsWith("http")
         ? API_ENDPOINTS.auth.googleOAuth
-        : `http://localhost:8081${API_ENDPOINTS.auth.googleOAuth}`;
+        : `http://localhost:8080${API_ENDPOINTS.auth.googleOAuth}`;
 
       console.log("Final OAuth URL:", oauthUrl);
 
@@ -678,6 +735,8 @@ const Login = () => {
   const handleFirstTimeLoginComplete = () => {
     setShowFirstTimeModal(false);
     setFirstTimeLoginEmail("");
+    setFirstTimeLoginUsername("");
+    setIsGoogleFirstTimeLogin(false);
     // Clear form fields
     setUsername("");
     setPassword("");
@@ -689,6 +748,8 @@ const Login = () => {
   const handleFirstTimeLoginCancel = () => {
     setShowFirstTimeModal(false);
     setFirstTimeLoginEmail("");
+    setFirstTimeLoginUsername("");
+    setIsGoogleFirstTimeLogin(false);
     // Clear form fields
     setUsername("");
     setPassword("");
@@ -939,6 +1000,8 @@ const Login = () => {
       <FirstTimeLoginModal
         visible={showFirstTimeModal}
         email={firstTimeLoginEmail}
+        currentUsername={firstTimeLoginUsername}
+        isGoogleLogin={isGoogleFirstTimeLogin}
         onComplete={handleFirstTimeLoginComplete}
         onCancel={handleFirstTimeLoginCancel}
       />
