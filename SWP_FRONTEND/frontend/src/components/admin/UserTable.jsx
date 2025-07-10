@@ -3,6 +3,23 @@ import { Button, Space, Popconfirm, Tag } from 'antd';
 import { EyeOutlined, CloseOutlined, SaveOutlined } from '@ant-design/icons';
 import { USER_ROLES, ROLE_LABELS, ROLE_COLORS } from '../../constants/userRoles';
 
+// Helper function to convert LocalDateTime array to Date
+const convertLocalDateTimeArray = (dateArray) => {
+  if (!dateArray || !Array.isArray(dateArray) || dateArray.length < 3) {
+    return null;
+  }
+  
+  try {
+    // Array format: [year, month, day, hour, minute, second, nanosecond]
+    const [year, month, day, hour = 0, minute = 0, second = 0] = dateArray;
+    // Note: JavaScript Date month is 0-indexed, but LocalDateTime month is 1-indexed
+    return new Date(year, month - 1, day, hour, minute, second);
+  } catch (error) {
+    console.error('Error converting date array:', error);
+    return null;
+  }
+};
+
 const UserTable = ({
   users,
   onViewUser,
@@ -58,9 +75,10 @@ const UserTable = ({
                 </span>
               </td>
               <td>
-                {user.createdAt
-                  ? new Date(user.createdAt).toLocaleDateString("vi-VN")
-                  : "N/A"}
+                {(() => {
+                  const date = convertLocalDateTimeArray(user.createdAt);
+                  return date ? date.toLocaleDateString("vi-VN") : "N/A";
+                })()}
               </td>
               <td>
                 <div className="action-buttons">

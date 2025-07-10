@@ -93,10 +93,13 @@ public class AdminMedicationController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> getSystemTime() {
         Map<String, Object> response = new HashMap<>();
+        ZoneId vietnamZone = ZoneId.of("Asia/Ho_Chi_Minh");
         response.put("currentTime", LocalDateTime.now());
+        response.put("currentTimeVietnam", LocalDateTime.now(vietnamZone));
         response.put("currentDate", LocalDate.now());
         response.put("currentTimeOnly", LocalTime.now());
-        response.put("timezone", ZoneId.systemDefault().toString());
+        response.put("systemTimezone", ZoneId.systemDefault().toString());
+        response.put("configuredTimezone", vietnamZone.toString());
         
         return ResponseEntity.ok(response);
     }

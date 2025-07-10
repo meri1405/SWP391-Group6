@@ -27,13 +27,19 @@ public class MedicationScheduleAutoUpdateService {
     
     @Value("${medication.schedule.overdue-threshold-minutes:30}")
     private int overdueThresholdMinutes;
+    
+    @Value("${app.timezone:Asia/Ho_Chi_Minh}")
+    private String configuredTimezone;
 
     @PostConstruct
     public void init() {
+        ZoneId appZoneId = ZoneId.of(configuredTimezone);
         log.info("Medication Schedule Auto-Update Service initialized");
         log.info("Auto-update enabled: true");
         log.info("Overdue threshold: {} minutes", overdueThresholdMinutes);
+        log.info("Configured timezone: {}", configuredTimezone);
         log.info("System timezone: {}", ZoneId.systemDefault());
+        log.info("Application timezone: {}", appZoneId);
         log.info("Service will run every 10 minutes and every 3 minutes during school hours (7AM-6PM, every day)");
     }
 

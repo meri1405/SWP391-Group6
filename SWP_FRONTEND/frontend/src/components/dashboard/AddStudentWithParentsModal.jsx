@@ -76,7 +76,7 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
   const [fatherEnabled, setFatherEnabled] = useState(true);
   const [motherEnabled, setMotherEnabled] = useState(false);
   const [studentDob, setStudentDob] = useState(
-    dayjs().year(2017).month(0).date(1)
+    dayjs().year(2023).month(0).date(1)
   );
   const [hasUserSelectedDate, setHasUserSelectedDate] = useState(false);
 
@@ -386,11 +386,11 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
               >
                 <DatePicker
                   style={{ width: "100%" }}
-                  placeholder="Chọn ngày sinh (7 tuổi)"
+                  placeholder="Chọn ngày sinh (2 tuổi)"
                   allowClear={false}
                   key="student-datepicker"
                   value={studentDob} // Controlled value
-                  defaultPickerValue={dayjs().year(2017).month(0).date(1)} // Calendar always opens at 2017
+                  defaultPickerValue={dayjs().year(2023).month(0).date(1)} // Calendar always opens at 2023
                   onChange={(date, dateString) => {
                     console.log(
                       "Student DatePicker onChange:",

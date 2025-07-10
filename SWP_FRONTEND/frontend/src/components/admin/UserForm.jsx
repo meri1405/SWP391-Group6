@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Form, Input, Select, DatePicker } from 'antd';
 import dayjs from 'dayjs';
 import { 
@@ -7,7 +7,7 @@ import {
   validateEmail, 
   validateAddress
 } from '../../utils/formValidation';
-import { getMinAgeForRole, getMaxAgeForRole, ROLE_LABELS } from '../../constants/userRoles';
+import { getMaxAgeForRole, ROLE_LABELS, getJobTitleForRole } from '../../constants/userRoles';
 
 const UserForm = ({ 
   form, 
@@ -23,7 +23,7 @@ const UserForm = ({
     );
   };
 
-  // Age validation based on role
+  // Age validation based on role (minimum 25 years old)
   const validateAge = (_, value) => {
     if (!value) return Promise.resolve();
 
@@ -40,12 +40,19 @@ const UserForm = ({
       return Promise.reject(new Error('Ngày sinh không thể trong tương lai!'));
     }
 
-    const minAge = getMinAgeForRole(selectedRole);
+    // Minimum age requirement is 25
+    const minAge = 25;
     const maxAge = getMaxAgeForRole(selectedRole);
 
-    if (age < minAge || age > maxAge) {
+    if (age < minAge) {
       return Promise.reject(
-        new Error(`Tuổi phải từ ${minAge} đến ${maxAge} cho vai trò này!`)
+        new Error(`Tuổi tối thiểu phải từ ${minAge} tuổi trở lên!`)
+      );
+    }
+
+    if (age > maxAge) {
+      return Promise.reject(
+        new Error(`Tuổi không được vượt quá ${maxAge} tuổi!`)
       );
     }
 
@@ -105,48 +112,23 @@ const UserForm = ({
     }
   };
 
+  // Auto-set jobTitle based on selectedRole
+  useEffect(() => {
+    if (form && selectedRole) {
+      const jobTitle = getJobTitleForRole(selectedRole);
+      form.setFieldsValue({ jobTitle });
+    }
+  }, [form, selectedRole]);
+
   return (
     <>
-      {/* Information Guidelines */}
-      <div
-        style={{
-          marginBottom: '24px',
-          padding: '16px',
-          backgroundColor: '#f6ffed',
-          border: '1px solid #b7eb8f',
-          borderRadius: '8px'
-        }}
-      >
-        <h4 style={{ margin: '0 0 12px 0', color: '#389e0d' }}>
-          📋 Thông tin cho vai trò: {ROLE_LABELS[selectedRole]}
-        </h4>
-        <div style={{ fontSize: '13px', color: '#52c41a' }}>
-          <div style={{ marginBottom: '8px' }}>
-            <strong>Thông tin bắt buộc:</strong>
-            <ul style={{ margin: '4px 0', paddingLeft: '20px' }}>
-              <li>Họ và tên: 2-50 ký tự, chỉ chữ cái tiếng Việt</li>
-              <li>Số điện thoại: 10 số, bắt đầu bằng 03, 05, 07, 08, 09 (không được trùng lặp)</li>
-              <li>Email: Địa chỉ email hợp lệ (không được trùng lặp)</li>
-              <li>Tên đăng nhập: 3-30 ký tự, bắt đầu bằng chữ cái (không được trùng lặp)</li>
-              <li>Mật khẩu: Sẽ được tự động tạo (mật khẩu tạm thời)</li>
-              <li>Ngày sinh: Tuổi từ {getMinAgeForRole(selectedRole)}-{getMaxAgeForRole(selectedRole)}</li>
-              <li>Giới tính: Bắt buộc chọn</li>
-              <li>Địa chỉ: 10-200 ký tự</li>
-            </ul>
-            <div style={{ marginTop: '8px', color: '#faad14', fontSize: '12px' }}>
-              <strong>Lưu ý:</strong> Người dùng sẽ được yêu cầu đổi mật khẩu và xác thực email khi đăng nhập lần đầu.
-            </div>
-          </div>
-        </div>
-      </div>
-
       <Form
         form={form}
         layout="vertical"
         initialValues={{
           role: selectedRole,
           email: '',
-          jobTitle: '',
+          jobTitle: getJobTitleForRole(selectedRole),
           firstName: '',
           lastName: '',
           phone: '',
@@ -211,7 +193,19 @@ const UserForm = ({
               style={{ width: '100%' }}
               placeholder="Chọn ngày sinh"
               format="DD/MM/YYYY"
-              disabledDate={(current) => current && current > dayjs().endOf('day')}
+              defaultPickerValue={dayjs().subtract(25, 'year')}
+              disabledDate={(current) => {
+                if (!current) return false;
+                
+                // Disable future dates
+                if (current > dayjs().endOf('day')) return true;
+                
+                // Calculate minimum date for 25 years old
+                const minDate = dayjs().subtract(25, 'year');
+                
+                // Disable dates that would make person younger than 25
+                return current > minDate;
+              }}
             />
           </Form.Item>
 
@@ -243,16 +237,13 @@ const UserForm = ({
             />
           </Form.Item>
 
-          {/* Job Title (if needed) */}
-          <Form.Item
-            label="Chức vụ"
-            name="jobTitle"
-          >
-            <Input placeholder="Nhập chức vụ (tùy chọn)" autoComplete="off" />
-          </Form.Item>
-
           {/* Hidden role field */}
           <Form.Item name="role" style={{ display: 'none' }}>
+            <Input />
+          </Form.Item>
+
+          {/* Hidden job title field - auto-set based on role */}
+          <Form.Item name="jobTitle" style={{ display: 'none' }}>
             <Input />
           </Form.Item>
         </div>

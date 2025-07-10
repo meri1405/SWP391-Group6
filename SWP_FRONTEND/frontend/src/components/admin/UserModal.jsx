@@ -5,6 +5,23 @@ import RoleSelection from './RoleSelection';
 import UserForm from './UserForm';
 import { ROLE_LABELS, ROLE_COLORS } from '../../constants/userRoles';
 
+// Helper function to convert LocalDateTime array to dayjs object
+const convertLocalDateTimeArray = (dateArray) => {
+  if (!dateArray || !Array.isArray(dateArray) || dateArray.length < 3) {
+    return null;
+  }
+  
+  try {
+    // Array format: [year, month, day, hour, minute, second, nanosecond]
+    const [year, month, day, hour = 0, minute = 0, second = 0] = dateArray;
+    // Note: dayjs month is 0-indexed, but LocalDateTime month is 1-indexed
+    return dayjs().year(year).month(month - 1).date(day).hour(hour).minute(minute).second(second);
+  } catch (error) {
+    console.error('Error converting date array:', error);
+    return null;
+  }
+};
+
 const UserModal = ({
   open,
   onCancel,
@@ -30,7 +47,7 @@ const UserModal = ({
   const getModalTitle = () => {
     switch (mode) {
       case 'add':
-        return 'Thêm người dùng mới';
+        return selectedRole ? `Thêm ${ROLE_LABELS[selectedRole]}` : 'Chọn vai trò';
       case 'view':
         return 'Thông tin người dùng';
       case 'edit':
@@ -58,6 +75,7 @@ const UserModal = ({
     }
 
     return [
+      
       <Button 
         key="cancel" 
         onClick={() => {
@@ -133,7 +151,10 @@ const UserModal = ({
             </Tag>
           </Descriptions.Item>
           <Descriptions.Item label="Ngày tạo" span={1}>
-            {selectedUser?.createdAt}
+            {(() => {
+              const createdDate = convertLocalDateTimeArray(selectedUser?.createdAt || selectedUser?.createdDate);
+              return createdDate ? createdDate.format("HH:mm DD/MM/YYYY") : "Chưa cập nhật";
+            })()}
           </Descriptions.Item>
           <Descriptions.Item label="Địa chỉ" span={2}>
             {selectedUser?.address && selectedUser.address.trim() !== ""
