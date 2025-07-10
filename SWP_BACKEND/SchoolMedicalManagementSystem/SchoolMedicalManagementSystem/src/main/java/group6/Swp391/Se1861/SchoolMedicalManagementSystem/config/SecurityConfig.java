@@ -24,19 +24,22 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final JwtAuthenticationEntryPoint unauthorizedHandler;
     private final CustomOAuth2UserService customOAuth2UserService;
-    private final CustomOAuth2AuthenticationSuccessHandler oAuth2SuccessHandler;
+    private final OAuth2AuthenticationSuccessHandler oAuth2SuccessHandler;
+    private final OAuth2AuthenticationFailureHandler oAuth2FailureHandler;
 
     public SecurityConfig(
             CustomUserDetailsService userDetailsService,
             JwtAuthenticationFilter jwtAuthenticationFilter,
             JwtAuthenticationEntryPoint unauthorizedHandler,
             CustomOAuth2UserService customOAuth2UserService,
-            CustomOAuth2AuthenticationSuccessHandler oAuth2SuccessHandler) {
+            OAuth2AuthenticationSuccessHandler oAuth2SuccessHandler,
+            OAuth2AuthenticationFailureHandler oAuth2FailureHandler) {
         this.userDetailsService = userDetailsService;
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.unauthorizedHandler = unauthorizedHandler;
         this.customOAuth2UserService = customOAuth2UserService;
         this.oAuth2SuccessHandler = oAuth2SuccessHandler;
+        this.oAuth2FailureHandler = oAuth2FailureHandler;
     }
 
     @Bean
@@ -94,6 +97,7 @@ public class SecurityConfig {
                     .userInfoEndpoint(userInfo ->
                         userInfo.userService(customOAuth2UserService))
                     .successHandler(oAuth2SuccessHandler)
+                    .failureHandler(oAuth2FailureHandler)
             );        http.authenticationProvider(authenticationProvider());
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

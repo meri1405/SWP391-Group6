@@ -1,23 +1,38 @@
 import React, { useState, useEffect } from "react";
 import { Modal, Form, Input, Button, message, Typography, Steps, Alert } from "antd";
-import { LockOutlined, MailOutlined, SafetyOutlined } from "@ant-design/icons";
-import { sendOtpForPasswordChange, verifyOtpAndChangePassword } from "../api/userApi";
+import { LockOutlined, MailOutlined, SafetyOutlined, UserOutlined } from "@ant-design/icons";
+import { sendOtpForPasswordChange, verifyOtpAndChangePasswordWithUsername } from "../api/userApi";
 
 const { Title, Text } = Typography;
 const { Step } = Steps;
 
 const FirstTimeLoginModal = ({ 
   visible, 
-  email, 
+  email,
+  currentUsername,
+  isGoogleLogin = false,
   onComplete, 
   onCancel 
 }) => {
   const [form] = Form.useForm();
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [otpSent, setOtpSent] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
   const [passwordStrength, setPasswordStrength] = useState({ score: 0, text: "", color: "" });
+
+  // Reset form when modal opens/closes or currentUsername changes
+  useEffect(() => {
+    if (visible && currentUsername) {
+      form.setFieldsValue({
+        newUsername: currentUsername
+      });
+    } else if (!visible) {
+      form.resetFields();
+      setCurrentStep(0);
+      setTimeLeft(0);
+      setPasswordStrength({ score: 0, text: "", color: "" });
+    }
+  }, [visible, currentUsername, form]);
 
   // Timer for OTP countdown
   useEffect(() => {
@@ -93,14 +108,13 @@ const FirstTimeLoginModal = ({
     try {
       const result = await sendOtpForPasswordChange(email);
       if (result.ok) {
-        setOtpSent(true);
         setTimeLeft(300); // 5 minutes
         setCurrentStep(1);
         message.success("Mã OTP đã được gửi đến email của bạn!");
       } else {
         message.error(result.data?.message || "Không thể gửi OTP. Vui lòng thử lại.");
       }
-    } catch (error) {
+    } catch {
       message.error("Lỗi hệ thống. Vui lòng thử lại sau.");
     } finally {
       setLoading(false);
@@ -117,7 +131,7 @@ const FirstTimeLoginModal = ({
       } else {
         message.error(result.data?.message || "Không thể gửi lại OTP.");
       }
-    } catch (error) {
+    } catch {
       message.error("Lỗi hệ thống. Vui lòng thử lại sau.");
     } finally {
       setLoading(false);
@@ -138,16 +152,33 @@ const FirstTimeLoginModal = ({
         return;
       }
 
+      // Validate username
+      const username = values.newUsername?.trim();
+      if (!username || username.length < 3 || username.length > 30) {
+        message.error("Tên đăng nhập phải từ 3-30 ký tự!");
+        return;
+      }
+
+      if (!/^[a-zA-Z0-9._-]+$/.test(username)) {
+        message.error("Tên đăng nhập chỉ được chứa chữ cái, số, dấu chấm, gạch dưới và gạch ngang!");
+        return;
+      }
+
       setLoading(true);
-      const result = await verifyOtpAndChangePassword(email, values.otp, values.newPassword);
+      const result = await verifyOtpAndChangePasswordWithUsername(
+        email, 
+        values.otp, 
+        values.newPassword, 
+        username
+      );
       
       if (result.ok) {
-        message.success("Đổi mật khẩu thành công! Vui lòng đăng nhập lại.");
+        message.success("Đổi mật khẩu và tên đăng nhập thành công! Vui lòng đăng nhập lại.");
         onComplete();
       } else {
         message.error(result.data?.message || "Mã OTP không hợp lệ hoặc đã hết hạn.");
       }
-    } catch (error) {
+    } catch {
       message.error("Vui lòng điền đầy đủ thông tin.");
     } finally {
       setLoading(false);
@@ -166,7 +197,7 @@ const FirstTimeLoginModal = ({
         <div style={{ textAlign: "center" }}>
           <SafetyOutlined style={{ color: "#1890ff", fontSize: "24px", marginRight: "8px" }} />
           <Title level={4} style={{ margin: 0, display: "inline" }}>
-            Thiết lập mật khẩu lần đầu
+            Thiết lập mật khẩu và tên đăng nhập
           </Title>
         </div>
       }
@@ -179,7 +210,11 @@ const FirstTimeLoginModal = ({
     >
       <Alert
         message="Lưu ý quan trọng"
-        description="Đây là lần đăng nhập đầu tiên của bạn. Vì lý do bảo mật, bạn cần đổi mật khẩu và xác thực qua email trước khi sử dụng hệ thống."
+        description={
+          isGoogleLogin 
+            ? "Đây là lần đăng nhập Google đầu tiên của bạn. Vì lý do bảo mật, bạn cần đổi mật khẩu và xác thực qua email trước khi sử dụng hệ thống."
+            : "Đây là lần đăng nhập đầu tiên của bạn. Vì lý do bảo mật, bạn cần đổi mật khẩu và xác thực qua email trước khi sử dụng hệ thống."
+        }
         type="warning"
         showIcon
         style={{ marginBottom: "24px" }}
@@ -187,7 +222,7 @@ const FirstTimeLoginModal = ({
 
       <Steps current={currentStep} style={{ marginBottom: "32px" }}>
         <Step title="Gửi OTP" icon={<MailOutlined />} />
-        <Step title="Đổi mật khẩu" icon={<LockOutlined />} />
+        <Step title="Đổi thông tin" icon={<LockOutlined />} />
       </Steps>
 
       {currentStep === 0 && (
@@ -245,6 +280,26 @@ const FirstTimeLoginModal = ({
               </div>
             )}
           </div>
+
+          <Form.Item
+            label="Tên đăng nhập mới"
+            name="newUsername"
+            rules={[
+              { required: true, message: "Vui lòng nhập tên đăng nhập!" },
+              { min: 3, message: "Tên đăng nhập phải có ít nhất 3 ký tự!" },
+              { max: 30, message: "Tên đăng nhập không được quá 30 ký tự!" },
+              {
+                pattern: /^[a-zA-Z0-9._-]+$/,
+                message: "Tên đăng nhập chỉ được chứa chữ cái, số, dấu chấm, gạch dưới và gạch ngang!"
+              }
+            ]}
+            extra="Bạn có thể giữ nguyên tên đăng nhập hiện tại hoặc thay đổi thành tên mới"
+          >
+            <Input
+              placeholder="Nhập tên đăng nhập mới"
+              prefix={<UserOutlined />}
+            />
+          </Form.Item>
 
           <Form.Item
             label="Mật khẩu mới"
@@ -309,7 +364,7 @@ const FirstTimeLoginModal = ({
               size="large"
               style={{ marginTop: "16px" }}
             >
-              Xác nhận đổi mật khẩu
+              Xác nhận đổi thông tin
             </Button>
           </Form.Item>
         </Form>

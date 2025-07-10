@@ -16,9 +16,11 @@ import OAuth2RedirectHandler from "./components/OAuth2RedirectHandler";
 import SessionTimeoutWarning from "./components/SessionTimeoutWarning";
 import ScrollToTop from "./components/ScrollToTop";
 import ScrollToTopOnMount from "./components/ScrollToTopOnMount";
+import ErrorBoundary from "./components/ErrorBoundary";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
+import ErrorPage from "./pages/ErrorPage";
 import Blog from "./pages/Blog";
 import BlogDetail from "./pages/BlogDetail";
 import Documents from "./pages/Documents";
@@ -39,15 +41,17 @@ function App() {
         v7_relativeSplatPath: true,
       }}
     >
-      <AuthProvider>
-        <SystemSettingsProvider>
-          <div className="App">
+      <ErrorBoundary>
+        <AuthProvider>
+          <SystemSettingsProvider>
+            <div className="App">
             <Navbar />
             <ScrollToTopOnMount />
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/error" element={<ErrorPage />} />
               <Route
                 path="/oauth2/redirect"
                 element={<OAuth2RedirectHandler />}
@@ -110,6 +114,7 @@ function App() {
           </div>
         </SystemSettingsProvider>
       </AuthProvider>
+      </ErrorBoundary>
     </Router>
   );
 }

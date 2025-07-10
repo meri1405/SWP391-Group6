@@ -7,6 +7,10 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * DTO for regular password reset request (used by forgot password functionality)
+ * Note: For first-time login password and username changes, use FirstTimePasswordChangeRequest instead
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

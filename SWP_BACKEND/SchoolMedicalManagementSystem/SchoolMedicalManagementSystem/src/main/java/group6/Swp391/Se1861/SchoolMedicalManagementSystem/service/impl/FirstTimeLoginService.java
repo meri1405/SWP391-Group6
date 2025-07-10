@@ -37,14 +37,14 @@ public class FirstTimeLoginService implements IFirstTimeLoginService {
     private static final int OTP_LENGTH = 6;
 
     @Override
-    public MessageResponse checkFirstLogin(PasswordResetRequest request) {
+    public FirstTimeLoginResponse checkFirstLogin(PasswordResetRequest request) {
         try {
             log.info("Checking first login status for email: {}", request.getEmail());
             
             Optional<User> userOpt = userRepository.findByEmail(request.getEmail());
             if (userOpt.isEmpty()) {
                 log.warn("User not found with email: {}", request.getEmail());
-                return new MessageResponse("Người dùng không tồn tại");
+                return new FirstTimeLoginResponse("Người dùng không tồn tại");
             }
 
             User user = userOpt.get();
@@ -53,21 +53,21 @@ public class FirstTimeLoginService implements IFirstTimeLoginService {
             // Chỉ kiểm tra first login cho các vai trò có username/password
             if (!"ADMIN".equals(roleName) && !"MANAGER".equals(roleName) && !"SCHOOLNURSE".equals(roleName)) {
                 log.warn("First login check not applicable for role: {}", roleName);
-                return new MessageResponse("Vai trò không hỗ trợ đăng nhập bằng username/password");
+                return new FirstTimeLoginResponse("Vai trò không hỗ trợ đăng nhập bằng username/password");
             }
 
             boolean isFirstLogin = user.getFirstLogin() != null ? user.getFirstLogin() : false;
             log.info("First login status for user {}: {}", request.getEmail(), isFirstLogin);
             
             if (isFirstLogin) {
-                return new MessageResponse("Người dùng cần đổi mật khẩu lần đầu");
+                return new FirstTimeLoginResponse("Người dùng cần đổi mật khẩu lần đầu", true, user.getUsername());
             } else {
-                return new MessageResponse("Người dùng đã đổi mật khẩu");
+                return new FirstTimeLoginResponse("Người dùng đã đổi mật khẩu", false, null);
             }
             
         } catch (Exception e) {
             log.error("Error checking first login status for email {}: {}", request.getEmail(), e.getMessage(), e);
-            return new MessageResponse("Lỗi hệ thống khi kiểm tra trạng thái đăng nhập");
+            return new FirstTimeLoginResponse("Lỗi hệ thống khi kiểm tra trạng thái đăng nhập");
         }
     }
 
@@ -124,9 +124,9 @@ public class FirstTimeLoginService implements IFirstTimeLoginService {
     }
 
     @Override
-    public MessageResponse verifyOtpAndChangePassword(ResetPasswordRequest request) {
+    public MessageResponse verifyOtpAndChangePasswordWithUsername(FirstTimePasswordChangeRequest request) {
         try {
-            log.info("Verifying OTP and changing password for email: {}", request.getEmail());
+            log.info("Verifying OTP and changing password with username for email: {}", request.getEmail());
             
             // Tìm OTP hợp lệ
             LocalDateTime currentTime = LocalDateTime.now();
@@ -144,31 +144,25 @@ public class FirstTimeLoginService implements IFirstTimeLoginService {
             OtpToken otpToken = otpTokenOpt.get();
             User user = otpToken.getUser();
 
-            // Kiểm tra mật khẩu mới
-            if (request.getNewPassword() == null || request.getNewPassword().trim().isEmpty()) {
-                return new MessageResponse("Mật khẩu mới không được để trống");
+            // Validate new password using extracted method
+            MessageResponse passwordValidation = validatePassword(request.getNewPassword());
+            if (passwordValidation != null) {
+                return passwordValidation;
             }
 
-            if (request.getNewPassword().length() < 8) {
-                return new MessageResponse("Mật khẩu phải có ít nhất 8 ký tự");
+            // Validate new username using extracted method
+            MessageResponse usernameValidation = validateUsername(request.getNewUsername(), user);
+            if (usernameValidation != null) {
+                return usernameValidation;
             }
 
-            if (request.getNewPassword().length() > 50) {
-                return new MessageResponse("Mật khẩu không được quá 50 ký tự");
-            }
-
-            if (request.getNewPassword().contains(" ")) {
-                return new MessageResponse("Mật khẩu không được chứa khoảng trắng");
-            }
-
-            // Kiểm tra độ mạnh mật khẩu
-            if (!isPasswordStrong(request.getNewPassword())) {
-                return new MessageResponse("Mật khẩu phải đạt độ mạnh 'Trung bình' trở lên (cần ít nhất 3/5 tiêu chí: chữ thường, chữ hoa, số, ký tự đặc biệt @$!%*?&)");
-            }
+            String newUsername = request.getNewUsername().trim();
+            boolean usernameChanged = !newUsername.equals(user.getUsername());
 
             // Mã hóa và cập nhật mật khẩu mới
             String encodedPassword = passwordEncoder.encode(request.getNewPassword());
             user.setPassword(encodedPassword);
+            user.setUsername(newUsername); // Update username
             user.setFirstLogin(false); // Đánh dấu đã đổi mật khẩu lần đầu
             userRepository.save(user);
 
@@ -179,11 +173,15 @@ public class FirstTimeLoginService implements IFirstTimeLoginService {
             // Vô hiệu hóa tất cả OTP khác của user này
             otpTokenRepository.markAllEmailTokensAsUsed(request.getEmail(), TOKEN_TYPE_PASSWORD_CHANGE);
 
-            log.info("Password changed successfully for user: {}", request.getEmail());
-            return new MessageResponse("Đổi mật khẩu thành công! Bạn có thể đăng nhập với mật khẩu mới.");
+            String message = usernameChanged 
+                ? "Đổi mật khẩu và tên đăng nhập thành công! Bạn có thể đăng nhập với thông tin mới."
+                : "Đổi mật khẩu thành công! Bạn có thể đăng nhập với mật khẩu mới.";
+            
+            log.info("Password and username changed successfully for user: {}", request.getEmail());
+            return new MessageResponse(message);
             
         } catch (Exception e) {
-            log.error("Error verifying OTP and changing password for email {}: {}", request.getEmail(), e.getMessage(), e);
+            log.error("Error verifying OTP and changing password with username for email {}: {}", request.getEmail(), e.getMessage(), e);
             return new MessageResponse("Lỗi hệ thống khi đổi mật khẩu. Vui lòng thử lại sau.");
         }
     }
@@ -213,6 +211,72 @@ public class FirstTimeLoginService implements IFirstTimeLoginService {
         }
         
         return otp.toString();
+    }
+
+    /**
+     * Validate password strength and format
+     * @param password the password to validate
+     * @return MessageResponse with error message if invalid, null if valid
+     */
+    private MessageResponse validatePassword(String password) {
+        if (password == null || password.trim().isEmpty()) {
+            return new MessageResponse("Mật khẩu mới không được để trống");
+        }
+
+        if (password.length() < 8) {
+            return new MessageResponse("Mật khẩu phải có ít nhất 8 ký tự");
+        }
+
+        if (password.length() > 50) {
+            return new MessageResponse("Mật khẩu không được quá 50 ký tự");
+        }
+
+        if (password.contains(" ")) {
+            return new MessageResponse("Mật khẩu không được chứa khoảng trắng");
+        }
+
+        if (!isPasswordStrong(password)) {
+            return new MessageResponse("Mật khẩu phải đạt độ mạnh 'Trung bình' trở lên (cần ít nhất 3/5 tiêu chí: chữ thường, chữ hoa, số, ký tự đặc biệt @$!%*?&)");
+        }
+
+        return null; // Valid
+    }
+
+    /**
+     * Validate username format and uniqueness
+     * @param username the username to validate
+     * @param currentUser the current user (to allow keeping same username)
+     * @return MessageResponse with error message if invalid, null if valid
+     */
+    private MessageResponse validateUsername(String username, User currentUser) {
+        if (username == null || username.trim().isEmpty()) {
+            return new MessageResponse("Tên đăng nhập mới không được để trống");
+        }
+
+        String trimmedUsername = username.trim();
+        
+        if (trimmedUsername.length() < 3) {
+            return new MessageResponse("Tên đăng nhập phải có ít nhất 3 ký tự");
+        }
+
+        if (trimmedUsername.length() > 30) {
+            return new MessageResponse("Tên đăng nhập không được quá 30 ký tự");
+        }
+
+        if (!trimmedUsername.matches("^[a-zA-Z0-9._-]+$")) {
+            return new MessageResponse("Tên đăng nhập chỉ được chứa chữ cái, số, dấu chấm, gạch dưới và gạch ngang");
+        }
+
+        // Check uniqueness only if username is different from current one
+        if (!trimmedUsername.equals(currentUser.getUsername())) {
+            Optional<User> existingUserOpt = userRepository.findByUsername(trimmedUsername);
+            if (existingUserOpt.isPresent() && !existingUserOpt.get().getId().equals(currentUser.getId())) {
+                log.warn("Username {} already exists for another user", trimmedUsername);
+                return new MessageResponse("Tên đăng nhập đã tồn tại. Vui lòng chọn tên đăng nhập khác.");
+            }
+        }
+
+        return null; // Valid
     }
 
     /**

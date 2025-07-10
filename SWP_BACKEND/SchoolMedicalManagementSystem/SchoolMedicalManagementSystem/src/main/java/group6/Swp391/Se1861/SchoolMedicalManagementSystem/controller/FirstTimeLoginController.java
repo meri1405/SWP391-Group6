@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001", "http://localhost:5173"})
+@CrossOrigin(origins = {"http://localhost:5173"})
 public class FirstTimeLoginController {
 
     private final IFirstTimeLoginService firstTimeLoginService;
@@ -24,22 +24,22 @@ public class FirstTimeLoginController {
      * Kiểm tra xem người dùng có cần đổi mật khẩu lần đầu không
      * 
      * @param request Yêu cầu kiểm tra đăng nhập lần đầu (sử dụng PasswordResetRequest để reuse DTO)
-     * @return ResponseEntity chứa thông tin trạng thái
+     * @return ResponseEntity chứa thông tin trạng thái và username hiện tại
      */
     @PostMapping("/check-first-login")
-    public ResponseEntity<MessageResponse> checkFirstLogin(@RequestBody PasswordResetRequest request) {
+    public ResponseEntity<FirstTimeLoginResponse> checkFirstLogin(@RequestBody PasswordResetRequest request) {
         try {
             log.info("Received check first login request for email: {}", request.getEmail());
             
             if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
                 return ResponseEntity.badRequest()
-                    .body(new MessageResponse("Email không được để trống"));
+                    .body(new FirstTimeLoginResponse("Email không được để trống"));
             }
 
-            MessageResponse response = firstTimeLoginService.checkFirstLogin(request);
+            FirstTimeLoginResponse response = firstTimeLoginService.checkFirstLogin(request);
             
-            // Check if the response indicates a first login requirement by message content
-            if (response.getMessage().contains("cần đổi mật khẩu lần đầu")) {
+            // Check if the response indicates a first login requirement by flag
+            if (response.isRequiresFirstTimeLogin()) {
                 return ResponseEntity.ok(response);
             } else if (response.getMessage().contains("đã đổi mật khẩu")) {
                 return ResponseEntity.ok(response);
@@ -50,7 +50,7 @@ public class FirstTimeLoginController {
         } catch (Exception e) {
             log.error("Error in checkFirstLogin: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new MessageResponse("Lỗi hệ thống"));
+                .body(new FirstTimeLoginResponse("Lỗi hệ thống"));
         }
     }
 
@@ -93,15 +93,15 @@ public class FirstTimeLoginController {
     }
 
     /**
-     * Xác thực OTP và đổi mật khẩu lần đầu
+     * Xác thực OTP và đổi cả mật khẩu và username lần đầu
      * 
-     * @param request Yêu cầu xác thực OTP và đổi mật khẩu (sử dụng ResetPasswordRequest)
+     * @param request Yêu cầu xác thực OTP và đổi mật khẩu + username
      * @return ResponseEntity chứa thông tin kết quả
      */
-    @PostMapping("/verify-otp-change-password")
-    public ResponseEntity<MessageResponse> verifyOtpAndChangePassword(@RequestBody ResetPasswordRequest request) {
+    @PostMapping("/verify-otp-change-password-username")
+    public ResponseEntity<MessageResponse> verifyOtpAndChangePasswordWithUsername(@RequestBody FirstTimePasswordChangeRequest request) {
         try {
-            log.info("Received verify OTP and change password request for email: {}", request.getEmail());
+            log.info("Received verify OTP and change password with username request for email: {}", request.getEmail());
             
             // Validate input
             if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
@@ -119,6 +119,11 @@ public class FirstTimeLoginController {
                     .body(new MessageResponse("Mật khẩu mới không được để trống"));
             }
 
+            if (request.getNewUsername() == null || request.getNewUsername().trim().isEmpty()) {
+                return ResponseEntity.badRequest()
+                    .body(new MessageResponse("Tên đăng nhập mới không được để trống"));
+            }
+
             // Validate email format
             if (!isValidEmail(request.getEmail())) {
                 return ResponseEntity.badRequest()
@@ -131,7 +136,19 @@ public class FirstTimeLoginController {
                     .body(new MessageResponse("Mã OTP phải có 6 chữ số"));
             }
 
-            MessageResponse response = firstTimeLoginService.verifyOtpAndChangePassword(request);
+            // Validate username format
+            String username = request.getNewUsername().trim();
+            if (username.length() < 3 || username.length() > 30) {
+                return ResponseEntity.badRequest()
+                    .body(new MessageResponse("Tên đăng nhập phải từ 3-30 ký tự"));
+            }
+
+            if (!username.matches("^[a-zA-Z0-9._-]+$")) {
+                return ResponseEntity.badRequest()
+                    .body(new MessageResponse("Tên đăng nhập chỉ được chứa chữ cái, số, dấu chấm, gạch dưới và gạch ngang"));
+            }
+
+            MessageResponse response = firstTimeLoginService.verifyOtpAndChangePasswordWithUsername(request);
             
             // Check if the response indicates success by message content
             if (response.getMessage().contains("thành công")) {
@@ -141,7 +158,7 @@ public class FirstTimeLoginController {
             }
             
         } catch (Exception e) {
-            log.error("Error in verifyOtpAndChangePassword: {}", e.getMessage(), e);
+            log.error("Error in verifyOtpAndChangePasswordWithUsername: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new MessageResponse("Lỗi hệ thống khi xác thực OTP"));
         }
