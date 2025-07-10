@@ -87,8 +87,10 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
     const today = dayjs();
     const age = today.diff(dateOfBirth, "year");
 
-    // Hệ thống giáo dục Việt Nam - tự động điền số lớp
-    if (age === 6) {
+    // Hệ thống giáo dục Việt Nam - tự động điền lớp học
+    if (age >= 2 && age <= 5) {
+      return "Mầm non"; // Lớp mầm non cho độ tuổi 2-5
+    } else if (age === 6) {
       return "1"; // Lớp 1
     } else if (age === 7) {
       return "2"; // Lớp 2 (có thể là 1 hoặc 2, nhưng chọn 2 làm mặc định)
@@ -225,6 +227,7 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
             dob: studentDob.format("YYYY-MM-DD"), // Use state instead of form value
             gender: values.student_gender,
             className: values.student_className,
+            schoolYear: values.student_schoolYear,
             birthPlace: values.student_birthPlace,
             address: values.student_address,
             citizenship: "Việt Nam",
@@ -449,13 +452,17 @@ const AddStudentWithParentsModal = ({ visible, onCancel, onSuccess }) => {
                 name="student_className"
                 label="Lớp học"
                 rules={[{ required: true, message: "Vui lòng nhập lớp học" }]}
-                help={
-                  <span style={{ color: "#666", fontSize: "12px" }}>
-                    Chỉ cần thên chữ cái A,B,C,... sau số lớp
-                  </span>
-                }
               >
-                <Input placeholder="Chọn ngày sinh trước để tự động điền số lớp" />
+                <Input placeholder="Vui lòng nhập lớp học" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item
+                name="student_schoolYear"
+                label="Năm học"
+                rules={[{ required: true, message: "Vui lòng nhập năm học" }]}
+              >
+                <Input placeholder="Ví dụ: 2024-2025" />
               </Form.Item>
             </Col>
           </Row>

@@ -23,6 +23,7 @@ public class HealthCheckResultDTO {
     private Long studentId;
     private String studentName;
     private String studentClass;
+    private String schoolYear;
     private Integer studentAge;
     
     // Campaign information
@@ -54,6 +55,7 @@ public class HealthCheckResultDTO {
         dto.setStudentId(student.getStudentID());
         dto.setStudentName(student.getFullName());
         dto.setStudentClass(student.getClassName());
+        dto.setSchoolYear(student.getSchoolYear());
         // Calculate age from date of birth
         if (student.getDob() != null) {
             dto.setStudentAge(java.time.Period.between(student.getDob(), LocalDate.now()).getYears());

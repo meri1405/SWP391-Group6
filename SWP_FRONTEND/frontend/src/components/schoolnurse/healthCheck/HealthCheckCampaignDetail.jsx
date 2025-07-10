@@ -440,9 +440,28 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
           );
         }
         
-        // Only show "Bắt đầu khám" button if notifications have been sent AND campaign is scheduled
+        // Only show "Bắt đầu khám" button if notifications have been sent AND campaign is scheduled AND start date is reached
         const isScheduled = campaign.timeSlot && campaign.timeSlot !== null;
-        const canStartCampaign = notificationSent && isScheduled;
+        const isStartDateReached = dayjs().isSameOrAfter(dayjs(campaign.startDate), 'day');
+        const canStartCampaign = notificationSent && isScheduled && isStartDateReached;
+        
+        // Determine tooltip message based on what conditions are missing
+        let tooltipMessage = '';
+        if (!notificationSent && !isScheduled && !isStartDateReached) {
+          tooltipMessage = 'Cần gửi thông báo, lên lịch và đến ngày bắt đầu khám mới có thể bắt đầu';
+        } else if (!notificationSent && !isScheduled) {
+          tooltipMessage = 'Cần gửi thông báo và lên lịch trước khi bắt đầu khám';
+        } else if (!notificationSent && !isStartDateReached) {
+          tooltipMessage = 'Cần gửi thông báo và đến ngày bắt đầu khám mới có thể bắt đầu';
+        } else if (!isScheduled && !isStartDateReached) {
+          tooltipMessage = 'Cần lên lịch và đến ngày bắt đầu khám mới có thể bắt đầu';
+        } else if (!notificationSent) {
+          tooltipMessage = 'Cần gửi thông báo trước khi bắt đầu khám';
+        } else if (!isScheduled) {
+          tooltipMessage = 'Cần lên lịch trước khi bắt đầu khám';
+        } else if (!isStartDateReached) {
+          tooltipMessage = `Chỉ có thể bắt đầu khám từ ngày ${dayjs(campaign.startDate).format('DD/MM/YYYY')}`;
+        }
         
         buttons.push(
           <Button 
@@ -455,7 +474,7 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
               'Xác nhận bắt đầu', 
               'Bạn có chắc chắn muốn bắt đầu đợt khám này?'
             )}
-            title={!canStartCampaign ? 'Cần gửi thông báo và lên lịch trước khi bắt đầu khám' : ''}
+            title={tooltipMessage}
           >
             Bắt đầu khám
           </Button>

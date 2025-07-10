@@ -23,6 +23,7 @@ public class EligibleStudentsResponse {
         private String studentCode;
         private Integer ageInMonths;
         private String className;
+        private String schoolYear;
         private String ineligibilityReason;
         private List<VaccinationHistoryInfo> previousVaccinations;
         

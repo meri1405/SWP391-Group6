@@ -154,7 +154,7 @@ public class VaccinationRecordService implements IVaccinationRecordService {
         // Add resolution note
         String timestamp = LocalDateTime.now().toString();
         String resolutionNote = "[" + timestamp + "] Case resolved by " + 
-                nurse.getFirstName() + " " + nurse.getLastName();
+                nurse.getFullName();
         
         String existingNotes = record.getFollowUpNotes();
         if (existingNotes != null && !existingNotes.trim().isEmpty()) {
@@ -245,8 +245,10 @@ public class VaccinationRecordService implements IVaccinationRecordService {
         
         if (record.getStudent() != null) {
             dto.setStudentId(record.getStudent().getStudentID());
-            dto.setStudentFullName(record.getStudent().getFirstName() + " " + record.getStudent().getLastName());
+            dto.setStudentFullName(record.getStudent().getFullName());
             dto.setStudentCode(record.getStudent().getStudentID().toString());
+            dto.setStudentClassName(record.getStudent().getClassName());
+            dto.setSchoolYear(record.getStudent().getSchoolYear());
         }
         
         if (record.getCampaign() != null) {
@@ -261,12 +263,12 @@ public class VaccinationRecordService implements IVaccinationRecordService {
         
         if (record.getRecordedBy() != null) {
             dto.setRecordedById(record.getRecordedBy().getId());
-            dto.setRecordedByName(record.getRecordedBy().getFirstName() + " " + record.getRecordedBy().getLastName());
+            dto.setRecordedByName(record.getRecordedBy().getFullName());
         }
         
         if (record.getUpdatedBy() != null) {
             dto.setUpdatedById(record.getUpdatedBy().getId());
-            dto.setUpdatedByName(record.getUpdatedBy().getFirstName() + " " + record.getUpdatedBy().getLastName());
+            dto.setUpdatedByName(record.getUpdatedBy().getFullName());
         }
         
         if (record.getVaccinationForm() != null) {

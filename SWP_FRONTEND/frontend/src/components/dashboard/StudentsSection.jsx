@@ -48,6 +48,7 @@ const StudentsSection = () => {
   // Filter states
   const [searchName, setSearchName] = useState("");
   const [filterClass, setFilterClass] = useState("");
+  const [filterSchoolYear, setFilterSchoolYear] = useState("");
   const [filterBirthPlace, setFilterBirthPlace] = useState("");
   const [filterBirthYear, setFilterBirthYear] = useState("");
 
@@ -81,6 +82,7 @@ const StudentsSection = () => {
       const filterParams = {
         searchName: searchName || null,
         className: filterClass || null,
+        schoolYear: filterSchoolYear || null,
         birthPlace: filterBirthPlace || null,
         birthYear: filterBirthYear || null,
       };
@@ -107,6 +109,7 @@ const StudentsSection = () => {
   const clearFilters = () => {
     setSearchName("");
     setFilterClass("");
+    setFilterSchoolYear("");
     setFilterBirthPlace("");
     setFilterBirthYear("");
     setCurrentPage(1);
@@ -117,7 +120,7 @@ const StudentsSection = () => {
   // Apply filters when filter values change
   useEffect(() => {
     // Nếu tất cả filter đều empty, hiển thị tất cả
-    if (!searchName && !filterClass && !filterBirthPlace && !filterBirthYear) {
+    if (!searchName && !filterClass && !filterSchoolYear && !filterBirthPlace && !filterBirthYear) {
       if (students.length !== allStudents.length) {
         setStudents(allStudents);
       }
@@ -129,7 +132,7 @@ const StudentsSection = () => {
 
       return () => clearTimeout(timeoutId);
     }
-  }, [searchName, filterClass, filterBirthPlace, filterBirthYear]);
+  }, [searchName, filterClass, filterSchoolYear, filterBirthPlace, filterBirthYear]);
 
   // Get unique values for filter options
   const getUniqueClasses = () => {
@@ -137,6 +140,13 @@ const StudentsSection = () => {
       .map((student) => student.className)
       .filter(Boolean);
     return [...new Set(classes)].sort();
+  };
+
+  const getUniqueSchoolYears = () => {
+    const schoolYears = allStudents
+      .map((student) => student.schoolYear)
+      .filter(Boolean);
+    return [...new Set(schoolYears)].sort();
   };
 
   const getUniqueBirthPlaces = () => {
@@ -229,6 +239,11 @@ const StudentsSection = () => {
       title: "Lớp",
       dataIndex: "className",
       key: "className",
+    },
+    {
+      title: "Năm học",
+      dataIndex: "schoolYear",
+      key: "schoolYear",
     },
     {
       title: "Ngày sinh",
@@ -381,6 +396,26 @@ const StudentsSection = () => {
               {getUniqueClasses().map((className) => (
                 <Select.Option key={className} value={className}>
                   {className}
+                </Select.Option>
+              ))}
+            </Select>
+          </Col>
+          <Col xs={24} sm={12} md={8} lg={6}>
+            <div style={{ marginBottom: 8 }}>
+              <label style={{ fontSize: 14, fontWeight: 500, color: "#333" }}>
+                Lọc theo năm học:
+              </label>
+            </div>
+            <Select
+              placeholder="Chọn năm học"
+              value={filterSchoolYear}
+              onChange={setFilterSchoolYear}
+              style={{ width: "100%" }}
+              allowClear
+            >
+              {getUniqueSchoolYears().map((schoolYear) => (
+                <Select.Option key={schoolYear} value={schoolYear}>
+                  {schoolYear}
                 </Select.Option>
               ))}
             </Select>

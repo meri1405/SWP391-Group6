@@ -344,13 +344,13 @@ public class MedicationScheduleService implements IMedicationScheduleService {
 
         if (schedule.getNurse() != null) {
             dto.setNurseId(schedule.getNurse().getId());
-            dto.setNurseName(schedule.getNurse().getLastName() + " " + schedule.getNurse().getFirstName());
+            dto.setNurseName(schedule.getNurse().getFullName());
         }
 
         // Get student info from the medication request
         Student student = schedule.getItemRequest().getMedicationRequest().getStudent();
         dto.setStudentId(student.getStudentID());
-        dto.setStudentName(student.getLastName() + " " + student.getFirstName());
+        dto.setStudentName(student.getFullName());
         dto.setClassName(student.getClassName());
 
         return dto;
@@ -376,14 +376,14 @@ public class MedicationScheduleService implements IMedicationScheduleService {
         // Set nurse info if available
         if (schedule.getNurse() != null) {
             dto.setNurseId(schedule.getNurse().getId());
-            dto.setNurseName(schedule.getNurse().getLastName() + " " + schedule.getNurse().getFirstName());
+            dto.setNurseName(schedule.getNurse().getFullName());
         }
 
         // Set student info
         Student student = schedule.getItemRequest().getMedicationRequest().getStudent();
         if (student != null) {
             dto.setStudentId(student.getStudentID());
-            dto.setStudentName(student.getLastName() + " " + student.getFirstName());
+            dto.setStudentName(student.getFullName());
             dto.setClassName(student.getClassName());
         }
 
@@ -504,8 +504,7 @@ public class MedicationScheduleService implements IMedicationScheduleService {
                     
                     log.info("Marked schedule ID {} as SKIPPED for student {} - medication: {}",
                             schedule.getId(),
-                            schedule.getItemRequest().getMedicationRequest().getStudent().getFirstName() + " " +
-                            schedule.getItemRequest().getMedicationRequest().getStudent().getLastName(),
+                            schedule.getItemRequest().getMedicationRequest().getStudent().getFullName(),
                             schedule.getItemRequest().getItemName());
                     
                     // Send notification to nurse who approved the medication request

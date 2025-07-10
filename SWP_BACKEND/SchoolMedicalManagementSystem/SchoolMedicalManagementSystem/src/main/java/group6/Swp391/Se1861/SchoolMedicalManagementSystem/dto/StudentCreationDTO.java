@@ -33,6 +33,9 @@ public class StudentCreationDTO {
     @NotBlank(message = "Lớp học không được để trống")
     private String className;
     
+    @NotBlank(message = "Năm học không được để trống")
+    private String schoolYear;
+    
     @NotBlank(message = "Nơi sinh không được để trống")
     private String birthPlace;
     
@@ -42,6 +45,6 @@ public class StudentCreationDTO {
     @NotBlank(message = "Quốc tịch không được để trống")
     private String citizenship;
     
-    @NotNull(message = "Trạng thái khuyết tật không được để trống")
+    @NotNull(message = "Trạng thái không được để trống")
     private Boolean isDisabled;
 }

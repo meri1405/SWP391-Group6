@@ -366,14 +366,14 @@ public class MedicationRequestService implements IMedicationRequestService {
         dto.setStatus(request.getStatus());
         dto.setConfirm(request.isConfirm());
         dto.setStudentId(request.getStudent().getStudentID());
-        dto.setStudentName(request.getStudent().getLastName() + " " + request.getStudent().getFirstName());
+        dto.setStudentName(request.getStudent().getFullName());
 
         // Add prescription images
         dto.setPrescriptionImages(request.getPrescriptionImages());
 
         if (request.getNurse() != null) {
             dto.setNurseId(request.getNurse().getId());
-            dto.setNurseName(request.getNurse().getLastName() + " " + request.getNurse().getFirstName());
+            dto.setNurseName(request.getNurse().getFullName());
         }
 
         // Convert item requests
@@ -411,14 +411,14 @@ public class MedicationRequestService implements IMedicationRequestService {
         dto.setStatus(request.getStatus());
         dto.setConfirm(request.isConfirm());
         dto.setStudentId(request.getStudent().getStudentID());
-        dto.setStudentName(request.getStudent().getLastName() + " " + request.getStudent().getFirstName());
+        dto.setStudentName(request.getStudent().getFullName());
 
         // Add prescription images
         dto.setPrescriptionImages(request.getPrescriptionImages());
 
         if (request.getNurse() != null) {
             dto.setNurseId(request.getNurse().getId());
-            dto.setNurseName(request.getNurse().getLastName() + " " + request.getNurse().getFirstName());
+            dto.setNurseName(request.getNurse().getFullName());
         }
 
         // Convert item requests with schedule times

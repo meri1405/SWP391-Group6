@@ -146,10 +146,14 @@ public class SchoolNurseHealthProfileService implements ISchoolNurseHealthProfil
 
         // Send notification to parent using NotificationService
         if (approvedProfile.getParent() != null) {
-            String title = "Hồ sơ sức khỏe đã được duyệt";
-            String message = "<p>Hồ sơ sức khỏe của học sinh " +
-                   "<strong>" + approvedProfile.getStudent().getFirstName() + " " +
-                    approvedProfile.getStudent().getLastName() + "</strong>"  + " đã được y tá trường duyệt.</p>";
+            String title = "Thông báo phê duyệt hồ sơ sức khỏe";
+
+            String message = "<p>Kính gửi Quý phụ huynh,</p>" +
+                "<p>Hệ thống xin thông báo hồ sơ sức khỏe của học sinh <strong>" +
+                approvedProfile.getStudent().getFullName() + "</strong> đã được y tá trường xác nhận và phê duyệt.</p>" +
+                "<p>Quý phụ huynh có thể yên tâm rằng thông tin sức khỏe đã được ghi nhận chính thức trong hệ thống.</p>" +
+                "<p>Trân trọng,</p>" +
+                "<p><em>Hệ thống Quản lý Sức khỏe Học đường (SMMS)</em></p>";
 
             notificationService.createHealthProfileNotification(
                 approvedProfile,
@@ -214,11 +218,16 @@ public class SchoolNurseHealthProfileService implements ISchoolNurseHealthProfil
 
         // Send notification to parent using NotificationService
         if (rejectedProfile.getParent() != null) {
-            String title = "Hồ sơ sức khỏe đã bị từ chối";
-            String message = "<p>Hồ sơ sức khỏe của học sinh " +
-                   "<strong>" + rejectedProfile.getStudent().getFirstName() + " " +
-                    rejectedProfile.getStudent().getLastName() + "</strong>" +
-                    " đã bị từ chối. Lý do: " + nurseNote + "</p>";
+            String title = "Thông báo từ chối hồ sơ sức khỏe";
+
+            String message = "<p>Kính gửi Quý phụ huynh,</p>" +
+                            "<p>Hệ thống xin thông báo hồ sơ sức khỏe của học sinh <strong>" +
+                            rejectedProfile.getStudent().getFullName() + "</strong> đã không được phê duyệt.</p>" +
+                            "<p><strong>Lý do từ chối:</strong> " + nurseNote + "</p>" +
+                            "<p>Quý phụ huynh vui lòng kiểm tra lại thông tin đã cung cấp và thực hiện chỉnh sửa nếu cần thiết.</p>" +
+                            "<p>Trân trọng,</p>" +
+                            "<p><em>Hệ thống Quản lý Sức khỏe Học đường (SMMS)</em></p>";
+
 
             notificationService.createHealthProfileNotification(
                 rejectedProfile,

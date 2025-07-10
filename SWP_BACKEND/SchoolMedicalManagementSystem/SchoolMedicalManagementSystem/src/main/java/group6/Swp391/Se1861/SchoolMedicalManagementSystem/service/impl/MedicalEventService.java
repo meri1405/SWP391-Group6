@@ -300,9 +300,9 @@ public class MedicalEventService implements IMedicalEventService {
         User parent = student.getParent();
 
         if (parent != null) {
-            String title = "Cập Nhật Sự Kiện Y Tế: " + student.getFirstName() + " " + student.getLastName();
+            String title = "Cập Nhật Sơ Cứu Y Tế: " + student.getFullName();
             StringBuilder message = new StringBuilder();
-            message.append("<p>Sự kiện y tế của con bạn đã được xử lý bởi đội ngũ y tế.</p>");
+            message.append("<p>Sơ cứu y tế của con bạn đã được xử lý bởi đội ngũ y tế.</p>");
             message.append("<p><strong>Loại:</strong> ").append(translateEventType(medicalEvent.getEventType())).append("</p>");
             message.append("<p><strong>Xử lý lúc:</strong> ").append(formatDateTime(medicalEvent.getProcessedTime())).append("</p>");
             message.append("<p><strong>Xử lý bởi:</strong> ").append(medicalEvent.getProcessedBy().getFullName()).append("</p>");
@@ -345,7 +345,8 @@ public class MedicalEventService implements IMedicalEventService {
                     student.getStudentID(),
                     student.getFirstName(),
                     student.getLastName(),
-                    student.getClassName()
+                    student.getClassName(),
+                    student.getSchoolYear()
             ));
         }
 

@@ -30,28 +30,29 @@ public class ExcelService implements IExcelService {
     private static final int COL_STUDENT_DOB = 2;
     private static final int COL_STUDENT_GENDER = 3;
     private static final int COL_STUDENT_CLASS = 4;
-    private static final int COL_STUDENT_BIRTH_PLACE = 5;    
-    private static final int COL_STUDENT_ADDRESS = 6;
+    private static final int COL_STUDENT_SCHOOL_YEAR = 5; // Added school year
+    private static final int COL_STUDENT_BIRTH_PLACE = 6;    
+    private static final int COL_STUDENT_ADDRESS = 7;
     
     // Excel column indices for father data
-    private static final int COL_FATHER_FIRST_NAME = 7;
-    private static final int COL_FATHER_LAST_NAME = 8;
-    private static final int COL_FATHER_PHONE = 9;
-    private static final int COL_FATHER_GENDER = 10;
-    private static final int COL_FATHER_JOB_TITLE = 11;
-    private static final int COL_FATHER_ADDRESS = 12;
-    private static final int COL_FATHER_DOB = 13;
-    private static final int COL_FATHER_ENABLED = 14;
+    private static final int COL_FATHER_FIRST_NAME = 8;
+    private static final int COL_FATHER_LAST_NAME = 9;
+    private static final int COL_FATHER_PHONE = 10;
+    private static final int COL_FATHER_GENDER = 11;
+    private static final int COL_FATHER_JOB_TITLE = 12;
+    private static final int COL_FATHER_ADDRESS = 13;
+    private static final int COL_FATHER_DOB = 14;
+    private static final int COL_FATHER_ENABLED = 15;
     
     // Excel column indices for mother data
-    private static final int COL_MOTHER_FIRST_NAME = 15;
-    private static final int COL_MOTHER_LAST_NAME = 16;
-    private static final int COL_MOTHER_PHONE = 17;
-    private static final int COL_MOTHER_GENDER = 18;
-    private static final int COL_MOTHER_JOB_TITLE = 19;
-    private static final int COL_MOTHER_ADDRESS = 20;
-    private static final int COL_MOTHER_DOB = 21;
-    private static final int COL_MOTHER_ENABLED = 22;
+    private static final int COL_MOTHER_FIRST_NAME = 16;
+    private static final int COL_MOTHER_LAST_NAME = 17;
+    private static final int COL_MOTHER_PHONE = 18;
+    private static final int COL_MOTHER_GENDER = 19;
+    private static final int COL_MOTHER_JOB_TITLE = 20;
+    private static final int COL_MOTHER_ADDRESS = 21;
+    private static final int COL_MOTHER_DOB = 22;
+    private static final int COL_MOTHER_ENABLED = 23;
 
       @Override
     public StudentWithParentsCreationResponseDTO importStudentsFromExcel(MultipartFile file) {
@@ -67,15 +68,18 @@ public class ExcelService implements IExcelService {
             List<StudentParentMapping> studentParentMappings = new ArrayList<>();
             
             // Skip header row (row 0), start from row 1
+            System.out.println("DEBUG: Starting Excel import, total rows: " + sheet.getLastRowNum());
             for (int rowIndex = 1; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
                 Row row = sheet.getRow(rowIndex);
                 if (row == null || isRowEmpty(row)) {
+                    System.out.println("DEBUG: Skipping empty row: " + rowIndex);
                     continue;
                 }
                 
                 try {
                     // Parse student data
                     StudentCreationDTO student = parseStudentFromRow(row, rowIndex);
+                    System.out.println("DEBUG: Parsed student: " + student.getFirstName() + " " + student.getLastName() + " - Class: " + student.getClassName());
                     allStudents.add(student);
                     
                     // Parse and collect father data
@@ -149,6 +153,11 @@ public class ExcelService implements IExcelService {
             if (allStudents.isEmpty()) {
                 throw new IllegalArgumentException("File Excel không chứa dữ liệu học sinh hợp lệ");
             }
+            
+            System.out.println("DEBUG: Total students parsed: " + allStudents.size());
+            System.out.println("DEBUG: Total unique fathers: " + uniqueFathers.size());
+            System.out.println("DEBUG: Total unique mothers: " + uniqueMothers.size());
+            System.out.println("DEBUG: Total student-parent mappings: " + studentParentMappings.size());
             
             // Process in groups by parent combination to use existing service efficiently
             return processStudentsByParentGroups(allStudents, uniqueFathers, uniqueMothers, studentParentMappings);
@@ -276,6 +285,7 @@ public class ExcelService implements IExcelService {
             createHeaderCell(headerRow, COL_STUDENT_DOB, "Ngày sinh học sinh * (dd/MM/yyyy)");
             createHeaderCell(headerRow, COL_STUDENT_GENDER, "Giới tính học sinh * (M/F)");
             createHeaderCell(headerRow, COL_STUDENT_CLASS, "Lớp *");
+            createHeaderCell(headerRow, COL_STUDENT_SCHOOL_YEAR, "Năm học *");
             createHeaderCell(headerRow, COL_STUDENT_BIRTH_PLACE, "Nơi sinh *");
             createHeaderCell(headerRow, COL_STUDENT_ADDRESS, "Địa chỉ học sinh *");
             
@@ -303,6 +313,7 @@ public class ExcelService implements IExcelService {
             sampleRow1.createCell(COL_STUDENT_DOB).setCellValue("15/05/2015");
             sampleRow1.createCell(COL_STUDENT_GENDER).setCellValue("M");
             sampleRow1.createCell(COL_STUDENT_CLASS).setCellValue("5A");
+            sampleRow1.createCell(COL_STUDENT_SCHOOL_YEAR).setCellValue("2023-2024");
             sampleRow1.createCell(COL_STUDENT_BIRTH_PLACE).setCellValue("Hà Nội");
             sampleRow1.createCell(COL_STUDENT_ADDRESS).setCellValue("123 Đường ABC, Hà Nội");
             
@@ -331,6 +342,7 @@ public class ExcelService implements IExcelService {
             sampleRow2.createCell(COL_STUDENT_DOB).setCellValue("10/08/2020");
             sampleRow2.createCell(COL_STUDENT_GENDER).setCellValue("M");
             sampleRow2.createCell(COL_STUDENT_CLASS).setCellValue("Mầm non");
+            sampleRow2.createCell(COL_STUDENT_SCHOOL_YEAR).setCellValue("2023-2024");
             sampleRow2.createCell(COL_STUDENT_BIRTH_PLACE).setCellValue("Hà Nội");
             sampleRow2.createCell(COL_STUDENT_ADDRESS).setCellValue("123 Đường ABC, Hà Nội");
             
@@ -361,6 +373,7 @@ public class ExcelService implements IExcelService {
             sampleRow3.createCell(COL_STUDENT_DOB).setCellValue("20/02/2016");
             sampleRow3.createCell(COL_STUDENT_GENDER).setCellValue("F");
             sampleRow3.createCell(COL_STUDENT_CLASS).setCellValue("3A");
+            sampleRow3.createCell(COL_STUDENT_SCHOOL_YEAR).setCellValue("2023-2024");
             sampleRow3.createCell(COL_STUDENT_BIRTH_PLACE).setCellValue("TP.HCM");
             sampleRow3.createCell(COL_STUDENT_ADDRESS).setCellValue("456 Đường XYZ, TP.HCM");
             
@@ -445,6 +458,7 @@ public class ExcelService implements IExcelService {
         student.setGender(getRequiredStringValue(row, COL_STUDENT_GENDER, "Giới tính học sinh"));
         student.setClassName(getRequiredStringValue(row, COL_STUDENT_CLASS, "Lớp"));
         student.setBirthPlace(getRequiredStringValue(row, COL_STUDENT_BIRTH_PLACE, "Nơi sinh"));
+        student.setSchoolYear(getRequiredStringValue(row, COL_STUDENT_SCHOOL_YEAR, "Năm học"));
         student.setAddress(getRequiredStringValue(row, COL_STUDENT_ADDRESS, "Địa chỉ học sinh"));
         student.setIsDisabled(false);
         // Set citizenship to "Việt Nam" automatically
@@ -457,6 +471,9 @@ public class ExcelService implements IExcelService {
         
         // Validate age (must be <= 12 years old)
         validateStudentAge(student.getDob());
+        
+        // Auto-set className based on age (2-5 years old -> "Mầm non")
+        autoSetClassNameForAge(student);
         
         return student;
     }

@@ -37,6 +37,7 @@ public class MedicalEventResponseDTO {
         private String firstName;
         private String lastName;
         private String className;
+        private String schoolYear;
     }
 
     @Data

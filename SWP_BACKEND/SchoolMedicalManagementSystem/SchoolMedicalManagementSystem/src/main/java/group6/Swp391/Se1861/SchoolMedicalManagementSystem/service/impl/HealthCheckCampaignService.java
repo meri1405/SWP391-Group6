@@ -401,6 +401,7 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
             studentData.put("studentID", student.getStudentID());
             studentData.put("fullName", student.getFullName());
             studentData.put("className", student.getClassName());
+            studentData.put("schoolYear", student.getSchoolYear());
             studentData.put("age", student.getAge());
             studentData.put("gender", student.getGender());
             studentData.put("parentName", student.getParentName());
@@ -1224,6 +1225,7 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
             studentData.put("studentID", student.getStudentID());
             studentData.put("fullName", student.getFullName());
             studentData.put("className", student.getClassName());
+            studentData.put("schoolYear", student.getSchoolYear());
             studentData.put("status", form.getStatus().toString());
             studentData.put("respondedAt", form.getRespondedAt());
             studentData.put("formId", form.getId());
@@ -1255,6 +1257,7 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
             studentResult.put("studentID", student.getStudentID());
             studentResult.put("fullName", student.getFullName());
             studentResult.put("className", student.getClassName());
+            studentResult.put("schoolYear", student.getSchoolYear());
             studentResult.put("formId", form.getId());
             studentResult.put("respondedAt", form.getRespondedAt());
             
@@ -1572,7 +1575,8 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
         String customizedContent = content
             .replace("{{studentName}}", student.getFullName())
             .replace("{{campaignName}}", campaign.getName())
-            .replace("{{className}}", student.getClassName() != null ? student.getClassName() : "");
+            .replace("{{className}}", student.getClassName() != null ? student.getClassName() : "")
+            .replace("{{schoolYear}}", student.getSchoolYear() != null ? student.getSchoolYear() : "");
 
         // Wrap in basic styling if not already styled
         if (!content.contains("<div") && !content.contains("<html")) {
