@@ -68,6 +68,7 @@ const Overview = ({ userInfo: externalUserInfo }) => {
         // Select first student by default
         if (studentsData && studentsData.length > 0) {
           setSelectedStudent(studentsData[0]);
+          console.log(studentsData[0]);
         }
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -284,7 +285,8 @@ const Overview = ({ userInfo: externalUserInfo }) => {
                 )}
               </Card>            </Col>
             
-            <Col xs={24} sm={12} lg={6}>              <Card 
+            <Col xs={24} sm={12} lg={6}>              
+              <Card 
                 style={{ 
                   borderTop: '3px solid #4caf50',
                   height: '100%'
@@ -310,7 +312,8 @@ const Overview = ({ userInfo: externalUserInfo }) => {
           </Card>
         </Col>
         
-        <Col xs={24} sm={12} lg={6}>          <Card 
+        <Col xs={24} sm={12} lg={6}>          
+          <Card 
             style={{ 
               borderTop: '3px solid #ff9800',
               height: '100%'
@@ -323,7 +326,8 @@ const Overview = ({ userInfo: externalUserInfo }) => {
                 justifyContent: 'center'
               }
             }}
-          >            <div>
+          >            
+          <div>
               <Text type="secondary" style={{ fontSize: 14 }}>Quốc tịch</Text>
               <div style={{ display: 'flex', alignItems: 'center', marginTop: 6 }}>
                 <CalendarOutlined style={{ color: '#ff9800', fontSize: 20, marginRight: 8 }} />
@@ -332,7 +336,34 @@ const Overview = ({ userInfo: externalUserInfo }) => {
                 </Text>
               </div>
             </div>
-          </Card>        </Col>
+          </Card>        
+        </Col>
+        <Col xs={24} sm={12} lg={6}>          
+          <Card 
+            style={{ 
+              borderTop: '3px solid #ff9800',
+              height: '100%'
+            }}
+            styles={{ 
+              body: { 
+                padding: '16px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center'
+              }
+            }}
+          >            
+          <div>
+              <Text type="secondary" style={{ fontSize: 14 }}>Năm học</Text>
+              <div style={{ display: 'flex', alignItems: 'center', marginTop: 6 }}>
+                <CalendarOutlined style={{ color: '#ff9800', fontSize: 20, marginRight: 8 }} />
+                <Text style={{ fontSize: 20, color: '#ff9800', fontWeight: 500 }}>
+                  {selectedStudent?.schoolYear || '-'}
+                </Text>
+              </div>
+            </div>
+          </Card>        
+        </Col>
       </Row>
 
       {/* Detailed Student Information */}

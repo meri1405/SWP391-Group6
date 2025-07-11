@@ -44,10 +44,7 @@ const UserTable = ({
         <thead>
           <tr>
             <th>STT</th>
-            <th>Họ</th>
-            <th>Tên</th>
-            <th>Email</th>
-            <th>Tên đăng nhập</th>
+            <th>Họ Tên</th>
             <th>Số điện thoại</th>
             <th>Vai trò</th>
             <th>Trạng thái</th>
@@ -59,10 +56,7 @@ const UserTable = ({
           {users.map((user, index) => (
             <tr key={user.id || user.userId || `user-${index}`}>
               <td>{index + 1}</td>
-              <td>{user.lastName || ""}</td>
-              <td>{user.firstName || ""}</td>
-              <td>{user.email || "-"}</td>
-              <td>{user.username || "-"}</td>
+              <td>{user.lastName || ""} {user.firstName || ""}</td>
               <td>{user.phone || "-"}</td>
               <td>
                 <Tag color={getRoleColor(user.roleName)}>

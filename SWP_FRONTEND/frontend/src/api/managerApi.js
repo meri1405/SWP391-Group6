@@ -411,6 +411,17 @@ const managerApi = {
       throw error;
     }
   },
+
+  updateManagerProfile: async (profileData, token = getTokenFromStorage()) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.put("/api/manager/dashboard/profile", profileData);
+      return response.data;
+    } catch (error) {
+      console.error("Error updating manager profile:", error);
+      throw error;
+    }
+  },
 };
 
 export default managerApi;

@@ -5,14 +5,11 @@ import {
   EditOutlined,
   CloseOutlined,
   SettingOutlined,
-  MailOutlined,
-  PhoneOutlined,
-  CalendarOutlined,
-  BankOutlined,
-  HomeOutlined,
 } from "@ant-design/icons";
 import { getAdminProfile, updateAdminProfile } from "../api/adminApi";
+import { UserProfileDetails, UserProfileAvatar, UserProfileEditForm } from "./common";
 import "../styles/AdminProfileCustom.css";
+import "../styles/SharedProfile.css";
 
 const AdminProfileCustom = ({ userInfo: initialUserInfo, onProfileUpdate }) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -26,7 +23,7 @@ const AdminProfileCustom = ({ userInfo: initialUserInfo, onProfileUpdate }) => {
     address: "",
     jobTitle: "",
     username: "",
-    dob: "",
+    dateOfBirth: "",
     gender: "",
   });
   const [errors, setErrors] = useState({});
@@ -52,7 +49,7 @@ const AdminProfileCustom = ({ userInfo: initialUserInfo, onProfileUpdate }) => {
           address: profileData.data.address || "",
           jobTitle: profileData.data.jobTitle || "Quản trị viên",
           username: profileData.data.username || "",
-          dob: profileData.data.dob || profileData.data.dateOfBirth || "",
+          dateOfBirth: profileData.data.dob || profileData.data.dateOfBirth || "",
           gender: profileData.data.gender || "",
         });
 
@@ -83,7 +80,7 @@ const AdminProfileCustom = ({ userInfo: initialUserInfo, onProfileUpdate }) => {
             address: initialUserInfo.address || "",
             jobTitle: initialUserInfo.jobTitle || "Quản trị viên",
             username: initialUserInfo.username || "",
-            dob: initialUserInfo.dob || "",
+            dateOfBirth: initialUserInfo.dob || initialUserInfo.dateOfBirth || "",
             gender: initialUserInfo.gender || "",
           });
         }
@@ -141,7 +138,7 @@ const AdminProfileCustom = ({ userInfo: initialUserInfo, onProfileUpdate }) => {
         phone: formData.phone,
         address: formData.address,
         jobTitle: formData.jobTitle,
-        dob: formData.dob,
+        dob: formData.dateOfBirth,
         gender: formData.gender,
       };
 
@@ -237,197 +234,96 @@ const AdminProfileCustom = ({ userInfo: initialUserInfo, onProfileUpdate }) => {
         >
           <div className="admin-profile-combined-section">
             <div className="admin-profile-avatar-section">
-              <div className="admin-profile-avatar-large">
-                <div className="admin-avatar-placeholder">
-                  <UserOutlined style={{ fontSize: 48 }} />
-                </div>
-              </div>
+              <UserProfileAvatar 
+                profileData={formData}
+                role="admin"
+                avatarSize={72}
+                showRole={true}
+                customRoleDisplay="Quản trị viên"
+              />
               {isEditing && (
                 <Button icon={<EditOutlined />} size="small" disabled>
                   Đổi ảnh
                 </Button>
               )}
-
-              <div className="admin-profile-basic-info">
-                <h3>
-                  {formData.lastName} {formData.firstName}
-                </h3>
-                <Tag color="red" icon={<SettingOutlined />}>
-                  Quản trị viên
-                </Tag>
-              </div>
             </div>
 
             {!isEditing && (
               <div className="admin-profile-info-grid">
-                <div className="admin-info-grid">
-                  <div className="admin-info-item">
-                    <UserOutlined className="admin-info-icon" />
-                    <div>
-                      <label>HỌ VÀ TÊN</label>
-                      <span>
-                        {formData.lastName && formData.firstName
-                          ? `${formData.lastName} ${formData.firstName}`
-                          : "Chưa cập nhật"}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="admin-info-item">
-                    <MailOutlined className="admin-info-icon" />
-                    <div>
-                      <label>EMAIL</label>
-                      <span>{formData.email || "Chưa cập nhật"}</span>
-                    </div>
-                  </div>
-                  <div className="admin-info-item">
-                    <PhoneOutlined className="admin-info-icon" />
-                    <div>
-                      <label>SỐ ĐIỆN THOẠI</label>
-                      <span>{formData.phone || "Chưa cập nhật"}</span>
-                    </div>
-                  </div>
-                  <div className="admin-info-item">
-                    <UserOutlined className="admin-info-icon" />
-                    <div>
-                      <label>TÊN ĐĂNG NHẬP</label>
-                      <span>{formData.username || "Chưa cập nhật"}</span>
-                    </div>
-                  </div>
-                  <div className="admin-info-item">
-                    <CalendarOutlined className="admin-info-icon" />
-                    <div>
-                      <label>NGÀY SINH</label>
-                      <span>
-                        {formData.dob
-                          ? new Date(formData.dob).toLocaleDateString("vi-VN")
-                          : "Chưa cập nhật"}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="admin-info-item">
-                    <UserOutlined className="admin-info-icon" />
-                    <div>
-                      <label>GIỚI TÍNH</label>
-                      <span>
-                        {formData.gender === "M"
-                          ? "Nam"
-                          : formData.gender === "F"
-                          ? "Nữ"
-                          : "Chưa cập nhật"}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="admin-info-item">
-                    <BankOutlined className="admin-info-icon" />
-                    <div>
-                      <label>CHỨC VỤ</label>
-                      <span>{formData.jobTitle || "Chưa cập nhật"}</span>
-                    </div>
-                  </div>
-                  <div className="admin-info-item">
-                    <SettingOutlined className="admin-info-icon" />
-                    <div>
-                      <label>VAI TRÒ</label>
-                      <span>Quản trị viên</span>
-                    </div>
-                  </div>
-                  <div className="admin-info-item">
-                    <HomeOutlined className="admin-info-icon" />
-                    <div>
-                      <label>ĐỊA CHỈ</label>
-                      <span>{formData.address || "Chưa cập nhật"}</span>
-                    </div>
-                  </div>
-                </div>
+                <UserProfileDetails
+                  profileData={formData}
+                  role="admin"
+                  showFields={{
+                    name: true,
+                    username: true,
+                    email: true,
+                    phone: true,
+                    address: true,
+                    dateOfBirth: true,
+                    gender: true,
+                    jobTitle: true,
+                  }}
+                  customLabels={{
+                    name: "HỌ VÀ TÊN",
+                    username: "TÊN ĐĂNG NHẬP",
+                    email: "EMAIL",
+                    phone: "SỐ ĐIỆN THOẠI",
+                    address: "ĐỊA CHỈ",
+                    dateOfBirth: "NGÀY SINH",
+                    gender: "GIỚI TÍNH",
+                    jobTitle: "CHỨC VỤ",
+                  }}
+                  customFormatters={{
+                    dateOfBirth: (value) => {
+                      if (!value) return "Chưa cập nhật";
+                      try {
+                        return new Date(value).toLocaleDateString("vi-VN");
+                      } catch {
+                        return "Chưa cập nhật";
+                      }
+                    }
+                  }}
+                  className="admin-profile-details"
+                />
               </div>
             )}
           </div>
 
           {isEditing && (
-            <form onSubmit={handleSubmit} className="admin-profile-form">
-              <div className="admin-form-row">
-                <div className="admin-form-group">
-                  <label>Họ *</label>
-                  <input
-                    type="text"
-                    name="lastName"
-                    value={formData.lastName}
-                    onChange={handleChange}
-                    className={errors.lastName ? "error" : ""}
-                    required
-                  />
-                  {errors.lastName && (
-                    <span className="admin-error-text">{errors.lastName}</span>
-                  )}
-                </div>
-                <div className="admin-form-group">
-                  <label>Tên *</label>
-                  <input
-                    type="text"
-                    name="firstName"
-                    value={formData.firstName}
-                    onChange={handleChange}
-                    className={errors.firstName ? "error" : ""}
-                    required
-                  />
-                  {errors.firstName && (
-                    <span className="admin-error-text">{errors.firstName}</span>
-                  )}
-                </div>
-              </div>
-
-              <div className="admin-form-section">
-                <h4>Thông tin tài khoản</h4>
-                <div className="admin-form-row">
-                  <div className="admin-form-group">
-                    <label>Email *</label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleChange}
-                      className={errors.email ? "error" : ""}
-                      placeholder="admin@example.com"
-                    />
-                    {errors.email && (
-                      <span className="admin-error-text">{errors.email}</span>
-                    )}
-                  </div>
-                  <div className="admin-form-group">
-                    <label>Số điện thoại</label>
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleChange}
-                      className={errors.phone ? "error" : ""}
-                      placeholder="0123456789"
-                    />
-                    {errors.phone && (
-                      <span className="admin-error-text">{errors.phone}</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="admin-form-actions">
-                <Button
-                  type="primary"
-                  htmlType="submit"
-                  loading={loading}
-                  size="large"
-                >
-                  Lưu thay đổi
-                </Button>
-                <Button
-                  type="default"
-                  onClick={() => setIsEditing(false)}
-                  size="large"
-                >
-                  Hủy
-                </Button>
-              </div>
-            </form>
+            <UserProfileEditForm
+              formData={formData}
+              errors={errors}
+              onChange={handleChange}
+              onSubmit={handleSubmit}
+              loading={loading}
+              role="admin"
+              showFields={{
+                firstName: true,
+                lastName: true,
+                email: true,
+                phone: true,
+                address: true,
+                dateOfBirth: true,
+                gender: true,
+                jobTitle: true,
+              }}
+              customLabels={{
+                firstName: "Tên",
+                lastName: "Họ",
+                email: "Email",
+                phone: "Số điện thoại",
+                address: "Địa chỉ",
+                dateOfBirth: "Ngày sinh",
+                gender: "Giới tính",
+                jobTitle: "Chức vụ",
+              }}
+              customPlaceholders={{
+                email: "admin@example.com",
+                phone: "0123456789",
+              }}
+              onCancel={() => setIsEditing(false)}
+              className="admin-profile-edit-form"
+            />
           )}
         </Card>
       </div>

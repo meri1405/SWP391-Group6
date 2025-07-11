@@ -423,6 +423,10 @@ public class ParentController {
                     studentInfo.put("firstName", student.getFirstName());
                     studentInfo.put("lastName", student.getLastName());
                     studentInfo.put("className", student.getClassName());
+                    studentInfo.put("citizenship", student.getCitizenship());
+                    studentInfo.put("birthPlace", student.getBirthPlace());
+                    studentInfo.put("address", student.getAddress());
+                    studentInfo.put("schoolYear", student.getSchoolYear());
                     studentInfo.put("gender", student.getGender());
                     studentInfo.put("dateOfBirth", student.getDob());
                     return studentInfo;

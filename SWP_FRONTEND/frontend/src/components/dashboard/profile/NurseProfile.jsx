@@ -1,20 +1,15 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Spin, message, Button } from "antd";
+import { Card, Button, Tag, Spin, message } from "antd";
 import {
   UserOutlined,
-  MailOutlined,
-  PhoneOutlined,
-  CalendarOutlined,
-  HomeOutlined,
-  IdcardOutlined,
-  MedicineBoxOutlined,
-  TrophyOutlined,
   EditOutlined,
-  SaveOutlined,
   CloseOutlined,
+  MedicineBoxOutlined,
 } from "@ant-design/icons";
 import { nurseApi } from "../../../api/nurseApi";
-import "../../../styles/NurseProfile.css";
+import { UserProfileDetails, UserProfileAvatar, UserProfileEditForm } from "../../common";
+import "../../../styles/SharedProfile.css";
+
 const NurseProfile = () => {
   const [profileData, setProfileData] = useState({
     id: "",
@@ -36,7 +31,18 @@ const NurseProfile = () => {
   });
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
-  const [editedData, setEditedData] = useState({});
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    address: "",
+    dateOfBirth: "",
+    gender: "",
+    jobTitle: "",
+    username: "",
+  });
+  const [errors, setErrors] = useState({});
 
   // Format functions
   const formatDate = useCallback((dateString) => {
@@ -107,7 +113,19 @@ const NurseProfile = () => {
           completionLevel: calculateCompletionLevel(response.data),
         };
         setProfileData(loadedProfile);
-        setEditedData(loadedProfile);
+        
+        // Initialize form data
+        setFormData({
+          firstName: loadedProfile.firstName || "",
+          lastName: loadedProfile.lastName || "",
+          email: loadedProfile.email || "",
+          phone: loadedProfile.phone || "",
+          address: loadedProfile.address || "",
+          dateOfBirth: loadedProfile.dateOfBirth || "",
+          gender: loadedProfile.gender || "",
+          jobTitle: loadedProfile.jobTitle || "Y tá Trường học",
+          username: loadedProfile.username || "",
+        });
       } else {
         message.error("Không thể tải thông tin hồ sơ: " + response.message);
       }
@@ -119,24 +137,67 @@ const NurseProfile = () => {
     }
   }, [calculateCompletionLevel]);
 
-  // Load data from API and userInfo
+  // Load data from API
   useEffect(() => {
     fetchProfileData();
   }, [fetchProfileData]);
 
-  // Handle form input changes
-  const handleInputChange = (field, value) => {
-    setEditedData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+  // Form validation
+  const validateForm = () => {
+    const newErrors = {};
+
+    if (!formData.firstName.trim()) {
+      newErrors.firstName = "Tên không được để trống";
+    }
+
+    if (!formData.lastName.trim()) {
+      newErrors.lastName = "Họ không được để trống";
+    }
+
+    if (!formData.email.trim()) {
+      newErrors.email = "Email không được để trống";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = "Email không hợp lệ";
+    }
+
+    if (formData.phone && !/^[0-9]{10,11}$/.test(formData.phone.replace(/\s/g, ""))) {
+      newErrors.phone = "Số điện thoại không hợp lệ";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
-  // Handle save profile
-  const handleSaveProfile = async () => {
+  // Handle form input changes
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      [name]: value,
+    });
+
+    // Clear error when user starts typing
+    if (errors[name]) {
+      setErrors({
+        ...errors,
+        [name]: "",
+      });
+    }
+  };
+
+  // Handle form submission
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!validateForm()) {
+      message.error("Vui lòng kiểm tra lại thông tin");
+      return;
+    }
+
     try {
       setLoading(true);
-      const response = await nurseApi.updateProfile(editedData);
+
+      const response = await nurseApi.updateProfile(formData);
       console.log("Response:", response);
       
       if (response && !response.error) {
@@ -146,9 +207,12 @@ const NurseProfile = () => {
           completionLevel: calculateCompletionLevel(response.profile),
         };
         setProfileData(updatedProfile);
-        setEditedData(updatedProfile);
+        setFormData(updatedProfile);
         setIsEditing(false);
         message.success("Cập nhật hồ sơ thành công");
+        
+        // Refresh profile data
+        await fetchProfileData();
       } else {
         message.error("Không thể cập nhật hồ sơ: " + (response.message || 'Đã có lỗi xảy ra'));
       }
@@ -160,265 +224,163 @@ const NurseProfile = () => {
     }
   };
 
-  if (loading) {
+  // Show loading spinner while fetching data
+  if (loading && !profileData.firstName) {
     return (
-      <div className="nurse-profile-loading">
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "400px",
+        }}
+      >
         <Spin size="large" />
-        <p>Đang tải thông tin hồ sơ...</p>
+        <span style={{ marginLeft: "16px" }}>Đang tải thông tin y tá...</span>
+      </div>
+    );
+  }
+
+  if (!profileData) {
+    return (
+      <div style={{ textAlign: "center", padding: "50px" }}>
+        <span>Không thể tải thông tin hồ sơ</span>
       </div>
     );
   }
 
   return (
     <div className="nurse-profile-container">
-      {/* Profile Header Card */}
-      <div className="nurse-profile-header-card">
-        <div className="nurse-profile-header-content">
-          <div className="nurse-profile-avatar-section">
-            <div className="nurse-profile-avatar-container">
-              <div className="nurse-profile-avatar-wrapper">
-                {profileData.avatar ? (
-                  <img
-                    src={profileData.avatar}
-                    alt="Avatar"
-                    className="nurse-profile-avatar-image"
-                  />
-                ) : (
-                  <div className="nurse-profile-avatar-placeholder">
-                    <UserOutlined />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="nurse-profile-info-section">
-              <div className="nurse-profile-name-container">
-                <h1 className="nurse-profile-name" style={{color: "white"}}>
-                  {profileData.lastName} {profileData.firstName}
-                </h1>
-                <Button
-                  type={isEditing ? "default" : "primary"}
-                  icon={isEditing ? <CloseOutlined /> : <EditOutlined />}
-                  onClick={() => setIsEditing(!isEditing)}
-                >
-                  {isEditing ? "Hủy" : "Chỉnh sửa"}
-                </Button>
-              </div>
-
-              <div className="nurse-profile-details">
-                {profileData.phone && (
-                  <div className="nurse-profile-detail-item">
-                    <PhoneOutlined />
-                    <span>{formatPhoneNumber(profileData.phone)}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+      <div className="nurse-profile-header">
+        <div className="nurse-header-content">
+          <h2>
+            <MedicineBoxOutlined style={{ color: "#52c41a" }} /> Hồ Sơ Cá Nhân
+          </h2>
+          <p>Y tá trường học - Quản lý thông tin cá nhân</p>
         </div>
+        <Button
+          type={isEditing ? "default" : "primary"}
+          icon={isEditing ? <CloseOutlined /> : <EditOutlined />}
+          onClick={() => setIsEditing(!isEditing)}
+          size="large"
+          style={{ 
+            backgroundColor: isEditing ? undefined : "#52c41a", 
+            borderColor: isEditing ? undefined : "#52c41a" 
+          }}
+        >
+          {isEditing ? "Hủy" : "Chỉnh sửa"}
+        </Button>
       </div>
 
-      {/* Profile Content Grid */}
-      <div className="nurse-profile-content-grid">
-        {/* Personal Information */}
-        <div className="nurse-profile-card">
-          <div className="nurse-profile-card-header">
-            <h3>
-              <UserOutlined />
-              Thông tin cá nhân
-            </h3>
-          </div>
-          <div className="nurse-profile-card-content">
-            {isEditing ? (
-              <form className="nurse-profile-form">
-                <div className="nurse-profile-form-grid">
-                  <div className="nurse-form-group">
-                    <label>
-                      <UserOutlined /> HỌ
-                    </label>
-                    <input
-                      type="text"
-                      value={editedData.lastName || ""}
-                      onChange={(e) => handleInputChange("lastName", e.target.value)}
-                    />
-                  </div>
-
-                  <div className="nurse-form-group">
-                    <label>
-                      <UserOutlined /> TÊN
-                    </label>
-                    <input
-                      type="text"
-                      value={editedData.firstName || ""}
-                      onChange={(e) => handleInputChange("firstName", e.target.value)}
-                    />
-                  </div>
-
-                  <div className="nurse-form-group">
-                    <label>
-                      <MailOutlined /> EMAIL
-                    </label>
-                    <input
-                      type="email"
-                      value={editedData.email || ""}
-                      onChange={(e) => handleInputChange("email", e.target.value)}
-                    />
-                  </div>
-
-                  <div className="nurse-form-group">
-                    <label>
-                      <PhoneOutlined /> SỐ ĐIỆN THOẠI
-                    </label>
-                    <input
-                      type="tel"
-                      value={editedData.phone || ""}
-                      onChange={(e) => handleInputChange("phone", e.target.value)}
-                    />
-                  </div>
-
-                  <div className="nurse-form-group">
-                    <label>
-                      <CalendarOutlined /> NGÀY SINH
-                    </label>
-                    <input
-                      type="date"
-                      value={editedData.dateOfBirth || ""}
-                      onChange={(e) => handleInputChange("dateOfBirth", e.target.value)}
-                    />
-                  </div>
-
-                  <div className="nurse-form-group">
-                    <label>
-                      <UserOutlined /> GIỚI TÍNH
-                    </label>
-                    <select
-                      value={editedData.gender || ""}
-                      onChange={(e) => handleInputChange("gender", e.target.value)}
-                    >
-                      <option value="">Chọn giới tính</option>
-                      <option value="M">Nam</option>
-                      <option value="F">Nữ</option>
-                      <option value="O">Khác</option>
-                    </select>
-                  </div>
-
-                  <div className="nurse-form-group nurse-form-group-full">
-                    <label>
-                      <HomeOutlined /> ĐỊA CHỈ
-                    </label>
-                    <input
-                      type="text"
-                      value={editedData.address || ""}
-                      onChange={(e) => handleInputChange("address", e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="nurse-profile-form-actions">
-                  <Button
-                    type="primary"
-                    icon={<SaveOutlined />}
-                    onClick={handleSaveProfile}
-                    loading={loading}
-                  >
-                    Lưu thay đổi
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      setIsEditing(false);
-                      setEditedData(profileData);
-                    }}
-                  >
-                    Hủy
-                  </Button>
-                </div>
-              </form>
-            ) : (
-              <div className="nurse-profile-form-grid">
-                <div className="nurse-form-group">
-                  <label>
-                    <UserOutlined /> HỌ VÀ TÊN
-                  </label>
-                  <div className="nurse-form-value">
-                    {profileData.lastName} {profileData.firstName}
-                  </div>
-                </div>
-
-                <div className="nurse-form-group">
-                  <label>
-                    <MailOutlined /> EMAIL
-                  </label>
-                  <div className="nurse-form-value">
-                    {profileData.email || "Chưa cập nhật"}
-                  </div>
-                </div>
-
-                <div className="nurse-form-group">
-                  <label>
-                    <PhoneOutlined /> SỐ ĐIỆN THOẠI
-                  </label>
-                  <div className="nurse-form-value">
-                    {formatPhoneNumber(profileData.phone)}
-                  </div>
-                </div>
-
-                <div className="nurse-form-group">
-                  <label>
-                    <UserOutlined /> TÊN ĐĂNG NHẬP
-                  </label>
-                  <div className="nurse-form-value">
-                    {profileData.username || "Chưa cập nhật"}
-                  </div>
-                </div>
-
-                <div className="nurse-form-group">
-                  <label>
-                    <CalendarOutlined /> NGÀY SINH
-                  </label>
-                  <div className="nurse-form-value">
-                    {formatDate(profileData.dateOfBirth)}
-                  </div>
-                </div>
-
-                <div className="nurse-form-group">
-                  <label>
-                    <UserOutlined /> GIỚI TÍNH
-                  </label>
-                  <div className="nurse-form-value">
-                    {formatGender(profileData.gender)}
-                  </div>
-                </div>
-
-                <div className="nurse-form-group">
-                  <label>
-                    <MedicineBoxOutlined /> CHỨC VỤ
-                  </label>
-                  <div className="nurse-form-value">
-                    {profileData.specialization || "Y tá Trường học"}
-                  </div>
-                </div>
-
-                <div className="nurse-form-group">
-                  <label>
-                    <IdcardOutlined /> VAI TRÒ
-                  </label>
-                  <div className="nurse-form-value">
-                    {profileData.jobTitle || "Chưa cập nhật"}
-                  </div>
-                </div>
-
-                <div className="nurse-form-group nurse-form-group-full">
-                  <label>
-                    <HomeOutlined /> ĐỊA CHỈ
-                  </label>
-                  <div className="nurse-form-value">
-                    {profileData.address || "Chưa cập nhật"}
-                  </div>
-                </div>
+      <div className="nurse-profile-content">
+        <Card
+          className="nurse-profile-card"
+          title={<div className="nurse-card-title">Thông tin cá nhân</div>}
+          styles={{
+            body: { padding: "24px" },
+            header: {
+              textAlign: "center",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              width: "100%",
+            },
+          }}
+        >
+          {!isEditing ? (
+            <div className="nurse-profile-combined-section">
+              <div className="nurse-profile-avatar-section">
+                <UserProfileAvatar 
+                  profileData={formData}
+                  role="nurse"
+                  avatarSize={72}
+                  showRole={true}
+                  customRoleDisplay="Y tá trường học"
+                />
               </div>
-            )}
-          </div>
-        </div>
+
+              <div className="nurse-profile-info-grid">
+                <UserProfileDetails
+                  profileData={formData}
+                  role="nurse"
+                  showFields={{
+                    name: true,
+                    username: true,
+                    email: true,
+                    phone: true,
+                    address: true,
+                    dateOfBirth: true,
+                    gender: true,
+                    jobTitle: true,
+                  }}
+                  customLabels={{
+                    name: "HỌ VÀ TÊN",
+                    username: "TÊN ĐĂNG NHẬP",
+                    email: "EMAIL", 
+                    phone: "SỐ ĐIỆN THOẠI",
+                    address: "ĐỊA CHỈ",
+                    dateOfBirth: "NGÀY SINH",
+                    gender: "GIỚI TÍNH",
+                    jobTitle: "VAI TRÒ",
+                  }}
+                  customFormatters={{
+                    phone: formatPhoneNumber,
+                    dateOfBirth: formatDate,
+                    gender: formatGender,
+                  }}
+                  className="nurse-profile-details"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="nurse-profile-edit-section">
+              <div className="nurse-profile-avatar-section-edit">
+                <UserProfileAvatar 
+                  profileData={formData}
+                  role="nurse"
+                  avatarSize={72}
+                  showRole={true}
+                  customRoleDisplay="Y tá trường học"
+                />
+              </div>
+              
+              <UserProfileEditForm
+                formData={formData}
+                errors={errors}
+                onChange={handleChange}
+                onSubmit={handleSubmit}
+                loading={loading}
+                role="nurse"
+                showFields={{
+                  firstName: true,
+                  lastName: true,
+                  email: true,
+                  phone: true,
+                  address: true,
+                  dateOfBirth: true,
+                  gender: true,
+                  jobTitle: true,
+                }}
+                customLabels={{
+                  firstName: "Tên",
+                  lastName: "Họ",
+                  email: "Email",
+                  phone: "Số điện thoại",
+                  address: "Địa chỉ",
+                  dateOfBirth: "Ngày sinh",
+                  gender: "Giới tính",
+                  jobTitle: "Vai trò",
+                }}
+                customPlaceholders={{
+                  email: "nurse@example.com",
+                  phone: "0123456789",
+                }}
+                onCancel={() => setIsEditing(false)}
+                className="nurse-profile-edit-form"
+              />
+            </div>
+          )}
+        </Card>
       </div>
     </div>
   );
