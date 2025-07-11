@@ -138,8 +138,8 @@ const ManagerOverview = () => {
         {
           label: "Chiến dịch tiêm chủng",
           data: vaccinationData,
-          backgroundColor: "#ff6b35",
-          borderColor: "#ff6b35",
+          backgroundColor: "#ff4d4f",
+          borderColor: "#ff4d4f",
           borderWidth: 1,
         },
         {

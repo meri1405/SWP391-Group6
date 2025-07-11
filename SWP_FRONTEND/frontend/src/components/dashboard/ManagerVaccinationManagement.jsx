@@ -622,7 +622,7 @@ const ManagerVaccinationManagement = () => {
             }}
           >
             <Descriptions.Item label="Tên chiến dịch" span={2}>
-              <Text strong style={{ fontSize: "16px", color: "#ff6b35" }}>
+              <Text strong style={{ fontSize: "16px", color: "#ff4d4f" }}>
                 {selectedCampaign.name}
               </Text>
             </Descriptions.Item>
