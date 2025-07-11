@@ -8,10 +8,12 @@ import {
   BellOutlined,
   TeamOutlined,
   DashboardOutlined,
+  ProfileOutlined,
 } from "@ant-design/icons";
 import ManagerVaccinationManagement from "../components/dashboard/ManagerVaccinationManagement";
 import ManagerHealthCheckManagement from "../components/dashboard/ManagerHealthCheckManagement";
 import ManagerOverview from "../components/dashboard/ManagerOverview";
+import ManagerProfile from "../components/dashboard/ManagerProfile";
 import { MedicalEventManagement } from "../components/dashboard/events";
 import InventorySection from "../components/dashboard/InventorySection";
 import { Notifications } from "../components/dashboard/notifications";
@@ -140,6 +142,7 @@ const ManagerDashboard = () => {
     if (tabParam) {
       const validTabs = [
         "overview",
+        "profile",
         "notifications",
         "students",
         "health-checks",
@@ -163,6 +166,11 @@ const ManagerDashboard = () => {
       label: "Tổng quan",
     },
     {
+      key: "profile",
+      icon: <ProfileOutlined />,
+      label: "Hồ sơ cá nhân",
+    },
+    {
       key: "notifications",
       icon: (
         <Badge count={notificationCount} offset={[10, 0]}>
@@ -179,7 +187,7 @@ const ManagerDashboard = () => {
     {
       key: "health-checks",
       icon: <TeamOutlined />,
-      label: "Quản lý khám sức khỏe",
+      label: "Quản lý đợt khám",
     },
     {
       key: "vaccinations",
@@ -211,6 +219,8 @@ const ManagerDashboard = () => {
     switch (activeSection) {
       case "overview":
         return <ManagerOverview />;
+      case "profile":
+        return <ManagerProfile />;
       case "notifications":
         return <Notifications role="manager" />;
       case "students":

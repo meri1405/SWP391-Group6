@@ -1,0 +1,61 @@
+.profile-section {
+  padding: 24px;
+  min-height: calc(100vh - 200px);
+  background: transparent;
+}
+
+.profile-section .ant-card {
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.profile-section .ant-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.12) !important;
+}
+
+.profile-section .ant-card .ant-card-head {
+  border-bottom: 1px solid #f0f0f0;
+  background: #fafafa;
+  border-radius: 12px 12px 0 0;
+}
+
+.profile-section .ant-card .ant-card-head-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.profile-section .ant-descriptions-item-label {
+  background: transparent;
+  font-weight: 600;
+}
+
+.profile-section .ant-descriptions-item-content {
+  font-weight: 500;
+}
+
+.profile-section .ant-avatar {
+  border: 4px solid #fff;
+  box-shadow: 0 4px 16px rgba(255, 107, 53, 0.2);
+}
+
+.profile-section .ant-tag {
+  border: none;
+  font-weight: 500;
+}
+
+.profile-section .ant-divider {
+  margin: 24px 0;
+  border-color: #f0f0f0;
+}
+
+@media (max-width: 768px) {
+  .profile-section {
+    padding: 16px;
+  }
+  
+  .profile-section .ant-card {
+    margin-bottom: 16px;
+  }
+}
