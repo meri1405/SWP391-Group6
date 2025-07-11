@@ -1,4 +1,4 @@
-package group6.Swp391.Se1861.SchoolMedicalManagementSystem.utils;
+package group6.Swp391.Se1861.SchoolMedicalManagementSystem.util;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
