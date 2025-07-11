@@ -18,8 +18,7 @@ const HealthCheckResults = () => {
     status: "",
     dateRange: "all", // "all", "last30", "last90", "lastYear"
   });
-  const [showDebugPanel, setShowDebugPanel] = useState(false);
-  const [debugInfo, setDebugInfo] = useState({});
+
   const [selectedTooltip, setSelectedTooltip] = useState(null);
   const { getToken } = useAuth();
 
@@ -64,304 +63,6 @@ const HealthCheckResults = () => {
       console.error("Error converting date array:", dateArray, error);
       return new Date().toISOString();
     }
-  };
-
-  // Debug function to test API directly
-  const testBackendData = async () => {
-    try {
-      const token = getToken();
-      console.log("=== TESTING BACKEND DATA ===");
-      console.log("Token:", token ? "Present" : "Missing");
-
-      // Test 1: Get students
-      console.log("1. Testing getMyStudents...");
-      const studentsResponse = await parentApi.getMyStudents(token);
-      console.log("Students response:", studentsResponse);
-
-      setDebugInfo((prev) => ({
-        ...prev,
-        students: studentsResponse,
-        studentsCount: studentsResponse?.length || 0,
-      }));
-
-      if (studentsResponse && studentsResponse.length > 0) {
-        const firstStudent = studentsResponse[0];
-        const studentId = firstStudent.id || firstStudent.studentID;
-
-        console.log("2. Testing health check results for student:", studentId);
-        console.log("Full student object:", firstStudent);
-
-        // Test 2: Get health check results
-        try {
-          const healthCheckResponse =
-            await parentApi.getAllHealthCheckResultsForStudent(
-              studentId,
-              token
-            );
-          console.log("Health check response:", healthCheckResponse);
-
-          setDebugInfo((prev) => ({
-            ...prev,
-            healthCheckResponse: healthCheckResponse,
-            campaignCount: healthCheckResponse?.campaignResults?.length || 0,
-            totalResults: healthCheckResponse?.totalResults || 0,
-          }));
-        } catch (healthCheckError) {
-          console.error("Health check error:", healthCheckError);
-          console.error("Error response:", healthCheckError.response?.data);
-          console.error("Error status:", healthCheckError.response?.status);
-          setDebugInfo((prev) => ({
-            ...prev,
-            healthCheckError: healthCheckError.message,
-            healthCheckErrorDetails: healthCheckError.response?.data,
-            healthCheckErrorStatus: healthCheckError.response?.status,
-          }));
-        }
-
-        // Test 3: Check if parent profile endpoint works (basic connectivity test)
-        console.log("3. Testing basic parent API connectivity...");
-        try {
-          const profileResponse = await fetch(`/api/parent/profile`, {
-            method: "GET",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          });
-          console.log("Parent profile API status:", profileResponse.status);
-          const profileText = await profileResponse.text();
-          console.log(
-            "Parent profile response (first 500 chars):",
-            profileText.substring(0, 500)
-          );
-
-          setDebugInfo((prev) => ({
-            ...prev,
-            parentProfileStatus: profileResponse.status,
-            parentProfileWorking: profileResponse.status === 200,
-          }));
-        } catch (profileError) {
-          console.error("Parent profile API error:", profileError);
-          setDebugInfo((prev) => ({
-            ...prev,
-            parentProfileError: profileError.message,
-          }));
-        }
-
-        // Test 4: Direct API call to debug the exact endpoint
-        console.log("4. Testing direct health check API call...");
-        try {
-          const response = await fetch(
-            `/api/parent/health-check/students/${studentId}/results`,
-            {
-              method: "GET",
-              headers: {
-                Authorization: `Bearer ${token}`,
-                "Content-Type": "application/json",
-              },
-            }
-          );
-
-          console.log("Direct API response status:", response.status);
-          console.log(
-            "Direct API response headers:",
-            Object.fromEntries(response.headers.entries())
-          );
-          console.log(
-            "Direct API response content-type:",
-            response.headers.get("content-type")
-          );
-
-          // Get raw text first to avoid JSON parsing errors
-          const responseText = await response.text();
-          console.log("Direct API response text length:", responseText.length);
-          console.log(
-            "Direct API response text (first 1000 chars):",
-            responseText.substring(0, 1000)
-          );
-          console.log(
-            "Direct API response text (last 1000 chars):",
-            responseText.substring(Math.max(0, responseText.length - 1000))
-          );
-
-          let responseData;
-          try {
-            responseData = JSON.parse(responseText);
-            console.log("Successfully parsed JSON:", responseData);
-          } catch (jsonError) {
-            console.error("JSON Parse Error:", jsonError.message);
-            console.log("Response is not valid JSON. Raw text:", responseText);
-
-            // Try to extract valid JSON from the beginning of corrupted response
-            try {
-              console.log(
-                "Attempting to extract valid JSON from corrupted response..."
-              );
-
-              // Look for the error message at the end to find where valid JSON ends
-              const errorMessageIndex = responseText.lastIndexOf(
-                '{"success":false,"error"'
-              );
-              if (errorMessageIndex > 0) {
-                // Extract JSON before the error message
-                let validJsonPart = responseText.substring(
-                  0,
-                  errorMessageIndex
-                );
-
-                // Remove trailing incomplete JSON by finding last complete object
-                let bracketCount = 0;
-                let lastValidIndex = -1;
-
-                for (let i = 0; i < validJsonPart.length; i++) {
-                  if (validJsonPart[i] === "{") bracketCount++;
-                  if (validJsonPart[i] === "}") {
-                    bracketCount--;
-                    if (bracketCount === 0) {
-                      lastValidIndex = i;
-                    }
-                  }
-                }
-
-                if (lastValidIndex > 0) {
-                  const cleanJson = validJsonPart.substring(
-                    0,
-                    lastValidIndex + 1
-                  );
-                  console.log("Extracted clean JSON length:", cleanJson.length);
-                  console.log(
-                    "Clean JSON preview:",
-                    cleanJson.substring(0, 500)
-                  );
-
-                  responseData = JSON.parse(cleanJson);
-                  console.log(
-                    "Successfully parsed extracted JSON:",
-                    responseData
-                  );
-                } else {
-                  throw new Error("Could not extract valid JSON");
-                }
-              } else {
-                throw new Error("No error message marker found");
-              }
-            } catch (extractError) {
-              console.error(
-                "Failed to extract valid JSON:",
-                extractError.message
-              );
-              responseData = {
-                error: "Corrupted JSON response",
-                originalError: jsonError.message,
-                extractError: extractError.message,
-                rawText: responseText.substring(0, 2000),
-              };
-            }
-          }
-
-          setDebugInfo((prev) => ({
-            ...prev,
-            directApiResponse: responseData,
-            directApiStatus: response.status,
-            directApiContentType: response.headers.get("content-type"),
-            directApiResponseLength: responseText.length,
-          }));
-        } catch (directError) {
-          console.error("Direct API error:", directError);
-          setDebugInfo((prev) => ({
-            ...prev,
-            directApiError: directError.message,
-          }));
-        }
-      }
-    } catch (error) {
-      console.error("Test backend error:", error);
-      setDebugInfo((prev) => ({
-        ...prev,
-        error: error.message,
-      }));
-    }
-  };
-
-  // Function to simulate sample data for testing display
-  const loadSampleData = () => {
-    const sampleData = [
-      {
-        id: "sample_1",
-        studentId: selectedStudent?.id || selectedStudent?.studentID,
-        campaignId: "campaign_1",
-        campaignName: "Khám sức khỏe định kỳ 2024",
-        campaignLocation: "Phòng y tế trường",
-        category: "HEARING",
-        status: "MINOR_CONCERN",
-        isAbnormal: true,
-        weight: 45,
-        height: 150,
-        bmi: 20.0,
-        resultNotes: "Học sinh có dấu hiệu giảm thính lực nhẹ ở tai phải",
-        recommendations: "Nên theo dõi thêm và kiểm tra lại sau 3 tháng",
-        performedAt: new Date().toISOString(),
-        nurseName: "Y tá Nguyễn Thị Lan",
-        campaignStartDate: "2024-01-15",
-        campaignEndDate: "2024-01-20",
-        campaignDescription: "Đợt khám sức khỏe định kỳ đầu năm học",
-        checkupType: "Khám thính lực",
-      },
-      {
-        id: "sample_2",
-        studentId: selectedStudent?.id || selectedStudent?.studentID,
-        campaignId: "campaign_1",
-        campaignName: "Khám sức khỏe định kỳ 2024",
-        campaignLocation: "Phòng y tế trường",
-        category: "VISION",
-        status: "NORMAL",
-        isAbnormal: false,
-        weight: 45,
-        height: 150,
-        bmi: 20.0,
-        resultNotes: "Thị lực bình thường, không cần điều chỉnh",
-        recommendations: null,
-        performedAt: new Date().toISOString(),
-        nurseName: "Y tá Nguyễn Thị Lan",
-        campaignStartDate: "2024-01-15",
-        campaignEndDate: "2024-01-20",
-        campaignDescription: "Đợt khám sức khỏe định kỳ đầu năm học",
-        checkupType: "Khám thị lực",
-      },
-    ];
-
-    console.log("Loading sample data:", sampleData);
-    setHistoryData(sampleData);
-    setFilteredHistoryData(sampleData);
-
-    // Create fake campaign results
-    const sampleCampaignResults = [
-      {
-        campaign: {
-          id: "campaign_1",
-          name: "Khám sức khỏe định kỳ 2024",
-          location: "Phòng y tế trường",
-          startDate: "2024-01-15",
-          endDate: "2024-01-20",
-          description: "Đợt khám sức khỏe định kỳ đầu năm học",
-        },
-        categoryResults: {
-          sample_1: sampleData[0],
-          sample_2: sampleData[1],
-        },
-        hasResults: true,
-      },
-    ];
-
-    setHealthCheckResults(sampleCampaignResults);
-
-    setDebugInfo((prev) => ({
-      ...prev,
-      totalResults: sampleData.length,
-      campaignCount: 1,
-      healthCheckError: null,
-      sampleDataLoaded: true,
-    }));
   };
 
   const loadHealthCheckResults = useCallback(
@@ -689,42 +390,13 @@ const HealthCheckResults = () => {
 
         setHistoryData(history);
         setFilteredHistoryData(history);
-
-        // Update debug info
-        setDebugInfo((prev) => ({
-          ...prev,
-          healthCheckResponse: response,
-          campaignCount: campaignResults.length,
-          totalResults: history.length,
-          processedHistory: history,
-        }));
-
-        console.log("=== DEBUG: State updated ===");
-        console.log("History data set:", history.length, "items");
-        console.log(
-          "Health check results set:",
-          campaignResults.length,
-          "campaigns"
-        );
-        console.log("Setting historyData state with:", history);
-        console.log("Setting filteredHistoryData state with:", history);
       } catch (error) {
-        console.error("=== DEBUG: Error loading health check results ===");
-        console.error("Error details:", error);
-        console.error("Error message:", error.message);
-        console.error("Error stack:", error.stack);
+        console.error("Error loading health check results:", error);
 
         setError("Không thể tải kết quả khám sức khỏe");
         setHealthCheckResults([]);
         setHistoryData([]);
         setFilteredHistoryData([]);
-
-        setDebugInfo((prev) => ({
-          ...prev,
-          healthCheckError: error.message,
-          totalResults: 0,
-          campaignCount: 0,
-        }));
       } finally {
         setLoading(false);
       }
@@ -810,8 +482,6 @@ const HealthCheckResults = () => {
 
   useEffect(() => {
     loadStudents();
-    // Auto-test backend data on mount
-    testBackendData();
   }, [loadStudents]);
 
   const handleStudentChange = async (student) => {
@@ -1318,13 +988,6 @@ const HealthCheckResults = () => {
   }
 
   // Debug render state
-  console.log("=== RENDER DEBUG ===");
-  console.log("Loading:", loading);
-  console.log("Error:", error);
-  console.log("HealthCheckResults length:", healthCheckResults.length);
-  console.log("HistoryData length:", historyData.length);
-  console.log("FilteredHistoryData length:", filteredHistoryData.length);
-  console.log("ViewMode:", viewMode);
 
   return (
     <div className="health-check-results">
@@ -1353,150 +1016,7 @@ const HealthCheckResults = () => {
             </select>
           </div>
         )}
-
-        {/* Debug Panel Toggle */}
-        <div className="debug-controls">
-          <button
-            className="debug-toggle-btn"
-            onClick={() => setShowDebugPanel(!showDebugPanel)}
-          >
-            🔍 Debug Mode
-          </button>
-          <button className="test-backend-btn" onClick={testBackendData}>
-            🧪 Test Backend
-          </button>
-        </div>
       </div>
-
-      {/* Debug Panel */}
-      {showDebugPanel && (
-        <div className="debug-panel">
-          <h3>🔍 Debug Information</h3>
-          <div className="debug-content">
-            <div className="debug-section">
-              <h4>Backend Status</h4>
-              <p>Students count: {debugInfo.studentsCount || 0}</p>
-              <p>Campaign count: {debugInfo.campaignCount || 0}</p>
-              <p>Total results: {debugInfo.totalResults || 0}</p>
-
-              {/* Parent API Connectivity */}
-              <div
-                style={{
-                  marginTop: "10px",
-                  padding: "10px",
-                  backgroundColor: "#f5f5f5",
-                  borderRadius: "4px",
-                }}
-              >
-                <strong>Parent API Connectivity:</strong>
-                {debugInfo.parentProfileWorking !== undefined && (
-                  <p
-                    style={{
-                      color: debugInfo.parentProfileWorking ? "green" : "red",
-                    }}
-                  >
-                    Profile Endpoint:{" "}
-                    {debugInfo.parentProfileWorking
-                      ? "✅ Working"
-                      : "❌ Failed"}
-                    (Status: {debugInfo.parentProfileStatus})
-                  </p>
-                )}
-                {debugInfo.parentProfileError && (
-                  <p className="error">
-                    Profile API Error: {debugInfo.parentProfileError}
-                  </p>
-                )}
-              </div>
-
-              {debugInfo.error && (
-                <p className="error">Error: {debugInfo.error}</p>
-              )}
-              {debugInfo.healthCheckError && (
-                <div className="error">
-                  <p>Health Check Error: {debugInfo.healthCheckError}</p>
-                  <p>Error Status: {debugInfo.healthCheckErrorStatus}</p>
-                  <p>
-                    Error Details:{" "}
-                    {JSON.stringify(debugInfo.healthCheckErrorDetails)}
-                  </p>
-                </div>
-              )}
-              {debugInfo.directApiResponse && (
-                <div>
-                  <p>Direct API Status: {debugInfo.directApiStatus}</p>
-                  <p>
-                    Direct API Content-Type: {debugInfo.directApiContentType}
-                  </p>
-                  <p>
-                    Direct API Response Length:{" "}
-                    {debugInfo.directApiResponseLength}
-                  </p>
-                  <details>
-                    <summary>Direct API Response</summary>
-                    <pre
-                      style={{
-                        fontSize: "12px",
-                        maxHeight: "200px",
-                        overflow: "auto",
-                      }}
-                    >
-                      {JSON.stringify(debugInfo.directApiResponse, null, 2)}
-                    </pre>
-                  </details>
-                </div>
-              )}
-              {debugInfo.directApiError && (
-                <p className="error">
-                  Direct API Error: {debugInfo.directApiError}
-                </p>
-              )}
-            </div>
-
-            <div className="debug-section">
-              <h4>Current State</h4>
-              <p>
-                Selected student: {selectedStudent?.firstName}{" "}
-                {selectedStudent?.lastName}
-              </p>
-              <p>Health check results: {healthCheckResults.length}</p>
-              <p>History data: {historyData.length}</p>
-              <p>Filtered data: {filteredHistoryData.length}</p>
-              <p>Loading: {loading ? "Yes" : "No"}</p>
-            </div>
-
-            <div className="debug-section">
-              <h4>Raw Data</h4>
-              <details>
-                <summary>Students Response</summary>
-                <pre>{JSON.stringify(debugInfo.students, null, 2)}</pre>
-              </details>
-              <details>
-                <summary>Health Check Response</summary>
-                <pre>
-                  {JSON.stringify(debugInfo.healthCheckResponse, null, 2)}
-                </pre>
-              </details>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Show debug info even when panel is closed */}
-      {debugInfo.totalResults === 0 && debugInfo.campaignCount === 0 && (
-        <div className="data-status-alert">
-          <div className="alert-content">
-            <i className="fas fa-info-circle"></i>
-            <div>
-              <h4>Trạng thái dữ liệu</h4>
-              <p>Chưa có dữ liệu khám sức khỏe trong hệ thống</p>
-              <p>Số học sinh: {debugInfo.studentsCount || 0}</p>
-              <p>Số chiến dịch: {debugInfo.campaignCount || 0}</p>
-              <p>Tổng kết quả: {debugInfo.totalResults || 0}</p>
-            </div>
-          </div>
-        </div>
-      )}
 
       {error && (
         <div className="error-state">
@@ -1543,17 +1063,15 @@ const HealthCheckResults = () => {
               <div className="summary-item">
                 <span className="summary-label">Trạng thái API:</span>
                 <span className="summary-value">
-                  {debugInfo.healthCheckError
-                    ? "Có lỗi"
-                    : "Hoạt động bình thường"}
+                  {error ? "Có lỗi" : "Hoạt động bình thường"}
                 </span>
               </div>
             </div>
 
-            {debugInfo.healthCheckError && (
+            {error && (
               <div className="error-details">
                 <h4>⚠️ Chi tiết lỗi:</h4>
-                <p>{debugInfo.healthCheckError}</p>
+                <p>{error}</p>
               </div>
             )}
 
@@ -1591,186 +1109,10 @@ const HealthCheckResults = () => {
                 >
                   🔄 Làm mới dữ liệu
                 </button>
-                <button onClick={testBackendData} className="test-btn">
-                  🧪 Kiểm tra kết nối
-                </button>
-                <button onClick={loadSampleData} className="sample-btn">
-                  📋 Xem mẫu dữ liệu
-                </button>
-                <button
-                  onClick={() => {
-                    if (
-                      debugInfo.directApiResponse &&
-                      !debugInfo.directApiResponse.error
-                    ) {
-                      console.log(
-                        "Using extracted API data to populate results..."
-                      );
-
-                      // Process the extracted response data
-                      const extractedResponse = debugInfo.directApiResponse;
-                      console.log("Extracted response:", extractedResponse);
-
-                      // Use the existing processing logic with extracted data
-                      if (extractedResponse.campaignResults) {
-                        console.log(
-                          "Processing extracted campaign results:",
-                          extractedResponse.campaignResults
-                        );
-                        setHealthCheckResults(
-                          extractedResponse.campaignResults
-                        );
-
-                        // Also process into history format
-                        const history = [];
-                        extractedResponse.campaignResults.forEach(
-                          (campaignResult, index) => {
-                            const categoryResults =
-                              campaignResult.categoryResults || {};
-
-                            Object.entries(categoryResults).forEach(
-                              ([categoryName, result]) => {
-                                const historyItem = {
-                                  id: `${categoryName}_${
-                                    selectedStudent.id
-                                  }_${Date.now()}`,
-                                  studentId:
-                                    selectedStudent.id ||
-                                    selectedStudent.studentID,
-                                  campaignId: "extracted_campaign",
-                                  campaignName: "Đợt khám sức khỏe từ server",
-                                  campaignLocation: "Phòng y tế trường",
-                                  category: categoryName,
-                                  status: result.isAbnormal
-                                    ? "ABNORMAL"
-                                    : "NORMAL",
-                                  isAbnormal: result.isAbnormal || false,
-                                  weight:
-                                    result.weight ||
-                                    result.hearingDetails?.healthProfile
-                                      ?.weight,
-                                  height:
-                                    result.hearingDetails?.healthProfile
-                                      ?.height,
-                                  bmi: null,
-                                  resultNotes: result.hearingDetails
-                                    ? `Tai trái: ${result.hearingDetails.leftEar}dB, Tai phải: ${result.hearingDetails.rightEar}dB`
-                                    : "",
-                                  recommendations:
-                                    result.hearingDetails?.recommendations ||
-                                    "",
-                                  performedAt: convertArrayDateToISO(
-                                    result.performedAt
-                                  ),
-                                  nurseName: result.nurseName || "",
-                                  doctorName:
-                                    result.hearingDetails?.doctorName || "",
-                                  hearingDetails: result.hearingDetails,
-                                  checkupType: `Khám ${
-                                    categoryName === "HEARING"
-                                      ? "thính lực"
-                                      : "tổng quát"
-                                  }`,
-                                };
-                                history.push(historyItem);
-                              }
-                            );
-                          }
-                        );
-
-                        setHistoryData(history);
-                        setFilteredHistoryData(history);
-                        console.log("Populated with extracted data:", history);
-                      }
-                    } else {
-                      alert("Không có dữ liệu đã extract để sử dụng");
-                    }
-                  }}
-                  className="refresh-btn"
-                  style={{ backgroundColor: "#52c41a" }}
-                >
-                  ✨ Sử dụng dữ liệu đã trích xuất
-                </button>
               </div>
-            </div>
-
-            <div className="instructions-panel">
-              <details>
-                <summary>
-                  🔧 Thông tin kỹ thuật (dành cho nhà phát triển)
-                </summary>
-                <div className="instructions-content">
-                  <p>Quy trình hoàn chình để có kết quả khám sức khỏe:</p>
-                  <ol>
-                    <li>
-                      <strong>Tạo chiến dịch khám sức khỏe</strong> (MANAGER)
-                      <br />
-                      <code>POST /api/manager/health-check-campaigns</code>
-                    </li>
-                    <li>
-                      <strong>Gửi form cho phụ huynh</strong> (MANAGER/NURSE)
-                      <br />
-                      <code>
-                        POST /api/health-check-campaigns/{"{campaignId}"}
-                        /send-forms
-                      </code>
-                    </li>
-                    <li>
-                      <strong>Phụ huynh xác nhận tham gia</strong>
-                      <br />
-                      <code>
-                        POST /api/parent/health-check-forms/{"{formId}"}/confirm
-                      </code>
-                    </li>
-                    <li>
-                      <strong>Y tá ghi kết quả khám</strong> (SCHOOLNURSE)
-                      <br />
-                      <code>
-                        POST /api/health-check-campaigns/record-result
-                      </code>
-                    </li>
-                    <li>
-                      <strong>Gửi kết quả cho phụ huynh</strong> (NURSE)
-                      <br />
-                      <code>POST /api/health-check/send-results</code>
-                    </li>
-                  </ol>
-
-                  <div className="current-api-status">
-                    <h5>📊 Trạng thái hiện tại:</h5>
-                    <ul>
-                      <li>
-                        API Endpoint:{" "}
-                        <code>
-                          GET /api/parent/health-check/students/
-                          {selectedStudent.id || selectedStudent.studentID}
-                          /results
-                        </code>
-                      </li>
-                      <li>
-                        Số lượng campaigns: {debugInfo.campaignCount || 0}
-                      </li>
-                      <li>Tổng kết quả: {debugInfo.totalResults || 0}</li>
-                      <li>Lỗi: {debugInfo.healthCheckError || "Không có"}</li>
-                    </ul>
-                  </div>
-                </div>
-              </details>
             </div>
           </div>
         )}
-
-      {!loading && selectedStudent && historyData.length > 0 && (
-        <div className="results-found-message">
-          <div className="success-indicator">
-            <i className="fas fa-check-circle"></i>
-            <span>
-              Đã tìm thấy {historyData.length} kết quả khám sức khỏe cho{" "}
-              {selectedStudent.firstName} {selectedStudent.lastName}
-            </span>
-          </div>
-        </div>
-      )}
 
       {!loading && historyData.length > 0 && (
         <div className="view-mode-controls">

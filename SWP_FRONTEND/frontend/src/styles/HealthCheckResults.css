@@ -1288,155 +1288,6 @@
 }
 
 /* Debug Panel Styles */
-.debug-controls {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-.debug-toggle-btn,
-.test-backend-btn {
-  background: #722ed1;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background 0.3s ease;
-}
-
-.debug-toggle-btn:hover,
-.test-backend-btn:hover {
-  background: #9254de;
-}
-
-.test-backend-btn {
-  background: #fa8c16;
-}
-
-.test-backend-btn:hover {
-  background: #ffa940;
-}
-
-.debug-panel {
-  background: #f6f6f6;
-  border: 2px solid #722ed1;
-  border-radius: 8px;
-  padding: 20px;
-  margin-bottom: 20px;
-  font-size: 14px;
-}
-
-.debug-panel h3 {
-  margin: 0 0 15px 0;
-  color: #722ed1;
-}
-
-.debug-content {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 20px;
-}
-
-.debug-section {
-  background: white;
-  padding: 15px;
-  border-radius: 6px;
-  border: 1px solid #e8e8e8;
-}
-
-.debug-section h4 {
-  margin: 0 0 10px 0;
-  color: #333;
-  font-size: 16px;
-}
-
-.debug-section p {
-  margin: 5px 0;
-  color: #666;
-}
-
-.debug-section .error {
-  color: #f5222d;
-  font-weight: 500;
-}
-
-.debug-section details {
-  margin: 10px 0;
-}
-
-.debug-section summary {
-  cursor: pointer;
-  font-weight: 500;
-  color: #1890ff;
-  padding: 5px 0;
-}
-
-.debug-section pre {
-  background: #f5f5f5;
-  padding: 10px;
-  border-radius: 4px;
-  overflow-x: auto;
-  font-size: 12px;
-  max-height: 300px;
-  overflow-y: auto;
-}
-
-/* Data Status Alert */
-.data-status-alert {
-  background: #fffbe6;
-  border: 1px solid #ffe58f;
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 20px;
-}
-
-.alert-content {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-}
-
-.alert-content i {
-  font-size: 20px;
-  color: #faad14;
-  margin-top: 2px;
-}
-
-.alert-content h4 {
-  margin: 0 0 8px 0;
-  color: #d48806;
-  font-size: 16px;
-}
-
-.alert-content p {
-  margin: 2px 0;
-  color: #d48806;
-  font-size: 14px;
-}
-
-/* Responsive debug panel */
-@media (max-width: 768px) {
-  .debug-controls {
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .debug-toggle-btn,
-  .test-backend-btn {
-    width: 100%;
-    text-align: center;
-  }
-
-  .debug-content {
-    grid-template-columns: 1fr;
-  }
-
-  .debug-section pre {
-    font-size: 10px;
-  }
-}
 
 /* Instructions Panel */
 .instructions-panel {
@@ -1646,9 +1497,7 @@
   flex-wrap: wrap;
 }
 
-.refresh-btn,
-.test-btn,
-.sample-btn {
+.refresh-btn {
   padding: 8px 16px;
   border: none;
   border-radius: 6px;
@@ -1659,35 +1508,12 @@
   display: flex;
   align-items: center;
   gap: 6px;
-}
-
-.refresh-btn {
   background: #52c41a;
   color: white;
 }
 
 .refresh-btn:hover {
   background: #73d13d;
-  transform: translateY(-1px);
-}
-
-.test-btn {
-  background: #faad14;
-  color: white;
-}
-
-.test-btn:hover {
-  background: #ffc53d;
-  transform: translateY(-1px);
-}
-
-.sample-btn {
-  background: #722ed1;
-  color: white;
-}
-
-.sample-btn:hover {
-  background: #9254de;
   transform: translateY(-1px);
 }
 
@@ -1711,74 +1537,6 @@
   color: #333;
 }
 
-.current-api-status {
-  background: #f0f5ff;
-  border: 1px solid #adc6ff;
-  border-radius: 6px;
-  padding: 15px;
-  margin-top: 15px;
-}
-
-.current-api-status h5 {
-  color: #1890ff;
-  margin: 0 0 10px 0;
-  font-size: 14px;
-}
-
-.current-api-status ul {
-  margin: 0;
-  padding-left: 20px;
-}
-
-.current-api-status li {
-  color: #1890ff;
-  margin-bottom: 5px;
-  font-size: 13px;
-}
-
-.current-api-status code {
-  background: rgba(24, 144, 255, 0.1);
-  color: #1890ff;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 12px;
-}
-
-/* Success indicator styles */
-.results-found-message {
-  background: #f6ffed;
-  border: 1px solid #b7eb8f;
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 20px;
-  animation: slideInDown 0.5s ease-out;
-}
-
-.success-indicator {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: #52c41a;
-  font-weight: 500;
-}
-
-.success-indicator i {
-  font-size: 18px;
-  color: #52c41a;
-}
-
-/* Animations */
-@keyframes slideInDown {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 /* Responsive improvements */
 @media (max-width: 768px) {
   .status-summary {
@@ -1790,9 +1548,7 @@
     flex-direction: column;
   }
 
-  .refresh-btn,
-  .test-btn,
-  .sample-btn {
+  .refresh-btn {
     width: 100%;
     justify-content: center;
   }

@@ -121,31 +121,91 @@ public class ParentHealthCheckController {
                 categoryData.put("nurseName", result.getNurse() != null ? 
                     result.getNurse().getFirstName() + " " + result.getNurse().getLastName() : null);
                 
-                // Add category-specific details
+                // Add category-specific details without circular references
                 switch (category) {
                     case VISION:
                         if (result.getVision() != null) {
-                            categoryData.put("visionDetails", result.getVision());
+                            Map<String, Object> visionData = new HashMap<>();
+                            visionData.put("id", result.getVision().getId());
+                            visionData.put("leftEye", result.getVision().getVisionLeft());
+                            visionData.put("rightEye", result.getVision().getVisionRight());
+                            visionData.put("description", result.getVision().getVisionDescription());
+                            visionData.put("dateOfExamination", result.getVision().getDateOfExamination());
+                            visionData.put("doctorName", result.getVision().getDoctorName());
+                            visionData.put("recommendations", result.getVision().getRecommendations());
+                            visionData.put("glassesRequired", result.getVision().isNeedsGlasses());
+                            categoryData.put("visionDetails", visionData);
                         }
                         break;
                     case HEARING:
                         if (result.getHearing() != null) {
-                            categoryData.put("hearingDetails", result.getHearing());
+                            Map<String, Object> hearingData = new HashMap<>();
+                            hearingData.put("id", result.getHearing().getId());
+                            hearingData.put("leftEar", result.getHearing().getLeftEar());
+                            hearingData.put("rightEar", result.getHearing().getRightEar());
+                            hearingData.put("description", result.getHearing().getDescription());
+                            hearingData.put("dateOfExamination", result.getHearing().getDateOfExamination());
+                            hearingData.put("doctorName", result.getHearing().getDoctorName());
+                            hearingData.put("recommendations", result.getHearing().getRecommendations());
+                            
+                            // Add basic health profile info without circular reference
+                            if (result.getHearing().getHealthProfile() != null) {
+                                Map<String, Object> healthProfileData = new HashMap<>();
+                                healthProfileData.put("id", result.getHearing().getHealthProfile().getId());
+                                healthProfileData.put("weight", result.getHearing().getHealthProfile().getWeight());
+                                healthProfileData.put("height", result.getHearing().getHealthProfile().getHeight());
+                                healthProfileData.put("bmi", result.getHearing().getHealthProfile().getBmi());
+                                healthProfileData.put("bloodType", result.getHearing().getHealthProfile().getBloodType());
+                                healthProfileData.put("status", result.getHearing().getHealthProfile().getStatus());
+                                hearingData.put("healthProfile", healthProfileData);
+                            }
+                            
+                            categoryData.put("hearingDetails", hearingData);
                         }
                         break;
                     case ORAL:
                         if (result.getOral() != null) {
-                            categoryData.put("oralDetails", result.getOral());
+                            Map<String, Object> oralData = new HashMap<>();
+                            oralData.put("id", result.getOral().getId());
+                            oralData.put("teethCondition", result.getOral().getTeethCondition());
+                            oralData.put("gumsCondition", result.getOral().getGumsCondition());
+                            oralData.put("tongueCondition", result.getOral().getTongueCondition());
+                            oralData.put("description", result.getOral().getDescription());
+                            oralData.put("dateOfExamination", result.getOral().getDateOfExamination());
+                            oralData.put("doctorName", result.getOral().getDoctorName());
+                            oralData.put("recommendations", result.getOral().getRecommendations());
+                            categoryData.put("oralDetails", oralData);
                         }
                         break;
                     case SKIN:
                         if (result.getSkin() != null) {
-                            categoryData.put("skinDetails", result.getSkin());
+                            Map<String, Object> skinData = new HashMap<>();
+                            skinData.put("id", result.getSkin().getId());
+                            skinData.put("skinColor", result.getSkin().getSkinColor());
+                            skinData.put("rashes", result.getSkin().isRashes());
+                            skinData.put("lesions", result.getSkin().isLesions());
+                            skinData.put("dryness", result.getSkin().isDryness());
+                            skinData.put("description", result.getSkin().getDescription());
+                            skinData.put("dateOfExamination", result.getSkin().getDateOfExamination());
+                            skinData.put("doctorName", result.getSkin().getDoctorName());
+                            skinData.put("recommendations", result.getSkin().getRecommendations());
+                            categoryData.put("skinDetails", skinData);
                         }
                         break;
                     case RESPIRATORY:
                         if (result.getRespiratory() != null) {
-                            categoryData.put("respiratoryDetails", result.getRespiratory());
+                            Map<String, Object> respiratoryData = new HashMap<>();
+                            respiratoryData.put("id", result.getRespiratory().getId());
+                            respiratoryData.put("breathingRate", result.getRespiratory().getBreathingRate());
+                            respiratoryData.put("breathingSound", result.getRespiratory().getBreathingSound());
+                            respiratoryData.put("wheezing", result.getRespiratory().isWheezing());
+                            respiratoryData.put("cough", result.getRespiratory().isCough());
+                            respiratoryData.put("breathingDifficulty", result.getRespiratory().isBreathingDifficulty());
+                            respiratoryData.put("description", result.getRespiratory().getDescription());
+                            respiratoryData.put("dateOfExamination", result.getRespiratory().getDateOfExamination());
+                            respiratoryData.put("doctorName", result.getRespiratory().getDoctorName());
+                            respiratoryData.put("recommendations", result.getRespiratory().getRecommendations());
+                            categoryData.put("respiratoryDetails", respiratoryData);
                         }
                         break;
                 }
@@ -281,32 +341,92 @@ public class ParentHealthCheckController {
                 categoryData.put("nurseName", result.getNurse() != null ? 
                     result.getNurse().getFirstName() + " " + result.getNurse().getLastName() : null);
                 
-                // Add category-specific details based on category type
+                // Add category-specific details based on category type without circular references
                 HealthCheckCategory category = result.getCategory();
                 switch (category) {
                     case VISION:
                         if (result.getVision() != null) {
-                            categoryData.put("visionDetails", result.getVision());
+                            Map<String, Object> visionData = new HashMap<>();
+                            visionData.put("id", result.getVision().getId());
+                            visionData.put("leftEye", result.getVision().getVisionLeft());
+                            visionData.put("rightEye", result.getVision().getVisionRight());
+                            visionData.put("description", result.getVision().getVisionDescription());
+                            visionData.put("dateOfExamination", result.getVision().getDateOfExamination());
+                            visionData.put("doctorName", result.getVision().getDoctorName());
+                            visionData.put("recommendations", result.getVision().getRecommendations());
+                            visionData.put("glassesRequired", result.getVision().isNeedsGlasses());
+                            categoryData.put("visionDetails", visionData);
                         }
                         break;
                     case HEARING:
                         if (result.getHearing() != null) {
-                            categoryData.put("hearingDetails", result.getHearing());
+                            Map<String, Object> hearingData = new HashMap<>();
+                            hearingData.put("id", result.getHearing().getId());
+                            hearingData.put("leftEar", result.getHearing().getLeftEar());
+                            hearingData.put("rightEar", result.getHearing().getRightEar());
+                            hearingData.put("description", result.getHearing().getDescription());
+                            hearingData.put("dateOfExamination", result.getHearing().getDateOfExamination());
+                            hearingData.put("doctorName", result.getHearing().getDoctorName());
+                            hearingData.put("recommendations", result.getHearing().getRecommendations());
+                            
+                            // Add basic health profile info without circular reference
+                            if (result.getHearing().getHealthProfile() != null) {
+                                Map<String, Object> healthProfileData = new HashMap<>();
+                                healthProfileData.put("id", result.getHearing().getHealthProfile().getId());
+                                healthProfileData.put("weight", result.getHearing().getHealthProfile().getWeight());
+                                healthProfileData.put("height", result.getHearing().getHealthProfile().getHeight());
+                                healthProfileData.put("bmi", result.getHearing().getHealthProfile().getBmi());
+                                healthProfileData.put("bloodType", result.getHearing().getHealthProfile().getBloodType());
+                                healthProfileData.put("status", result.getHearing().getHealthProfile().getStatus());
+                                hearingData.put("healthProfile", healthProfileData);
+                            }
+                            
+                            categoryData.put("hearingDetails", hearingData);
                         }
                         break;
                     case ORAL:
                         if (result.getOral() != null) {
-                            categoryData.put("oralDetails", result.getOral());
+                            Map<String, Object> oralData = new HashMap<>();
+                            oralData.put("id", result.getOral().getId());
+                            oralData.put("teethCondition", result.getOral().getTeethCondition());
+                            oralData.put("gumsCondition", result.getOral().getGumsCondition());
+                            oralData.put("tongueCondition", result.getOral().getTongueCondition());
+                            oralData.put("description", result.getOral().getDescription());
+                            oralData.put("dateOfExamination", result.getOral().getDateOfExamination());
+                            oralData.put("doctorName", result.getOral().getDoctorName());
+                            oralData.put("recommendations", result.getOral().getRecommendations());
+                            categoryData.put("oralDetails", oralData);
                         }
                         break;
                     case SKIN:
                         if (result.getSkin() != null) {
-                            categoryData.put("skinDetails", result.getSkin());
+                            Map<String, Object> skinData = new HashMap<>();
+                            skinData.put("id", result.getSkin().getId());
+                            skinData.put("skinColor", result.getSkin().getSkinColor());
+                            skinData.put("rashes", result.getSkin().isRashes());
+                            skinData.put("lesions", result.getSkin().isLesions());
+                            skinData.put("dryness", result.getSkin().isDryness());
+                            skinData.put("description", result.getSkin().getDescription());
+                            skinData.put("dateOfExamination", result.getSkin().getDateOfExamination());
+                            skinData.put("doctorName", result.getSkin().getDoctorName());
+                            skinData.put("recommendations", result.getSkin().getRecommendations());
+                            categoryData.put("skinDetails", skinData);
                         }
                         break;
                     case RESPIRATORY:
                         if (result.getRespiratory() != null) {
-                            categoryData.put("respiratoryDetails", result.getRespiratory());
+                            Map<String, Object> respiratoryData = new HashMap<>();
+                            respiratoryData.put("id", result.getRespiratory().getId());
+                            respiratoryData.put("breathingRate", result.getRespiratory().getBreathingRate());
+                            respiratoryData.put("breathingSound", result.getRespiratory().getBreathingSound());
+                            respiratoryData.put("wheezing", result.getRespiratory().isWheezing());
+                            respiratoryData.put("cough", result.getRespiratory().isCough());
+                            respiratoryData.put("breathingDifficulty", result.getRespiratory().isBreathingDifficulty());
+                            respiratoryData.put("description", result.getRespiratory().getDescription());
+                            respiratoryData.put("dateOfExamination", result.getRespiratory().getDateOfExamination());
+                            respiratoryData.put("doctorName", result.getRespiratory().getDoctorName());
+                            respiratoryData.put("recommendations", result.getRespiratory().getRecommendations());
+                            categoryData.put("respiratoryDetails", respiratoryData);
                         }
                         break;
                 }
