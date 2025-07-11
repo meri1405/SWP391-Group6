@@ -9,6 +9,8 @@ import {
   TeamOutlined,
   DashboardOutlined,
   ProfileOutlined,
+  LeftOutlined,
+  RightOutlined,
 } from "@ant-design/icons";
 import ManagerVaccinationManagement from "../components/dashboard/ManagerVaccinationManagement";
 import ManagerHealthCheckManagement from "../components/dashboard/ManagerHealthCheckManagement";
@@ -19,7 +21,7 @@ import InventorySection from "../components/dashboard/InventorySection";
 import { Notifications } from "../components/dashboard/notifications";
 import StudentsSection from "../components/dashboard/StudentsSection";
 import managerApi from "../api/managerApi";
-import "../styles/AdminDashboard.css";
+import "../styles/ManagerDashboard.css";
 import { useAuth } from "../contexts/AuthContext";
 import { restockRequestApi } from "../api/restockRequestApi";
 import webSocketService from "../services/webSocketService";
@@ -27,7 +29,7 @@ import webSocketService from "../services/webSocketService";
 const { Header, Sider, Content } = Layout;
 
 const ManagerDashboard = () => {
-  const [collapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const [activeSection, setActiveSection] = useState("overview");
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -83,19 +85,6 @@ const ManagerDashboard = () => {
     // Subscribe to restock request updates
     console.log("[ManagerDashboard] Subscribing to restock request updates");
     const unsubscribe = restockRequestApi.subscribeToUpdates(() => {
-      // When a restock request is updated, show notification and update count
-      // console.log("[ManagerDashboard] Received restock request update notification");
-      // api.info({
-      //   message: 'Yêu cầu nhập kho mới',
-      //   description: 'Có yêu cầu nhập kho mới cần xử lý.',
-      //   placement: 'topRight',
-      //   onClick: () => {
-      //     setActiveSection('notifications');
-      //     navigate('/manager-dashboard?tab=notifications');
-      //   },
-      // });
-
-      // Update notification count
       updateNotificationCount();
     });
 
@@ -166,11 +155,6 @@ const ManagerDashboard = () => {
       label: "Tổng quan",
     },
     {
-      key: "profile",
-      icon: <ProfileOutlined />,
-      label: "Hồ sơ cá nhân",
-    },
-    {
       key: "notifications",
       icon: (
         <Badge count={notificationCount} offset={[10, 0]}>
@@ -204,23 +188,34 @@ const ManagerDashboard = () => {
       icon: <MedicineBoxOutlined />,
       label: "Quản lý kho",
     },
+    {
+      key: "profile",
+      icon: <ProfileOutlined />,
+      label: "Hồ sơ cá nhân",
+    },
+    {
+      key: 'toggle-sidebar',
+      icon: collapsed ? <RightOutlined /> : <LeftOutlined />,
+      label: 'Thu gọn',
+    },
   ];
 
-  const handleMenuClick = ({ key }) => {
-    setActiveSection(key);
-    if (key === "overview") {
-      navigate("/manager-dashboard");
-    } else {
-      navigate(`/manager-dashboard?tab=${key}`);
+  const handleMenuClick = (e) => {
+    const tabKey = e.key;
+  
+    if (tabKey === 'toggle-sidebar') {
+      setCollapsed(!collapsed);
+      return;
     }
+  
+    setActiveSection(tabKey);
+    navigate(`/manager-dashboard?tab=${tabKey}`);
   };
 
   const renderContent = () => {
     switch (activeSection) {
       case "overview":
         return <ManagerOverview />;
-      case "profile":
-        return <ManagerProfile />;
       case "notifications":
         return <Notifications role="manager" />;
       case "students":
@@ -233,6 +228,8 @@ const ManagerDashboard = () => {
         return <MedicalEventManagement />;
       case "inventory":
         return <InventorySection />;
+      case "profile":
+        return <ManagerProfile />;
       default:
         return null;
     }
@@ -284,16 +281,16 @@ const ManagerDashboard = () => {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              border: "2px solid #ff6b35",
+              border: "2px solid #ff4d4f",
             }}
           >
-            <MedicineBoxOutlined style={{ fontSize: 32, color: "#ff6b35" }} />
+            <MedicineBoxOutlined style={{ fontSize: 32, color: "#ff4d4f" }} />
           </div>
           {!collapsed && (
             <span
               style={{
                 fontWeight: 600,
-                color: "#ff6b35",
+                color: "#ff4d4f",
                 fontSize: 18,
                 marginTop: 12,
                 borderRadius: 20,
@@ -331,7 +328,7 @@ const ManagerDashboard = () => {
         >
           <h1
             style={{
-              color: "#ff6b35",
+              color: "#ff4d4f",
               margin: 0,
               fontSize: 28,
               fontWeight: 700,
@@ -349,10 +346,10 @@ const ManagerDashboard = () => {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                border: "1px solid #ff6b35",
+                border: "1px solid #ff4d4f",
               }}
             >
-              <UserOutlined style={{ fontSize: 20, color: "#ff6b35" }} />
+              <UserOutlined style={{ fontSize: 20, color: "#ff4d4f" }} />
             </div>
             <span style={{ fontWeight: 500, fontSize: 16 }}>
               {user?.lastName} {user?.firstName}

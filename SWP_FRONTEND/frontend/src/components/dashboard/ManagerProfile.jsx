@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Card, Button, Tag, Spin, message } from "antd";
 import {
-  UserOutlined,
   EditOutlined,
   CloseOutlined,
   TeamOutlined,
@@ -31,6 +30,7 @@ const ManagerProfile = () => {
 
   useEffect(() => {
     fetchManagerProfile();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchManagerProfile = async () => {
@@ -103,7 +103,13 @@ const ManagerProfile = () => {
     try {
       setLoading(true);
       const submitData = {
-        ...formData,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phone: formData.phone,
+        address: formData.address,
+        gender: formData.gender,
+        jobTitle: formData.jobTitle,
         dob: formData.dateOfBirth || null,
       };
       const updatedProfile = await managerApi.updateManagerProfile(submitData);
