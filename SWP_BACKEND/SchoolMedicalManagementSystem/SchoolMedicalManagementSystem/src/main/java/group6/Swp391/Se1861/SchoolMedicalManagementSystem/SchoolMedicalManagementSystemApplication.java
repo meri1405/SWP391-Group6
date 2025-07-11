@@ -1,6 +1,6 @@
 package group6.Swp391.Se1861.SchoolMedicalManagementSystem;
 
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.utils.PhoneValidator;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.util.PhoneValidator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;

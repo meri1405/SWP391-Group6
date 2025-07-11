@@ -489,7 +489,7 @@ const ParentMedicationSchedules = () => {
                             <Col span={12}>
                                 <Text strong>Liều lượng:</Text>
                                 <br />
-                                <Text>{selectedSchedule.dosage}</Text>
+                                <Text>{selectedSchedule.dosage} {selectedSchedule.unit || "đơn vị"}</Text>
                             </Col>
                         </Row>
                         

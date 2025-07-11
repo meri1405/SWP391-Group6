@@ -35,7 +35,13 @@ public class ItemRequestDTO {
 
     @NotNull(message = "Frequency is required")
     @Min(value = 0, message = "Frequency must be at least 0.1")
-    private Integer frequency;    @Size(max = 500, message = "Note cannot exceed 500 characters")
+    private Integer frequency;
+
+    @NotBlank(message = "Unit is required")
+    @Size(max = 50, message = "Unit cannot exceed 50 characters")
+    private String unit;
+
+    @Size(max = 500, message = "Note cannot exceed 500 characters")
     private String note;
 
     @NotNull(message = "Start date is required")

@@ -3,7 +3,7 @@ package group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.impl;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.*;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IExcelService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IStudentService;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.utils.PhoneValidator;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.util.PhoneValidator;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;

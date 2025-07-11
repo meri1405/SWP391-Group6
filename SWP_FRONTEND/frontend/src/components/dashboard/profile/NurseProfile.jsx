@@ -1,50 +1,29 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { Card, Button, Tag, Spin, message } from "antd";
+import React, { useCallback } from "react";
+import { Card, Button, Spin } from "antd";
 import {
-  UserOutlined,
   EditOutlined,
   CloseOutlined,
   MedicineBoxOutlined,
 } from "@ant-design/icons";
-import { nurseApi } from "../../../api/nurseApi";
 import { UserProfileDetails, UserProfileAvatar, UserProfileEditForm } from "../../common";
+import { useProfileEditLogic } from "../../../hooks/useProfileEditLogic";
+import { nurseProfileConfig } from "../../../hooks/profileConfigs";
 import "../../../styles/SharedProfile.css";
 
 const NurseProfile = () => {
-  const [profileData, setProfileData] = useState({
-    id: "",
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-    address: "",
-    dateOfBirth: "",
-    gender: "",
-    avatar: "",
-    username: "",
-    jobTitle: "",
-    specialization: "Y tá Trường học",
-    department: "Phòng Y tế",
-    employeeId: "",
-    status: "active",
-    completionLevel: 0,
-  });
-  const [loading, setLoading] = useState(true);
-  const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-    address: "",
-    dateOfBirth: "",
-    gender: "",
-    jobTitle: "",
-    username: "",
-  });
-  const [errors, setErrors] = useState({});
+  // Use the profile edit logic hook with nurse configuration
+  const {
+    isEditing,
+    loading,
+    formData,
+    errors,
+    requiredFields,
+    handleChange,
+    handleSubmit,
+    toggleEditMode,
+  } = useProfileEditLogic(nurseProfileConfig);
 
-  // Format functions
+  // Format functions (keep these for display formatting)
   const formatDate = useCallback((dateString) => {
     if (!dateString) return "Chưa cập nhật";
     try {
@@ -79,153 +58,8 @@ const NurseProfile = () => {
     }
   }, []);
 
-  // Helper function to calculate completion level
-  const calculateCompletionLevel = useCallback((data) => {
-    const fields = [
-      "firstName",
-      "lastName",
-      "email",
-      "phone",
-      "address",
-      "dateOfBirth",
-      "gender",
-      "jobTitle",
-    ];
-
-    const filledFields = fields.filter((field) => {
-      const value = data[field];
-      return value && value.toString().trim() !== "";
-    });
-
-    return Math.round((filledFields.length / fields.length) * 100);
-  }, []);
-
-  // Fetch profile data from API
-  const fetchProfileData = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await nurseApi.getProfile();
-      console.log("Response:", response);
-      if (response.success) {
-        const loadedProfile = {
-          ...response.data,
-          phone: response.data.phone || "",
-          completionLevel: calculateCompletionLevel(response.data),
-        };
-        setProfileData(loadedProfile);
-        
-        // Initialize form data
-        setFormData({
-          firstName: loadedProfile.firstName || "",
-          lastName: loadedProfile.lastName || "",
-          email: loadedProfile.email || "",
-          phone: loadedProfile.phone || "",
-          address: loadedProfile.address || "",
-          dateOfBirth: loadedProfile.dateOfBirth || "",
-          gender: loadedProfile.gender || "",
-          jobTitle: loadedProfile.jobTitle || "Y tá Trường học",
-          username: loadedProfile.username || "",
-        });
-      } else {
-        message.error("Không thể tải thông tin hồ sơ: " + response.message);
-      }
-    } catch (error) {
-      console.error("Error fetching nurse profile:", error);
-      message.error("Đã xảy ra lỗi khi tải thông tin hồ sơ");
-    } finally {
-      setLoading(false);
-    }
-  }, [calculateCompletionLevel]);
-
-  // Load data from API
-  useEffect(() => {
-    fetchProfileData();
-  }, [fetchProfileData]);
-
-  // Form validation
-  const validateForm = () => {
-    const newErrors = {};
-
-    if (!formData.firstName.trim()) {
-      newErrors.firstName = "Tên không được để trống";
-    }
-
-    if (!formData.lastName.trim()) {
-      newErrors.lastName = "Họ không được để trống";
-    }
-
-    if (!formData.email.trim()) {
-      newErrors.email = "Email không được để trống";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "Email không hợp lệ";
-    }
-
-    if (formData.phone && !/^[0-9]{10,11}$/.test(formData.phone.replace(/\s/g, ""))) {
-      newErrors.phone = "Số điện thoại không hợp lệ";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  // Handle form input changes
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
-
-    // Clear error when user starts typing
-    if (errors[name]) {
-      setErrors({
-        ...errors,
-        [name]: "",
-      });
-    }
-  };
-
-  // Handle form submission
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!validateForm()) {
-      message.error("Vui lòng kiểm tra lại thông tin");
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      const response = await nurseApi.updateProfile(formData);
-      console.log("Response:", response);
-      
-      if (response && !response.error) {
-        const updatedProfile = {
-          ...response.profile,
-          phone: response.profile.phone || "",
-          completionLevel: calculateCompletionLevel(response.profile),
-        };
-        setProfileData(updatedProfile);
-        setFormData(updatedProfile);
-        setIsEditing(false);
-        message.success("Cập nhật hồ sơ thành công");
-        
-        // Refresh profile data
-        await fetchProfileData();
-      } else {
-        message.error("Không thể cập nhật hồ sơ: " + (response.message || 'Đã có lỗi xảy ra'));
-      }
-    } catch (error) {
-      console.error("Error updating nurse profile:", error);
-      message.error("Đã xảy ra lỗi khi cập nhật hồ sơ");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // Show loading spinner while fetching data
-  if (loading && !profileData.firstName) {
+  if (loading && !formData.firstName) {
     return (
       <div
         style={{
@@ -241,7 +75,7 @@ const NurseProfile = () => {
     );
   }
 
-  if (!profileData) {
+  if (!formData) {
     return (
       <div style={{ textAlign: "center", padding: "50px" }}>
         <span>Không thể tải thông tin hồ sơ</span>
@@ -261,7 +95,7 @@ const NurseProfile = () => {
         <Button
           type={isEditing ? "default" : "primary"}
           icon={isEditing ? <CloseOutlined /> : <EditOutlined />}
-          onClick={() => setIsEditing(!isEditing)}
+          onClick={toggleEditMode}
           size="large"
           style={{ 
             backgroundColor: isEditing ? undefined : "#52c41a", 
@@ -351,6 +185,7 @@ const NurseProfile = () => {
                 onSubmit={handleSubmit}
                 loading={loading}
                 role="nurse"
+                requiredFields={requiredFields}
                 showFields={{
                   firstName: true,
                   lastName: true,
@@ -375,7 +210,7 @@ const NurseProfile = () => {
                   email: "nurse@example.com",
                   phone: "0123456789",
                 }}
-                onCancel={() => setIsEditing(false)}
+                onCancel={toggleEditMode}
                 className="nurse-profile-edit-form"
               />
             </div>

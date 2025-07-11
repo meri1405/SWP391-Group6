@@ -33,6 +33,22 @@ const Notifications = ({ role = "parent" }) => {
     },
   };
 
+  const convertLocalDateTimeArray = (dateArray) => {
+  if (!dateArray || !Array.isArray(dateArray) || dateArray.length < 3) {
+    return null;
+  }
+  
+  try {
+    // Array format: [year, month, day, hour, minute, second, nanosecond]
+    const [year, month, day, hour = 0, minute = 0, second = 0] = dateArray;
+    // Note: JavaScript Date month is 0-indexed, but LocalDateTime month is 1-indexed
+    return new Date(year, month - 1, day, hour, minute, second);
+  } catch (error) {
+    console.error('Error converting date array:', error);
+    return null;
+  }
+};
+
   // Use a ref to track if the component is mounted
   const isMounted = useRef(true);
   // Use a ref to prevent duplicate API calls
@@ -723,7 +739,14 @@ const Notifications = ({ role = "parent" }) => {
                 {/* Show formatted date */}
                 <div className="notification-timestamp">
                   <i className="fas fa-clock"></i>
-                  <span>{formatVietnameseDate(notification.date)}</span>
+                  <span>
+
+                  {(() => {
+                  const date = convertLocalDateTimeArray(notification.date);
+                  return date ? date.toLocaleDateString("vi-VN") : "N/A";
+                })()}
+
+                  </span>
                 </div>
               </div>
               <div className="notification-actions">

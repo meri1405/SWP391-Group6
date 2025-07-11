@@ -121,7 +121,7 @@ const NurseMedicationRequests = () => {
           studentName: schedule.studentName || schedule.student?.name || "N/A",
           className: schedule.className || schedule.student?.className || "N/A",
           medicationName: schedule.medicationName || "N/A",
-          dosage: schedule.dosage ? `${schedule.dosage}mg` : "N/A",
+          dosage: schedule.dosage ? `${schedule.dosage} ${schedule.unit || "đơn vị"}` : "N/A",
           frequency: schedule.frequency || 1,
           scheduleTimes: schedule.scheduledTime
             ? [schedule.scheduledTime]
@@ -715,7 +715,7 @@ const NurseMedicationRequests = () => {
 
                                 return (
                                   <>
-                                    {schedulesToShow.map((schedule, index) => (
+                                    {schedulesToShow.map((schedule) => (
                                       <div
                                         key={schedule.id}
                                         className="schedule-item"
@@ -1075,17 +1075,7 @@ const NurseMedicationRequests = () => {
                         <strong>Mục đích:</strong> {item.purpose}
                       </p>
                       <p>
-                        <strong>Liều lượng:</strong> {item.dosage}{" "}
-                        {item.itemType === "TABLET" ||
-                        item.itemType === "CAPSULE"
-                          ? "viên"
-                          : item.itemType === "LIQUID" ||
-                            item.itemType === "INJECTION"
-                          ? "ml"
-                          : item.itemType === "CREAM" ||
-                            item.itemType === "POWDER"
-                          ? "g"
-                          : "đơn vị"}
+                        <strong>Liều lượng:</strong> {item.dosage} {item.unit || "đơn vị"}
                       </p>{" "}
                       <p>
                         <strong>Tần suất:</strong> {item.frequency} lần/ngày

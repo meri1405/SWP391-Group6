@@ -9,7 +9,7 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.StudentRepo
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.UserRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IStudentService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.util.StudentMapper;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.utils.PhoneValidator;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.util.PhoneValidator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
