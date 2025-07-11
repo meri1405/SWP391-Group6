@@ -6,6 +6,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.*;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.*;
@@ -166,6 +167,38 @@ public class ManagerDashboardController {
             errorResponse.put("success", false);
             errorResponse.put("message", "Error retrieving medical event statistics: " + e.getMessage());
             return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * Get manager profile information
+     */
+    @GetMapping("/profile")
+    public ResponseEntity<ManagerProfileDTO> getManagerProfile(@AuthenticationPrincipal User manager) {
+        try {
+            // Create DTO from the authenticated user
+            ManagerProfileDTO profile = new ManagerProfileDTO();
+            profile.setId(manager.getId());
+            profile.setUsername(manager.getUsername());
+            profile.setFirstName(manager.getFirstName());
+            profile.setLastName(manager.getLastName());
+            profile.setDob(manager.getDob());
+            profile.setGender(manager.getGender());
+            profile.setPhone(manager.getPhone());
+            profile.setEmail(manager.getEmail());
+            profile.setAddress(manager.getAddress());
+            profile.setJobTitle(manager.getJobTitle());
+            profile.setCreatedDate(manager.getCreatedDate());
+            profile.setLastModifiedDate(manager.getLastModifiedDate());
+            profile.setEnabled(manager.getEnabled());
+            profile.setFirstLogin(manager.getFirstLogin());
+            profile.setRoleName(manager.getRole().getRoleName());
+            profile.setFullName(manager.getFullName());
+            
+            return ResponseEntity.ok(profile);
+            
+        } catch (Exception e) {
+            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -392,4 +425,4 @@ public class ManagerDashboardController {
         
         return urgent;
     }
-} 
+}

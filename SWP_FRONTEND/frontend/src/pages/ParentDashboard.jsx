@@ -52,7 +52,7 @@ const ParentDashboard = () => {
     {
       key: "health-profile-declaration",
       icon: <MedicineBoxOutlined />,
-      label: "Khai báo hồ sơ sức khỏe",
+      label: "Khai báo hồ sơ",
       style: studentsMissingHealthProfile.length > 0 ? { 
         backgroundColor: '#fff2f0',
         border: '2px solid #ff4d4f',
@@ -69,7 +69,7 @@ const ParentDashboard = () => {
     {
       key: "health-check-results",
       icon: <ExperimentOutlined />,
-      label: "Kết quả khám sức khỏe",
+      label: "Kết quả khám",
       disabled: studentsMissingHealthProfile.length > 0,
     },
     {

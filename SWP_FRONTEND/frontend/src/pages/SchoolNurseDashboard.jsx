@@ -250,12 +250,12 @@ const SchoolNurseDashboard = () => {
     {
       key: "medication-requests",
       icon: <FileDoneOutlined />,
-      label: "Duyệt yêu cầu thuốc",
+      label: "Quản lý gửi thuốc",
     },
     {
       key: "medication-schedules",
       icon: <ClockCircleOutlined />,
-      label: "Quản lý lịch uống thuốc",
+      label: "Lịch uống thuốc",
     },
     {
       key: "events",
@@ -270,7 +270,7 @@ const SchoolNurseDashboard = () => {
     {
       key: "restock-requests",
       icon: <MailOutlined />,
-      label: "Yêu cầu bổ sung vật tư",
+      label: "Bổ sung vật tư",
     },
     {
       key: "vaccination",
@@ -280,7 +280,7 @@ const SchoolNurseDashboard = () => {
     {
       key: "vaccination-rule-management",
       icon: <MedicineBoxOutlined />,
-      label: "Quản lý quy tắc tiêm chủng",
+      label: "Quy tắc tiêm chủng",
     },
     {
       key: "health-check",
@@ -290,7 +290,7 @@ const SchoolNurseDashboard = () => {
     {
       key: "health-records",
       icon: <FileTextOutlined />,
-      label: "Hồ sơ y tế học sinh",
+      label: "Hồ sơ y tế",
     },
     {
       key: "profile",

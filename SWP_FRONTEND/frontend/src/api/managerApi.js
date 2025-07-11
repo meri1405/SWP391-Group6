@@ -399,6 +399,18 @@ const managerApi = {
       throw error;
     }
   },
+
+  // Manager Profile endpoints
+  getManagerProfile: async (token = getTokenFromStorage()) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.get("/api/manager/dashboard/profile");
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching manager profile:", error);
+      throw error;
+    }
+  },
 };
 
 export default managerApi;
