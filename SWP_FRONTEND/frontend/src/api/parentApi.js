@@ -54,6 +54,7 @@ export const parentApi = {
     try {
       const authAxios = createAuthAxios(token);
       const response = await authAxios.get("/api/parent/students");
+      console.log(response.data);
       return response.data;
     } catch (error) {
       console.error("Error fetching parent students:", error);

@@ -175,6 +175,32 @@ export const GENDER = {
   FEMALE: "F",
 };
 
+// Medication Unit Constants
+export const MEDICATION_UNITS = {
+  TABLET: "viên",
+  CAPSULE: "viên",
+  ML: "ml",
+  MG: "mg",
+  G: "g",
+  DROPS: "giọt",
+  SPOONFUL: "thìa",
+  SPRAY: "lần xịt",
+  PATCH: "miếng dán",
+  BOTTLE: "chai",
+  TUBE: "tuýp",
+  UNIT: "đơn vị",
+};
+
+// Default Units for Item Types
+export const DEFAULT_UNITS_BY_TYPE = {
+  TABLET: ["viên", "mg", "g"],
+  CREAM: ["g", "tuýp", "ml"],
+  DROPS: ["giọt", "ml", "chai"],
+  SPOONFUL: ["thìa", "ml"],
+  SPRAY: ["lần xịt", "chai", "ml"],
+  CAPSULE: ["viên", "mg"]
+};
+
 // Default Values
 export const DEFAULTS = {
   AVATAR: "/images/default-avatar.png",

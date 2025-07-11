@@ -34,6 +34,9 @@ public class ItemRequest {
     @Column(name = "frequency", nullable = false)
     private int frequency;
 
+    @Column(name = "unit", nullable = false)
+    private String unit;
+
     @Column(name = "note", nullable = true)
     private String note;
 
