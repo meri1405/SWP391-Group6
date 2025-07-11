@@ -36,6 +36,7 @@ const UserProfileEditForm = ({
   },
   customLabels = {},
   customPlaceholders = {},
+  requiredFields = [],
   onCancel,
   className = "",
 }) => {
@@ -98,7 +99,7 @@ const UserProfileEditForm = ({
         {/* Last Name */}
         {showFields.lastName && (
           <div className="profile-form-group">
-            {createLabel(<UserOutlined />, labels.lastName, true)}
+            {createLabel(<UserOutlined />, labels.lastName, requiredFields.includes('lastName'))}
             <input
               type="text"
               name="lastName"
@@ -117,7 +118,7 @@ const UserProfileEditForm = ({
         {/* First Name */}
         {showFields.firstName && (
           <div className="profile-form-group">
-            {createLabel(<UserOutlined />, labels.firstName, true)}
+            {createLabel(<UserOutlined />, labels.firstName, requiredFields.includes('firstName'))}
             <input
               type="text"
               name="firstName"
@@ -136,7 +137,7 @@ const UserProfileEditForm = ({
         {/* Email */}
         {showFields.email && (
           <div className="profile-form-group">
-            {createLabel(<MailOutlined />, labels.email, true)}
+            {createLabel(<MailOutlined />, labels.email, requiredFields.includes('email'))}
             <input
               type="email"
               name="email"
@@ -155,7 +156,7 @@ const UserProfileEditForm = ({
         {/* Phone */}
         {showFields.phone && (
           <div className="profile-form-group">
-            {createLabel(<PhoneOutlined />, labels.phone, true)}
+            {createLabel(<PhoneOutlined />, labels.phone, requiredFields.includes('phone'))}
             <input
               type="tel"
               name="phone"
@@ -174,7 +175,7 @@ const UserProfileEditForm = ({
         {/* Date of Birth */}
         {showFields.dateOfBirth && (
           <div className="profile-form-group">
-            {createLabel(<CalendarOutlined />, labels.dateOfBirth)}
+            {createLabel(<CalendarOutlined />, labels.dateOfBirth, requiredFields.includes('dateOfBirth'))}
             <input
               type="date"
               name="dateOfBirth"
@@ -191,7 +192,7 @@ const UserProfileEditForm = ({
         {/* Gender */}
         {showFields.gender && (
           <div className="profile-form-group">
-            {createLabel(<UserOutlined />, labels.gender)}
+            {createLabel(<UserOutlined />, labels.gender, requiredFields.includes('gender'))}
             <select
               name="gender"
               value={formData.gender || ""}
@@ -201,7 +202,6 @@ const UserProfileEditForm = ({
               <option value="">Chọn giới tính</option>
               <option value="M">Nam</option>
               <option value="F">Nữ</option>
-              <option value="O">Khác</option>
             </select>
             {errors.gender && (
               <span className="error-text">{errors.gender}</span>
@@ -212,7 +212,7 @@ const UserProfileEditForm = ({
         {/* Job Title */}
         {showFields.jobTitle && (
           <div className="profile-form-group">
-            {createLabel(<BankOutlined />, labels.jobTitle)}
+            {createLabel(<BankOutlined />, labels.jobTitle, requiredFields.includes('jobTitle'))}
             <input
               type="text"
               name="jobTitle"
@@ -227,28 +227,11 @@ const UserProfileEditForm = ({
           </div>
         )}
         
-        {/* Emergency Contact */}
-        {showFields.emergencyContact && (
-          <div className="profile-form-group">
-            {createLabel(<PhoneOutlined />, labels.emergencyContact)}
-            <input
-              type="tel"
-              name="emergencyContact"
-              value={formData.emergencyContact || ""}
-              onChange={onChange}
-              placeholder={placeholders.emergencyContact}
-              className={errors.emergencyContact ? "error" : ""}
-            />
-            {errors.emergencyContact && (
-              <span className="error-text">{errors.emergencyContact}</span>
-            )}
-          </div>
-        )}
 
         {/* Address */}
         {showFields.address && (
           <div className="profile-form-group">
-            {createLabel(<HomeOutlined />, labels.address)}
+            {createLabel(<HomeOutlined />, labels.address, requiredFields.includes('address'))}
             <input
               type="text"
               name="address"

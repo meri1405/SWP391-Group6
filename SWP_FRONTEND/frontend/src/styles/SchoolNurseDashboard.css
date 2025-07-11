@@ -98,7 +98,7 @@
 }
 
 .school-nurse-dashboard .ant-menu .ant-menu-item-selected .ant-menu-item-icon {
-  color: #1890ff;
+  color: #52c41a;
 }
 
 /* Fix for sidebar width to accommodate badges */
@@ -139,12 +139,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid #1976d2;
+  border: 2px solid #52c41a;
 }
 
 .nurse-user-badge {
   font-weight: 600;
-  color: #1976d2;
+  color: #66bb6a;
   font-size: 18px;
   margin-top: 12px;
   border-radius: 20px;
@@ -166,7 +166,7 @@
 }
 
 .nurse-header-title {
-  color: #1976d2;
+  color: #66bb6a;
   margin: 0;
   font-size: 28px;
   font-weight: 700;
@@ -201,7 +201,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #1976d2;
+  border: 1px solid #52c41a;
 }
 
 .nurse-content {
@@ -244,11 +244,11 @@
   left: 0;
   right: 0;
   height: 4px;
-  background: linear-gradient(135deg, #1976d2, #42a5f5);
+  background: linear-gradient(135deg, #52c41a, #66bb6a);
 }
 
 .nurse-stat-card.primary::before {
-  background: linear-gradient(135deg, #1976d2, #42a5f5);
+  background: linear-gradient(135deg, #388e3c, #66bb6a);
 }
 
 .nurse-stat-card.success::before {
@@ -281,7 +281,7 @@
 }
 
 .nurse-stat-card.primary .nurse-stat-icon {
-  background: linear-gradient(135deg, #1976d2, #42a5f5);
+  background: linear-gradient(135deg, #52c41a, #52c41a);
 }
 
 .nurse-stat-card.success .nurse-stat-icon {
@@ -386,7 +386,7 @@
   justify-content: center;
   font-size: 16px;
   color: white;
-  background: linear-gradient(135deg, #1976d2, #42a5f5);
+  background: linear-gradient(135deg, #52c41a, #52c41a);
   flex-shrink: 0;
 }
 
