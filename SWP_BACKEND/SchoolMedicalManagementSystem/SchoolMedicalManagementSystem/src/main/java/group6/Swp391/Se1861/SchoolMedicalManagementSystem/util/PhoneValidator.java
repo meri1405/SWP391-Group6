@@ -1,4 +1,4 @@
-package group6.Swp391.Se1861.SchoolMedicalManagementSystem.utils;
+package group6.Swp391.Se1861.SchoolMedicalManagementSystem.util;
 
 /**
  * Tiện ích xác thực số điện thoại

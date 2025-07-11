@@ -9,7 +9,7 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IAuthService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IEmailService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IOtpService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.util.JwtUtil;
-import group6.Swp391.Se1861.SchoolMedicalManagementSystem.utils.PhoneValidator;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.util.PhoneValidator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.security.authentication.AuthenticationManager;
