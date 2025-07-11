@@ -5,11 +5,6 @@ import {
   SaveOutlined,
   CloseOutlined,
   UploadOutlined,
-  PhoneOutlined,
-  MailOutlined,
-  HomeOutlined,
-  BankOutlined,
-  CalendarOutlined,
   TeamOutlined,
 } from "@ant-design/icons";
 import {
@@ -19,21 +14,21 @@ import {
   Upload,
   Button,
   Card,
-  Divider,
   Tag,
   Avatar,
 } from "antd";
 import { useAuth } from "../../../contexts/AuthContext";
 import { parentApi } from "../../../api/parentApi";
+import { UserProfileDetails, UserProfileAvatar, UserProfileEditForm } from "../../common";
 import HealthProfileDetailModal from "./HealthProfileDetailModal";
 import "../../../styles/Profile.css";
+import "../../../styles/SharedProfile.css";
 import dayjs from "dayjs";
 
 const Profile = ({ userInfo, onProfileUpdate }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [students, setStudents] = useState([]);
-  const [avatarUrl, setAvatarUrl] = useState(null);
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewImage, setPreviewImage] = useState("");
   // eslint-disable-next-line no-unused-vars
@@ -47,38 +42,13 @@ const Profile = ({ userInfo, onProfileUpdate }) => {
     firstName: userInfo?.firstName || "",
     lastName: userInfo?.lastName || "",
     phone: userInfo?.phone || "",
-    address: userInfo?.address || "123 Healthcare Ave",
-    jobTitle: userInfo?.jobTitle || "PARENT",
-    dateOfBirth: userInfo?.dateOfBirth || "1990-01-15",
+    address: userInfo?.address || "",
+    jobTitle: userInfo?.jobTitle || "Phụ huynh",
+    dateOfBirth: userInfo?.dateOfBirth || "",
     emergencyContact: userInfo?.phone || "",
     relationship: userInfo?.gender === "M" ? "Cha" : "Mẹ",
-  }); // Function to refresh parent profile - used after profile updates
-  // eslint-disable-next-line no-unused-vars
-  const refreshParentProfile = async () => {
-    if (!isParent()) return;
-
-    try {
-      const token = getToken();
-      const profileData = await parentApi.getParentProfile(token);
-
-      console.log("Refreshed parent profile:", profileData);
-
-      // Apply default values to refreshed profile
-      const enhancedProfile = {
-        ...profileData,
-        address: profileData.address || "123 Healthcare Ave",
-        jobTitle: profileData.jobTitle || "PARENT",
-        dateOfBirth: profileData.dateOfBirth || "1990-01-15",
-      };
-
-      setParentProfile(enhancedProfile);
-      // Return the enhanced profile in case needed by caller
-      return enhancedProfile;
-    } catch (error) {
-      console.error("Error refreshing parent profile:", error);
-      return null;
-    }
-  };
+  });
+  
   const [errors, setErrors] = useState({});
 
   // Unified fetch data effect - combines all previous data loading effects
@@ -364,8 +334,8 @@ const Profile = ({ userInfo, onProfileUpdate }) => {
       return;
     }
     if (info.file.status === "done") {
-      // Get this url from response in real world.
-      setAvatarUrl(info.file.response.url);
+      // Avatar upload completed successfully
+      message.success("Cập nhật ảnh đại diện thành công!");
       setLoading(false);
     }
   };
@@ -407,11 +377,12 @@ const Profile = ({ userInfo, onProfileUpdate }) => {
           styles={{ body: { padding: "24px" } }}
         >
           <div className="profile-avatar-section">
-            <Avatar
-              size={120}
-              src={avatarUrl}
-              icon={<UserOutlined />}
-              className="profile-avatar-large"
+            <UserProfileAvatar 
+              profileData={formData}
+              role="parent"
+              avatarSize={120}
+              showRole={true}
+              customRoleDisplay="Phụ Huynh"
             />
             {isEditing && (
               <Upload
@@ -427,217 +398,76 @@ const Profile = ({ userInfo, onProfileUpdate }) => {
                   Đổi ảnh
                 </Button>
               </Upload>
-            )}{" "}
-            <div className="profile-basic-info">
-              <h3>
-                {formData.lastName} {formData.firstName}
-              </h3>
-              <Tag color="blue" icon={<TeamOutlined />}>
-                Phụ Huynh
-              </Tag>
-            </div>
+            )}
           </div>
 
           {isEditing ? (
-            <form onSubmit={handleSubmit} className="profile-form">
-              {" "}
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Họ</label>
-                  <input
-                    type="text"
-                    name="lastName"
-                    value={formData.lastName}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Tên</label>
-                  <input
-                    type="text"
-                    name="firstName"
-                    value={formData.firstName}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-              </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Số điện thoại *</label>
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    className={errors.phone ? "error" : ""}
-                    placeholder="0123456789"
-                  />
-                  {errors.phone && (
-                    <span className="error-text">{errors.phone}</span>
-                  )}
-                </div>{" "}
-              </div>
-              <div className="form-section">
-                <h4>Thông tin cơ bản</h4>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Ngày sinh</label>
-                    <input
-                      type="date"
-                      name="dateOfBirth"
-                      value={formData.dateOfBirth || ""}
-                      onChange={(e) => {
-                        console.log("Date changed to:", e.target.value);
-                        setFormData({
-                          ...formData,
-                          dateOfBirth: e.target.value,
-                        });
-                      }}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Mối quan hệ</label>
-                    <input
-                      type="text"
-                      name="relationship"
-                      value={formData.relationship || ""}
-                      readOnly
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="form-section">
-                <h4>Thông tin liên hệ</h4>{" "}
-                <div className="form-group">
-                  <label>Địa chỉ</label>
-                  <input
-                    type="text"
-                    name="address"
-                    value={formData.address || ""}
-                    onChange={(e) => {
-                      console.log("Address changed to:", e.target.value);
-                      setFormData({
-                        ...formData,
-                        address: e.target.value,
-                      });
-                    }}
-                    placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành phố"
-                  />
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Nghề nghiệp</label>
-                    <input
-                      type="text"
-                      name="jobTitle"
-                      value={formData.jobTitle || ""}
-                      onChange={(e) => {
-                        console.log("Job title changed to:", e.target.value);
-                        setFormData({
-                          ...formData,
-                          jobTitle: e.target.value,
-                        });
-                      }}
-                      placeholder="Nhập nghề nghiệp"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Số điện thoại khẩn cấp</label>
-                    <input
-                      type="tel"
-                      name="emergencyContact"
-                      value={formData.emergencyContact}
-                      onChange={handleChange}
-                      placeholder="0123456789"
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="form-actions">
-                <button type="submit" className="save-btn">
-                  Lưu thay đổi
-                </button>
-                <button
-                  type="button"
-                  className="cancel-btn"
-                  onClick={() => setIsEditing(false)}
-                >
-                  Hủy
-                </button>
-              </div>
-            </form>
+            <UserProfileEditForm
+              formData={formData}
+              errors={errors}
+              onChange={handleChange}
+              onSubmit={handleSubmit}
+              loading={loading}
+              role="parent"
+              showFields={{
+                firstName: true,
+                lastName: true,
+                phone: true,
+                address: true,
+                dateOfBirth: true,
+                jobTitle: true,
+                emergencyContact: true,
+                relationship: true,
+              }}
+              customLabels={{
+                firstName: "Tên",
+                lastName: "Họ",
+                phone: "Số điện thoại",
+                address: "Địa chỉ",
+                dateOfBirth: "Ngày sinh",
+                jobTitle: "Nghề nghiệp",
+                emergencyContact: "Số điện thoại khẩn cấp",
+                relationship: "Mối quan hệ",
+              }}
+              onCancel={() => setIsEditing(false)}
+              className="parent-profile-edit-form"
+            />
           ) : (
-            <div className="profile-info-enhanced">
-              <div className="info-section">
-                <h4>Thông tin cơ bản</h4>
-                <div className="info-grid">
-                  <div className="info-item">
-                    <UserOutlined className="info-icon" />
-                    <div>
-                      <label>Họ và tên</label>
-                      <span>
-                        {formData.lastName} {formData.firstName}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="info-item">
-                    <PhoneOutlined className="info-icon" />
-                    <div>
-                      <label>Số điện thoại</label>
-                      <span>{formData.phone}</span>
-                    </div>
-                  </div>{" "}
-                  <div className="info-item">
-                    <CalendarOutlined className="info-icon" />
-                    <div>
-                      <label>Ngày sinh</label>
-                      <span>
-                        {dayjs(formData.dateOfBirth).format("DD/MM/YYYY") ||
-                          "N/A"}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="info-item">
-                    <TeamOutlined className="info-icon" />
-                    <div>
-                      <label>Mối quan hệ</label>
-                      <span>{formData.relationship}</span>
-                    </div>
-                  </div>{" "}
-                  <div className="info-item">
-                    <BankOutlined className="info-icon" />
-                    <div>
-                      <label>Nghề nghiệp</label>
-                      <span>{formData.jobTitle || "PARENT"}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <Divider />
-
-              <div className="info-section">
-                <h4>Thông tin liên hệ</h4>
-                <div className="info-grid">
-                  <div className="info-item full-width">
-                    <HomeOutlined className="info-icon" />
-                    <div>
-                      <label>Địa chỉ</label>
-                      <span>{formData.address || "123 Healthcare Ave"}</span>
-                    </div>
-                  </div>
-                  <div className="info-item full-width">
-                    <PhoneOutlined className="info-icon" />
-                    <div>
-                      <label>Số điện thoại khẩn cấp</label>
-                      <span>{formData.emergencyContact}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <UserProfileDetails
+              profileData={formData}
+              role="parent"
+              showFields={{
+                name: true,
+                phone: true,
+                dateOfBirth: true,
+                relationship: true,
+                jobTitle: true,
+                address: true,
+                emergencyContact: true,
+              }}
+              customLabels={{
+                name: "Họ và tên",
+                phone: "Số điện thoại",
+                dateOfBirth: "Ngày sinh",
+                relationship: "Mối quan hệ",
+                jobTitle: "Nghề nghiệp",
+                address: "Địa chỉ",
+                emergencyContact: "Khẩn cấp",
+              }}
+              customFormatters={{
+                dateOfBirth: (value) => {
+                  if (!value) return "N/A";
+                  try {
+                    return dayjs(value).format("DD/MM/YYYY");
+                  } catch {
+                    return "N/A";
+                  }
+                },
+                jobTitle: (value) => value || "PARENT",
+                address: (value) => value || "123 Healthcare Ave",
+              }}
+              className="parent-profile-details"
+            />
           )}
         </Card>
         <Card

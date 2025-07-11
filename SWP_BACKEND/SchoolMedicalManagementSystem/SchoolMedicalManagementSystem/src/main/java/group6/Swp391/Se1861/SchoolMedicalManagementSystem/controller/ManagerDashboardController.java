@@ -26,6 +26,7 @@ public class ManagerDashboardController {
     private final IMedicalEventService medicalEventService;
     private final IMedicalSupplyService medicalSupplyService;
     private final IRestockRequestService restockRequestService;
+    private final IUserService userService;
 
     /**
      * Get comprehensive dashboard statistics
@@ -196,6 +197,53 @@ public class ManagerDashboardController {
             profile.setFullName(manager.getFullName());
             
             return ResponseEntity.ok(profile);
+            
+        } catch (Exception e) {
+            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * Update manager profile information
+     */
+    @PutMapping("/profile")
+    public ResponseEntity<ManagerProfileDTO> updateManagerProfile(
+            @AuthenticationPrincipal User manager, 
+            @RequestBody ManagerProfileUpdateDTO updateRequest) {
+        try {
+            // Update the manager's profile fields
+            manager.setFirstName(updateRequest.getFirstName());
+            manager.setLastName(updateRequest.getLastName());
+            manager.setDob(updateRequest.getDob());
+            manager.setGender(updateRequest.getGender());
+            manager.setPhone(updateRequest.getPhone());
+            manager.setEmail(updateRequest.getEmail());
+            manager.setAddress(updateRequest.getAddress());
+            manager.setJobTitle(updateRequest.getJobTitle());
+            
+            // Save the updated user
+            User updatedManager = userService.save(manager);
+            
+            // Create response DTO
+            ManagerProfileDTO response = new ManagerProfileDTO();
+            response.setId(updatedManager.getId());
+            response.setUsername(updatedManager.getUsername());
+            response.setFirstName(updatedManager.getFirstName());
+            response.setLastName(updatedManager.getLastName());
+            response.setDob(updatedManager.getDob());
+            response.setGender(updatedManager.getGender());
+            response.setPhone(updatedManager.getPhone());
+            response.setEmail(updatedManager.getEmail());
+            response.setAddress(updatedManager.getAddress());
+            response.setJobTitle(updatedManager.getJobTitle());
+            response.setCreatedDate(updatedManager.getCreatedDate());
+            response.setLastModifiedDate(updatedManager.getLastModifiedDate());
+            response.setEnabled(updatedManager.getEnabled());
+            response.setFirstLogin(updatedManager.getFirstLogin());
+            response.setRoleName(updatedManager.getRole().getRoleName());
+            response.setFullName(updatedManager.getFullName());
+            
+            return ResponseEntity.ok(response);
             
         } catch (Exception e) {
             return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);

@@ -1,0 +1,359 @@
+/* Shared Profile Component Styles */
+
+/* Profile Form Styles */
+.user-profile-edit-form {
+  width: 100%;
+}
+
+.profile-form-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.profile-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.profile-form-label {
+  font-weight: 600;
+  color: #333;
+  display: flex;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.profile-form-group input,
+.profile-form-group select {
+  padding: 8px 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  font-size: 14px;
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.profile-form-group input:focus,
+.profile-form-group select:focus {
+  outline: none;
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+.profile-form-group input.error,
+.profile-form-group select.error {
+  border-color: #ff4d4f;
+}
+
+.profile-form-group input.error:focus,
+.profile-form-group select.error:focus {
+  box-shadow: 0 0 0 2px rgba(255, 77, 79, 0.2);
+}
+
+.error-text {
+  color: #ff4d4f;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.profile-form-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-start;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid #f0f0f0;
+}
+
+/* User Profile Avatar Styles */
+.user-profile-avatar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Role-based Theme Colors */
+.profile-theme-parent {
+  --theme-color: #1890ff;
+  --theme-color-light: #1890ff15;
+  --theme-color-border: #1890ff50;
+}
+
+.profile-theme-admin {
+  --theme-color: #faad14;
+  --theme-color-light: #faad1415;
+  --theme-color-border: #faad1450;
+}
+
+.profile-theme-manager {
+  --theme-color: #ff4d4f;
+  --theme-color-light: #ff4d4f15;
+  --theme-color-border: #ff4d4f50;
+}
+
+.profile-theme-nurse {
+  --theme-color: #52c41a;
+  --theme-color-light: #52c41a15;
+  --theme-color-border: #52c41a50;
+}
+
+/* User Profile View Form Styles */
+.user-profile-view-form {
+  width: 100%;
+}
+
+.profile-display-field {
+  padding: 8px 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  font-size: 14px;
+  background-color: #f5f5f5;
+  color: #333;
+  min-height: 40px;
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  word-wrap: break-word;
+  word-break: break-word;
+}
+
+/* Manager Profile Styles */
+.manager-profile-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.manager-profile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding: 24px;
+  border-bottom: 2px solid #ff4d4f;
+  background: linear-gradient(135deg, #ff4d4f10, #ff4d4f05);
+  border-radius: 12px;
+}
+
+.manager-header-content h2 {
+  margin: 0;
+  color: #ff4d4f;
+  font-size: 28px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.manager-header-content p {
+  margin: 8px 0 0 0;
+  color: #666;
+  font-size: 16px;
+}
+
+.manager-profile-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.manager-profile-card {
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(255, 77, 79, 0.08);
+  border: 1px solid #ff4d4f20;
+}
+
+.manager-card-title {
+  color: #ff4d4f;
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.manager-profile-combined-section {
+  display: flex;
+  gap: 32px;
+  align-items: flex-start;
+}
+
+.manager-profile-avatar-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  min-width: 120px;
+}
+
+.manager-profile-info-grid {
+  flex: 1;
+}
+
+.manager-profile-edit-section {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.manager-profile-avatar-section-edit {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 16px 0;
+}
+
+/* System Info Grid for Manager */
+.system-info-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.system-info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #ff4d4f;
+}
+
+.system-info-label {
+  font-weight: 600;
+  color: #555;
+}
+
+.system-info-value {
+  color: #333;
+}
+
+/* Nurse Profile Styles */
+.nurse-profile-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.nurse-profile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding: 24px;
+  border-bottom: 2px solid #52c41a;
+  background: linear-gradient(135deg, #52c41a10, #52c41a05);
+  border-radius: 12px;
+}
+
+.nurse-header-content h2 {
+  margin: 0;
+  color: #52c41a;
+  font-size: 28px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.nurse-header-content p {
+  margin: 8px 0 0 0;
+  color: #666;
+  font-size: 16px;
+}
+
+.nurse-profile-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.nurse-profile-card {
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(82, 196, 26, 0.08);
+  border: 1px solid #52c41a20;
+}
+
+.nurse-card-title {
+  color: #52c41a;
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.nurse-profile-combined-section {
+  display: flex;
+  gap: 32px;
+  align-items: flex-start;
+}
+
+.nurse-profile-avatar-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  min-width: 120px;
+}
+
+.nurse-profile-info-grid {
+  flex: 1;
+  width: 100%;
+}
+
+.nurse-profile-edit-section {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+}
+
+.nurse-profile-avatar-section-edit {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 16px 0;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .profile-form-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .profile-form-actions .ant-btn {
+    width: 100%;
+  }
+  
+  .profile-display-field {
+    font-size: 13px;
+    padding: 6px 10px;
+  }
+  
+  .manager-profile-combined-section,
+  .nurse-profile-combined-section {
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+  }
+  
+  .manager-profile-avatar-section,
+  .nurse-profile-avatar-section {
+    min-width: auto;
+  }
+  
+  .manager-profile-header,
+  .nurse-profile-header {
+    flex-direction: column;
+    gap: 16px;
+    text-align: center;
+  }
+}
+
+@media (max-width: 576px) {
+  .profile-form-grid {
+    gap: 16px;
+  }
+}
