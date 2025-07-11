@@ -308,8 +308,21 @@ public class VaccinationCampaignService implements IVaccinationCampaignService {
 
         for (Student student : allStudents) {
             if (isStudentEligible(student, rule) && !formRepository.existsByCampaignAndStudent(campaign, student)) {
-                // Determine parent (prefer mother, then father)
-                User parent = student.getMother() != null ? student.getMother() : student.getFather();
+                // Determine parent (prefer enabled parent)
+                User parent = null;
+                User mother = student.getMother();
+                User father = student.getFather();
+                
+                // Priority: enabled parent > mother > father
+                if (mother != null && mother.isEnabled()) {
+                    parent = mother;
+                } else if (father != null && father.isEnabled()) {
+                    parent = father;
+                } else if (mother != null) {
+                    parent = mother; // Fallback to mother even if disabled
+                } else {
+                    parent = father; // Fallback to father even if disabled
+                }
                 
                 if (parent != null) {
                     VaccinationForm form = new VaccinationForm();

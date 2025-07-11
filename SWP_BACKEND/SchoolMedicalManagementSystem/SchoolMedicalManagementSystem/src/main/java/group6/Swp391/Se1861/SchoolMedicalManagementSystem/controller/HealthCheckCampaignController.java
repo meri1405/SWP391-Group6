@@ -24,6 +24,12 @@ import java.util.HashMap;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.ArrayList;
+import java.util.stream.Collectors;
+import java.util.Set;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.enums.FormStatus;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.HealthCheckForm;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.HealthCheckFormDTO;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IHealthCheckFormService;
 
 @RestController
 @RequestMapping("/api/nurse/health-check-campaigns")
@@ -408,6 +414,117 @@ public class HealthCheckCampaignController {
             return new ResponseEntity<>(
                 Map.of("error", "Failed to send health check result notifications: " + e.getMessage()),
                 HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * Debug endpoint to check form statuses and investigate confirmed students discrepancy
+     */
+    @GetMapping("/{id}/debug-forms")
+    public ResponseEntity<Map<String, Object>> debugFormStatuses(@PathVariable Long id) {
+        try {
+            System.out.println("=== DEBUG: Investigating form statuses for campaign " + id + " ===");
+            
+            // Get the campaign
+            HealthCheckCampaign campaign = campaignService.getCampaignModelById(id);
+            
+            // Get all forms for this campaign (regardless of status)
+            List<HealthCheckForm> allForms = healthCheckFormService.getFormsByCampaign(campaign)
+                .stream()
+                .map(dto -> {
+                    // Convert DTO back to entity (simplified)
+                    HealthCheckForm form = new HealthCheckForm();
+                    form.setId(dto.getId());
+                    form.setStatus(dto.getStatus());
+                    // Add other necessary fields
+                    return form;
+                })
+                .collect(Collectors.toList());
+            
+            System.out.println("DEBUG: Found " + allForms.size() + " total forms");
+            
+            // Count by status
+            Map<String, Long> statusCounts = allForms.stream()
+                .collect(Collectors.groupingBy(
+                    form -> form.getStatus().toString(),
+                    Collectors.counting()
+                ));
+            
+            System.out.println("DEBUG: Status counts: " + statusCounts);
+            
+            // Get forms with CONFIRMED status specifically
+            List<HealthCheckForm> confirmedForms = allForms.stream()
+                .filter(form -> form.getStatus() == FormStatus.CONFIRMED)
+                .collect(Collectors.toList());
+            
+            System.out.println("DEBUG: Found " + confirmedForms.size() + " CONFIRMED forms");
+            
+            // Get eligible students with status (Method 1)
+            List<Map<String, Object>> eligibleWithStatus = campaignService.getEligibleStudentsWithFormStatus(id);
+            long confirmedFromMethod1 = eligibleWithStatus.stream()
+                .filter(student -> "CONFIRMED".equals(student.get("status")))
+                .count();
+            
+            System.out.println("DEBUG: Method 1 (eligible-students-with-status) shows " + confirmedFromMethod1 + " confirmed");
+            
+            // Get confirmed students (Method 2)
+            List<Map<String, Object>> confirmedFromMethod2 = campaignService.getConfirmedStudents(id);
+            
+            System.out.println("DEBUG: Method 2 (confirmed-students) shows " + confirmedFromMethod2.size() + " confirmed");
+            
+            // Build debug response
+            Map<String, Object> debugInfo = new HashMap<>();
+            debugInfo.put("campaignId", id);
+            debugInfo.put("campaignName", campaign.getName());
+            debugInfo.put("totalForms", allForms.size());
+            debugInfo.put("statusCounts", statusCounts);
+            debugInfo.put("confirmedFromDatabase", confirmedForms.size());
+            debugInfo.put("confirmedFromMethod1", confirmedFromMethod1);
+            debugInfo.put("confirmedFromMethod2", confirmedFromMethod2.size());
+            
+            // Add form details for investigation
+            List<Map<String, Object>> formDetails = new ArrayList<>();
+            for (HealthCheckFormDTO dto : healthCheckFormService.getFormsByCampaign(campaign)) {
+                Map<String, Object> formInfo = new HashMap<>();
+                formInfo.put("formId", dto.getId());
+                formInfo.put("studentId", dto.getStudentId());
+                formInfo.put("studentName", dto.getStudentFullName());
+                formInfo.put("status", dto.getStatus().toString());
+                formInfo.put("sentAt", dto.getSentAt());
+                formInfo.put("respondedAt", dto.getRespondedAt());
+                formDetails.add(formInfo);
+            }
+            debugInfo.put("formDetails", formDetails);
+            
+            // Log discrepancy details
+            if (confirmedFromMethod1 != confirmedFromMethod2.size()) {
+                System.out.println("=== DISCREPANCY FOUND ===");
+                System.out.println("Method 1 confirmed count: " + confirmedFromMethod1);
+                System.out.println("Method 2 confirmed count: " + confirmedFromMethod2.size());
+                
+                // Find students that appear confirmed in method 1 but not method 2
+                Set<Long> method2StudentIds = confirmedFromMethod2.stream()
+                    .map(student -> ((Number) student.get("studentID")).longValue())
+                    .collect(Collectors.toSet());
+                
+                List<Map<String, Object>> missingStudents = eligibleWithStatus.stream()
+                    .filter(student -> "CONFIRMED".equals(student.get("status")))
+                    .filter(student -> !method2StudentIds.contains(((Number) student.get("studentID")).longValue()))
+                    .collect(Collectors.toList());
+                
+                debugInfo.put("missingFromMethod2", missingStudents);
+                System.out.println("Students missing from method 2: " + missingStudents);
+            }
+            
+            return ResponseEntity.ok(debugInfo);
+            
+        } catch (Exception e) {
+            System.err.println("ERROR in debug endpoint: " + e.getMessage());
+            e.printStackTrace();
+            Map<String, Object> errorInfo = new HashMap<>();
+            errorInfo.put("error", e.getMessage());
+            errorInfo.put("stackTrace", e.getStackTrace());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorInfo);
         }
     }
 }

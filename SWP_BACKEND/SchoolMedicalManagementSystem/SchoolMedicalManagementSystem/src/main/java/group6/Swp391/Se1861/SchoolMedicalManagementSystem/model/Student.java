@@ -73,15 +73,19 @@ public class Student {
 
     /**
      * Gets the primary parent contact for the student.
-     * Returns mother if available, otherwise returns father.
-     * May return null if no parent is assigned.
+     * Priority: enabled parent > mother > father.
+     * Returns the most appropriate parent for communication.
      */
     public User getParent() {
-        // Return mother as the primary contact if available
+        // Priority: enabled parent > mother > father
         if (mother != null && mother.isEnabled()) {
             return mother;
+        } else if (father != null && father.isEnabled()) {
+            return father;
+        } else if (mother != null) {
+            return mother; // Fallback to mother even if disabled
+        } else {
+            return father; // Fallback to father even if disabled
         }
-        // Otherwise return father
-        return father;
     }
 }

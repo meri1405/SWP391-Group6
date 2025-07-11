@@ -447,8 +447,15 @@ const VaccinationCampaignDetail = ({ campaignId, onBack, onEdit }) => {
       title: "Ngày gửi",
       dataIndex: "sentDate",
       key: "sentDate",
-      render: (date) =>
-        date ? dayjs(date).format("DD/MM/YYYY HH:mm") : "Chưa gửi",
+      render: (date) => {
+        if (!date || date === "null" || date === "undefined") {
+          return "Chưa gửi";
+        }
+        const dayjsDate = dayjs(date);
+        return dayjsDate.isValid()
+          ? dayjsDate.format("DD/MM/YYYY HH:mm")
+          : "Chưa gửi";
+      },
     },
     {
       title: "Hành động",
@@ -508,7 +515,15 @@ const VaccinationCampaignDetail = ({ campaignId, onBack, onEdit }) => {
       title: "Ngày tiêm",
       dataIndex: "vaccinationDate",
       key: "vaccinationDate",
-      render: (date) => dayjs(date).format("DD/MM/YYYY HH:mm"),
+      render: (date) => {
+        if (!date || date === "null" || date === "undefined") {
+          return "Chưa có thông tin";
+        }
+        const dayjsDate = dayjs(date);
+        return dayjsDate.isValid()
+          ? dayjsDate.format("DD/MM/YYYY HH:mm")
+          : "Chưa có thông tin";
+      },
     },
     {
       title: "Tình trạng trước tiêm",

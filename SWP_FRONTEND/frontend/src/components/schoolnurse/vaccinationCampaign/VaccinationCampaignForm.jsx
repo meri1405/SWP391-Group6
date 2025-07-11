@@ -31,6 +31,42 @@ const VaccinationCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
   const [calculatingCount, setCalculatingCount] = useState(false);
   const isEditing = !!campaign;
 
+  const calculateEstimatedVaccineCount = useCallback(
+    async (ruleId) => {
+      if (!ruleId) return;
+
+      setCalculatingCount(true);
+      try {
+        const response =
+          await vaccinationCampaignApi.getEligibleStudentsCountByRule(ruleId);
+        const eligibleCount = response.eligibleCount || 0;
+
+        form.setFieldsValue({
+          estimatedVaccineCount: eligibleCount,
+        });
+
+        if (eligibleCount > 0) {
+          message.success(
+            `Tìm thấy ${eligibleCount} học sinh thỏa mãn điều kiện tiêm chủng`
+          );
+        } else {
+          message.info(
+            "Không có học sinh nào thỏa mãn điều kiện tiêm chủng hiện tại"
+          );
+        }
+      } catch (error) {
+        console.error("Error calculating estimated vaccine count:", error);
+        message.error("Không thể tính toán số lượng vaccine dự kiến");
+        form.setFieldsValue({
+          estimatedVaccineCount: 0,
+        });
+      } finally {
+        setCalculatingCount(false);
+      }
+    },
+    [form]
+  );
+
   useEffect(() => {
     fetchVaccinationRules();
     if (isEditing) {
@@ -113,39 +149,6 @@ const VaccinationCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
     }
   };
 
-  const calculateEstimatedVaccineCount = useCallback(async (ruleId) => {
-    if (!ruleId) return;
-
-    setCalculatingCount(true);
-    try {
-      const response =
-        await vaccinationCampaignApi.getEligibleStudentsCountByRule(ruleId);
-      const eligibleCount = response.eligibleCount || 0;
-
-      form.setFieldsValue({
-        estimatedVaccineCount: eligibleCount,
-      });
-
-      if (eligibleCount > 0) {
-        message.success(
-          `Tìm thấy ${eligibleCount} học sinh thỏa mãn điều kiện tiêm chủng`
-        );
-      } else {
-        message.info(
-          "Không có học sinh nào thỏa mãn điều kiện tiêm chủng hiện tại"
-        );
-      }
-    } catch (error) {
-      console.error("Error calculating estimated vaccine count:", error);
-      message.error("Không thể tính toán số lượng vaccine dự kiến");
-      form.setFieldsValue({
-        estimatedVaccineCount: 0,
-      });
-    } finally {
-      setCalculatingCount(false);
-    }
-  }, [form]);
-
   if (loading) {
     return (
       <Card>
@@ -180,7 +183,11 @@ const VaccinationCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
           <Col span={12}>
             <Form.Item
               name="name"
-              label={<span>Tên chiến dịch <span style={{color: 'red'}}>*</span></span>}
+              label={
+                <span>
+                  Tên chiến dịch <span style={{ color: "red" }}>*</span>
+                </span>
+              }
               rules={[
                 { required: true, message: "Vui lòng nhập tên chiến dịch" },
               ]}
@@ -191,7 +198,11 @@ const VaccinationCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
           <Col span={12}>
             <Form.Item
               name="vaccinationRuleId"
-              label={<span>Quy tắc tiêm chủng <span style={{color: 'red'}}>*</span></span>}
+              label={
+                <span>
+                  Quy tắc tiêm chủng <span style={{ color: "red" }}>*</span>
+                </span>
+              }
               rules={[
                 { required: true, message: "Vui lòng chọn quy tắc tiêm chủng" },
               ]}
@@ -214,7 +225,11 @@ const VaccinationCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
           <Col span={12}>
             <Form.Item
               name="scheduledDate"
-              label={<span>Ngày thực hiện <span style={{color: 'red'}}>*</span></span>}
+              label={
+                <span>
+                  Ngày thực hiện <span style={{ color: "red" }}>*</span>
+                </span>
+              }
               rules={[
                 { required: true, message: "Vui lòng chọn ngày thực hiện" },
                 {
@@ -222,17 +237,22 @@ const VaccinationCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
                     if (!value) {
                       return Promise.resolve();
                     }
-                    
+
                     const today = dayjs();
-                    
+
                     // Kiểm tra ngày thực hiện phải là ngày tương lai (sau hôm nay)
-                    if (value.isBefore(today, 'day') || value.isSame(today, 'day')) {
-                      return Promise.reject(new Error('Ngày thực hiện phải là ngày tương lai'));
+                    if (
+                      value.isBefore(today, "day") ||
+                      value.isSame(today, "day")
+                    ) {
+                      return Promise.reject(
+                        new Error("Ngày thực hiện phải là ngày tương lai")
+                      );
                     }
-                    
+
                     return Promise.resolve();
-                  }
-                }
+                  },
+                },
               ]}
             >
               <DatePicker
@@ -242,7 +262,11 @@ const VaccinationCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
                 placeholder="Chọn ngày và giờ thực hiện"
                 disabledDate={(current) => {
                   // Vô hiệu hóa tất cả ngày từ hôm nay trở về trước
-                  return current && (current.isBefore(dayjs(), 'day') || current.isSame(dayjs(), 'day'));
+                  return (
+                    current &&
+                    (current.isBefore(dayjs(), "day") ||
+                      current.isSame(dayjs(), "day"))
+                  );
                 }}
               />
             </Form.Item>
@@ -250,7 +274,11 @@ const VaccinationCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
           <Col span={12}>
             <Form.Item
               name="location"
-              label={<span>Địa điểm <span style={{color: 'red'}}>*</span></span>}
+              label={
+                <span>
+                  Địa điểm <span style={{ color: "red" }}>*</span>
+                </span>
+              }
               rules={[{ required: true, message: "Vui lòng nhập địa điểm" }]}
             >
               <Input
@@ -271,7 +299,12 @@ const VaccinationCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
           <Col span={12}>
             <Form.Item
               name="estimatedVaccineCount"
-              label={<span>Số lượng vắc xin (dự kiến) <span style={{color: 'red'}}>*</span></span>}
+              label={
+                <span>
+                  Số lượng vắc xin (dự kiến){" "}
+                  <span style={{ color: "red" }}>*</span>
+                </span>
+              }
               rules={[
                 {
                   required: true,
@@ -304,7 +337,11 @@ const VaccinationCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
 
         <Form.Item
           name="description"
-          label={<span>Mô tả chiến dịch <span style={{color: 'red'}}>*</span></span>}
+          label={
+            <span>
+              Mô tả chiến dịch <span style={{ color: "red" }}>*</span>
+            </span>
+          }
           rules={[{ required: true, message: "Vui lòng nhập mô tả" }]}
         >
           <TextArea
@@ -315,7 +352,12 @@ const VaccinationCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
 
         <Form.Item
           name="prePostCareInstructions"
-          label={<span>Hướng dẫn chăm sóc trước và sau tiêm <span style={{color: 'red'}}>*</span></span>}
+          label={
+            <span>
+              Hướng dẫn chăm sóc trước và sau tiêm{" "}
+              <span style={{ color: "red" }}>*</span>
+            </span>
+          }
           rules={[
             { required: true, message: "Vui lòng nhập hướng dẫn chăm sóc" },
           ]}
