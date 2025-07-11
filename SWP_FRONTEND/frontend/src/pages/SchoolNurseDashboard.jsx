@@ -275,7 +275,7 @@ const SchoolNurseDashboard = () => {
     {
       key: "vaccination",
       icon: <CalendarOutlined />,
-      label: "Chiến dịch tiêm chủng",
+      label: "Chiến dịch tiêm",
     },
     {
       key: "vaccination-rule-management",
@@ -644,7 +644,7 @@ const SchoolNurseDashboard = () => {
       >
         <div className="nurse-user-section">
           <div className="nurse-user-avatar">
-            <UserOutlined style={{ fontSize: 32, color: "#1976d2" }} />
+            <UserOutlined style={{ fontSize: 32, color: "#52c41a" }} />
           </div>
           {!collapsed && (
             <span className="nurse-user-badge">Y tá Trường học</span>
@@ -692,7 +692,7 @@ const SchoolNurseDashboard = () => {
 
           <div className="nurse-header-user">
             <div className="nurse-header-avatar">
-              <UserOutlined style={{ fontSize: 20, color: "#1976d2" }} />
+              <UserOutlined style={{ fontSize: 20, color: "#52c41a" }} />
             </div>
             <span style={{ fontWeight: 500, fontSize: 16 }}>
               {userInfo?.lastName || ""} {userInfo?.firstName || ""}

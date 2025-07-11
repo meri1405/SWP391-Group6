@@ -1,61 +1,32 @@
-import React, { useState, useEffect } from "react";
-import { Card, Button, Tag, Spin, message } from "antd";
+import React from "react";
+import { Card, Button, Tag, Spin } from "antd";
 import {
   EditOutlined,
   CloseOutlined,
   TeamOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
-import managerApi from "../../api/managerApi";
 import { UserProfileDetails, UserProfileAvatar, UserProfileEditForm } from "../common";
+import { useProfileEditLogic } from "../../hooks/useProfileEditLogic";
+import { managerProfileConfig } from "../../hooks/profileConfigs";
 import "../../styles/ProfileSection.css";
 import "../../styles/SharedProfile.css";
 
 const ManagerProfile = () => {
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-    address: "",
-    dateOfBirth: "",
-    gender: "",
-    jobTitle: "",
-    username: "",
-  });
-  const [errors, setErrors] = useState({});
+  // Use the profile edit logic hook with manager configuration
+  const {
+    isEditing,
+    loading,
+    profileData: profile,
+    formData,
+    errors,
+    requiredFields,
+    handleChange,
+    handleSubmit,
+    toggleEditMode,
+  } = useProfileEditLogic(managerProfileConfig);
 
-  useEffect(() => {
-    fetchManagerProfile();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const fetchManagerProfile = async () => {
-    setLoading(true);
-    try {
-      const data = await managerApi.getManagerProfile();
-      setProfile(data);
-      setFormData({
-        firstName: data.firstName || "",
-        lastName: data.lastName || "",
-        email: data.email || "",
-        phone: data.phone || "",
-        address: data.address || "",
-        dateOfBirth: data.dob ? (Array.isArray(data.dob) ? convertJavaDateArray(data.dob)?.format("YYYY-MM-DD") : dayjs(data.dob).format("YYYY-MM-DD")) : "",
-        gender: data.gender || "",
-        jobTitle: data.jobTitle || "Quản lý",
-        username: data.username || "",
-      });
-    } catch (error) {
-      message.error("Không thể tải thông tin hồ sơ: " + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Helper function to convert Java date array (keep this for system info display)
   const convertJavaDateArray = (dateArray) => {
     if (!dateArray || !Array.isArray(dateArray)) return null;
     try {
@@ -64,64 +35,6 @@ const ManagerProfile = () => {
     } catch (error) {
       console.error("Error converting date array:", dateArray, error);
       return null;
-    }
-  };
-
-  const validateForm = () => {
-    const newErrors = {};
-    if (!formData.firstName.trim()) newErrors.firstName = "Tên không được để trống";
-    if (!formData.lastName.trim()) newErrors.lastName = "Họ không được để trống";
-    if (!formData.email.trim()) {
-      newErrors.email = "Email không được để trống";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "Email không hợp lệ";
-    }
-    if (formData.phone && !/^[0-9]{10,11}$/.test(formData.phone.replace(/\s/g, ""))) {
-      newErrors.phone = "Số điện thoại không hợp lệ";
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
-    if (errors[name]) {
-      setErrors({ ...errors, [name]: "" });
-    }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateForm()) {
-      message.error("Vui lòng kiểm tra lại thông tin");
-      return;
-    }
-    try {
-      setLoading(true);
-      const submitData = {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        phone: formData.phone,
-        address: formData.address,
-        gender: formData.gender,
-        jobTitle: formData.jobTitle,
-        dob: formData.dateOfBirth || null,
-      };
-      const updatedProfile = await managerApi.updateManagerProfile(submitData);
-      setProfile(updatedProfile);
-      setIsEditing(false);
-      message.success("Cập nhật thông tin thành công!");
-      await fetchManagerProfile();
-    } catch (error) {
-      console.error("Error updating manager profile:", error);
-      message.error("Có lỗi xảy ra khi cập nhật thông tin: " + error.message);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -154,7 +67,7 @@ const ManagerProfile = () => {
         <Button
           type={isEditing ? "default" : "primary"}
           icon={isEditing ? <CloseOutlined /> : <EditOutlined />}
-          onClick={() => setIsEditing(!isEditing)}
+          onClick={toggleEditMode}
           size="large"
           style={{
             backgroundColor: isEditing ? undefined : "#ff4d4f",
@@ -238,6 +151,7 @@ const ManagerProfile = () => {
                 onSubmit={handleSubmit}
                 loading={loading}
                 role="manager"
+                requiredFields={requiredFields}
                 showFields={{
                   firstName: true,
                   lastName: true,
@@ -262,7 +176,7 @@ const ManagerProfile = () => {
                   email: "manager@example.com",
                   phone: "0123456789",
                 }}
-                onCancel={() => setIsEditing(false)}
+                onCancel={toggleEditMode}
                 className="manager-profile-edit-form"
               />
             </div>

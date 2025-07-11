@@ -271,7 +271,6 @@ const AdminDashboard = () => {
         </Header>
         <Content
           style={{
-            margin: '16px 24px 24px 24px',
             padding: 0,
             minHeight: 'calc(100vh - 260px)',
             background: 'transparent',

@@ -20,149 +20,64 @@ import {
 import { useAuth } from "../../../contexts/AuthContext";
 import { parentApi } from "../../../api/parentApi";
 import { UserProfileDetails, UserProfileAvatar, UserProfileEditForm } from "../../common";
+import { useProfileEditLogic } from "../../../hooks/useProfileEditLogic";
+import { createParentProfileConfig } from "../../../hooks/profileConfigs";
 import HealthProfileDetailModal from "./HealthProfileDetailModal";
 import "../../../styles/Profile.css";
 import "../../../styles/SharedProfile.css";
 import dayjs from "dayjs";
 
 const Profile = ({ userInfo, onProfileUpdate }) => {
-  const [isEditing, setIsEditing] = useState(false);
+  const { getToken, isParent } = useAuth();
+  
+  // Use the profile edit logic hook with parent configuration
+  const parentConfig = createParentProfileConfig(getToken());
+  const {
+    isEditing,
+    loading: profileLoading,
+    formData,
+    errors,
+    requiredFields,
+    handleChange,
+    handleSubmit,
+    toggleEditMode,
+  } = useProfileEditLogic({
+    ...parentConfig,
+    initialData: userInfo,
+    onProfileUpdate,
+  });
+
+  // Separate state for students and other non-profile data
   const [loading, setLoading] = useState(false);
   const [students, setStudents] = useState([]);
-  const [previewVisible, setPreviewVisible] = useState(false);
-  const [previewImage, setPreviewImage] = useState("");
-  // eslint-disable-next-line no-unused-vars
-  const [parentProfile, setParentProfile] = useState(null);
-  const [healthProfileModalVisible, setHealthProfileModalVisible] =
-    useState(false);
+  const [healthProfileModalVisible, setHealthProfileModalVisible] = useState(false);
   const [selectedHealthProfile, setSelectedHealthProfile] = useState(null);
   const [loadingHealthProfile, setLoadingHealthProfile] = useState(false);
-  const { getToken, isParent } = useAuth();
-  const [formData, setFormData] = useState({
-    firstName: userInfo?.firstName || "",
-    lastName: userInfo?.lastName || "",
-    phone: userInfo?.phone || "",
-    address: userInfo?.address || "",
-    jobTitle: userInfo?.jobTitle || "Phụ huynh",
-    dateOfBirth: userInfo?.dateOfBirth || "",
-    emergencyContact: userInfo?.phone || "",
-    relationship: userInfo?.gender === "M" ? "Cha" : "Mẹ",
-  });
-  
-  const [errors, setErrors] = useState({});
 
-  // Unified fetch data effect - combines all previous data loading effects
+  // Fetch students data (profile data is handled by the hook)
   useEffect(() => {
-    const fetchAllData = async () => {
+    const fetchStudentData = async () => {
       if (!isParent()) return;
 
       try {
         setLoading(true);
         const token = getToken();
-
-        // Load both students and parent profile in parallel
-        const [studentsData, profileData] = await Promise.all([
-          parentApi.getMyStudents(token),
-          parentApi.getParentProfile(token),
-        ]);
-
-        console.log("Initial parent profile data:", profileData);
-
-        // Apply default values for missing fields
-        const userAddress = profileData.address || "123 Healthcare Ave";
-        const userJobTitle = profileData.jobTitle || "PARENT";
-        // For date fields, ensure they are in YYYY-MM-DD format
-        let userDateOfBirth = "1990-01-15"; // Default birth date
-        if (profileData.dateOfBirth) {
-          try {
-            // If it's already a valid date string, use it as is
-            userDateOfBirth = profileData.dateOfBirth;
-
-            // Test if we can parse it as a date
-            new Date(userDateOfBirth);
-            console.log("Using date of birth:", userDateOfBirth);
-          } catch (error) {
-            // Log the error and use default value
-            console.error(
-              "Invalid date format:",
-              profileData.dateOfBirth,
-              error
-            );
-            // Still use the default value of 1990-01-15
-          }
-        }
-
-        // Create enhanced profile with defaults
-        const enhancedProfile = {
-          ...profileData,
-          address: userAddress,
-          jobTitle: userJobTitle,
-          dateOfBirth: userDateOfBirth,
-        };
-
-        console.log("Using enhanced profile values:", {
-          address: userAddress,
-          jobTitle: userJobTitle,
-          dateOfBirth: userDateOfBirth,
-        });
-
-        // Update state with all data at once
+        const studentsData = await parentApi.getMyStudents(token);
         setStudents(studentsData);
-        setParentProfile(enhancedProfile);
-
-        // Update form data with consistent values
-        setFormData({
-          firstName: profileData.firstName || "",
-          lastName: profileData.lastName || "",
-          phone: profileData.phone || "",
-          address: userAddress,
-          jobTitle: userJobTitle,
-          dateOfBirth: userDateOfBirth,
-          emergencyContact:
-            profileData.emergencyContact || profileData.phone || "",
-          relationship:
-            profileData.relationship ||
-            (profileData.gender === "M" ? "Cha" : "Mẹ"),
-        });
-
-        if (studentsData && studentsData.length > 0) {
-          console.log("Found students:", studentsData.length);
-        }
       } catch (error) {
-        console.error("Error fetching profile data:", error);
-        message.error("Không thể tải thông tin. Vui lòng thử lại.");
+        console.error("Error fetching students:", error);
+        message.error("Không thể tải thông tin học sinh. Vui lòng thử lại.");
       } finally {
         setLoading(false);
       }
     };
 
-    // Only fetch data if we have user auth
+    // Only fetch students data if we have user auth
     if (userInfo) {
-      console.log("User info loaded, fetching profile data");
-      fetchAllData();
+      console.log("User info loaded, fetching student data");
+      fetchStudentData();
     }
   }, [userInfo, isParent, getToken]);
-
-  const validateForm = () => {
-    const newErrors = {};
-
-    if (!formData.firstName.trim()) {
-      newErrors.firstName = "Họ không được để trống";
-    }
-
-    if (!formData.lastName.trim()) {
-      newErrors.lastName = "Tên không được để trống";
-    }
-
-    if (!formData.phone.trim()) {
-      newErrors.phone = "Số điện thoại không được để trống";
-    } else if (!/^[0-9]{10,11}$/.test(formData.phone.replace(/\s/g, ""))) {
-      newErrors.phone = "Số điện thoại không hợp lệ";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
 
   // Handle viewing student health profile
   const handleViewHealthProfile = async (student) => {
@@ -219,138 +134,6 @@ const Profile = ({ userInfo, onProfileUpdate }) => {
     setHealthProfileModalVisible(false);
     setSelectedHealthProfile(null);
   };
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!validateForm()) {
-      message.error("Vui lòng kiểm tra lại thông tin");
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const token = getToken();
-
-      // Prepare data for API call - include all required fields
-      const updateData = {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        phone: formData.phone,
-      };
-
-      // Include optional fields if they have values
-      if (formData.address) {
-        updateData.address = formData.address;
-        console.log("Including address in update:", updateData.address);
-      }
-
-      if (formData.jobTitle) {
-        updateData.jobTitle = formData.jobTitle;
-        console.log("Including jobTitle in update:", updateData.jobTitle);
-      }
-
-      if (formData.dateOfBirth) {
-        updateData.dateOfBirth = formData.dateOfBirth;
-        console.log("Including dateOfBirth in update:", updateData.dateOfBirth);
-      }
-
-      console.log("Sending profile update with data:", updateData);
-
-      // Call the API to update profile
-      const response = await parentApi.updateParentProfile(token, updateData);
-
-      console.log("Profile update response:", response);
-
-      message.success("Cập nhật thông tin thành công");
-      setIsEditing(false);
-      setErrors({});
-
-      // Update the local form data with the response data
-      if (response.profile) {
-        console.log("Updated profile from API:", response.profile);
-
-        // Update the form data with the response values
-        setFormData((prevData) => ({
-          ...prevData,
-          firstName: response.profile.firstName || prevData.firstName,
-          lastName: response.profile.lastName || prevData.lastName,
-          phone: response.profile.phone || prevData.phone,
-          address: response.profile.address || prevData.address,
-          jobTitle: response.profile.jobTitle || prevData.jobTitle,
-          dateOfBirth: response.profile.dateOfBirth || prevData.dateOfBirth,
-        }));
-
-        // Also update the parentProfile state
-        setParentProfile((prevProfile) => ({
-          ...prevProfile,
-          ...response.profile,
-          address: response.profile.address || "123 Healthcare Ave",
-          jobTitle: response.profile.jobTitle || "PARENT",
-          dateOfBirth: response.profile.dateOfBirth || "1990-01-15",
-        }));
-
-        console.log("Profile updated with new values:", {
-          address: response.profile.address,
-          jobTitle: response.profile.jobTitle,
-          dateOfBirth: response.profile.dateOfBirth,
-        });
-
-        // Trigger a parent component update if there's a callback
-        if (typeof onProfileUpdate === "function") {
-          console.log("Calling onProfileUpdate with:", response.profile);
-          onProfileUpdate(response.profile);
-        }
-      }
-    } catch (error) {
-      console.error("Profile update error:", error);
-      message.error("Có lỗi xảy ra khi cập nhật thông tin");
-    } finally {
-      setLoading(false);
-    }
-  };
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
-
-  // Upload functions for avatar
-  const beforeUpload = (file) => {
-    const isJpgOrPng = file.type === "image/jpeg" || file.type === "image/png";
-    if (!isJpgOrPng) {
-      message.error("You can only upload JPG/PNG file!");
-    }
-    const isLt2M = file.size / 1024 / 1024 < 2;
-    if (!isLt2M) {
-      message.error("Image must smaller than 2MB!");
-    }
-    return isJpgOrPng && isLt2M;
-  };
-
-  const handleAvatarChange = (info) => {
-    if (info.file.status === "uploading") {
-      setLoading(true);
-      return;
-    }
-    if (info.file.status === "done") {
-      // Avatar upload completed successfully
-      message.success("Cập nhật ảnh đại diện thành công!");
-      setLoading(false);
-    }
-  };
-
-  const handlePreview = async (file) => {
-    if (!file.url && !file.preview) {
-      file.preview = await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file.originFileObj);
-        reader.onload = () => resolve(reader.result);
-      });
-    }
-    setPreviewImage(file.url || file.preview);
-    setPreviewVisible(true);
-  };
 
   return (
     <div className="profile-container">
@@ -364,7 +147,7 @@ const Profile = ({ userInfo, onProfileUpdate }) => {
         <Button
           type={isEditing ? "default" : "primary"}
           icon={isEditing ? <CloseOutlined /> : <EditOutlined />}
-          onClick={() => setIsEditing(!isEditing)}
+          onClick={toggleEditMode}
           size="large"
         >
           {isEditing ? "Hủy" : "Chỉnh sửa"}
@@ -384,27 +167,13 @@ const Profile = ({ userInfo, onProfileUpdate }) => {
               showRole={true}
               customRoleDisplay="Phụ Huynh"
             />
-            {isEditing && (
-              <Upload
-                name="avatar"
-                listType="picture"
-                className="avatar-uploader"
-                showUploadList={false}
-                beforeUpload={beforeUpload}
-                onChange={handleAvatarChange}
-                onPreview={handlePreview}
-              >
-                <Button icon={<UploadOutlined />} size="small">
-                  Đổi ảnh
-                </Button>
-              </Upload>
-            )}
           </div>
 
           {isEditing ? (
             <UserProfileEditForm
               formData={formData}
               errors={errors}
+              requiredFields={requiredFields}
               onChange={handleChange}
               onSubmit={handleSubmit}
               loading={loading}
@@ -416,8 +185,6 @@ const Profile = ({ userInfo, onProfileUpdate }) => {
                 address: true,
                 dateOfBirth: true,
                 jobTitle: true,
-                emergencyContact: true,
-                relationship: true,
               }}
               customLabels={{
                 firstName: "Tên",
@@ -426,10 +193,8 @@ const Profile = ({ userInfo, onProfileUpdate }) => {
                 address: "Địa chỉ",
                 dateOfBirth: "Ngày sinh",
                 jobTitle: "Nghề nghiệp",
-                emergencyContact: "Số điện thoại khẩn cấp",
-                relationship: "Mối quan hệ",
               }}
-              onCancel={() => setIsEditing(false)}
+              onCancel={toggleEditMode}
               className="parent-profile-edit-form"
             />
           ) : (
@@ -476,7 +241,7 @@ const Profile = ({ userInfo, onProfileUpdate }) => {
           extra={<TeamOutlined />}
           styles={{ body: { padding: "24px" } }}
         >
-          {loading ? (
+          {loading || profileLoading ? (
             <div className="loading-container">
               <Spin size="large" />
               <p>Đang tải thông tin học sinh...</p>
@@ -527,15 +292,6 @@ const Profile = ({ userInfo, onProfileUpdate }) => {
           )}
         </Card>
       </div>
-
-      <Modal
-        open={previewVisible}
-        title="Xem trước ảnh"
-        footer={null}
-        onCancel={() => setPreviewVisible(false)}
-      >
-        <img alt="preview" style={{ width: "100%" }} src={previewImage} />
-      </Modal>
 
       <HealthProfileDetailModal
         visible={healthProfileModalVisible}
