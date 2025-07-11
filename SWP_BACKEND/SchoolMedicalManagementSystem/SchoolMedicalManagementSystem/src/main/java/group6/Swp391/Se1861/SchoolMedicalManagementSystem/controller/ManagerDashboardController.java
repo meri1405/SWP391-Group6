@@ -202,7 +202,6 @@ public class ManagerDashboardController {
             return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
-
     /**
      * Update manager profile information
      */
@@ -249,7 +248,6 @@ public class ManagerDashboardController {
             return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
-
     // Helper methods
     private Map<String, Object> getVaccinationStatistics() {
         Map<String, Object> stats = new HashMap<>();

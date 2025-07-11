@@ -31,7 +31,6 @@ const ManagerProfile = () => {
 
   useEffect(() => {
     fetchManagerProfile();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchManagerProfile = async () => {
@@ -39,8 +38,6 @@ const ManagerProfile = () => {
     try {
       const data = await managerApi.getManagerProfile();
       setProfile(data);
-      
-      // Initialize form data with profile data
       setFormData({
         firstName: data.firstName || "",
         lastName: data.lastName || "",
@@ -52,8 +49,6 @@ const ManagerProfile = () => {
         jobTitle: data.jobTitle || "Quản lý",
         username: data.username || "",
       });
-      
-      console.log(data);
     } catch (error) {
       message.error("Không thể tải thông tin hồ sơ: " + error.message);
     } finally {
@@ -61,15 +56,9 @@ const ManagerProfile = () => {
     }
   };
 
-  // Helper function to convert Java LocalDateTime array to JavaScript Date
   const convertJavaDateArray = (dateArray) => {
-    if (!dateArray || !Array.isArray(dateArray)) {
-      return null;
-    }
-    
+    if (!dateArray || !Array.isArray(dateArray)) return null;
     try {
-      // Java array format: [year, month, day, hour, minute, second, nanosecond]
-      // Note: Java month is 1-based, JavaScript month is 0-based
       const [year, month, day, hour = 0, minute = 0, second = 0] = dateArray;
       return dayjs(`${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:${second.toString().padStart(2, '0')}`);
     } catch (error) {
@@ -78,74 +67,49 @@ const ManagerProfile = () => {
     }
   };
 
-  // Form validation
   const validateForm = () => {
     const newErrors = {};
-
-    if (!formData.firstName.trim()) {
-      newErrors.firstName = "Tên không được để trống";
-    }
-
-    if (!formData.lastName.trim()) {
-      newErrors.lastName = "Họ không được để trống";
-    }
-
+    if (!formData.firstName.trim()) newErrors.firstName = "Tên không được để trống";
+    if (!formData.lastName.trim()) newErrors.lastName = "Họ không được để trống";
     if (!formData.email.trim()) {
       newErrors.email = "Email không được để trống";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = "Email không hợp lệ";
     }
-
     if (formData.phone && !/^[0-9]{10,11}$/.test(formData.phone.replace(/\s/g, ""))) {
       newErrors.phone = "Số điện thoại không hợp lệ";
     }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  // Handle form input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({
       ...formData,
       [name]: value,
     });
-
-    // Clear error when user starts typing
     if (errors[name]) {
-      setErrors({
-        ...errors,
-        [name]: "",
-      });
+      setErrors({ ...errors, [name]: "" });
     }
   };
 
-  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (!validateForm()) {
       message.error("Vui lòng kiểm tra lại thông tin");
       return;
     }
-
     try {
       setLoading(true);
-
-      // Convert date format for API
       const submitData = {
         ...formData,
         dob: formData.dateOfBirth || null,
       };
-
       const updatedProfile = await managerApi.updateManagerProfile(submitData);
-      
       setProfile(updatedProfile);
       setIsEditing(false);
       message.success("Cập nhật thông tin thành công!");
-      
-      // Refresh profile data
       await fetchManagerProfile();
     } catch (error) {
       console.error("Error updating manager profile:", error);
@@ -155,17 +119,9 @@ const ManagerProfile = () => {
     }
   };
 
-  // Show loading spinner while fetching data
   if (loading && !profile) {
     return (
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          height: "400px",
-        }}
-      >
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "400px" }}>
         <Spin size="large" />
         <span style={{ marginLeft: "16px" }}>Đang tải thông tin quản lý...</span>
       </div>
@@ -194,9 +150,9 @@ const ManagerProfile = () => {
           icon={isEditing ? <CloseOutlined /> : <EditOutlined />}
           onClick={() => setIsEditing(!isEditing)}
           size="large"
-          style={{ 
-            backgroundColor: isEditing ? undefined : "#ff4d4f", 
-            borderColor: isEditing ? undefined : "#ff4d4f" 
+          style={{
+            backgroundColor: isEditing ? undefined : "#ff4d4f",
+            borderColor: isEditing ? undefined : "#ff4d4f"
           }}
         >
           {isEditing ? "Hủy" : "Chỉnh sửa"}
@@ -207,21 +163,11 @@ const ManagerProfile = () => {
         <Card
           className="manager-profile-card"
           title={<div className="manager-card-title">Thông tin cá nhân</div>}
-          styles={{
-            body: { padding: "24px" },
-            header: {
-              textAlign: "center",
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              width: "100%",
-            },
-          }}
         >
           {!isEditing ? (
             <div className="manager-profile-combined-section">
               <div className="manager-profile-avatar-section">
-                <UserProfileAvatar 
+                <UserProfileAvatar
                   profileData={formData}
                   role="manager"
                   avatarSize={72}
@@ -229,7 +175,6 @@ const ManagerProfile = () => {
                   customRoleDisplay="Quản lý"
                 />
               </div>
-
               <div className="manager-profile-info-grid">
                 <UserProfileDetails
                   profileData={formData}
@@ -271,7 +216,7 @@ const ManagerProfile = () => {
           ) : (
             <div className="manager-profile-edit-section">
               <div className="manager-profile-avatar-section-edit">
-                <UserProfileAvatar 
+                <UserProfileAvatar
                   profileData={formData}
                   role="manager"
                   avatarSize={72}
@@ -279,7 +224,7 @@ const ManagerProfile = () => {
                   customRoleDisplay="Quản lý"
                 />
               </div>
-              
+
               <UserProfileEditForm
                 formData={formData}
                 errors={errors}
@@ -318,7 +263,6 @@ const ManagerProfile = () => {
           )}
         </Card>
 
-        {/* System Information Card */}
         {!isEditing && (
           <Card
             title={
@@ -332,7 +276,6 @@ const ManagerProfile = () => {
               borderRadius: 12,
               boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
             }}
-            styles={{ body: { padding: 24 } }}
           >
             <div className="system-info-grid">
               <div className="system-info-item">
