@@ -36,9 +36,9 @@ export const useMedicationManagement = () => {
       // Filter out any students with null or undefined IDs
       // Backend returns studentID, so we need to map it to id for frontend compatibility
       const validStudents = Array.isArray(studentsData) 
-        ? studentsData.filter(student => student && student.studentID).map(student => ({
+        ? studentsData.filter(student => student && student.id).map(student => ({
             ...student,
-            id: student.studentID  // Map studentID to id for frontend compatibility
+            id: student.id  // Map studentID to id for frontend compatibility
           }))
         : [];
         
@@ -58,10 +58,10 @@ export const useMedicationManagement = () => {
         }
         
         // If the student name doesn't exist but we have the student ID, try to get it from the students array
-        if (!med.studentName && med.studentId) {
-          const student = validStudents.find(s => s.id === med.studentId);
+        if (!med.studentName && med.id) {
+          const student = validStudents.find(s => s.id === med.id);
           if (student) {
-            med.studentName = `${student.firstName} ${student.lastName}`;
+            med.studentName = `${student.lastName} ${student.firstName}`;
           }
         }
         
@@ -100,6 +100,7 @@ export const useMedicationManagement = () => {
     const defaultValues = {
       itemRequests: [{ 
         itemType: 'TABLET',
+        unit: 'viên', // Default unit for tablets
         frequency: 1,
         startDate: dayjs(),
         endDate: dayjs().add(7, 'day'),
@@ -314,6 +315,7 @@ export const useMedicationManagement = () => {
             itemName: item.itemName,
             purpose: item.purpose,
             itemType: item.itemType,
+            unit: item.unit || 'đơn vị', // Include unit field
             dosage: parseFloat(item.dosage),
             frequency: parseInt(item.frequency, 10),
             startDate: item.startDate.format('YYYY-MM-DD'),

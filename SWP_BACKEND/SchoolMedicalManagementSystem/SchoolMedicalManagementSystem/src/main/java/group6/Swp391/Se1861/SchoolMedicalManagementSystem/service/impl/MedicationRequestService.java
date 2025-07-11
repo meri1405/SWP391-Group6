@@ -83,6 +83,7 @@ public class MedicationRequestService implements IMedicationRequestService {
             item.setItemType(itemDTO.getItemType());            
             item.setDosage(itemDTO.getDosage());
             item.setFrequency(itemDTO.getFrequency());
+            item.setUnit(itemDTO.getUnit());
             item.setNote(itemDTO.getNote());
             item.setStartDate(itemDTO.getStartDate());
             item.setEndDate(itemDTO.getEndDate());
@@ -99,7 +100,8 @@ public class MedicationRequestService implements IMedicationRequestService {
             item.setMedicationRequest(savedRequest);
             
             // Save the item request
-            ItemRequest savedItem = itemRequestRepository.save(item);            // Generate medication schedules immediately when parent creates request
+            ItemRequest savedItem = itemRequestRepository.save(item);
+            // Generate medication schedules immediately when parent creates request
             // This ensures schedules are available for nurse review
             medicationScheduleService.generateSchedules(
                 savedItem,
@@ -258,10 +260,12 @@ public class MedicationRequestService implements IMedicationRequestService {
                         .orElseThrow(() -> new ResourceNotFoundException("Item request not found with id: " + itemDTO.getId()));
 
                 // Remove from existing items list to track what's been processed
-                existingItems.remove(existingItem);                existingItem.setPurpose(itemDTO.getPurpose());
+                existingItems.remove(existingItem);
+                existingItem.setPurpose(itemDTO.getPurpose());
                 existingItem.setItemType(itemDTO.getItemType());
                 existingItem.setDosage(itemDTO.getDosage());
                 existingItem.setFrequency(itemDTO.getFrequency());
+                existingItem.setUnit(itemDTO.getUnit());
                 existingItem.setNote(itemDTO.getNote());
                 existingItem.setStartDate(itemDTO.getStartDate());
                 existingItem.setEndDate(itemDTO.getEndDate());
@@ -285,6 +289,7 @@ public class MedicationRequestService implements IMedicationRequestService {
                 newItem.setItemType(itemDTO.getItemType());
                 newItem.setDosage(itemDTO.getDosage());
                 newItem.setFrequency(itemDTO.getFrequency());
+                newItem.setUnit(itemDTO.getUnit());
                 newItem.setNote(itemDTO.getNote());
                 newItem.setStartDate(itemDTO.getStartDate());
                 newItem.setEndDate(itemDTO.getEndDate());
@@ -386,6 +391,7 @@ public class MedicationRequestService implements IMedicationRequestService {
                     itemDTO.setItemType(item.getItemType());                    
                     itemDTO.setDosage(item.getDosage());
                     itemDTO.setFrequency(item.getFrequency());
+                    itemDTO.setUnit(item.getUnit());
                     itemDTO.setNote(item.getNote());
                     itemDTO.setStartDate(item.getStartDate());
                     itemDTO.setEndDate(item.getEndDate());
@@ -427,9 +433,11 @@ public class MedicationRequestService implements IMedicationRequestService {
                 ItemRequestDTO itemDTO = new ItemRequestDTO();
                 itemDTO.setId(item.getId());
                 itemDTO.setItemName(item.getItemName());
-                itemDTO.setPurpose(item.getPurpose());                itemDTO.setItemType(item.getItemType());
+                itemDTO.setPurpose(item.getPurpose());
+                itemDTO.setItemType(item.getItemType());
                 itemDTO.setDosage(item.getDosage());
                 itemDTO.setFrequency(item.getFrequency());
+                itemDTO.setUnit(item.getUnit());
                 itemDTO.setStartDate(item.getStartDate());
                 itemDTO.setEndDate(item.getEndDate());
 

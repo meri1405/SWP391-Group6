@@ -1,3 +1,4 @@
+import { DEFAULT_UNITS_BY_TYPE } from "../../../constants/index.js";
 import {
   Card,
   Button,
@@ -95,6 +96,20 @@ const MedicationManagement = () => {
     setPreviewImageUrl(imageUrl);
     setPreviewImageTitle(`Đơn thuốc ${index + 1}`);
     setImagePreviewVisible(true);
+  };
+
+  // Handle item type change to update available units
+  const handleItemTypeChange = (itemType, itemIndex) => {
+    const availableUnits = DEFAULT_UNITS_BY_TYPE[itemType] || ['đơn vị'];
+    const defaultUnit = availableUnits[0];
+    
+    // Update the unit field when item type changes
+    form.setFieldValue(['itemRequests', itemIndex, 'unit'], defaultUnit);
+    
+    // Force form to re-render by updating a dummy field and then removing it
+    form.setFieldsValue({
+      itemRequests: form.getFieldValue('itemRequests')
+    });
   };
 
   // Table columns for medication requests
@@ -509,7 +524,10 @@ const MedicationManagement = () => {
                             },
                           ]}
                         >
-                          <Select placeholder="Chọn loại thuốc">
+                          <Select
+                            placeholder="Chọn loại thuốc"
+                            onChange={(value) => handleItemTypeChange(value, name)}
+                          >
                             <Option value="CREAM">Kem</Option>
                             <Option value="DROPS">Giọt</Option>
                             <Option value="SPOONFUL">Thìa</Option>
@@ -544,6 +562,39 @@ const MedicationManagement = () => {
                           ]}
                         >
                           <Input placeholder="Ví dụ: 0.5, 1.5, 5.0, 10" />
+                        </Form.Item>
+                        <Form.Item
+                          noStyle
+                          shouldUpdate={(prevValues, currentValues) => {
+                            const prevItemType = prevValues?.itemRequests?.[name]?.itemType;
+                            const currentItemType = currentValues?.itemRequests?.[name]?.itemType;
+                            return prevItemType !== currentItemType;
+                          }}
+                        >
+                          {() => {
+                            const currentItemType = form.getFieldValue(['itemRequests', name, 'itemType']);
+                            const availableUnits = DEFAULT_UNITS_BY_TYPE[currentItemType] || ['đơn vị'];
+                            
+                            return (
+                              <Form.Item
+                                {...restField}
+                                name={[name, "unit"]}
+                                label="Đơn vị"
+                                rules={[
+                                  {
+                                    required: true,
+                                    message: "Vui lòng chọn đơn vị",
+                                  },
+                                ]}
+                              >
+                                <Select placeholder="Chọn đơn vị">
+                                  {availableUnits.map(unit => (
+                                    <Option key={unit} value={unit}>{unit}</Option>
+                                  ))}
+                                </Select>
+                              </Form.Item>
+                            );
+                          }}
                         </Form.Item>
                       </div>
                       <div className="form-row">
@@ -706,6 +757,7 @@ const MedicationManagement = () => {
 
                       add({
                         itemType: "TABLET",
+                        unit: "viên", // Default unit for tablet
                         startDate: startDate,
                         endDate: endDate,
                       });
@@ -1019,17 +1071,7 @@ const MedicationManagement = () => {
                             <p>
                               <strong>Liều lượng:</strong>{" "}
                               <span className="medication-dosage">
-                                {item.dosage}{" "}
-                                {item.itemType === "TABLET" ||
-                                item.itemType === "CAPSULE"
-                                  ? "viên"
-                                  : item.itemType === "LIQUID" ||
-                                    item.itemType === "INJECTION"
-                                  ? "ml"
-                                  : item.itemType === "CREAM" ||
-                                    item.itemType === "POWDER"
-                                  ? "g"
-                                  : "đơn vị"}
+                                {item.dosage} {item.unit || "đơn vị"}
                               </span>
                             </p>
                             <p>
