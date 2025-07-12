@@ -32,11 +32,11 @@ import {
   HeartOutlined
 } from '@ant-design/icons';
 import { healthCheckApi, CAMPAIGN_STATUS_LABELS, HEALTH_CHECK_CATEGORY_LABELS } from '../../api/healthCheckApi';
+import { formatDate,  } from '../../utils/timeUtils';
 import '../../styles/ManagerHealthCheck.css';
 
 const { TextArea } = Input;
 const { Title, Text } = Typography;
-const { TabPane } = Tabs;
 const { Option } = Select;
 
 const ManagerHealthCheckManagement = () => {
@@ -85,6 +85,7 @@ const ManagerHealthCheckManagement = () => {
       switch (status) {
         case 'pending':
           response = await healthCheckApi.getAllCampaignsByStatus('PENDING');
+          console.log('Fetching pending campaigns:', response);
           break;
         case 'approved':
           response = await healthCheckApi.getAllCampaignsByStatus('APPROVED');
@@ -94,6 +95,7 @@ const ManagerHealthCheckManagement = () => {
           break;
         case 'ongoing':
           response = await healthCheckApi.getAllCampaignsByStatus('IN_PROGRESS');
+          console.log('Fetching ongoing campaigns:', response);
           break;
         case 'completed':
           response = await healthCheckApi.getAllCampaignsByStatus('COMPLETED');
@@ -163,15 +165,43 @@ const ManagerHealthCheckManagement = () => {
       const updatedCampaign = await healthCheckApi.getCampaignByIdForManager(campaign.id);
       setSelectedCampaign(updatedCampaign);
       
-      // Note: These endpoints don't exist in the backend yet
-      // For now, we'll just use empty arrays
-      // TODO: Implement when backend supports these endpoints
-      // const [campaignForms, campaignResults] = await Promise.all([
-      //   healthCheckApi.getFormsByCampaign(campaign.id),
-      //   healthCheckApi.getResultsByCampaign(campaign.id)
-      // ]);
+      // Reset forms and results before fetching
       setForms([]);
       setResults([]);
+      
+      // If campaign has progressed beyond PENDING, fetch confirmed students and results
+      if (updatedCampaign.status !== 'PENDING') {
+        try {
+          // Use manager API to get confirmed students
+          const confirmedStudentsData = await healthCheckApi.confirmCampaign(campaign.id);
+          console.log('Confirmed students data:', confirmedStudentsData);
+          setForms(Array.isArray(confirmedStudentsData) ? confirmedStudentsData : []);
+        } catch (formError) {
+          console.error('Error fetching confirmed students:', formError);
+          // Fallback to nurse API if manager API fails
+          try {
+            const formsData = await healthCheckApi.getFormsByCampaignId(campaign.id);
+            setForms(Array.isArray(formsData) ? formsData : []);
+          } catch (fallbackError) {
+            console.error('Error fetching campaign forms (fallback):', fallbackError);
+            setForms([]);
+          }
+        }
+        
+        // If campaign is completed or in progress, fetch results using manager API
+        if (updatedCampaign.status === 'COMPLETED' || updatedCampaign.status === 'IN_PROGRESS') {
+          try {
+            // Use manager API to get results
+            const resultsData = await healthCheckApi.resultCampaign(campaign.id);
+            console.log('Campaign results data:', resultsData);
+            setResults(Array.isArray(resultsData) ? resultsData : []);
+          } catch (resultError) {
+            console.error('Error fetching campaign results from manager API:', resultError);
+            // Set empty results if both APIs fail
+            setResults([]);
+          }
+        }
+      }
     } catch (error) {
       console.error('Error fetching campaign details:', error);
       // We already set the campaign from the table above, so no need to do it again
@@ -204,13 +234,9 @@ const ManagerHealthCheckManagement = () => {
       title: 'Tên chiến dịch',
       dataIndex: 'name',
       key: 'name',
-      render: (text, record) => (
+      render: (text) => (
         <div>
           <Text strong>{text}</Text>
-          <br />
-          <Text type="secondary" style={{ fontSize: '12px' }}>
-            ID: {record.id}
-          </Text>
         </div>
       ),
     },
@@ -225,8 +251,14 @@ const ManagerHealthCheckManagement = () => {
       key: 'duration',
       render: (_, record) => (
         <div>
-          <div>Từ: {new Date(record.startDate).toLocaleDateString('vi-VN')}</div>
-          <div>Đến: {new Date(record.endDate).toLocaleDateString('vi-VN')}</div>
+          <div>{record.startDate
+                      ? new Date(record.startDate).toLocaleDateString('vi-VN')
+                      : 'N/A'
+                    } - {record.endDate
+                      ? new Date(record.endDate).toLocaleDateString('vi-VN')
+                        : 'N/A'
+                      }
+          </div>
         </div>
       ),
     },
@@ -238,9 +270,9 @@ const ManagerHealthCheckManagement = () => {
     },
     {
       title: 'Người tạo',
-      dataIndex: 'createdBy',
-      key: 'createdBy',
-      render: (user) => user?.fullName || 'N/A',
+      dataIndex: 'createdByName',
+      key: 'createdByName',
+      render: (createdByName, record) => createdByName || record.createdBy?.fullName || 'N/A',
     },
     {
       title: 'Thao tác',
@@ -252,7 +284,6 @@ const ManagerHealthCheckManagement = () => {
             icon={<EyeOutlined />}
             onClick={() => showCampaignDetail(record)}
           >
-            Xem
           </Button>
           {record.status === 'PENDING' && (
             <>
@@ -268,7 +299,6 @@ const ManagerHealthCheckManagement = () => {
                   icon={<CheckOutlined />}
                   size="small"
                 >
-                  Duyệt
                 </Button>
               </Popconfirm>
               <Button
@@ -280,7 +310,6 @@ const ManagerHealthCheckManagement = () => {
                   setRejectModalVisible(true);
                 }}
               >
-                Từ chối
               </Button>
             </>
           )}
@@ -347,13 +376,17 @@ const ManagerHealthCheckManagement = () => {
 
       {/* Campaign Management Table */}
       <Card title="Quản lý chiến dịch khám sức khỏe">
-        <Tabs activeKey={activeTab} onChange={setActiveTab}>
-          <TabPane tab="Chờ duyệt" key="pending" />
-          <TabPane tab="Đã duyệt" key="approved" />
-          <TabPane tab="Bị hủy" key="canceled" />
-          <TabPane tab="Đang tiến hành" key="ongoing" />
-          <TabPane tab="Hoàn thành" key="completed" />
-        </Tabs>
+        <Tabs 
+          activeKey={activeTab} 
+          onChange={setActiveTab}
+          items={[
+            { key: 'pending', label: 'Chờ duyệt' },
+            { key: 'approved', label: 'Đã duyệt' },
+            { key: 'canceled', label: 'Bị hủy' },
+            { key: 'ongoing', label: 'Đang tiến hành' },
+            { key: 'completed', label: 'Hoàn thành' }
+          ]}
+        />
 
         <Table
           columns={columns}
@@ -426,230 +459,296 @@ const ManagerHealthCheckManagement = () => {
         className="detail-modal"
       >
         {selectedCampaign && (
-          <Tabs defaultActiveKey="info">
-            <TabPane tab="Thông tin chiến dịch" key="info">
-              <Descriptions column={2} bordered>
-                <Descriptions.Item label="Tên chiến dịch" span={2}>
-                  <Text strong style={{ fontSize: '16px', color: '#ff4d4f' }}>
-                    {selectedCampaign.name}
-                  </Text>
-                </Descriptions.Item>
-                <Descriptions.Item label="Trạng thái">
-                  {getStatusBadge(selectedCampaign.status)}
-                </Descriptions.Item>
-                <Descriptions.Item label="Địa điểm">
-                  <Text>{selectedCampaign.location || 'N/A'}</Text>
-                </Descriptions.Item>
-                <Descriptions.Item label="Ngày bắt đầu">
-                  <Text>
-                    {selectedCampaign.startDate 
-                      ? new Date(selectedCampaign.startDate).toLocaleDateString('vi-VN')
-                      : 'N/A'
-                    }
-                  </Text>
-                </Descriptions.Item>
-                <Descriptions.Item label="Ngày kết thúc">
-                  <Text>
-                    {selectedCampaign.endDate 
-                      ? new Date(selectedCampaign.endDate).toLocaleDateString('vi-VN')
-                      : 'N/A'
-                    }
-                  </Text>
-                </Descriptions.Item>
-                <Descriptions.Item label="Độ tuổi tham gia">
-                  <Tag color="green">
-                    {selectedCampaign.minAge && selectedCampaign.maxAge 
-                      ? `${selectedCampaign.minAge} - ${selectedCampaign.maxAge} tuổi`
-                      : 'Tất cả độ tuổi'
-                    }
-                  </Tag>
-                </Descriptions.Item>
-                <Descriptions.Item label="Lớp tham gia">
-                  <div>
-                    {selectedCampaign.targetClasses && selectedCampaign.targetClasses.length > 0
-                      ? selectedCampaign.targetClasses.map(cls => (
-                          <Tag key={cls} color="blue" style={{ marginBottom: 4 }}>
-                            {cls}
-                          </Tag>
-                        ))
-                      : 'Tất cả lớp'
-                    }
-                  </div>
-                </Descriptions.Item>
-                <Descriptions.Item label="Người tạo">
-                  <div>
-                    <UserOutlined style={{ marginRight: 8, color: '#1890ff' }} />
-                    <Text strong>{selectedCampaign.createdBy?.fullName || 'N/A'}</Text>
-                  </div>
-                </Descriptions.Item>
-                <Descriptions.Item label="Ngày tạo">
-                  <Text>
-                    {selectedCampaign.createdAt 
-                      ? new Date(selectedCampaign.createdAt).toLocaleDateString('vi-VN')
-                      : 'N/A'
-                    }
-                  </Text>
-                </Descriptions.Item>
-                <Descriptions.Item label="Người duyệt">
-                  <div>
-                    {selectedCampaign.approvedBy ? (
-                      <>
-                        <CheckOutlined style={{ marginRight: 8, color: '#52c41a' }} />
-                        <Text strong>{selectedCampaign.approvedBy.fullName}</Text>
-                      </>
-                    ) : (
-                      <Text type="secondary">Chưa duyệt</Text>
-                    )}
-                  </div>
-                </Descriptions.Item>
-                <Descriptions.Item label="Loại khám" span={2}>
-                  <div>
-                    {formatCategories(selectedCampaign.categories)}
-                  </div>
-                </Descriptions.Item>
-                <Descriptions.Item label="Mô tả" span={2}>
-                  <div style={{ 
-                    maxHeight: '120px', 
-                    overflowY: 'auto', 
-                    padding: '8px', 
-                    backgroundColor: '#fff7e6', 
-                    borderRadius: '4px', 
-                    border: '1px solid #ffd591',
-                    fontSize: '14px',
-                    lineHeight: '1.5',
-                    whiteSpace: 'pre-line'
-                  }}>
-                    {selectedCampaign.description || 'Không có mô tả'}
-                  </div>
-                </Descriptions.Item>
-                {selectedCampaign.notes && selectedCampaign.status === 'CANCELED' && (
-                  <Descriptions.Item label="Ghi chú từ Manager" span={2}>
-                    <div style={{ 
-                      padding: '8px', 
-                      backgroundColor: '#fff2f0', 
-                      borderRadius: '4px', 
-                      border: '1px solid #ffccc7',
-                      fontSize: '14px',
-                      lineHeight: '1.5',
-                      color: '#cf1322',
-                      whiteSpace: 'pre-line'
-                    }}>
-                      {selectedCampaign.notes}
-                    </div>
-                  </Descriptions.Item>
-                )}
-                {selectedCampaign.rejectNotes && selectedCampaign.status === 'CANCELED' && (
-                  <Descriptions.Item label="Lý do hủy" span={2}>
-                    <div style={{ 
-                      padding: '8px', 
-                      backgroundColor: '#fff2f0', 
-                      borderRadius: '4px', 
-                      border: '1px solid #ffccc7',
-                      fontSize: '14px',
-                      lineHeight: '1.5',
-                      color: '#cf1322',
-                      whiteSpace: 'pre-line'
-                    }}>
-                      {selectedCampaign.rejectNotes}
-                    </div>
-                  </Descriptions.Item>
-                )}
-              </Descriptions>
-            </TabPane>
-            <TabPane tab={`Danh sách đăng ký (${forms.length})`} key="forms">
-              <Table
-                dataSource={forms}
-                columns={[
-                  {
-                    title: 'Học sinh',
-                    dataIndex: 'student',
-                    render: (student) => student?.fullName || 'N/A'
-                  },
-                  {
-                    title: 'Lớp',
-                    dataIndex: 'student',
-                    render: (student) => student?.className || 'N/A'
-                  },
-                  {
-                    title: 'Phụ huynh',
-                    dataIndex: 'parent',
-                    render: (parent) => parent?.fullName || 'N/A'
-                  },
-                  {
-                    title: 'Trạng thái',
-                    dataIndex: 'status',
-                    render: (status) => {
-                      const statusMap = {
-                        SENT: { color: 'processing', text: 'Đã gửi' },
-                        CONFIRMED: { color: 'success', text: 'Đã xác nhận' },
-                        DECLINED: { color: 'error', text: 'Từ chối' },
-                        SCHEDULED: { color: 'warning', text: 'Đã lên lịch' },
-                        CHECKED_IN: { color: 'success', text: 'Đã check-in' }
-                      };
-                      const statusInfo = statusMap[status] || { color: 'default', text: status };
-                      return <Badge status={statusInfo.color} text={statusInfo.text} />;
-                    }
-                  }
-                ]}
-                pagination={{ pageSize: 5 }}
-                rowKey="id"
-                size="small"
-              />
-            </TabPane>
-            <TabPane tab={`Kết quả khám (${results.length})`} key="results">
-              <Table
-                dataSource={results}
-                columns={[
-                  {
-                    title: 'Học sinh',
-                    dataIndex: 'form',
-                    render: (form) => form?.student?.fullName || 'N/A'
-                  },
-                  {
-                    title: 'Loại khám',
-                    dataIndex: 'category',
-                    render: (category) => {
-                      const categoryMap = {
-                        VISION: 'Khám mắt',
-                        HEARING: 'Khám tai',
-                        ORAL: 'Khám răng miệng',
-                        SKIN: 'Khám da liễu',
-                        RESPIRATORY: 'Khám hô hấp'
-                      };
-                      return <Tag color="blue">{categoryMap[category] || category}</Tag>;
-                    }
-                  },
-                  {
-                    title: 'Kết quả',
-                    dataIndex: 'abnormal',
-                    render: (abnormal) => (
-                      <Tag color={abnormal ? 'red' : 'green'}>
-                        {abnormal ? 'Bất thường' : 'Bình thường'}
+          <Tabs 
+            defaultActiveKey="info"
+            items={[
+              {
+                key: 'info',
+                label: 'Thông tin chiến dịch',
+                children: (
+                  <Descriptions column={2} bordered>
+                    <Descriptions.Item label="Tên chiến dịch" span={2}>
+                      <Text strong style={{ fontSize: '16px', color: '#ff4d4f' }}>
+                        {selectedCampaign.name}
+                      </Text>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Trạng thái">
+                      {getStatusBadge(selectedCampaign.status)}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Địa điểm">
+                      <Text>{selectedCampaign.location || 'N/A'}</Text>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Ngày bắt đầu">
+                      <Text>
+                        {selectedCampaign.startDate 
+                          ? new Date(selectedCampaign.startDate).toLocaleDateString('vi-VN')
+                          : 'N/A'
+                        }
+                      </Text>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Ngày kết thúc">
+                      <Text>
+                        {selectedCampaign.endDate 
+                          ? new Date(selectedCampaign.endDate).toLocaleDateString('vi-VN')
+                          : 'N/A'
+                        }
+                      </Text>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Độ tuổi tham gia">
+                      <Tag color="green">
+                        {selectedCampaign.minAge && selectedCampaign.maxAge 
+                          ? `${selectedCampaign.minAge} - ${selectedCampaign.maxAge} tuổi`
+                          : 'Tất cả độ tuổi'
+                        }
                       </Tag>
-                    )
-                  },
-                  {
-                    title: 'Trạng thái',
-                    dataIndex: 'status',
-                    render: (status) => {
-                      const statusMap = {
-                        RECORDED: { color: 'success', text: 'Đã ghi nhận' },
-                        CONSULTATION_SCHEDULED: { color: 'warning', text: 'Đã lên lịch tư vấn' },
-                        CONSULTATION_COMPLETED: { color: 'success', text: 'Đã tư vấn' },
-                        NOTIFIED_PARENT: { color: 'processing', text: 'Đã thông báo phụ huynh' },
-                        SYNCED_TO_PROFILE: { color: 'default', text: 'Đã đồng bộ hồ sơ' }
-                      };
-                      const statusInfo = statusMap[status] || { color: 'default', text: status };
-                      return <Badge status={statusInfo.color} text={statusInfo.text} />;
-                    }
-                  }
-                ]}
-                pagination={{ pageSize: 5 }}
-                rowKey="id"
-                size="small"
-              />
-            </TabPane>
-          </Tabs>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Lớp tham gia">
+                      <div>
+                        {selectedCampaign.targetClasses && selectedCampaign.targetClasses.length > 0
+                          ? selectedCampaign.targetClasses.map(cls => (
+                              <Tag key={cls} color="blue" style={{ marginBottom: 4 }}>
+                                {cls}
+                              </Tag>
+                            ))
+                          : 'Tất cả lớp'
+                        }
+                      </div>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Người tạo">
+                      <div>
+                        <UserOutlined style={{ marginRight: 8, color: '#1890ff' }} />
+                        <Text strong>{selectedCampaign.createdByName || 'N/A'}</Text>
+                      </div>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Ngày tạo">
+                      <Text>
+                        {selectedCampaign.createdAt 
+                          ? formatDate(selectedCampaign.createdAt)
+                          : 'N/A'
+                        }
+                      </Text>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Người duyệt">
+                      <div>
+                        {selectedCampaign.approvedByName ? (
+                          <>
+                            <CheckOutlined style={{ marginRight: 8, color: '#52c41a' }} />
+                            <Text strong>{selectedCampaign.approvedByName}</Text>
+                          </>
+                        ) : (
+                          <Text type="secondary">Chưa duyệt</Text>
+                        )}
+                      </div>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Loại khám" span={2}>
+                      <div>
+                        {formatCategories(selectedCampaign.categories)}
+                      </div>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Mô tả" span={2}>
+                      <div style={{ 
+                        maxHeight: '120px', 
+                        overflowY: 'auto', 
+                        padding: '8px', 
+                        backgroundColor: '#fff7e6', 
+                        borderRadius: '4px', 
+                        border: '1px solid #ffd591',
+                        fontSize: '14px',
+                        lineHeight: '1.5',
+                        whiteSpace: 'pre-line'
+                      }}>
+                        {selectedCampaign.description || 'Không có mô tả'}
+                      </div>
+                    </Descriptions.Item>
+                    {selectedCampaign.notes && selectedCampaign.status === 'CANCELED' && (
+                      <Descriptions.Item label="Ghi chú từ Manager" span={2}>
+                        <div style={{ 
+                          padding: '8px', 
+                          backgroundColor: '#fff2f0', 
+                          borderRadius: '4px', 
+                          border: '1px solid #ffccc7',
+                          fontSize: '14px',
+                          lineHeight: '1.5',
+                          color: '#cf1322',
+                          whiteSpace: 'pre-line'
+                        }}>
+                          {selectedCampaign.notes}
+                        </div>
+                      </Descriptions.Item>
+                    )}
+                    {selectedCampaign.rejectNotes && selectedCampaign.status === 'CANCELED' && (
+                      <Descriptions.Item label="Lý do hủy" span={2}>
+                        <div style={{ 
+                          padding: '8px', 
+                          backgroundColor: '#fff2f0', 
+                          borderRadius: '4px', 
+                          border: '1px solid #ffccc7',
+                          fontSize: '14px',
+                          lineHeight: '1.5',
+                          color: '#cf1322',
+                          whiteSpace: 'pre-line'
+                        }}>
+                          {selectedCampaign.rejectNotes}
+                        </div>
+                      </Descriptions.Item>
+                    )}
+                  </Descriptions>
+                )
+              },
+              {
+                key: 'forms',
+                label: `Danh sách đăng ký (${forms.length})`,
+                children: (
+                  <Table
+                    dataSource={forms}
+                    columns={[
+                      {
+                        title: 'Học sinh',
+                        dataIndex: 'fullName',
+                        key: 'fullName',
+                        render: (fullName) => fullName || 'N/A'
+                      },
+                      {
+                        title: 'Lớp',
+                        dataIndex: 'className',
+                        key: 'className',
+                        render: (className) => className || 'N/A'
+                      },
+                      {
+                        title: 'Niên khóa',
+                        dataIndex: 'schoolYear',
+                        key: 'schoolYear',
+                        render: (schoolYear) => schoolYear || 'N/A'
+                      },
+                      {
+                        title: 'Trạng thái',
+                        dataIndex: 'status',
+                        key: 'status',
+                        render: (status) => {
+                          const statusMap = {
+                            SENT: { color: 'processing', text: 'Đã gửi' },
+                            CONFIRMED: { color: 'success', text: 'Đã xác nhận' },
+                            DECLINED: { color: 'error', text: 'Từ chối' },
+                            SCHEDULED: { color: 'warning', text: 'Đã lên lịch' },
+                            CHECKED_IN: { color: 'success', text: 'Đã check-in' }
+                          };
+                          const statusInfo = statusMap[status] || { color: 'default', text: status };
+                          return <Badge status={statusInfo.color} text={statusInfo.text} />;
+                        }
+                      },
+                      {
+                        title: 'Thời gian phản hồi',
+                        dataIndex: 'respondedAt',
+                        key: 'respondedAt',
+                        render: (respondedAt) => {
+                          if (!respondedAt) return 'N/A';
+                          try {
+                            // Handle array format [year, month, day, hour, minute, second, nanosecond]
+                            if (Array.isArray(respondedAt) && respondedAt.length >= 6) {
+                              const [year, month, day, hour, minute, second] = respondedAt;
+                              const date = new Date(year, month - 1, day, hour, minute, second);
+                              return date.toLocaleString('vi-VN');
+                            }
+                            return new Date(respondedAt).toLocaleString('vi-VN');
+                          } catch (error) {
+                            console.error('Error parsing respondedAt:', error);
+                            return 'N/A';
+                          }
+                        }
+                      }
+                    ]}
+                    pagination={{ pageSize: 5 }}
+                    rowKey={(record) => record.formId || record.studentID || Math.random()}
+                    size="small"
+                  />
+                )
+              },
+              {
+                key: 'results',
+                label: `Kết quả khám (${results.length})`,
+                children: (
+                  <Table
+                    dataSource={results}
+                    columns={[
+                      {
+                        title: 'Học sinh',
+                        dataIndex: 'fullName',
+                        key: 'student',
+                        render: (fullName) => fullName || 'N/A'
+                      },
+                      {
+                        title: 'Lớp',
+                        dataIndex: 'className',
+                        key: 'class',
+                        render: (className) => className || 'N/A'
+                      },
+                      {
+                        title: 'Loại khám',
+                        dataIndex: 'results',
+                        key: 'category',
+                        render: (results) => {
+                          if (!results || typeof results !== 'object') return 'N/A';
+                          
+                          const categoryMap = {
+                            VISION: 'Khám mắt',
+                            HEARING: 'Khám tai',
+                            ORAL: 'Khám răng miệng',
+                            SKIN: 'Khám da liễu',
+                            RESPIRATORY: 'Khám hô hấp'
+                          };
+                          
+                          // Get all categories from results object
+                          const categories = Object.keys(results);
+                          if (categories.length === 0) return 'N/A';
+                          
+                          return categories.map(category => (
+                            <Tag key={category} color="blue" style={{ marginBottom: 2 }}>
+                              {categoryMap[category] || category}
+                            </Tag>
+                          ));
+                        }
+                      },
+                      {
+                        title: 'Kết quả',
+                        dataIndex: 'results',
+                        key: 'abnormal',
+                        render: (results) => {
+                          if (!results || typeof results !== 'object') return 'N/A';
+                          
+                          const categories = Object.keys(results);
+                          if (categories.length === 0) return 'N/A';
+                          
+                          return categories.map(category => {
+                            const result = results[category];
+                            const isAbnormal = result?.abnormal || false;
+                            return (
+                              <div key={category} style={{ marginBottom: 2 }}>
+                                <Tag color={isAbnormal ? 'red' : 'green'}>
+                                  {isAbnormal ? 'Bất thường' : 'Bình thường'}
+                                </Tag>
+                              </div>
+                            );
+                          });
+                        }
+                      },
+                      {
+                        title: 'Thời gian khám',
+                        dataIndex: 'overallResults',
+                        key: 'performedAt',
+                        render: (overallResults) => {
+                          if (!overallResults?.performedAt) return 'N/A';
+                          return formatDate(overallResults.performedAt);
+                        }
+                      }
+                    ]}
+                    pagination={{ pageSize: 5 }}
+                    rowKey={(record) => record.id || Math.random()}
+                    size="small"
+                  />
+                )
+              }
+            ]}
+          />
         )}
       </Modal>
 

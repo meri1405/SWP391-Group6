@@ -538,6 +538,7 @@ public class HealthCheckCampaignController {
 class HealthCheckCampaignManagerController {
 
     private final IHealthCheckCampaignService campaignService;
+    private final IHealthCheckFormService healthCheckFormService;
 
     /**
      * Get campaigns by status for manager review
@@ -586,6 +587,50 @@ class HealthCheckCampaignManagerController {
             return ResponseEntity.ok(campaign);
         } catch (RuntimeException e) {
             return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @GetMapping("/{id}/confirmed-students")
+    public ResponseEntity<List<Map<String, Object>>> getConfirmedStudents(@PathVariable Long id) {
+        try {
+            List<Map<String, Object>> confirmedStudents = campaignService.getConfirmedStudents(id);
+            return ResponseEntity.ok(confirmedStudents);
+        } catch (RuntimeException e) {
+            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    /**
+     * Get health check results for a campaign
+     */
+    @GetMapping("/{id}/results")
+    public ResponseEntity<List<Map<String, Object>>> getCampaignResults(@PathVariable Long id) {
+        try {
+            List<Map<String, Object>> results = campaignService.getCampaignResults(id);
+            return ResponseEntity.ok(results);
+        } catch (RuntimeException e) {
+            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @GetMapping("/{id}/forms")
+    public ResponseEntity<List<HealthCheckFormDTO>> getFormsByCampaign(@PathVariable Long id) {
+        try {
+            // Get the campaign first
+            HealthCheckCampaignDTO campaignDTO = campaignService.getCampaignById(id);
+            if (campaignDTO == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            // Convert DTO to entity for service call
+            HealthCheckCampaign campaign = new HealthCheckCampaign();
+            campaign.setId(campaignDTO.getId());
+            campaign.setName(campaignDTO.getName());
+
+            List<HealthCheckFormDTO> forms = healthCheckFormService.getFormsByCampaign(campaign);
+            return ResponseEntity.ok(forms);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().build();
         }
     }
 }
