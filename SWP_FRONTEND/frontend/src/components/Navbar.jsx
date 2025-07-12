@@ -6,6 +6,8 @@ import { nurseApi } from "../api/nurseApi";
 import managerApi from "../api/managerApi";
 import webSocketService from "../services/webSocketService";
 import { useSystemSettings } from "../contexts/SystemSettingsContext";
+import { cleanNotificationText } from "../utils/htmlUtils";
+import { formatTimeAgo } from "../utils/timeUtils";
 import "../styles/Navbar.css";
 
 const Navbar = () => {
@@ -49,7 +51,7 @@ const Navbar = () => {
       const transformedNotifications = allData.map((notification) => ({
         id: notification.id,
         title: notification.title,
-        text: notification.message,
+        text: cleanNotificationText(notification.message, 80), // Clean HTML and truncate
         time: formatTimeAgo(notification.createdAt),
         icon: getNotificationIcon(notification),
         read: notification.read,
@@ -90,7 +92,7 @@ const Navbar = () => {
           const transformedNotification = {
             id: newNotification.id,
             title: newNotification.title,
-            text: newNotification.message,
+            text: cleanNotificationText(newNotification.message, 80), // Clean HTML and truncate
             time: "Vừa xong",
             icon: getNotificationIcon(newNotification),
             read: false,
@@ -113,27 +115,6 @@ const Navbar = () => {
       return "pills";
     }
     return "info-circle";
-  };
-
-  const formatTimeAgo = (dateString) => {
-    if (!dateString) return "Không xác định";
-
-    const now = new Date();
-    const notificationDate = new Date(dateString);
-    const diffInMs = now - notificationDate;
-    const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
-    const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
-    const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
-
-    if (diffInMinutes < 1) {
-      return "Vừa xong";
-    } else if (diffInMinutes < 60) {
-      return `${diffInMinutes} phút trước`;
-    } else if (diffInHours < 24) {
-      return `${diffInHours} giờ trước`;
-    } else {
-      return `${diffInDays} ngày trước`;
-    }
   };
   // Remove the old useEffect that calculated unread count
   // This is now handled by the notification loading
