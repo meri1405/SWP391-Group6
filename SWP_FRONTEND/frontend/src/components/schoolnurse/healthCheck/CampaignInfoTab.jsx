@@ -9,6 +9,7 @@ import {
   ReloadOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import { formatDate } from '../../../utils/timeUtils';
 import { HEALTH_CHECK_CATEGORY_LABELS } from '../../../api/healthCheckApi';
 import { getStatusTag, calculateCampaignStats } from '../../../utils/healthCheckUtils.jsx';
 import { getEligibleStudentsColumns } from '../../../utils/tableConfigs.jsx';
@@ -55,9 +56,9 @@ const CampaignInfoTab = ({
               {dayjs(campaign.endDate).format('DD/MM/YYYY')}
             </Descriptions.Item>
             <Descriptions.Item label="Địa điểm">{campaign.location}</Descriptions.Item>
-            <Descriptions.Item label="Người tạo">{campaign.nurse?.fullName || 'N/A'}</Descriptions.Item>
+            <Descriptions.Item label="Người tạo">{campaign.createdByName || 'N/A'}</Descriptions.Item>
             <Descriptions.Item label="Ngày tạo">
-              {dayjs(campaign.createdAt).format('DD/MM/YYYY HH:mm')}
+              {formatDate(campaign.createdAt)}
             </Descriptions.Item>
           </Descriptions>
         </Card>

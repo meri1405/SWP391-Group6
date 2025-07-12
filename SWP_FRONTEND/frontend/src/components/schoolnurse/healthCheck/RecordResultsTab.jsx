@@ -60,10 +60,6 @@ const RecordResultsTab = ({ campaignId, campaign, onRefreshData }) => {
   // Student selection card
   const renderStudentSelectionCard = () => (
     <Card className="mb-6">
-      <Title level={4} className="text-blue-600 mb-4">
-        <UserOutlined className="mr-2" />
-        Chọn học sinh để ghi kết quả
-      </Title>
 
       <div className="mb-6">
         <Input
@@ -79,10 +75,10 @@ const RecordResultsTab = ({ campaignId, campaign, onRefreshData }) => {
       <Table
         columns={[
           {
-            title: "Mã học sinh",
-            dataIndex: "studentCode",
-            key: "studentCode",
-            width: 120,
+            title: "STT",
+            key: "stt",
+            width: 60,
+            render: (_, record, index) => index + 1,
           },
           {
             title: "Họ và tên",
@@ -133,9 +129,6 @@ const RecordResultsTab = ({ campaignId, campaign, onRefreshData }) => {
         <div className="bg-blue-50 p-4 rounded-lg">
           <Text strong>Học sinh: </Text>
           <Text className="text-blue-600">{selectedStudent?.fullName}</Text>
-          <Text className="ml-4">
-            <strong>Mã HS:</strong> {selectedStudent?.studentCode}
-          </Text>
           <Text className="ml-4">
             <strong>Lớp:</strong> {selectedStudent?.className}
           </Text>
