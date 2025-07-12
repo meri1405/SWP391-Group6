@@ -19,6 +19,8 @@ import {
   Divider,
   Typography,
   Image,
+  Row,
+  Col,
 } from "antd";
 import {
   PlusOutlined,
@@ -30,6 +32,7 @@ import {
 import { useState } from "react";
 import dayjs from "dayjs";
 import { useMedicationManagement } from "../../../hooks/useMedicationManagement.jsx";
+import { medicationUIUtils } from "../../../utils/medicationUIUtils.jsx";
 import "../../../styles/MedicationManagement.css";
 import ParentMedicationSchedules from "./ParentMedicationSchedules";
 import PrescriptionImageUpload from "../../common/PrescriptionImageUpload";
@@ -81,35 +84,18 @@ const MedicationManagement = () => {
 
   // Handle image preview
   const handleImagePreview = (imageUrl, index) => {
-    if (!imageUrl) {
-      return;
-    }
-
-    if (typeof imageUrl !== "string") {
-      return;
-    }
-
-    if (!imageUrl.startsWith("data:image/")) {
-      return;
-    }
-
-    setPreviewImageUrl(imageUrl);
-    setPreviewImageTitle(`Đơn thuốc ${index + 1}`);
-    setImagePreviewVisible(true);
+    medicationUIUtils.handleImagePreview(
+      imageUrl, 
+      index, 
+      setPreviewImageUrl, 
+      setPreviewImageTitle, 
+      setImagePreviewVisible
+    );
   };
 
   // Handle item type change to update available units
   const handleItemTypeChange = (itemType, itemIndex) => {
-    const availableUnits = DEFAULT_UNITS_BY_TYPE[itemType] || ['đơn vị'];
-    const defaultUnit = availableUnits[0];
-    
-    // Update the unit field when item type changes
-    form.setFieldValue(['itemRequests', itemIndex, 'unit'], defaultUnit);
-    
-    // Force form to re-render by updating a dummy field and then removing it
-    form.setFieldsValue({
-      itemRequests: form.getFieldValue('itemRequests')
-    });
+    medicationUIUtils.handleItemTypeChange(itemType, itemIndex, form);
   };
 
   // Table columns for medication requests
@@ -118,73 +104,24 @@ const MedicationManagement = () => {
       title: "Tên học sinh",
       dataIndex: "studentName",
       key: "studentName",
-      render: (text, record) => {
-        // If studentName exists in the record, use it directly
-        if (record.studentName) {
-          return record.studentName;
-        }
-
-        // Otherwise, try to find the student in the students array
-        const student = students.find((s) => s.id === record.studentId);
-        return student ? `${student.lastName} ${student.firstName}` : "N/A";
-      },
+      render: (text, record) => medicationUIUtils.renderStudentName(text, record, students),
     },
     {
       title: "Thời gian sử dụng",
       key: "period",
-      render: (_, record) => {
-        // Since dates are now at item level, show min-max dates across all items
-        if (!record.itemRequests || record.itemRequests.length === 0) {
-          return "N/A";
-        }
-
-        const dates = record.itemRequests.map((item) => ({
-          start: dayjs(item.startDate),
-          end: dayjs(item.endDate),
-        }));
-
-        const minStart = dates.reduce(
-          (min, curr) => (curr.start.isBefore(min) ? curr.start : min),
-          dates[0].start
-        );
-        const maxEnd = dates.reduce(
-          (max, curr) => (curr.end.isAfter(max) ? curr.end : max),
-          dates[0].end
-        );
-
-        return (
-          <span>
-            {minStart.format("DD/MM/YYYY")} - {maxEnd.format("DD/MM/YYYY")}
-          </span>
-        );
-      },
+      render: (_, record) => medicationUIUtils.renderPeriod(record),
     },
     {
       title: "Số loại thuốc",
       key: "medicationCount",
-      render: (_, record) => (
-        <span>{record.itemRequests?.length || 0} loại</span>
-      ),
+      render: (_, record) => medicationUIUtils.renderMedicationCount(record),
     },
     {
       title: "Ghi chú",
       dataIndex: "note",
       key: "note",
       width: 250,
-      render: (text) => {
-        // Only display the main medication request note
-        const generalNote = text || "";
-
-        return (
-          <div className="note-column-content">
-            {generalNote ? (
-              <div className="general-note-inline">{generalNote}</div>
-            ) : (
-              <span className="empty-note">Không có ghi chú</span>
-            )}
-          </div>
-        );
-      },
+      render: (text) => medicationUIUtils.renderNote(text),
     },
     {
       title: "Trạng thái",
@@ -512,91 +449,97 @@ const MedicationManagement = () => {
                         </Form.Item>
                       </div>
 
-                      <div className="form-row">
-                        <Form.Item
-                          {...restField}
-                          name={[name, "itemType"]}
-                          label="Loại thuốc"
-                          rules={[
-                            {
-                              required: true,
-                              message: "Vui lòng chọn loại thuốc",
-                            },
-                          ]}
-                        >
-                          <Select
-                            placeholder="Chọn loại thuốc"
-                            onChange={(value) => handleItemTypeChange(value, name)}
-                          >
-                            <Option value="CREAM">Kem</Option>
-                            <Option value="DROPS">Giọt</Option>
-                            <Option value="SPOONFUL">Thìa</Option>
-                            <Option value="SPRAY">Xịt</Option>
-                            <Option value="TABLET">Viên</Option>
-                          </Select>
-                        </Form.Item>
-                        <Form.Item
-                          {...restField}
-                          name={[name, "dosage"]}
-                          label="Liều lượng"
-                          rules={[
-                            {
-                              required: true,
-                              message: "Vui lòng nhập liều lượng",
-                            },
-                            {
-                              pattern: /^[0-9]*\.?[0-9]+$/,
-                              message: "Vui lòng nhập số hợp lệ",
-                            },
-                            {
-                              validator: (_, value) => {
-                                const num = parseFloat(value);
-                                if (isNaN(num) || num < 0.1) {
-                                  return Promise.reject(
-                                    new Error("Liều lượng phải ít nhất là 0.1")
-                                  );
-                                }
-                                return Promise.resolve();
+                      <Row gutter={16}>
+                        <Col span={8}>
+                          <Form.Item
+                            {...restField}
+                            name={[name, "itemType"]}
+                            label="Loại thuốc"
+                            rules={[
+                              {
+                                required: true,
+                                message: "Vui lòng chọn loại thuốc",
                               },
-                            },
-                          ]}
-                        >
-                          <Input placeholder="Ví dụ: 0.5, 1.5, 5.0, 10" />
-                        </Form.Item>
-                        <Form.Item
-                          noStyle
-                          shouldUpdate={(prevValues, currentValues) => {
-                            const prevItemType = prevValues?.itemRequests?.[name]?.itemType;
-                            const currentItemType = currentValues?.itemRequests?.[name]?.itemType;
-                            return prevItemType !== currentItemType;
-                          }}
-                        >
-                          {() => {
-                            const currentItemType = form.getFieldValue(['itemRequests', name, 'itemType']);
-                            const availableUnits = DEFAULT_UNITS_BY_TYPE[currentItemType] || ['đơn vị'];
-                            
-                            return (
-                              <Form.Item
-                                {...restField}
-                                name={[name, "unit"]}
-                                label="Đơn vị"
-                                rules={[
-                                  {
-                                    required: true,
-                                    message: "Vui lòng chọn đơn vị",
-                                  },
-                                ]}
-                              >
-                                <Select placeholder="Chọn đơn vị">
-                                  {availableUnits.map(unit => (
-                                    <Option key={unit} value={unit}>{unit}</Option>
-                                  ))}
-                                </Select>
-                              </Form.Item>
-                            );
-                          }}
-                        </Form.Item>
-                      </div>
+                            ]}
+                          >
+                            <Select
+                              placeholder="Chọn loại thuốc"
+                              onChange={(value) => handleItemTypeChange(value, name)}
+                            >
+                              <Option value="CREAM">Kem</Option>
+                              <Option value="DROPS">Giọt</Option>
+                              <Option value="SPOONFUL">Thìa</Option>
+                              <Option value="SPRAY">Xịt</Option>
+                              <Option value="TABLET">Viên</Option>
+                            </Select>
+                          </Form.Item>
+                        </Col>
+                        <Col span={8}>
+                          <Form.Item
+                            {...restField}
+                            name={[name, "dosage"]}
+                            label="Liều lượng"
+                            rules={[
+                              {
+                                required: true,
+                                message: "Vui lòng nhập liều lượng",
+                              },
+                              {
+                                pattern: /^[0-9]*\.?[0-9]+$/,
+                                message: "Vui lòng nhập số hợp lệ",
+                              },
+                              {
+                                validator: (_, value) => {
+                                  const num = parseFloat(value);
+                                  if (isNaN(num) || num < 0.1) {
+                                    return Promise.reject(
+                                      new Error("Liều lượng phải ít nhất là 0.1")
+                                    );
+                                  }
+                                  return Promise.resolve();
+                                },
+                              },
+                            ]}
+                          >
+                            <Input placeholder="Ví dụ: 0.5, 1.5, 5.0, 10" />
+                          </Form.Item>
+                        </Col>
+                        <Col span={8}>
+                          <Form.Item
+                            noStyle
+                            shouldUpdate={(prevValues, currentValues) => {
+                              const prevItemType = prevValues?.itemRequests?.[name]?.itemType;
+                              const currentItemType = currentValues?.itemRequests?.[name]?.itemType;
+                              return prevItemType !== currentItemType;
+                            }}
+                          >
+                            {() => {
+                              const currentItemType = form.getFieldValue(['itemRequests', name, 'itemType']);
+                              const availableUnits = DEFAULT_UNITS_BY_TYPE[currentItemType] || ['đơn vị'];
+                              
+                              return (
+                                <Form.Item
+                                  {...restField}
+                                  name={[name, "unit"]}
+                                  label="Đơn vị"
+                                  rules={[
+                                    {
+                                      required: true,
+                                      message: "Vui lòng chọn đơn vị",
+                                    },
+                                  ]}
+                                >
+                                  <Select placeholder="Chọn đơn vị">
+                                    {availableUnits.map(unit => (
+                                      <Option key={unit} value={unit}>{unit}</Option>
+                                    ))}
+                                  </Select>
+                                </Form.Item>
+                              );
+                            }}
+                          </Form.Item>
+                        </Col>
+                      </Row>
                       <div className="form-row">
                         <Form.Item
                           {...restField}
@@ -615,53 +558,7 @@ const MedicationManagement = () => {
                         >
                           <Input
                             placeholder="Ví dụ: 1, 2, 3"
-                            onChange={(e) => {
-                              const value = parseInt(e.target.value) || 0;
-
-                              // When frequency changes, update time slots field to match frequency
-                              const currentTimeSlots =
-                                form.getFieldValue([
-                                  "itemRequests",
-                                  name,
-                                  "timeSlots",
-                                ]) || [];
-                              const newTimeSlots = [...currentTimeSlots];
-
-                              // Add or remove time slots as needed
-                              if (value > currentTimeSlots.length) {
-                                // Add more time slots
-                                for (
-                                  let i = currentTimeSlots.length;
-                                  i < value;
-                                  i++
-                                ) {
-                                  // Default to 8:00, 12:00, 18:00, etc. based on index
-                                  const defaultHour =
-                                    i === 0
-                                      ? 8
-                                      : i === 1
-                                      ? 12
-                                      : i === 2
-                                      ? 18
-                                      : 8 + ((i * 4) % 24);
-                                  newTimeSlots.push(
-                                    dayjs().hour(defaultHour).minute(0)
-                                  );
-                                }
-                              } else if (value < currentTimeSlots.length) {
-                                // Remove excess time slots
-                                newTimeSlots.length = value;
-                              }
-
-                              // Update form field
-                              form.setFieldsValue({
-                                itemRequests: {
-                                  [name]: {
-                                    timeSlots: newTimeSlots,
-                                  },
-                                },
-                              });
-                            }}
+                            onChange={(e) => medicationUIUtils.handleFrequencyChange(e, name, form)}
                           />
                         </Form.Item>
 
@@ -739,28 +636,8 @@ const MedicationManagement = () => {
                   <Button
                     type="dashed"
                     onClick={() => {
-                      // Lấy ngày bắt đầu và kết thúc từ thuốc đầu tiên (nếu có)
-                      const currentItems =
-                        form.getFieldValue("itemRequests") || [];
-                      let startDate = dayjs();
-                      let endDate = dayjs().add(7, "day");
-
-                      if (currentItems.length > 0 && currentItems[0]) {
-                        // Copy ngày từ thuốc đầu tiên
-                        if (currentItems[0].startDate) {
-                          startDate = currentItems[0].startDate;
-                        }
-                        if (currentItems[0].endDate) {
-                          endDate = currentItems[0].endDate;
-                        }
-                      }
-
-                      add({
-                        itemType: "TABLET",
-                        unit: "viên", // Default unit for tablet
-                        startDate: startDate,
-                        endDate: endDate,
-                      });
+                      const defaultValues = medicationUIUtils.getNewMedicationItemDefaults(form);
+                      add(defaultValues);
                     }}
                     block
                     icon={<PlusOutlined />}
@@ -875,14 +752,7 @@ const MedicationManagement = () => {
                   <p>
                     <strong>Học sinh: </strong>
                     {selectedMedicationDetail.studentName ||
-                      (() => {
-                        const student = students.find(
-                          (s) => s.id === selectedMedicationDetail.studentId
-                        );
-                        return student
-                          ? `${student.firstName} ${student.lastName}`
-                          : "N/A";
-                      })()}
+                      medicationUIUtils.renderStudentName('', selectedMedicationDetail, students)}
                   </p>
                   <p>
                     <strong>Mã yêu cầu: </strong>
@@ -890,11 +760,7 @@ const MedicationManagement = () => {
                   </p>
                   <p>
                     <strong>Ngày yêu cầu: </strong>
-                    {selectedMedicationDetail.requestDate
-                      ? dayjs(selectedMedicationDetail.requestDate).format(
-                          "DD/MM/YYYY"
-                        )
-                      : dayjs().format("DD/MM/YYYY")}
+                    {medicationUIUtils.formatRequestDate(selectedMedicationDetail.requestDate)}
                   </p>
                   <p>
                     <strong>Ghi chú chung: </strong>
@@ -1025,28 +891,8 @@ const MedicationManagement = () => {
 
                           <h4>
                             <strong>Loại: </strong>
-                            <Tag
-                              color={
-                                item.itemType === "CREAM"
-                                  ? "red"
-                                  : item.itemType === "DROPS"
-                                  ? "green"
-                                  : item.itemType === "TABLET"
-                                  ? "blue"
-                                  : item.itemType === "SPOONFUL"
-                                  ? "cyan"
-                                  : "magenta"
-                              }
-                            >
-                              {item.itemType === "CREAM"
-                                ? "Kem"
-                                : item.itemType === "DROPS"
-                                ? "Giọt"
-                                : item.itemType === "TABLET"
-                                ? "Viên"
-                                : item.itemType === "SPOONFUL"
-                                ? "Thìa"
-                                : "Xịt"}
+                            <Tag color={medicationUIUtils.getItemTypeColor(item.itemType)}>
+                              {medicationUIUtils.getItemTypeDisplayName(item.itemType)}
                             </Tag>
                           </h4>
                           <div className="medication-item-details">
@@ -1085,36 +931,9 @@ const MedicationManagement = () => {
                             <p>
                               <strong>Thời gian uống:</strong>{" "}
                               {(() => {
-                                let scheduleTimes = [];
+                                const scheduleTimes = medicationUIUtils.getScheduleTimesForDisplay(item);
 
-                                // First try to get scheduleTimes directly from the item
-                                if (Array.isArray(item.scheduleTimes)) {
-                                  scheduleTimes = item.scheduleTimes;
-                                }
-                                // If not found, try to parse from note
-                                else if (item.note) {
-                                  const scheduleTimeMatch = item.note.match(
-                                    /scheduleTimeJson:(.*?)($|\s)/
-                                  );
-                                  if (scheduleTimeMatch) {
-                                    try {
-                                      const scheduleTimeJson = JSON.parse(
-                                        scheduleTimeMatch[1]
-                                      );
-                                      if (scheduleTimeJson.scheduleTimes) {
-                                        scheduleTimes =
-                                          scheduleTimeJson.scheduleTimes;
-                                      }
-                                    } catch (e) {
-                                      console.error(
-                                        "Error parsing schedule times from note:",
-                                        e
-                                      );
-                                    }
-                                  }
-                                }
-
-                                if (scheduleTimes.length > 0) {
+                                if (scheduleTimes && scheduleTimes.length > 0) {
                                   return (
                                     <span className="medication-schedule-times">
                                       {scheduleTimes.map((time, timeIndex) => (
@@ -1144,14 +963,7 @@ const MedicationManagement = () => {
                             <p>
                               <strong>Ghi chú riêng:</strong>{" "}
                               {(() => {
-                                // Show cleaned note without schedule times JSON
-                                let displayNote = item.note || "";
-                                if (displayNote) {
-                                  // Remove scheduleTimeJson part if exists
-                                  displayNote = displayNote
-                                    .replace(/scheduleTimeJson:.*?($|\s)/, "")
-                                    .trim();
-                                }
+                                const displayNote = medicationUIUtils.cleanNoteForDisplay(item.note);
 
                                 return displayNote ? (
                                   <span className="medication-note">
