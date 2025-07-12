@@ -186,6 +186,10 @@ const NurseHealthProfiles = () => {
 
   const handleTabChange = (key) => {
     setActiveTabKey(key);
+    
+    // Reset filters when changing tabs
+    setSearchText("");
+    setClassNameFilter("");
 
     switch (key) {
       case "pending":
@@ -347,25 +351,41 @@ const NurseHealthProfiles = () => {
   // Students without profiles table columns
   const studentsColumns = [
     {
-      title: "Mã học sinh",
-      dataIndex: "studentID",
-      key: "studentID",
-      sorter: (a, b) => a.studentID.localeCompare(b.studentID),
+      title: "STT",
+      key: "index",
+      width: 60,
+      render: (_, __, index) => index + 1,
     },
     {
       title: "Họ và tên",
       key: "fullName",
-      render: (_, record) => `${record.lastName} ${record.firstName}`,
+      width: 150,
+      render: (_, record) => (
+        <div>
+          <div style={{ fontWeight: 500 }}>
+            {record.lastName} {record.firstName}
+          </div>
+          <div style={{ fontSize: "12px", color: "#666" }}>
+            ID: {record.studentID}
+          </div>
+        </div>
+      ),
       sorter: (a, b) => {
         const nameA = `${a.lastName} ${a.firstName}`;
         const nameB = `${b.lastName} ${b.firstName}`;
         return nameA.localeCompare(nameB);
+      },
+      filteredValue: searchText ? [searchText] : null,
+      onFilter: (value, record) => {
+        const fullName = `${record.firstName || ""} ${record.lastName || ""}`.toLowerCase();
+        return fullName.includes(value.toLowerCase());
       },
     },
     {
       title: "Lớp",
       dataIndex: "className",
       key: "className",
+      width: 80,
       sorter: (a, b) => (a.className || "").localeCompare(b.className || ""),
       filteredValue: classNameFilter ? [classNameFilter] : null,
       onFilter: (value, record) => record.className === value,
@@ -374,6 +394,7 @@ const NurseHealthProfiles = () => {
       title: "Ngày sinh",
       dataIndex: "dob",
       key: "dob",
+      width: 100,
       render: (date) => date ? dayjs(date).format("DD/MM/YYYY") : "N/A",
       sorter: (a, b) => dayjs(a.dob).unix() - dayjs(b.dob).unix(),
     },
@@ -381,6 +402,7 @@ const NurseHealthProfiles = () => {
       title: "Giới tính",
       dataIndex: "gender",
       key: "gender",
+      width: 80,
       render: (gender) => {
         if (gender === "M" || gender === "MALE") return "Nam";
         if (gender === "F" || gender === "FEMALE") return "Nữ";
@@ -391,7 +413,16 @@ const NurseHealthProfiles = () => {
       title: "Địa chỉ",
       dataIndex: "address",
       key: "address",
-      ellipsis: true,
+      width: 300,
+      render: (address) => (
+        <div style={{ 
+          wordWrap: "break-word", 
+          whiteSpace: "normal",
+          lineHeight: "1.4"
+        }}>
+          {address || "N/A"}
+        </div>
+      ),
     },
   ];
 
@@ -399,6 +430,14 @@ const NurseHealthProfiles = () => {
   const getUniqueClassNames = () => {
     const classNames = healthProfiles
       .map(profile => profile.additionalFields?.student?.className)
+      .filter(className => className);
+    return [...new Set(classNames)].sort();
+  };
+
+  // Get unique class names for students without profiles filter
+  const getUniqueClassNamesForStudents = () => {
+    const classNames = studentsWithoutProfiles
+      .map(student => student.className)
       .filter(className => className);
     return [...new Set(classNames)].sort();
   };
@@ -418,6 +457,26 @@ const NurseHealthProfiles = () => {
       
       // Class filter
       if (classNameFilter && student?.className !== classNameFilter) {
+        return false;
+      }
+      
+      return true;
+    });
+  };
+
+  // Filter students without profiles based on search and class filter
+  const getFilteredStudents = () => {
+    return studentsWithoutProfiles.filter(student => {
+      // Search filter
+      if (searchText) {
+        const fullName = `${student.firstName || ""} ${student.lastName || ""}`.toLowerCase();
+        if (!fullName.includes(searchText.toLowerCase())) {
+          return false;
+        }
+      }
+      
+      // Class filter
+      if (classNameFilter && student.className !== classNameFilter) {
         return false;
       }
       
@@ -870,13 +929,6 @@ const NurseHealthProfiles = () => {
             <FileTextOutlined style={{ marginRight: "8px" }} />
             Quản lý Hồ sơ Sức khỏe Học sinh
           </Title>
-          <Alert
-            message="Thông tin quan trọng"
-            description="Đây là nơi quản lý các hồ sơ sức khỏe do phụ huynh gửi. Bạn có thể xem, chỉnh sửa, duyệt hoặc từ chối các hồ sơ."
-            type="info"
-            showIcon
-            style={{ marginBottom: "16px" }}
-          />
         </div>
 
         <Tabs
@@ -901,6 +953,28 @@ const NurseHealthProfiles = () => {
                     allowClear
                   >
                     {getUniqueClassNames().map(className => (
+                      <Option key={className} value={className}>{className}</Option>
+                    ))}
+                  </Select>
+                </>
+              )}
+              {activeTabKey === "no-profiles" && (
+                <>
+                  <Input.Search
+                    placeholder="Tìm kiếm theo tên học sinh"
+                    value={searchText}
+                    onChange={(e) => setSearchText(e.target.value)}
+                    style={{ width: 200 }}
+                    allowClear
+                  />
+                  <Select
+                    placeholder="Lọc theo lớp"
+                    value={classNameFilter}
+                    onChange={setClassNameFilter}
+                    style={{ width: 120 }}
+                    allowClear
+                  >
+                    {getUniqueClassNamesForStudents().map(className => (
                       <Option key={className} value={className}>{className}</Option>
                     ))}
                   </Select>
@@ -979,7 +1053,7 @@ const NurseHealthProfiles = () => {
               children: (
                 <Table
                   columns={studentsColumns}
-                  dataSource={studentsWithoutProfiles}
+                  dataSource={getFilteredStudents()}
                   rowKey="studentID"
                   loading={studentsLoading}
                   pagination={{ pageSize: 10 }}
