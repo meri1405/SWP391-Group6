@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../../../contexts/AuthContext";
 import { parentApi } from "../../../api/parentApi";
 import "../../../styles/HealthCheckResults.css";
+import dayjs from "dayjs";
 
 const HealthCheckResults = () => {
   const [students, setStudents] = useState([]);
@@ -63,6 +64,17 @@ const HealthCheckResults = () => {
       console.error("Error converting date array:", dateArray, error);
       return new Date().toISOString();
     }
+  };
+
+  const convertJavaDateArray = (dateArray) => {
+      if (!dateArray || !Array.isArray(dateArray)) return null;
+      try {
+        const [year, month, day, hour = 0, minute = 0, second = 0] = dateArray;
+        return dayjs(`${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:${second.toString().padStart(2, '0')}`);
+      } catch (error) {
+        console.error("Error converting date array:", dateArray, error);
+        return null;
+      }
   };
 
   const loadHealthCheckResults = useCallback(
@@ -1291,7 +1303,7 @@ const HealthCheckResults = () => {
                                 </p>
                                 <p>
                                   <strong>Ngày khám:</strong>{" "}
-                                  {formatDateTime(item.performedAt)}
+                                  {convertJavaDateArray(item.performedAt)?.format("HH:mm DD/MM/YYYY") || "Chưa cập nhật"}
                                 </p>
                                 <p>
                                   <strong>Y tá:</strong>{" "}
@@ -1482,7 +1494,7 @@ const HealthCheckResults = () => {
                 <div className="info-row">
                   <span className="label">Ngày khám:</span>
                   <span className="value">
-                    {formatDate(selectedResult.overallResults?.performedAt)}
+                    {convertJavaDateArray(selectedResult.overallResults?.performedAt)?.format("HH:mm DD/MM/YYYY") || "Chưa cập nhật"}
                   </span>
                 </div>
               </div>
@@ -1588,11 +1600,11 @@ const HealthCheckResults = () => {
                           )}
 
                           {/* Add any other specific fields that might be in the data */}
-                          {result.performedAt && (
+                          {convertJavaDateArray(result.performedAt)?.format("HH:mm DD/MM/YYYY") && (
                             <div className="detail-row">
                               <span className="label">Ngày thực hiện:</span>
                               <span className="value">
-                                {formatDateTime(result.performedAt)}
+                                {convertJavaDateArray(result.performedAt)?.format("HH:mm DD/MM/YYYY") || "Chưa cập nhật"}
                               </span>
                             </div>
                           )}
@@ -1732,9 +1744,7 @@ const HealthCheckResults = () => {
                         <div className="measurement-item">
                           <label>Ngày khám:</label>
                           <span>
-                            {formatDateTime(
-                              campaignResult.overallResults.performedAt
-                            )}
+                            {convertJavaDateArray(campaignResult.overallResults.performedAt)?.format("HH:mm DD/MM/YYYY") || "Chưa cập nhật"}
                           </span>
                         </div>
                       )}

@@ -79,6 +79,8 @@ const Notifications = ({ role = "parent" }) => {
       return "health";
     }
 
+    
+
     // Check title and message content for vaccination-related keywords
     const titleLower = notification.title?.toLowerCase() || "";
     const messageLower = notification.message?.toLowerCase() || "";
@@ -166,7 +168,6 @@ const Notifications = ({ role = "parent" }) => {
       return "medication";
     }
 
-    return "general";
 
     // Check for health check keywords
     if (
@@ -235,11 +236,25 @@ const Notifications = ({ role = "parent" }) => {
     );
   }, []);
 
-  const formatTimeAgo = (dateString) => {
-    if (!dateString) return "Không xác định";
+  const formatTimeAgo = useCallback((dateInput) => {
+    if (!dateInput) return "Không xác định";
+
+    let notificationDate;
+    
+    // Check if dateInput is an array (LocalDateTime format from backend)
+    if (Array.isArray(dateInput)) {
+      notificationDate = convertLocalDateTimeArray(dateInput);
+    } else {
+      // Handle string date format
+      notificationDate = new Date(dateInput);
+    }
+
+    // Check if date conversion was successful
+    if (!notificationDate || isNaN(notificationDate.getTime())) {
+      return "Không xác định";
+    }
 
     const now = new Date();
-    const notificationDate = new Date(dateString);
     const diffInMs = now - notificationDate;
     const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
     const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
@@ -254,7 +269,7 @@ const Notifications = ({ role = "parent" }) => {
     } else {
       return `${diffInDays} ngày trước`;
     }
-  };
+  }, []);
 
   // Helper function to check if content is HTML
   const isHtmlContent = useCallback((content) => {
@@ -374,7 +389,7 @@ const Notifications = ({ role = "parent" }) => {
         setLoading(false);
       }
     }
-  }, [getToken, determineActionRequired, api]);
+  }, [getToken, determineActionRequired, api, formatTimeAgo]);
 
   const setupWebSocketConnection = useCallback(async () => {
     const token = getToken();
@@ -455,11 +470,24 @@ const Notifications = ({ role = "parent" }) => {
   }, [loadNotifications, setupWebSocketConnection]);
 
   // Helper functions for formatting
-  const formatVietnameseDate = useCallback((dateString) => {
-    if (!dateString) return dateString;
+  const formatVietnameseDate = useCallback((dateInput) => {
+    if (!dateInput) return dateInput;
 
     try {
-      const date = new Date(dateString);
+      let date;
+      
+      // Check if dateInput is an array (LocalDateTime format from backend)
+      if (Array.isArray(dateInput)) {
+        date = convertLocalDateTimeArray(dateInput);
+      } else {
+        date = new Date(dateInput);
+      }
+
+      // Check if date conversion was successful
+      if (!date || isNaN(date.getTime())) {
+        return dateInput;
+      }
+
       const day = date.getDate().toString().padStart(2, "0");
       const month = (date.getMonth() + 1).toString().padStart(2, "0");
       const year = date.getFullYear();
@@ -480,7 +508,7 @@ const Notifications = ({ role = "parent" }) => {
 
       return `${dayName}, ngày ${day}/${month}/${year} lúc ${hours}:${minutes}`;
     } catch {
-      return dateString;
+      return dateInput;
     }
   }, []);
   const filteredNotifications = notifications.filter((notification) => {
@@ -740,12 +768,7 @@ const Notifications = ({ role = "parent" }) => {
                 <div className="notification-timestamp">
                   <i className="fas fa-clock"></i>
                   <span>
-
-                  {(() => {
-                  const date = convertLocalDateTimeArray(notification.date);
-                  return date ? date.toLocaleDateString("vi-VN") : "N/A";
-                })()}
-
+                    {formatVietnameseDate(notification.date)}
                   </span>
                 </div>
               </div>
