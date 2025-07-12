@@ -66,15 +66,61 @@ const HealthCheckResults = () => {
     }
   };
 
-  const convertJavaDateArray = (dateArray) => {
-      if (!dateArray || !Array.isArray(dateArray)) return null;
-      try {
-        const [year, month, day, hour = 0, minute = 0, second = 0] = dateArray;
-        return dayjs(`${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:${second.toString().padStart(2, '0')}`);
-      } catch (error) {
-        console.error("Error converting date array:", dateArray, error);
+  const convertJavaDateArray = (dateInput) => {
+    if (!dateInput) return null;
+
+    try {
+      let dateArray;
+
+      // Nếu là chuỗi với dấu phẩy (như "2025,7,11")
+      if (typeof dateInput === "string" && dateInput.includes(",")) {
+        dateArray = dateInput.split(",").map((str) => parseInt(str.trim()));
+      }
+      // Nếu là array
+      else if (Array.isArray(dateInput)) {
+        dateArray = dateInput;
+      }
+      // Nếu là chuỗi ISO hoặc format khác
+      else if (typeof dateInput === "string") {
+        return dayjs(dateInput);
+      }
+      // Nếu là object Date
+      else if (dateInput instanceof Date) {
+        return dayjs(dateInput);
+      } else {
+        console.warn("Unsupported date format:", dateInput);
         return null;
       }
+
+      const [year, month, day, hour = 0, minute = 0, second = 0] = dateArray;
+
+      // Validate year, month, day
+      if (
+        !year ||
+        !month ||
+        !day ||
+        year < 1900 ||
+        year > 2100 ||
+        month < 1 ||
+        month > 12 ||
+        day < 1 ||
+        day > 31
+      ) {
+        console.error("Invalid date components:", { year, month, day });
+        return null;
+      }
+
+      return dayjs(
+        `${year}-${month.toString().padStart(2, "0")}-${day
+          .toString()
+          .padStart(2, "0")} ${hour.toString().padStart(2, "0")}:${minute
+          .toString()
+          .padStart(2, "0")}:${second.toString().padStart(2, "0")}`
+      );
+    } catch (error) {
+      console.error("Error converting date:", dateInput, error);
+      return null;
+    }
   };
 
   const loadHealthCheckResults = useCallback(
@@ -518,21 +564,33 @@ const HealthCheckResults = () => {
     setSelectedResult(null);
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return "Chưa có thông tin";
+  const formatDate = (dateInput) => {
+    if (!dateInput) return "Chưa có thông tin";
     try {
-      return new Date(dateString).toLocaleDateString("vi-VN");
-    } catch {
-      return dateString;
+      const convertedDate = convertJavaDateArray(dateInput);
+      if (convertedDate && convertedDate.isValid()) {
+        return convertedDate.format("DD/MM/YYYY");
+      }
+      // Fallback to original method
+      return new Date(dateInput).toLocaleDateString("vi-VN");
+    } catch (error) {
+      console.error("Error formatting date:", dateInput, error);
+      return "Ngày không hợp lệ";
     }
   };
 
-  const formatDateTime = (dateTimeString) => {
-    if (!dateTimeString) return "Chưa có thông tin";
+  const formatDateTime = (dateTimeInput) => {
+    if (!dateTimeInput) return "Chưa có thông tin";
     try {
-      return new Date(dateTimeString).toLocaleString("vi-VN");
-    } catch {
-      return dateTimeString;
+      const convertedDate = convertJavaDateArray(dateTimeInput);
+      if (convertedDate && convertedDate.isValid()) {
+        return convertedDate.format("HH:mm DD/MM/YYYY");
+      }
+      // Fallback to original method
+      return new Date(dateTimeInput).toLocaleString("vi-VN");
+    } catch (error) {
+      console.error("Error formatting datetime:", dateTimeInput, error);
+      return "Thời gian không hợp lệ";
     }
   };
 
@@ -860,20 +918,24 @@ const HealthCheckResults = () => {
       if (Array.isArray(details)) {
         return details.map((item, index) => (
           <div key={index} className="detail-item">
-            {Object.entries(item).map(([key, value]) => (
-              <div key={key}>
-                <strong>{formatDetailKey(key)}:</strong>{" "}
-                {formatValue(key, value)}
-              </div>
-            ))}
+            {Object.entries(item)
+              .filter(([key]) => key !== "healthProfile") // Bỏ qua healthProfile
+              .map(([key, value]) => (
+                <div key={key}>
+                  <strong>{formatDetailKey(key)}:</strong>{" "}
+                  {formatValue(key, value)}
+                </div>
+              ))}
           </div>
         ));
       } else {
-        return Object.entries(details).map(([key, value]) => (
-          <div key={key}>
-            <strong>{formatDetailKey(key)}:</strong> {formatValue(key, value)}
-          </div>
-        ));
+        return Object.entries(details)
+          .filter(([key]) => key !== "healthProfile") // Bỏ qua healthProfile
+          .map(([key, value]) => (
+            <div key={key}>
+              <strong>{formatDetailKey(key)}:</strong> {formatValue(key, value)}
+            </div>
+          ));
       }
     } catch (error) {
       console.error("Error formatting details:", error);
@@ -918,14 +980,28 @@ const HealthCheckResults = () => {
 
     // Format date values
     if (
-      key.includes("Date") &&
-      typeof value === "string" &&
-      (value.includes("-") || value.includes("/"))
+      key.includes("Date") ||
+      key.includes("Time") ||
+      key === "performedAt" ||
+      key === "createdAt" ||
+      key === "updatedAt"
     ) {
       try {
-        return new Date(value).toLocaleDateString("vi-VN");
-      } catch {
+        const convertedDate = convertJavaDateArray(value);
+        if (convertedDate && convertedDate.isValid()) {
+          return convertedDate.format("DD/MM/YYYY HH:mm");
+        }
+        // Fallback to original method for regular date strings
+        if (
+          typeof value === "string" &&
+          (value.includes("-") || value.includes("/"))
+        ) {
+          return new Date(value).toLocaleDateString("vi-VN");
+        }
         return value;
+      } catch (error) {
+        console.error("Error formatting date in formatValue:", value, error);
+        return "Ngày không hợp lệ";
       }
     }
 
@@ -1303,7 +1379,10 @@ const HealthCheckResults = () => {
                                 </p>
                                 <p>
                                   <strong>Ngày khám:</strong>{" "}
-                                  {convertJavaDateArray(item.performedAt)?.format("HH:mm DD/MM/YYYY") || "Chưa cập nhật"}
+                                  {convertJavaDateArray(
+                                    item.performedAt
+                                  )?.format("HH:mm DD/MM/YYYY") ||
+                                    "Chưa cập nhật"}
                                 </p>
                                 <p>
                                   <strong>Y tá:</strong>{" "}
@@ -1494,7 +1573,9 @@ const HealthCheckResults = () => {
                 <div className="info-row">
                   <span className="label">Ngày khám:</span>
                   <span className="value">
-                    {convertJavaDateArray(selectedResult.overallResults?.performedAt)?.format("HH:mm DD/MM/YYYY") || "Chưa cập nhật"}
+                    {convertJavaDateArray(
+                      selectedResult.overallResults?.performedAt
+                    )?.format("HH:mm DD/MM/YYYY") || "Chưa cập nhật"}
                   </span>
                 </div>
               </div>
@@ -1600,11 +1681,16 @@ const HealthCheckResults = () => {
                           )}
 
                           {/* Add any other specific fields that might be in the data */}
-                          {convertJavaDateArray(result.performedAt)?.format("HH:mm DD/MM/YYYY") && (
+                          {convertJavaDateArray(result.performedAt)?.format(
+                            "HH:mm DD/MM/YYYY"
+                          ) && (
                             <div className="detail-row">
                               <span className="label">Ngày thực hiện:</span>
                               <span className="value">
-                                {convertJavaDateArray(result.performedAt)?.format("HH:mm DD/MM/YYYY") || "Chưa cập nhật"}
+                                {convertJavaDateArray(
+                                  result.performedAt
+                                )?.format("HH:mm DD/MM/YYYY") ||
+                                  "Chưa cập nhật"}
                               </span>
                             </div>
                           )}
@@ -1744,7 +1830,9 @@ const HealthCheckResults = () => {
                         <div className="measurement-item">
                           <label>Ngày khám:</label>
                           <span>
-                            {convertJavaDateArray(campaignResult.overallResults.performedAt)?.format("HH:mm DD/MM/YYYY") || "Chưa cập nhật"}
+                            {convertJavaDateArray(
+                              campaignResult.overallResults.performedAt
+                            )?.format("HH:mm DD/MM/YYYY") || "Chưa cập nhật"}
                           </span>
                         </div>
                       )}
