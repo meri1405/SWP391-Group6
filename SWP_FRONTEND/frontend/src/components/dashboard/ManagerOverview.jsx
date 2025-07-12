@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Spin, Typography, Progress, Row, Col } from "antd";
-import { managerVaccinationApi } from "../../api/vaccinationCampaignApi";
-import { healthCheckApi } from "../../api/healthCheckApi";
+import { Spin, Row, Col, Typography, Progress } from "antd";
 import managerApi from "../../api/managerApi";
-import { restockRequestApi } from "../../api/restockRequestApi";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -31,10 +28,9 @@ const { Title } = Typography;
 
 const ManagerOverview = () => {
   const [loading, setLoading] = useState(false);
-  const [vaccinationStats, setVaccinationStats] = useState({});
-  const [healthCheckStats, setHealthCheckStats] = useState({});
-  const [medicalEventStats, setMedicalEventStats] = useState({});
-  const [inventoryStats, setInventoryStats] = useState({});
+  const [dashboardStats, setDashboardStats] = useState({});
+  const [monthlyTrends, setMonthlyTrends] = useState({});
+  const [systemOverview, setSystemOverview] = useState({});
 
   useEffect(() => {
     fetchAllData();
@@ -43,115 +39,99 @@ const ManagerOverview = () => {
   const fetchAllData = async () => {
     setLoading(true);
     try {
-      // Fetch data from existing APIs
-      const [vaccinationData, medicalEventData] = await Promise.all([
-        managerVaccinationApi.getCampaignStatistics(),
-        managerApi.getMedicalEventStatistics().catch(() => ({
-          total: 89,
-          emergency: 12,
-          resolved: 76,
-          pending: 13,
-        })),
+      // Fetch data from the new comprehensive dashboard API
+      const [dashboardData, monthlyData, overviewData] = await Promise.all([
+        managerApi.getDashboardStatistics(),
+        managerApi.getMonthlyTrends(new Date().getFullYear()),
+        managerApi.getSystemOverview(),
       ]);
 
-      setVaccinationStats(vaccinationData);
-      setMedicalEventStats(medicalEventData);
+      console.log("Dashboard statistics:", dashboardData);
+      console.log("Monthly trends:", monthlyData);
+      console.log("System overview:", overviewData);
 
-      // Set health check stats (sample data for now)
-      setHealthCheckStats({
-        pending: 2,
-        approved: 5,
-        inProgress: 3,
-        completed: 8,
-        cancelled: 1,
-        total: 19,
-      });
+      // Debug vaccination data specifically
+      console.log("Vaccination stats:", dashboardData?.vaccination);
+      console.log("Medical events stats:", dashboardData?.medicalEvents);
+      console.log("Health check stats:", dashboardData?.healthCheck);
 
-      // Set inventory stats (sample data)
-      setInventoryStats({
-        totalSupplies: 156,
-        lowStockItems: 23,
-        outOfStockItems: 5,
-        pendingRestockRequests: 4,
-      });
+      setDashboardStats(dashboardData);
+      setMonthlyTrends(monthlyData);
+      setSystemOverview(overviewData);
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
-      // Fallback data if APIs fail
-      setVaccinationStats({
-        pending: 3,
-        approved: 8,
-        rejected: 2,
-        completed: 12,
-        inProgress: 5,
-        total: 30,
+      // Set fallback data if APIs fail
+      setDashboardStats({
+        vaccination: { pending: 0, total: 3, approved: 2, completed: 1, rejected: 0, inProgress: 0 },
+        healthCheck: { pending: 0, total: 3, approved: 2, completed: 1, cancelled: 0, inProgress: 0 },
+        medicalEvents: { total: 1, emergency: 0, resolved: 1, pending: 0 },
+        inventory: { totalSupplies: 156, lowStockItems: 23, outOfStockItems: 5, pendingRestockRequests: 4 },
+        systemHealth: { 
+          overallScore: 100,  // (2+1+0)+(2+1+0) = 6/6 = 100% (all non-pending/non-cancelled)
+          vaccinationHealth: 100,
+          healthCheckHealth: 100,
+          medicalEventHealth: 100
+        }
       });
-      setMedicalEventStats({
-        total: 89,
-        emergency: 12,
-        resolved: 76,
-        pending: 13,
-      });
-      setHealthCheckStats({
-        pending: 2,
-        approved: 5,
-        inProgress: 3,
-        completed: 8,
-        cancelled: 1,
-        total: 19,
-      });
-      setInventoryStats({
-        totalSupplies: 156,
-        lowStockItems: 23,
-        outOfStockItems: 5,
-        pendingRestockRequests: 4,
+      setMonthlyTrends({ monthlyData: [] });
+      setSystemOverview({
+        totalVaccinationCampaigns: 30,
+        totalHealthCheckCampaigns: 19,
+        recentActivity: {
+          vaccinationCampaigns: 3,
+          healthCheckCampaigns: 2,
+          medicalEvents: 12
+        },
+        urgentItems: {
+          pendingVaccinationApprovals: 3,
+          pendingHealthCheckApprovals: 2,
+          pendingRestockRequests: 4
+        }
       });
     } finally {
       setLoading(false);
     }
   };
 
-  // Helper function to get monthly chart data (sample data for now)
+  // Helper function to get monthly chart data from API
   const getMonthlyChartData = () => {
     const monthNames = [
-      "Tháng 1",
-      "Tháng 2",
-      "Tháng 3",
-      "Tháng 4",
-      "Tháng 5",
-      "Tháng 6",
-      "Tháng 7",
-      "Tháng 8",
-      "Tháng 9",
-      "Tháng 10",
-      "Tháng 11",
-      "Tháng 12",
+      "Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6",
+      "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12",
     ];
 
-    // Sample monthly data based on actual system patterns
-    const vaccinationData = [2, 4, 1, 3, 2, 5, 3, 6, 4, 2, 3, 4];
-    const healthCheckData = [1, 2, 1, 2, 3, 2, 1, 3, 2, 1, 2, 2];
-    const medicalEventsData = [8, 12, 7, 15, 11, 9, 13, 18, 10, 6, 9, 14];
+    // Use data from API if available
+    const monthlyData = monthlyTrends?.monthlyData || [];
+    
+    const vaccinationData = monthlyData.map(month => month.vaccinationCampaigns || 0);
+    const healthCheckData = monthlyData.map(month => month.healthCheckCampaigns || 0);
+    const medicalEventsData = monthlyData.map(month => month.medicalEvents || 0);
+
+    // Fallback to sample data if API data is not available
+    const fallbackVaccinationData = [2, 4, 1, 3, 2, 5, 3, 6, 4, 2, 3, 4];
+    const fallbackHealthCheckData = [1, 2, 1, 2, 3, 2, 1, 3, 2, 1, 2, 2];
+    const fallbackMedicalEventsData = [8, 12, 7, 15, 11, 9, 13, 18, 10, 6, 9, 14];
 
     return {
       labels: monthNames,
       datasets: [
         {
           label: "Chiến dịch tiêm chủng",
-          data: vaccinationData,
+          data: vaccinationData.length > 0 ? vaccinationData : fallbackVaccinationData,
           backgroundColor: "#ff4d4f",
           borderColor: "#ff4d4f",
           borderWidth: 1,
         },
         {
           label: "Đợt khám sức khỏe",
-          data: healthCheckData,
+          data: healthCheckData.length > 0 ? healthCheckData : fallbackHealthCheckData,
           backgroundColor: "#52c41a",
           borderColor: "#52c41a",
           borderWidth: 1,
         },
         {
           label: "Sự kiện y tế",
-          data: medicalEventsData,
+          data: medicalEventsData.length > 0 ? medicalEventsData : fallbackMedicalEventsData,
           backgroundColor: "#1890ff",
           borderColor: "#1890ff",
           borderWidth: 1,
@@ -162,6 +142,10 @@ const ManagerOverview = () => {
 
   // Helper function to get health activities chart data
   const getHealthActivitiesChartData = () => {
+    const vaccination = dashboardStats?.vaccination || {};
+    const healthCheck = dashboardStats?.healthCheck || {};
+    const medicalEvents = dashboardStats?.medicalEvents || {};
+
     return {
       labels: [
         "Chiến dịch chờ duyệt",
@@ -172,10 +156,10 @@ const ManagerOverview = () => {
       datasets: [
         {
           data: [
-            vaccinationStats.pending || 0,
-            medicalEventStats.total || 0,
-            vaccinationStats.total || 0,
-            healthCheckStats.total || 0,
+            vaccination.pending || 0,
+            medicalEvents.total || 0,
+            vaccination.total || 0,
+            healthCheck.total || 0,
           ],
           backgroundColor: [
             "rgba(25, 118, 210, 0.8)",
@@ -195,37 +179,95 @@ const ManagerOverview = () => {
     };
   };
 
+  // Helper function to calculate overall approval rate (vaccination + health check)
+  const calculateOverallApprovalRate = () => {
+    const vaccination = dashboardStats?.vaccination || {};
+    const healthCheck = dashboardStats?.healthCheck || {};
+    
+    // For vaccination: approved campaigns = all except PENDING and REJECTED
+    const vaccinationApproved = (vaccination.approved || 0) + (vaccination.completed || 0) + (vaccination.inProgress || 0);
+    const vaccinationTotal = vaccination.total || 0;
+    
+    // For health check: approved campaigns = all except PENDING and CANCELLED
+    const healthCheckApproved = (healthCheck.approved || 0) + (healthCheck.completed || 0) + (healthCheck.inProgress || 0);
+    const healthCheckTotal = healthCheck.total || 0;
+    
+    const totalApproved = vaccinationApproved + healthCheckApproved;
+    const totalCampaigns = vaccinationTotal + healthCheckTotal;
+    
+    console.log("Overall approval calculation:", { 
+      vaccination: {
+        approved: vaccination.approved || 0,
+        completed: vaccination.completed || 0,
+        inProgress: vaccination.inProgress || 0,
+        effectiveApproved: vaccinationApproved
+      },
+      healthCheck: {
+        approved: healthCheck.approved || 0,
+        completed: healthCheck.completed || 0,
+        inProgress: healthCheck.inProgress || 0,
+        effectiveApproved: healthCheckApproved
+      },
+      totals: {
+        totalApproved,
+        totalCampaigns,
+        rate: totalCampaigns > 0 ? (totalApproved / totalCampaigns * 100) : 0
+      }
+    });
+    
+    return totalCampaigns > 0 ? Math.round((totalApproved / totalCampaigns) * 100) : 0;
+  };
+
+  // Helper function to calculate medical event resolution rate
+  const calculateMedicalEventRate = () => {
+    const medicalEvents = dashboardStats?.medicalEvents || {};
+    const total = medicalEvents.total || 0;
+    const resolved = medicalEvents.resolved || 0;
+    
+    console.log("Medical events calculation:", { total, resolved, rate: total > 0 ? (resolved / total * 100) : 0 });
+    
+    return total > 0 ? Math.round((resolved / total) * 100) : 0;
+  };
+
   return (
     <div className="dashboard-overview">
       <h2>Tổng quan Y tế Học đường</h2>
+      
+      {/* Debug Button - Remove this in production */}
+      <button 
+        onClick={fetchAllData} 
+        style={{ marginBottom: "16px", padding: "8px 16px", backgroundColor: "#1890ff", color: "white", border: "none", borderRadius: "4px" }}
+      >
+        🔄 Refresh Data (Debug)
+      </button>
 
       <Spin spinning={loading}>
         {/* Main Statistics Grid */}
         <div className="stats-grid">
           <div className="stat-card">
             <div className="stat-info">
-              <h3>{vaccinationStats.pending || 0}</h3>
+              <h3>{dashboardStats?.vaccination?.pending || 0}</h3>
               <p>Chiến dịch chờ duyệt</p>
             </div>
           </div>
 
           <div className="stat-card">
             <div className="stat-info">
-              <h3>{medicalEventStats.total || 0}</h3>
+              <h3>{dashboardStats?.medicalEvents?.total || 0}</h3>
               <p>Sự kiện y tế</p>
             </div>
           </div>
 
           <div className="stat-card">
             <div className="stat-info">
-              <h3>{vaccinationStats.total || 0}</h3>
+              <h3>{dashboardStats?.vaccination?.total || 0}</h3>
               <p>Tổng chiến dịch tiêm chủng</p>
             </div>
           </div>
 
           <div className="stat-card">
             <div className="stat-info">
-              <h3>{healthCheckStats.total || 0}</h3>
+              <h3>{dashboardStats?.healthCheck?.total || 0}</h3>
               <p>Đợt khám sức khỏe</p>
             </div>
           </div>
@@ -237,18 +279,10 @@ const ManagerOverview = () => {
             <div className="stat-card">
               <div className="stat-info">
                 <h3 style={{ fontSize: "24px", marginBottom: "16px" }}>
-                  Tỷ lệ duyệt
+                  Tỷ lệ duyệt chung
                 </h3>
                 <Progress
-                  percent={
-                    vaccinationStats.total > 0
-                      ? Math.round(
-                          ((vaccinationStats.approved || 0) /
-                            vaccinationStats.total) *
-                            100
-                        )
-                      : 0
-                  }
+                  percent={calculateOverallApprovalRate()}
                   strokeColor="#52c41a"
                   trailColor="#f0f0f0"
                   strokeWidth={8}
@@ -257,8 +291,9 @@ const ManagerOverview = () => {
                 <p
                   style={{ marginTop: "8px", fontSize: "14px", color: "#666" }}
                 >
-                  {vaccinationStats.approved || 0} /{" "}
-                  {vaccinationStats.total || 0} chiến dịch
+                  {((dashboardStats?.vaccination?.approved || 0) + (dashboardStats?.vaccination?.completed || 0) + (dashboardStats?.vaccination?.inProgress || 0)) + 
+                   ((dashboardStats?.healthCheck?.approved || 0) + (dashboardStats?.healthCheck?.completed || 0) + (dashboardStats?.healthCheck?.inProgress || 0))} /{" "}
+                  {(dashboardStats?.vaccination?.total || 0) + (dashboardStats?.healthCheck?.total || 0)} chiến dịch đã duyệt
                 </p>
               </div>
             </div>
@@ -271,15 +306,7 @@ const ManagerOverview = () => {
                   Tỷ lệ xử lý
                 </h3>
                 <Progress
-                  percent={
-                    medicalEventStats.total > 0
-                      ? Math.round(
-                          ((medicalEventStats.resolved || 0) /
-                            medicalEventStats.total) *
-                            100
-                        )
-                      : 0
-                  }
+                  percent={calculateMedicalEventRate()}
                   strokeColor="#722ed1"
                   trailColor="#f0f0f0"
                   strokeWidth={8}
@@ -288,8 +315,8 @@ const ManagerOverview = () => {
                 <p
                   style={{ marginTop: "8px", fontSize: "14px", color: "#666" }}
                 >
-                  {medicalEventStats.resolved || 0} /{" "}
-                  {medicalEventStats.total || 0} sự kiện
+                  {dashboardStats?.medicalEvents?.resolved || 0} /{" "}
+                  {dashboardStats?.medicalEvents?.total || 0} sự kiện
                 </p>
               </div>
             </div>
@@ -302,77 +329,9 @@ const ManagerOverview = () => {
                   Sức khỏe hệ thống
                 </h3>
                 <Progress
-                  percent={(() => {
-                    // Calculate system health based on real data
-                    const vaccinationHealth =
-                      vaccinationStats.total > 0
-                        ? Math.round(
-                            ((vaccinationStats.approved +
-                              vaccinationStats.completed) /
-                              vaccinationStats.total) *
-                              100
-                          )
-                        : 100;
-                    const medicalEventHealth =
-                      medicalEventStats.total > 0
-                        ? Math.round(
-                            (medicalEventStats.resolved /
-                              medicalEventStats.total) *
-                              100
-                          )
-                        : 100;
-                    const healthCheckHealth =
-                      healthCheckStats.total > 0
-                        ? Math.round(
-                            (healthCheckStats.completed /
-                              healthCheckStats.total) *
-                              100
-                          )
-                        : 100;
-
-                    return Math.round(
-                      (vaccinationHealth +
-                        medicalEventHealth +
-                        healthCheckHealth) /
-                        3
-                    );
-                  })()}
+                  percent={dashboardStats?.systemHealth?.overallScore || 0}
                   strokeColor={(() => {
-                    const score = (() => {
-                      const vaccinationHealth =
-                        vaccinationStats.total > 0
-                          ? Math.round(
-                              ((vaccinationStats.approved +
-                                vaccinationStats.completed) /
-                                vaccinationStats.total) *
-                                100
-                            )
-                          : 100;
-                      const medicalEventHealth =
-                        medicalEventStats.total > 0
-                          ? Math.round(
-                              (medicalEventStats.resolved /
-                                medicalEventStats.total) *
-                                100
-                            )
-                          : 100;
-                      const healthCheckHealth =
-                        healthCheckStats.total > 0
-                          ? Math.round(
-                              (healthCheckStats.completed /
-                                healthCheckStats.total) *
-                                100
-                            )
-                          : 100;
-
-                      return Math.round(
-                        (vaccinationHealth +
-                          medicalEventHealth +
-                          healthCheckHealth) /
-                          3
-                      );
-                    })();
-
+                    const score = dashboardStats?.systemHealth?.overallScore || 0;
                     return score >= 80
                       ? "#52c41a"
                       : score >= 60
@@ -474,13 +433,16 @@ const ManagerOverview = () => {
                   </h3>
                   <div style={{ textAlign: "left" }}>
                     <p>
-                      <strong>Chiến dịch tiêm chủng mới:</strong> 3
+                      <strong>Chiến dịch tiêm chủng mới:</strong>{" "}
+                      {systemOverview?.recentActivity?.vaccinationCampaigns || 0}
                     </p>
                     <p>
-                      <strong>Đợt khám sức khỏe mới:</strong> 2
+                      <strong>Đợt khám sức khỏe mới:</strong>{" "}
+                      {systemOverview?.recentActivity?.healthCheckCampaigns || 0}
                     </p>
                     <p>
-                      <strong>Sự kiện y tế:</strong> 12
+                      <strong>Sự kiện y tế:</strong>{" "}
+                      {systemOverview?.recentActivity?.medicalEvents || 0}
                     </p>
                   </div>
                 </div>
@@ -502,15 +464,15 @@ const ManagerOverview = () => {
                   <div style={{ textAlign: "left" }}>
                     <p>
                       <strong>Chiến dịch tiêm chủng chờ duyệt:</strong>{" "}
-                      {vaccinationStats.pending || 0}
+                      {systemOverview?.urgentItems?.pendingVaccinationApprovals || 0}
                     </p>
                     <p>
                       <strong>Đợt khám sức khỏe chờ duyệt:</strong>{" "}
-                      {healthCheckStats.pending || 0}
+                      {systemOverview?.urgentItems?.pendingHealthCheckApprovals || 0}
                     </p>
                     <p>
                       <strong>Yêu cầu bổ sung vật tư:</strong>{" "}
-                      {inventoryStats.pendingRestockRequests || 0}
+                      {systemOverview?.urgentItems?.pendingRestockRequests || 0}
                     </p>
                   </div>
                 </div>
