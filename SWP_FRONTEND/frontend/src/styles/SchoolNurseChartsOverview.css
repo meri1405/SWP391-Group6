@@ -1,0 +1,377 @@
+/* School Nurse Charts Overview Styles */
+.school-nurse-charts-overview {
+  padding: 24px;
+  background: #f5f5f5;
+  min-height: 100vh;
+  position: relative;
+  z-index: 1;
+}
+
+.overview-header h2 {
+  margin: 0;
+  color: #262626;
+  font-weight: 600;
+  font-size: 24px;
+}
+
+.overview-header p {
+  margin: 8px 0 0 0;
+  color: #8c8c8c;
+  font-size: 14px;
+}
+
+/* Chart Cards */
+.school-nurse-charts-overview .ant-card {
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #f0f0f0;
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 2;
+  margin-bottom: 16px;
+}
+
+.school-nurse-charts-overview .ant-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+  z-index: 3;
+}
+
+.school-nurse-charts-overview .ant-card-head {
+  border-bottom: 1px solid #f0f0f0;
+  padding: 0 24px;
+}
+
+.school-nurse-charts-overview .ant-card-head-title {
+  font-weight: 600;
+  color: #262626;
+}
+
+.school-nurse-charts-overview .ant-card-body {
+  padding: 24px;
+}
+
+/* Metric Cards */
+.school-nurse-charts-overview .ant-statistic-title {
+  font-size: 14px;
+  color: #8c8c8c;
+  margin-bottom: 8px;
+}
+
+.school-nurse-charts-overview .ant-statistic-content {
+  font-size: 24px;
+  font-weight: 600;
+}
+
+/* Custom Tooltip */
+.custom-tooltip {
+  background: white;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  padding: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.custom-tooltip .label {
+  font-weight: bold;
+  margin-bottom: 5px;
+  color: #262626;
+}
+
+/* Chart Containers */
+.school-nurse-charts-overview .recharts-wrapper {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.school-nurse-charts-overview .recharts-legend-wrapper {
+  padding-top: 10px;
+}
+
+.school-nurse-charts-overview .recharts-legend-item-text {
+  color: #595959 !important;
+  font-size: 12px;
+}
+
+/* Segmented Control */
+.school-nurse-charts-overview .ant-segmented {
+  background: #f5f5f5;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+.school-nurse-charts-overview .ant-segmented-item {
+  border-radius: 6px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.school-nurse-charts-overview .ant-segmented-item-selected {
+  background: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.school-nurse-charts-overview .ant-segmented-item:hover {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+/* Summary Insights */
+.school-nurse-charts-overview .summary-insight {
+  text-align: center;
+  padding: 16px;
+}
+
+.school-nurse-charts-overview .summary-insight .main-number {
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.school-nurse-charts-overview .summary-insight .description {
+  color: #8c8c8c;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+/* Back to table button styling */
+.school-nurse-charts-overview .ant-btn {
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.school-nurse-charts-overview .ant-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Header with back button spacing */
+.overview-header .ant-space {
+  align-items: flex-start;
+}
+
+.overview-header .ant-space > div {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .school-nurse-charts-overview {
+    padding: 16px;
+  }
+  
+  .overview-header h2 {
+    font-size: 20px;
+  }
+  
+  .school-nurse-charts-overview .ant-card-body {
+    padding: 16px;
+  }
+  
+  .school-nurse-charts-overview .ant-statistic-content {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 576px) {
+  .school-nurse-charts-overview {
+    padding: 12px;
+  }
+  
+  .overview-header h2 {
+    font-size: 18px;
+  }
+  
+  .school-nurse-charts-overview .ant-card-body {
+    padding: 12px;
+  }
+}
+
+/* Animation */
+.school-nurse-charts-overview .ant-card {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Chart specific styles */
+.school-nurse-charts-overview .recharts-pie-label-text {
+  font-size: 12px;
+  fill: #262626;
+}
+
+.school-nurse-charts-overview .recharts-bar {
+  cursor: pointer;
+}
+
+.school-nurse-charts-overview .recharts-bar:hover {
+  opacity: 0.8;
+}
+
+/* Tags in charts */
+.school-nurse-charts-overview .ant-tag {
+  border-radius: 4px;
+  font-size: 12px;
+  padding: 2px 8px;
+}
+
+/* Alert messages */
+.school-nurse-charts-overview .ant-alert {
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+/* Filter controls */
+.school-nurse-charts-overview .ant-select,
+.school-nurse-charts-overview .ant-picker {
+  border-radius: 6px;
+}
+
+.school-nurse-charts-overview .ant-btn {
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+/* Consistent filter controls styling between table and charts */
+.school-nurse-overview .ant-select,
+.school-nurse-overview .ant-picker,
+.school-nurse-charts-overview .ant-select,
+.school-nurse-charts-overview .ant-picker {
+  border-radius: 6px;
+}
+
+.school-nurse-overview .ant-btn,
+.school-nurse-charts-overview .ant-btn {
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.school-nurse-overview .ant-btn:hover,
+.school-nurse-charts-overview .ant-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Header space alignment for both components */
+.school-nurse-overview .overview-header .ant-space,
+.school-nurse-charts-overview .overview-header .ant-space {
+  align-items: center;
+  gap: 16px;
+}
+
+/* Overview header layout - ensure everything is on same row */
+.overview-header .ant-row {
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+.overview-header .ant-col:first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.overview-header .ant-col:last-child {
+  flex-shrink: 0;
+}
+
+/* Segmented control consistent styling */
+.school-nurse-overview .ant-segmented,
+.school-nurse-charts-overview .ant-segmented {
+  background: #f5f5f5;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+/* Chart type selector separate styling */
+.school-nurse-charts-overview > div:nth-child(2) .ant-segmented {
+  min-width: 400px;
+}
+
+.school-nurse-overview .ant-segmented-item,
+.school-nurse-charts-overview .ant-segmented-item {
+  border-radius: 6px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.school-nurse-overview .ant-segmented-item-selected,
+.school-nurse-charts-overview .ant-segmented-item-selected {
+  background: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.school-nurse-overview .ant-segmented-item:hover,
+.school-nurse-charts-overview .ant-segmented-item:hover {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+/* Fix overlapping issues */
+.school-nurse-charts-overview .ant-row {
+  margin-bottom: 24px;
+}
+
+.school-nurse-charts-overview .ant-col {
+  position: relative;
+  z-index: 1;
+}
+
+/* Ensure charts don't overlap */
+.recharts-wrapper {
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+/* Overview header spacing */
+.overview-header {
+  margin-bottom: 24px !important;
+  position: relative;
+  z-index: 2;
+}
+
+/* Segmented control spacing */
+.ant-segmented {
+  margin-bottom: 24px !important;
+  position: relative;
+  z-index: 2;
+}
+
+/* Fix tooltip z-index */
+.custom-tooltip {
+  z-index: 1000 !important;
+  position: relative !important;
+}
+
+/* Ensure proper spacing between chart sections */
+.school-nurse-charts-overview > div {
+  clear: both;
+  margin-bottom: 24px;
+}
+
+/* Fix card body padding for better spacing */
+.school-nurse-charts-overview .ant-card-body {
+  padding: 24px;
+  position: relative;
+  z-index: 1;
+}
+
+/* Prevent text and content overlap */
+.school-nurse-charts-overview h2,
+.school-nurse-charts-overview p {
+  position: relative;
+  z-index: 2;
+}
+
+/* Fix responsive container positioning */
+.recharts-responsive-container {
+  position: relative !important;
+  overflow: visible !important;
+}

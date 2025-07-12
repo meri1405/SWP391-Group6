@@ -78,4 +78,11 @@ public interface HealthProfileRepository extends JpaRepository<HealthProfile, Lo
     // Find health profiles with events
     @Query("SELECT DISTINCT hp FROM HealthProfile hp LEFT JOIN FETCH hp.events WHERE hp.student.studentID = :studentId")
     Optional<HealthProfile> findByStudentStudentIDWithEvents(@Param("studentId") Long studentId);
+
+    // Dashboard statistics methods
+    long countByStatus(ProfileStatus status);
+    long countByStatusAndCreatedAtBetween(ProfileStatus status, java.time.LocalDate start, java.time.LocalDate end);
+    
+    @Query("SELECT COUNT(DISTINCT hp.student) FROM HealthProfile hp")
+    long countDistinctStudents();
 }

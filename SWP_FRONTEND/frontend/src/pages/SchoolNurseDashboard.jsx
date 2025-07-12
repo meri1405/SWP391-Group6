@@ -35,39 +35,17 @@ import { Notifications } from "../components/dashboard/notifications";
 import { restockRequestApi } from "../api/restockRequestApi";
 import webSocketService from "../services/webSocketService";
 import NurseProfile from "../components/dashboard/profile";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-  ArcElement,
-  PointElement,
-  LineElement,
-} from "chart.js";
-import { Bar, Doughnut } from "react-chartjs-2";
 import "../styles/SchoolNurseDashboard.css";
 import "../styles/SidebarTrigger.css";
 import NurseHealthProfiles from "../components/dashboard/NurseHealthProfiles";
+import SchoolNurseOverview from "../components/dashboard/SchoolNurseOverview";
 import { MedicalEventManagement } from "../components/dashboard/events";
 // Import the campaign management components
 import VaccinationCampaignManagement from "../components/schoolnurse/vaccinationCampaign/VaccinationCampaignManagement";
 import { HealthCheckCampaignManagement } from "../components/schoolnurse/healthCheck";
 import { nurseApi } from "../api/nurseApi";
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-  ArcElement,
-  PointElement,
-  LineElement
-);
+
 
 const { Header, Sider, Content } = Layout;
 
@@ -214,13 +192,7 @@ const SchoolNurseDashboard = () => {
     };
   }, [api, navigate, updateNotificationCount, user, refreshSession]);
 
-  // Sample data for the dashboard
-  const [stats] = useState({
-    totalMedicineReceived: 156,
-    totalMedicalEvents: 89,
-    totalVaccinations: 450,
-    totalHealthChecks: 1200,
-  });
+
 
   // Navigation items specific to SchoolNurse role
   const menuItems = [
@@ -381,113 +353,10 @@ const SchoolNurseDashboard = () => {
     }
   }, [searchParams]);
 
-  // Dashboard Overview Component (giữ nguyên như cũ)
+  // Dashboard Overview Component
   const DashboardOverview = () => {
     console.log("Rendering DashboardOverview");
-
-    const barChartData = {
-      labels: [
-        "Tháng 1",
-        "Tháng 2",
-        "Tháng 3",
-        "Tháng 4",
-        "Tháng 5",
-        "Tháng 6",
-      ],
-      datasets: [
-        {
-          label: "Số lượng sự kiện y tế",
-          data: [12, 19, 15, 25, 22, 30],
-          backgroundColor: "rgba(25, 118, 210, 0.8)",
-          borderColor: "rgba(25, 118, 210, 1)",
-          borderWidth: 1,
-        },
-      ],
-    };
-
-    const doughnutChartData = {
-      labels: ["Thuốc đã nhận", "Sự kiện y tế", "Tiêm chủng", "Khám sức khỏe"],
-      datasets: [
-        {
-          data: [156, 89, 450, 1200],
-          backgroundColor: [
-            "rgba(25, 118, 210, 0.8)",
-            "rgba(76, 175, 80, 0.8)",
-            "rgba(255, 193, 7, 0.8)",
-            "rgba(156, 39, 176, 0.8)",
-          ],
-          borderColor: [
-            "rgba(25, 118, 210, 1)",
-            "rgba(76, 175, 80, 1)",
-            "rgba(255, 193, 7, 1)",
-            "rgba(156, 39, 176, 1)",
-          ],
-          borderWidth: 2,
-        },
-      ],
-    };
-
-    const chartOptions = {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          position: "top",
-        },
-      },
-    };
-
-    return (
-      <div className="dashboard-overview">
-        <h2>Tổng quan Y tế Học đường</h2>
-
-        {/* Stats Grid */}
-        <div className="stats-grid">
-          <div className="stat-card">
-            <div className="stat-info">
-              <h3>{stats.totalMedicineReceived}</h3>
-              <p>Thuốc đã nhận</p>
-            </div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-info">
-              <h3>{stats.totalMedicalEvents}</h3>
-              <p>Sự kiện y tế</p>
-            </div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-info">
-              <h3>{stats.totalVaccinations}</h3>
-              <p>Số mũi tiêm chủng</p>
-            </div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-info">
-              <h3>{stats.totalHealthChecks}</h3>
-              <p>Lượt khám sức khỏe</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Charts Section */}
-        <div className="charts-section">
-          <div className="chart-row">
-            <div className="chart-container">
-              <h3>Thống kê sự kiện y tế theo tháng</h3>
-              <div className="chart-wrapper">
-                <Bar data={barChartData} options={chartOptions} />
-              </div>
-            </div>
-            <div className="chart-container">
-              <h3>Phân bố hoạt động y tế</h3>
-              <div className="chart-wrapper">
-                <Doughnut data={doughnutChartData} options={chartOptions} />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+    return <SchoolNurseOverview />;
   };
 
   // Các components khác giữ nguyên như cũ...

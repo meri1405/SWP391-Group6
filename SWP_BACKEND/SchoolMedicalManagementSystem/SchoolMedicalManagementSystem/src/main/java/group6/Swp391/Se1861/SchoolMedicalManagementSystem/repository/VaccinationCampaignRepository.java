@@ -41,4 +41,9 @@ public interface VaccinationCampaignRepository extends JpaRepository<Vaccination
     );
     
     boolean existsByNameAndStatus(String name, VaccinationCampaign.CampaignStatus status);
+
+    // Dashboard statistics methods
+    long countByStatus(VaccinationCampaign.CampaignStatus status);
+    long countByCreatedDateBetween(LocalDateTime start, LocalDateTime end);
+    long countByStatusAndCreatedDateBetween(VaccinationCampaign.CampaignStatus status, LocalDateTime start, LocalDateTime end);
 }

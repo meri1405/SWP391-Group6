@@ -200,7 +200,9 @@ public class SchoolNurseController {
             errorResponse.put("message", "An error occurred while updating the profile: " + e.getMessage());
             return ResponseEntity.internalServerError().body(errorResponse);
         }
-    }    /**
+    }    
+    
+    /**
      * Get medication schedules for all children of the parent
      */
 }
