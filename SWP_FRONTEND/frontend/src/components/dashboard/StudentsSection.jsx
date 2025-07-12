@@ -366,7 +366,7 @@ const StudentsSection = () => {
         styles={{ body: { padding: 20 } }}
       >
         <Row gutter={[16, 16]}>
-          <Col xs={24} sm={12} md={8} lg={6}>
+          <Col xs={24} sm={12} md={4} lg={4} xl={4}>
             <div style={{ marginBottom: 8 }}>
               <label style={{ fontSize: 14, fontWeight: 500, color: "#333" }}>
                 Tìm kiếm theo tên:
@@ -380,7 +380,7 @@ const StudentsSection = () => {
               allowClear
             />
           </Col>
-          <Col xs={24} sm={12} md={8} lg={6}>
+          <Col xs={24} sm={12} md={4} lg={4} xl={4}>
             <div style={{ marginBottom: 8 }}>
               <label style={{ fontSize: 14, fontWeight: 500, color: "#333" }}>
                 Lọc theo lớp:
@@ -400,7 +400,7 @@ const StudentsSection = () => {
               ))}
             </Select>
           </Col>
-          <Col xs={24} sm={12} md={8} lg={6}>
+          <Col xs={24} sm={12} md={4} lg={4} xl={4}>
             <div style={{ marginBottom: 8 }}>
               <label style={{ fontSize: 14, fontWeight: 500, color: "#333" }}>
                 Lọc theo năm học:
@@ -420,7 +420,7 @@ const StudentsSection = () => {
               ))}
             </Select>
           </Col>
-          <Col xs={24} sm={12} md={8} lg={6}>
+          <Col xs={24} sm={12} md={4} lg={4} xl={4}>
             <div style={{ marginBottom: 8 }}>
               <label style={{ fontSize: 14, fontWeight: 500, color: "#333" }}>
                 Lọc theo nơi sinh:
@@ -440,7 +440,7 @@ const StudentsSection = () => {
               ))}
             </Select>
           </Col>
-          <Col xs={24} sm={12} md={8} lg={6}>
+          <Col xs={24} sm={12} md={4} lg={4} xl={4}>
             <div style={{ marginBottom: 8 }}>
               <label style={{ fontSize: 14, fontWeight: 500, color: "#333" }}>
                 Lọc theo năm sinh:
@@ -460,33 +460,38 @@ const StudentsSection = () => {
               ))}
             </Select>
           </Col>
+          <Col xs={24} sm={12} md={4} lg={4} xl={4}>
+            <div style={{ marginBottom: 8 }}>
+              <label style={{ fontSize: 14, fontWeight: 500, color: "#333" }}>
+                &nbsp;
+              </label>
+            </div>
+            <Button
+              onClick={clearFilters}
+              icon={<ReloadOutlined />}
+              style={{
+                borderRadius: 6,
+                fontWeight: 500,
+                border: "1px solid #d9d9d9",
+                background: "#fafafa",
+                color: "#595959",
+                width: "100%",
+                height: "32px",
+              }}
+            >
+              Xóa bộ lọc
+            </Button>
+          </Col>
         </Row>
         <Row style={{ marginTop: 16 }}>
           <Col span={24}>
             <div
               style={{
                 display: "flex",
-                justifyContent: "space-between",
+                justifyContent: "flex-end",
                 alignItems: "center",
               }}
             >
-              <Button
-                onClick={clearFilters}
-                icon={<ReloadOutlined />}
-                style={{
-                  borderRadius: 6,
-                  fontWeight: 500,
-                  border: "1px solid #d9d9d9",
-                  background: "#fafafa",
-                  color: "#595959",
-                  display: "flex",
-                  alignItems: "center",
-                  padding: "4px 12px",
-                  height: "32px",
-                }}
-              >
-                Xóa bộ lọc
-              </Button>
               <div
                 style={{
                   fontSize: 14,

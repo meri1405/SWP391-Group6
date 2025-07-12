@@ -404,6 +404,41 @@ export const healthCheckApi = {
       throw error;
     }
   },
+  confirmCampaign: async (id) => {
+    try {
+      const response = await healthCheckApiClient.get(
+        `/manager/health-check-campaigns/${id}/confirmed-students`
+      );
+      return response.data;
+    } catch (error) {
+      console.error(`Error confirming health check campaign ${id}:`, error);
+      throw error;
+    }
+  },
+  resultCampaign: async (id) => {
+    try {
+      const response = await healthCheckApiClient.get(
+        `/manager/health-check-campaigns/${id}/results`
+      );
+      return response.data;
+    } catch (error) {
+      console.error(`Error getting results for health check campaign ${id}:`, error);
+      // If the manager endpoint doesn't exist (404) or other errors, 
+      // we'll let the caller handle the fallback
+      throw error;
+    }
+  },
+  getFormsByCampaignId: async (campaignId) => {
+    try {
+      const response = await healthCheckApiClient.get(
+        `/manager/health-check-campaigns/${campaignId}/forms`
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching forms by campaign:", error);
+      throw error;
+    }
+  },
 
   // ==================== UTILITY FUNCTIONS ====================
 
