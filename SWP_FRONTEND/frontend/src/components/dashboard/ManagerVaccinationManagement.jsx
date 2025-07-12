@@ -22,6 +22,7 @@ import {
   CheckCircleOutlined,
 } from "@ant-design/icons";
 import managerApi from "../../api/managerApi";
+import { formatDate } from "../../utils/timeUtils";
 import "../../styles/ManagerVaccination.css";
 
 const { TextArea } = Input;
@@ -245,13 +246,6 @@ const ManagerVaccinationManagement = () => {
       ),
     },
     {
-      title: "Thương hiệu",
-      dataIndex: "vaccineBrand",
-      key: "vaccineBrand",
-      width: "15%",
-      render: (text) => text || "N/A",
-    },
-    {
       title: "Trạng thái",
       dataIndex: "status",
       key: "status",
@@ -263,19 +257,10 @@ const ManagerVaccinationManagement = () => {
       dataIndex: "scheduledDate",
       key: "scheduledDate",
       width: "15%",
-      render: (date) => {
-        if (!date) return "N/A";
-        return new Date(date).toLocaleString("vi-VN", {
-          year: "numeric",
-          month: "2-digit",
-          day: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit",
-        });
-      },
+      render: (date) => formatDate(date),
     },
     {
-      title: "Độ tuổi phù hợp",
+      title: "Độ tuổi",
       key: "ageRange",
       width: "12%",
       render: (_, record) => {
@@ -626,9 +611,6 @@ const ManagerVaccinationManagement = () => {
                 {selectedCampaign.name}
               </Text>
             </Descriptions.Item>
-            <Descriptions.Item label="Thương hiệu">
-              <Text strong>{selectedCampaign.vaccineBrand || "N/A"}</Text>
-            </Descriptions.Item>
             <Descriptions.Item label="Trạng thái">
               <div style={{ fontSize: "14px" }}>
                 {getStatusBadge(selectedCampaign.status)}
@@ -641,18 +623,7 @@ const ManagerVaccinationManagement = () => {
             </Descriptions.Item>
             <Descriptions.Item label="Ngày tiêm">
               <Text style={{ fontSize: "14px", fontWeight: 500 }}>
-                {selectedCampaign.scheduledDate
-                  ? new Date(selectedCampaign.scheduledDate).toLocaleString(
-                      "vi-VN",
-                      {
-                        year: "numeric",
-                        month: "2-digit",
-                        day: "2-digit",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      }
-                    )
-                  : "N/A"}
+                {formatDate(selectedCampaign.scheduledDate)}
               </Text>
             </Descriptions.Item>
             <Descriptions.Item label="Địa điểm">
@@ -684,11 +655,7 @@ const ManagerVaccinationManagement = () => {
             </Descriptions.Item>
             <Descriptions.Item label="Ngày tạo">
               <Text style={{ fontSize: "14px" }}>
-                {selectedCampaign.createdDate
-                  ? new Date(selectedCampaign.createdDate).toLocaleDateString(
-                      "vi-VN"
-                    )
-                  : "N/A"}
+                {formatDate(selectedCampaign.createdDate)}
               </Text>
             </Descriptions.Item>
             <Descriptions.Item label="Người duyệt">
@@ -698,11 +665,7 @@ const ManagerVaccinationManagement = () => {
             </Descriptions.Item>
             <Descriptions.Item label="Ngày duyệt">
               <Text style={{ fontSize: "14px" }}>
-                {selectedCampaign.approvedDate
-                  ? new Date(selectedCampaign.approvedDate).toLocaleDateString(
-                      "vi-VN"
-                    )
-                  : "N/A"}
+                {formatDate(selectedCampaign.approvedDate)}
               </Text>
             </Descriptions.Item>
             <Descriptions.Item label="Mô tả" span={2}>

@@ -1,139 +1,20 @@
-import React, { useState, useEffect } from "react";
-import { parentApi } from "../../../api/parentApi";
+import React from "react";
+import { useVaccinationSchedule } from "../../../hooks/useVaccinationSchedule";
+import { formatDate, getPriorityColor, getPriorityText } from "../../../utils/vaccinationUtils";
 import "../../../styles/VaccinationSchedule.css";
 
 const VaccinationSchedule = () => {
-  const [activeTab, setActiveTab] = useState("completed");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [completedVaccinations, setCompletedVaccinations] = useState([]);
-  const [upcomingVaccinations, setUpcomingVaccinations] = useState([]);
-
-  // Load vaccination data on component mount
-  useEffect(() => {
-    loadVaccinationData();
-  }, []);
-
-  const loadVaccinationData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      // Get all students and their health profiles
-      const students = await parentApi.getMyStudents();
-      console.log("Students data:", students);
-      console.log("First student structure:", students[0]);
-      
-      let allCompletedVaccinations = [];
-      let allUpcomingVaccinations = [];
-
-      // For each student, get their health profile to extract vaccination history
-      for (const student of students) {
-        try {
-          console.log("Processing student:", student);
-          // Get health profile for this student
-          const healthProfileData = await parentApi.getHealthProfilesByStudentId(student.id);
-          console.log(`Health profile for student ${student.fullName}:`, healthProfileData);
-          
-          if (healthProfileData && healthProfileData.length > 0) {
-            // Get the first (active) health profile
-            const healthProfile = healthProfileData[0];
-            
-            // Extract vaccination history
-            if (healthProfile.vaccinationHistory && healthProfile.vaccinationHistory.length > 0) {
-              const studentVaccinations = healthProfile.vaccinationHistory.map(vaccination => ({
-                id: `${student.id}-${vaccination.id}`,
-                vaccine: `${vaccination.vaccineName}${vaccination.doseNumber ? ` (lần ${vaccination.doseNumber})` : ''}`,
-                date: vaccination.dateOfVaccination,
-                location: vaccination.placeOfVaccination,
-                batchNumber: vaccination.manufacturer || '--',
-                nextDue: null,
-                status: "completed",
-                studentName: student.fullName,
-                studentClassName: student.className || '--',
-                notes: vaccination.notes
-              }));
-              allCompletedVaccinations.push(...studentVaccinations);
-            }
-          }
-        } catch (profileError) {
-          console.error(`Error loading health profile for student ${student.fullName}:`, profileError);
-        }
-      }
-
-      // Load upcoming vaccinations from vaccination forms
-      try {
-        const vaccinationForms = await parentApi.getVaccinationForms();
-        console.log("Vaccination forms:", vaccinationForms);
-        
-        // Filter for confirmed forms that are scheduled in the future
-        const confirmedForms = vaccinationForms.filter(form => 
-          form.confirmationStatus === 'CONFIRMED' && 
-          new Date(form.scheduledDate) > new Date()
-        );
-        
-        const upcomingData = confirmedForms.map(form => ({
-          id: form.id,
-          vaccine: `${form.vaccineName}${form.doseNumber ? ` (lần ${form.doseNumber})` : ''}`,
-          scheduledDate: form.scheduledDate,
-          location: form.location,
-          status: "scheduled",
-          priority: "medium",
-          studentName: form.studentFullName,
-          studentClassName: form.studentClassName || '--',
-          campaignName: form.campaignName,
-          formId: form.id
-        }));
-        
-        allUpcomingVaccinations = upcomingData;
-      } catch (formsError) {
-        console.error("Error loading vaccination forms:", formsError);
-      }
-
-      console.log("Final completed vaccinations:", allCompletedVaccinations);
-      console.log("Final upcoming vaccinations:", allUpcomingVaccinations);
-      
-      setCompletedVaccinations(allCompletedVaccinations);
-      setUpcomingVaccinations(allUpcomingVaccinations);
-    } catch (error) {
-      console.error("Error loading vaccination data:", error);
-      setError("Không thể tải dữ liệu lịch tiêm chủng. Vui lòng thử lại.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const formatDate = (dateString) => {
-    if (!dateString) return "--";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("vi-VN");
-  };
-
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case "high":
-        return "#f44336";
-      case "medium":
-        return "#ff9800";
-      case "low":
-        return "#4caf50";
-      default:
-        return "#666";
-    }
-  };
-
-  const getPriorityText = (priority) => {
-    switch (priority) {
-      case "high":
-        return "Cao";
-      case "medium":
-        return "Trung bình";
-      case "low":
-        return "Thấp";
-      default:
-        return "";
-    }
-  };
+  const {
+    activeTab,
+    loading,
+    error,
+    completedVaccinations,
+    upcomingVaccinations,
+    handleTabSwitch,
+    retryLoadingData,
+    completedCount,
+    upcomingCount
+  } = useVaccinationSchedule();
 
   return (
     <div className="vaccination-container">
@@ -150,7 +31,7 @@ const VaccinationSchedule = () => {
         <div className="error-container">
           <i className="fas fa-exclamation-triangle"></i>
           <p>{error}</p>
-          <button className="retry-btn" onClick={loadVaccinationData}>
+          <button className="retry-btn" onClick={retryLoadingData}>
             <i className="fas fa-refresh"></i>
             Thử lại
           </button>
@@ -160,17 +41,17 @@ const VaccinationSchedule = () => {
           <div className="tabs">
             <button
               className={`tab ${activeTab === "completed" ? "active" : ""}`}
-              onClick={() => setActiveTab("completed")}
+              onClick={() => handleTabSwitch("completed")}
             >
               <i className="fas fa-check-circle"></i>
-              Đã tiêm ({completedVaccinations.length})
+              Đã tiêm ({completedCount})
             </button>
             <button
               className={`tab ${activeTab === "upcoming" ? "active" : ""}`}
-              onClick={() => setActiveTab("upcoming")}
+              onClick={() => handleTabSwitch("upcoming")}
             >
               <i className="fas fa-calendar-alt"></i>
-              Sắp tới ({upcomingVaccinations.length})
+              Sắp tới ({upcomingCount})
             </button>
           </div>
 
