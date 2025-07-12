@@ -129,6 +129,48 @@ const managerApi = {
     }
   },
 
+  // Health Check Campaign Statistics API (new endpoint)
+  getHealthCheckStatistics: async (token = getTokenFromStorage()) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.get(
+        "/api/manager/dashboard/health-check/statistics"
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching health check statistics:", error);
+      // Return fallback data if API fails
+      return {
+        pending: 2,
+        approved: 5,
+        inProgress: 3,
+        completed: 8,
+        cancelled: 1,
+        total: 19,
+      };
+    }
+  },
+
+  // Inventory Statistics API (new endpoint)
+  getInventoryStatistics: async (token = getTokenFromStorage()) => {
+    try {
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.get(
+        "/api/manager/dashboard/inventory/statistics"
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching inventory statistics:", error);
+      // Return fallback data if API fails
+      return {
+        totalSupplies: 156,
+        lowStockItems: 23,
+        outOfStockItems: 5,
+        pendingRestockRequests: 4,
+      };
+    }
+  },
+
   // Vaccination Campaign Management APIs
   getVaccinationCampaignsByStatus: async (
     status,
@@ -258,7 +300,7 @@ const managerApi = {
       );
 
       const response = await authAxios.get(
-        `/api/manager/medical-events/statistics?${queryParams}`
+        `/api/manager/dashboard/medical-events/statistics?${queryParams}`
       );
 
       console.log(
