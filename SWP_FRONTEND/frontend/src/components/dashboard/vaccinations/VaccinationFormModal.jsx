@@ -1,6 +1,17 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { useAuth } from "../../../contexts/AuthContext";
-import { parentApi } from "../../../api/parentApi";
+import React from "react";
+import { useVaccinationFormModal } from "../../../hooks/useVaccinationFormModal";
+import {
+  formatGender,
+  getStatusColor,
+  getStatusText,
+  validateFormSubmission,
+  getConfirmationDialogTitle,
+  getConfirmationDialogMessage,
+  getNotesPlaceholder,
+  getNotesLabel,
+  canModifyForm
+} from "../../../utils/vaccinationFormModalUtils";
+import { formatDate } from "../../../utils/timeUtils";
 import "../../../styles/VaccinationFormModal.css";
 
 const VaccinationFormModal = ({
@@ -9,153 +20,20 @@ const VaccinationFormModal = ({
   vaccinationFormId,
   onFormUpdated,
 }) => {
-  const [form, setForm] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState(null);
-  const [notes, setNotes] = useState("");
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [confirmAction, setConfirmAction] = useState(null); // 'confirm' or 'decline'
-  const { getToken } = useAuth();
-
-  const formatGender = (gender) => {
-    if (!gender) return "Không có thông tin";
-
-    switch (gender.toLowerCase()) {
-      case "male":
-      case "nam":
-        return "Nam";
-      case "female":
-      case "nữ":
-        return "Nữ";
-      default:
-        return gender;
-    }
-  };
-
-  const loadVaccinationForm = useCallback(async () => {
-    const token = getToken();
-    if (!token) return;
-
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await parentApi.getVaccinationFormById(
-        vaccinationFormId,
-        token
-      );
-      if (response.success) {
-        setForm(response.form);
-      } else {
-        setError(response.message);
-      }
-    } catch (error) {
-      console.error("Error loading vaccination form:", error);
-      setError("Không thể tải thông tin phiếu tiêm chủng");
-    } finally {
-      setLoading(false);
-    }
-  }, [getToken, vaccinationFormId]);
-
-  useEffect(() => {
-    if (isOpen && vaccinationFormId) {
-      loadVaccinationForm();
-    }
-  }, [isOpen, vaccinationFormId, loadVaccinationForm]);
-
-  const handleConfirmClick = () => {
-    setConfirmAction("confirm");
-    setShowConfirmDialog(true);
-  };
-
-  const handleDeclineClick = () => {
-    setConfirmAction("decline");
-    setShowConfirmDialog(true);
-  };
-
-  const handleConfirmSubmit = async () => {
-    const token = getToken();
-    if (!token) return;
-
-    try {
-      setSubmitting(true);
-      let response;
-
-      if (confirmAction === "confirm") {
-        response = await parentApi.confirmVaccinationForm(
-          vaccinationFormId,
-          notes,
-          token
-        );
-      } else {
-        response = await parentApi.declineVaccinationForm(
-          vaccinationFormId,
-          notes,
-          token
-        );
-      }
-
-      if (response.success) {
-        setForm(response.form);
-        setShowConfirmDialog(false);
-        setNotes("");
-        if (onFormUpdated) {
-          onFormUpdated(response.form);
-        }
-      } else {
-        setError(response.message);
-      }
-    } catch (error) {
-      console.error("Error submitting form:", error);
-      setError("Không thể xử lý yêu cầu. Vui lòng thử lại.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-  const formatDate = (dateString) => {
-    if (!dateString) return "Chưa xác định";
-
-    try {
-      const date = new Date(dateString);
-      const day = date.getDate().toString().padStart(2, "0");
-      const month = (date.getMonth() + 1).toString().padStart(2, "0");
-      const year = date.getFullYear();
-
-      return `${day}/${month}/${year}`;
-    } catch {
-      return "Không hợp lệ";
-    }
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "CONFIRMED":
-        return "#52c41a";
-      case "DECLINED":
-        return "#ff4d4f";
-      case "PENDING":
-        return "#faad14";
-      case "EXPIRED":
-        return "#8c8c8c";
-      default:
-        return "#d9d9d9";
-    }
-  };
-
-  const getStatusText = (status) => {
-    switch (status) {
-      case "CONFIRMED":
-        return "Đã xác nhận";
-      case "DECLINED":
-        return "Đã từ chối";
-      case "PENDING":
-        return "Chờ xác nhận";
-      case "EXPIRED":
-        return "Đã hết hạn";
-      default:
-        return status;
-    }
-  };
+  const {
+    form,
+    loading,
+    submitting,
+    error,
+    notes,
+    showConfirmDialog,
+    confirmAction,
+    handleConfirmClick,
+    handleDeclineClick,
+    handleConfirmSubmit,
+    handleCancelConfirmation,
+    handleNotesChange,
+  } = useVaccinationFormModal(vaccinationFormId, isOpen, onFormUpdated);
 
   if (!isOpen) return null;
 
@@ -310,7 +188,7 @@ const VaccinationFormModal = ({
                   </div>
                 )}
               </div>
-              {form.confirmationStatus === "PENDING" && (
+              {canModifyForm(form.confirmationStatus) && (
                 <div className="form-actions">
                   <button
                     className="btn btn-success"
@@ -337,31 +215,16 @@ const VaccinationFormModal = ({
           <div className="confirm-dialog-overlay">
             <div className="confirm-dialog">
               <div className="confirm-dialog-header">
-                <h3>
-                  {confirmAction === "confirm"
-                    ? "Xác nhận đồng ý"
-                    : "Xác nhận từ chối"}
-                </h3>
+                <h3>{getConfirmationDialogTitle(confirmAction)}</h3>
               </div>
               <div className="confirm-dialog-body">
-                <p>
-                  {confirmAction === "confirm"
-                    ? `Bạn có chắc chắn muốn đồng ý cho con tiêm vắc xin ${form?.vaccineName}?`
-                    : `Bạn có chắc chắn muốn từ chối cho con tiêm vắc xin ${form?.vaccineName}?`}
-                </p>
+                <p>{getConfirmationDialogMessage(confirmAction, form?.vaccineName)}</p>
                 <div className="notes-section">
-                  <label>
-                    Ghi chú{" "}
-                    {confirmAction === "decline" ? "(bắt buộc)" : "(tùy chọn)"}:
-                  </label>
+                  <label>{getNotesLabel(confirmAction)}</label>
                   <textarea
                     value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder={
-                      confirmAction === "confirm"
-                        ? "Ghi chú thêm (nếu có)..."
-                        : "Vui lòng ghi rõ lý do từ chối..."
-                    }
+                    onChange={(e) => handleNotesChange(e.target.value)}
+                    placeholder={getNotesPlaceholder(confirmAction)}
                     rows={3}
                     required={confirmAction === "decline"}
                   />
@@ -370,10 +233,7 @@ const VaccinationFormModal = ({
               <div className="confirm-dialog-actions">
                 <button
                   className="btn btn-secondary"
-                  onClick={() => {
-                    setShowConfirmDialog(false);
-                    setNotes("");
-                  }}
+                  onClick={handleCancelConfirmation}
                 >
                   Hủy
                 </button>
@@ -383,7 +243,7 @@ const VaccinationFormModal = ({
                   }`}
                   onClick={handleConfirmSubmit}
                   disabled={
-                    submitting || (confirmAction === "decline" && !notes.trim())
+                    submitting || !validateFormSubmission(confirmAction, notes)
                   }
                 >
                   {submitting ? (
