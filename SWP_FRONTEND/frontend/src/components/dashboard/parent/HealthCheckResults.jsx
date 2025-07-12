@@ -1,1965 +1,736 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { Table, Button, Modal, Typography, Spin, Alert, Row, Col, Divider } from "antd";
+import { EyeOutlined } from "@ant-design/icons";
 import { useAuth } from "../../../contexts/AuthContext";
 import { parentApi } from "../../../api/parentApi";
-import "../../../styles/HealthCheckResults.css";
 import dayjs from "dayjs";
 
+
+const { Text, Title } = Typography;
+
 const HealthCheckResults = () => {
-  const [students, setStudents] = useState([]);
-  const [selectedStudent, setSelectedStudent] = useState(null);
   const [healthCheckResults, setHealthCheckResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [viewMode, setViewMode] = useState("history"); // "history", "table", "detail"
   const [selectedResult, setSelectedResult] = useState(null);
-  const [historyData, setHistoryData] = useState([]);
-  const [filteredHistoryData, setFilteredHistoryData] = useState([]);
-  const [filters, setFilters] = useState({
-    category: "",
-    status: "",
-    dateRange: "all", // "all", "last30", "last90", "lastYear"
-  });
-
-  const [selectedTooltip, setSelectedTooltip] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [healthCheckDetail, setHealthCheckDetail] = useState(null);
   const { getToken } = useAuth();
 
-  // Close tooltip when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (selectedTooltip && !event.target.closest(".result-summary")) {
-        setSelectedTooltip(null);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [selectedTooltip]);
-
-  // Helper function to convert array date format to ISO string
-  const convertArrayDateToISO = (dateArray) => {
-    if (!dateArray || !Array.isArray(dateArray)) {
-      return new Date().toISOString();
-    }
+  // Load health check results on component mount
+  const loadHealthCheckResults = useCallback(async () => {
+    setLoading(true);
+    setError(null);
 
     try {
-      // Format: [year, month, day, hour, minute, second, nanoseconds]
-      const [year, month, day, hour = 0, minute = 0, second = 0, nano = 0] =
-        dateArray;
-
-      // Month is 1-based in the array but 0-based in JavaScript Date
-      const jsDate = new Date(
-        year,
-        month - 1,
-        day,
-        hour,
-        minute,
-        second,
-        Math.floor(nano / 1000000)
-      );
-
-      return jsDate.toISOString();
-    } catch (error) {
-      console.error("Error converting date array:", dateArray, error);
-      return new Date().toISOString();
-    }
-  };
-
-  const convertJavaDateArray = (dateInput) => {
-    if (!dateInput) return null;
-
-    try {
-      let dateArray;
-
-      // Nếu là chuỗi với dấu phẩy (như "2025,7,11")
-      if (typeof dateInput === "string" && dateInput.includes(",")) {
-        dateArray = dateInput.split(",").map((str) => parseInt(str.trim()));
+      const token = getToken();
+      if (!token) {
+        throw new Error("No authentication token found");
       }
-      // Nếu là array
-      else if (Array.isArray(dateInput)) {
-        dateArray = dateInput;
-      }
-      // Nếu là chuỗi ISO hoặc format khác
-      else if (typeof dateInput === "string") {
-        return dayjs(dateInput);
-      }
-      // Nếu là object Date
-      else if (dateInput instanceof Date) {
-        return dayjs(dateInput);
+
+      const response = await parentApi.getAllHealthCheckResultsForParent(token);
+
+      if (response && response.results && Array.isArray(response.results)) {
+        setHealthCheckResults(response.results);
+      } else if (response && Array.isArray(response)) {
+        setHealthCheckResults(response);
       } else {
-        console.warn("Unsupported date format:", dateInput);
-        return null;
+        setHealthCheckResults([]);
       }
-
-      const [year, month, day, hour = 0, minute = 0, second = 0] = dateArray;
-
-      // Validate year, month, day
-      if (
-        !year ||
-        !month ||
-        !day ||
-        year < 1900 ||
-        year > 2100 ||
-        month < 1 ||
-        month > 12 ||
-        day < 1 ||
-        day > 31
-      ) {
-        console.error("Invalid date components:", { year, month, day });
-        return null;
-      }
-
-      return dayjs(
-        `${year}-${month.toString().padStart(2, "0")}-${day
-          .toString()
-          .padStart(2, "0")} ${hour.toString().padStart(2, "0")}:${minute
-          .toString()
-          .padStart(2, "0")}:${second.toString().padStart(2, "0")}`
-      );
-    } catch (error) {
-      console.error("Error converting date:", dateInput, error);
-      return null;
+    } catch (err) {
+      console.error("Error loading health check results:", err);
+      setError(err.message || "Không thể tải kết quả khám sức khỏe");
+      setHealthCheckResults([]);
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [getToken]);
 
-  const loadHealthCheckResults = useCallback(
-    async (studentId) => {
+  useEffect(() => {
+    loadHealthCheckResults();
+  }, [loadHealthCheckResults]);
+
+  // Load health check details for selected result
+  const loadHealthCheckDetails = useCallback(
+    async (resultId) => {
+      setDetailLoading(true);
+
       try {
-        setLoading(true);
-        setError(null);
         const token = getToken();
-
-        console.log("=== DEBUG: Loading health check results ===");
-        console.log("Student ID:", studentId);
-        console.log("Token:", token ? "Present" : "Missing");
-
-        let response;
-        try {
-          response = await parentApi.getAllHealthCheckResultsForStudent(
-            studentId,
-            token
-          );
-        } catch (apiError) {
-          console.error("API Error:", apiError);
-          // If it's a JSON parsing error, try direct fetch with our workaround
-          if (apiError.message && apiError.message.includes("JSON")) {
-            console.log(
-              "JSON parsing error detected, trying direct approach..."
-            );
-            try {
-              const directResponse = await fetch(
-                `/api/parent/health-check/students/${studentId}/results`,
-                {
-                  method: "GET",
-                  headers: {
-                    Authorization: `Bearer ${token}`,
-                    "Content-Type": "application/json",
-                  },
-                }
-              );
-
-              const directText = await directResponse.text();
-
-              // Use our JSON extraction logic
-              const errorMessageIndex = directText.lastIndexOf(
-                '{"success":false,"error"'
-              );
-              if (errorMessageIndex > 0) {
-                let validJsonPart = directText.substring(0, errorMessageIndex);
-                let bracketCount = 0;
-                let lastValidIndex = -1;
-
-                for (let i = 0; i < validJsonPart.length; i++) {
-                  if (validJsonPart[i] === "{") bracketCount++;
-                  if (validJsonPart[i] === "}") {
-                    bracketCount--;
-                    if (bracketCount === 0) lastValidIndex = i;
-                  }
-                }
-
-                if (lastValidIndex > 0) {
-                  const cleanJson = validJsonPart.substring(
-                    0,
-                    lastValidIndex + 1
-                  );
-                  response = JSON.parse(cleanJson);
-                  console.log(
-                    "Successfully extracted response from corrupted JSON"
-                  );
-                } else {
-                  throw apiError;
-                }
-              } else {
-                throw apiError;
-              }
-            } catch (directError) {
-              console.error("Direct fetch also failed:", directError);
-              throw apiError;
-            }
-          } else {
-            throw apiError;
-          }
+        if (!token) {
+          throw new Error("No authentication token found");
         }
 
-        console.log("=== DEBUG: API Response ===");
-        console.log("Full response:", response);
-
-        // Handle different response structures
-        let campaignResults = [];
-        let totalResults = 0;
-
-        if (response) {
-          // New structure with campaignResults
-          if (
-            response.campaignResults &&
-            Array.isArray(response.campaignResults)
-          ) {
-            campaignResults = response.campaignResults;
-            totalResults = response.totalResults || 0;
-          }
-          // Fallback: direct array of results
-          else if (Array.isArray(response)) {
-            campaignResults = response;
-            totalResults = response.length;
-          }
-          // Fallback: single campaign result
-          else if (response.campaign || response.categoryResults) {
-            campaignResults = [response];
-            totalResults = 1;
-          }
-        }
-
-        console.log("=== DEBUG: Processed response structure ===");
-        console.log("Campaign results:", campaignResults);
-        console.log("Total results:", totalResults);
-
-        console.log("=== DEBUG: Processing results ===");
-        console.log("Campaign results length:", campaignResults.length);
-        console.log("Total results from API:", totalResults);
-
-        console.log("=== FINAL PROCESSING RESULTS ===");
-        console.log("About to set healthCheckResults:", campaignResults);
-        setHealthCheckResults(campaignResults);
-
-        // Create comprehensive history data
-        const history = [];
-
-        console.log("=== About to process campaign results ===");
-        campaignResults.forEach((campaignResult, index) => {
-          console.log(`Processing campaign ${index + 1}:`, campaignResult);
-
-          // Handle different campaign result structures
-          let campaign = campaignResult.campaign || campaignResult;
-          let categoryResults =
-            campaignResult.categoryResults || campaignResult.results || {};
-          let overallResults = campaignResult.overallResults || {};
-
-          console.log("Processing campaign structure:");
-          console.log("- Campaign info:", campaign);
-          console.log("- Category results:", categoryResults);
-          console.log("- Overall results:", overallResults);
-
-          // If campaign info is missing, create a default one
-          if (!campaign.name && !campaign.title) {
-            campaign = {
-              id: `campaign_${index}`,
-              name: "Đợt khám sức khỏe",
-              location: "Phòng y tế trường",
-              description: "Khám sức khỏe định kỳ",
-              startDate: null,
-              endDate: null,
-            };
-          }
-
-          // If no category results but we have direct result data
-          if (
-            Object.keys(categoryResults).length === 0 &&
-            campaignResult.status
-          ) {
-            categoryResults = {
-              [campaignResult.id || "general"]: campaignResult,
-            };
-          }
-
-          if (Object.keys(categoryResults).length > 0) {
-            console.log("Processing category results:", categoryResults);
-
-            Object.entries(categoryResults).forEach(
-              ([categoryName, result]) => {
-                console.log(`Processing category ${categoryName}:`, result);
-
-                // Extract basic health metrics
-                let weight = result.weight || overallResults.weight || null;
-                let height = result.height || overallResults.height || null;
-
-                // Try to get height/weight from nested health profile
-                if (result.hearingDetails?.healthProfile) {
-                  weight = weight || result.hearingDetails.healthProfile.weight;
-                  height = height || result.hearingDetails.healthProfile.height;
-                }
-
-                const bmi =
-                  result.bmi ||
-                  overallResults.bmi ||
-                  (weight && height
-                    ? weight / Math.pow(height / 100, 2)
-                    : null);
-
-                // Convert date format
-                const performedAt = result.performedAt
-                  ? convertArrayDateToISO(result.performedAt)
-                  : new Date().toISOString();
-
-                // Extract category-specific information
-                let resultNotes = "";
-                let recommendations = "";
-                let doctorName = "";
-
-                if (categoryName === "HEARING" && result.hearingDetails) {
-                  const hearing = result.hearingDetails;
-                  resultNotes = `Tai trái: ${
-                    hearing.leftEar || "N/A"
-                  }dB, Tai phải: ${hearing.rightEar || "N/A"}dB`;
-                  recommendations = hearing.recommendations || "";
-                  doctorName = hearing.doctorName || "";
-
-                  if (hearing.description) {
-                    resultNotes += `. ${hearing.description}`;
-                  }
-                }
-
-                // Determine status based on isAbnormal flag
-                let status = "NORMAL";
-                if (result.isAbnormal === true) {
-                  status = "ABNORMAL";
-                } else if (result.isAbnormal === false) {
-                  status = "NORMAL";
-                }
-
-                const historyItem = {
-                  id: `${categoryName}_${studentId}_${Date.now()}`,
-                  studentId: studentId,
-                  campaignId: campaign.id || campaign.campaignId || "unknown",
-                  campaignName:
-                    campaign.name || campaign.title || "Đợt khám sức khỏe",
-                  campaignLocation: campaign.location || "Phòng y tế trường",
-                  category: categoryName,
-                  status: status,
-                  isAbnormal: result.isAbnormal || false,
-                  weight: weight,
-                  height: height,
-                  bmi: bmi,
-                  resultNotes:
-                    resultNotes || result.notes || result.description || "",
-                  recommendations:
-                    recommendations ||
-                    result.recommendations ||
-                    result.recommendation ||
-                    "",
-                  performedAt: performedAt,
-                  nurseName:
-                    result.nurseName ||
-                    result.nurseFullName ||
-                    overallResults.nurseName ||
-                    "",
-                  doctorName: doctorName,
-
-                  // Category-specific details (keep the raw data for detailed view)
-                  visionDetails: result.visionDetails,
-                  hearingDetails: result.hearingDetails,
-                  oralDetails: result.oralDetails,
-                  skinDetails: result.skinDetails,
-                  respiratoryDetails: result.respiratoryDetails,
-
-                  // Overall campaign info
-                  campaignStartDate: campaign.startDate
-                    ? convertArrayDateToISO(campaign.startDate)
-                    : null,
-                  campaignEndDate: campaign.endDate
-                    ? convertArrayDateToISO(campaign.endDate)
-                    : null,
-                  campaignDescription: campaign.description || "",
-
-                  // Additional fields for better display
-                  overallStatus:
-                    result.overallStatus || campaign.status || status,
-                  checkupType: `Khám ${
-                    categoryName === "HEARING"
-                      ? "thính lực"
-                      : categoryName === "VISION"
-                      ? "thị lực"
-                      : categoryName === "ORAL"
-                      ? "răng miệng"
-                      : categoryName === "SKIN"
-                      ? "da liễu"
-                      : categoryName === "RESPIRATORY"
-                      ? "hô hấp"
-                      : "tổng quát"
-                  }`,
-                };
-
-                console.log("Created history item:", historyItem);
-                console.log("Pushing history item for category:", categoryName);
-                history.push(historyItem);
-              }
-            );
-          } else {
-            console.log(
-              "No category results, creating general entry for campaign:",
-              campaign.name
-            );
-
-            // Create a general entry even if no specific results
-            history.push({
-              id: campaign.id || "campaign_" + index,
-              studentId: studentId,
-              campaignId: campaign.id || campaign.campaignId,
-              campaignName:
-                campaign.name || campaign.title || "Đợt khám sức khỏe",
-              campaignLocation: campaign.location || "Trường học",
-              category: "GENERAL",
-              status: campaign.status || "PENDING",
-              isAbnormal: false,
-              weight: overallResults.weight,
-              height: overallResults.height,
-              bmi: overallResults.bmi,
-              resultNotes: "Chưa có kết quả chi tiết",
-              recommendations: null,
-              performedAt: campaign.createdAt || new Date().toISOString(),
-              nurseName: overallResults.nurseName,
-              campaignStartDate: campaign.startDate,
-              campaignEndDate: campaign.endDate,
-              campaignDescription: campaign.description,
-              overallStatus: campaign.status,
-              checkupType: "Khám tổng quát",
-            });
-          }
-        });
-
-        console.log("=== DEBUG: Final history data ===");
-        console.log("History length:", history.length);
-        console.log("History data:", history);
-
-        // Sort by performed date (newest first)
-        history.sort(
-          (a, b) => new Date(b.performedAt) - new Date(a.performedAt)
+        const response = await parentApi.getHealthCheckResultDetail(
+          resultId,
+          token
         );
 
-        setHistoryData(history);
-        setFilteredHistoryData(history);
-      } catch (error) {
-        console.error("Error loading health check results:", error);
-
-        setError("Không thể tải kết quả khám sức khỏe");
-        setHealthCheckResults([]);
-        setHistoryData([]);
-        setFilteredHistoryData([]);
+        if (response && response.result) {
+          setHealthCheckDetail(response.result);
+        } else if (response) {
+          setHealthCheckDetail(response);
+        } else {
+          setHealthCheckDetail(null);
+        }
+      } catch (err) {
+        console.error("Error loading health check details:", err);
+        setHealthCheckDetail(null);
       } finally {
-        setLoading(false);
+        setDetailLoading(false);
       }
     },
     [getToken]
   );
 
-  // Filter history data based on filters
-  useEffect(() => {
-    let filtered = [...historyData];
-
-    // Filter by category
-    if (filters.category) {
-      filtered = filtered.filter((item) => item.category === filters.category);
-    }
-
-    // Filter by status
-    if (filters.status) {
-      filtered = filtered.filter((item) => item.status === filters.status);
-    }
-
-    // Filter by date range
-    if (filters.dateRange !== "all") {
-      const now = new Date();
-      const filterDate = new Date();
-
-      switch (filters.dateRange) {
-        case "last30":
-          filterDate.setDate(now.getDate() - 30);
-          break;
-        case "last90":
-          filterDate.setDate(now.getDate() - 90);
-          break;
-        case "lastYear":
-          filterDate.setFullYear(now.getFullYear() - 1);
-          break;
-      }
-
-      filtered = filtered.filter(
-        (item) => new Date(item.performedAt) >= filterDate
-      );
-    }
-
-    setFilteredHistoryData(filtered);
-  }, [historyData, filters]);
-
-  const handleFilterChange = (filterName, value) => {
-    setFilters((prev) => ({
-      ...prev,
-      [filterName]: value,
-    }));
+  // Handle view button click
+  const handleViewDetails = (result) => {
+    setSelectedResult(result);
+    setShowModal(true);
+    loadHealthCheckDetails(result.resultId);
   };
 
-  const clearFilters = () => {
-    setFilters({
-      category: "",
-      status: "",
-      dateRange: "all",
-    });
-  };
-
-  const loadStudents = useCallback(async () => {
-    try {
-      setLoading(true);
-      const token = getToken();
-      const studentsData = await parentApi.getMyStudents(token);
-      setStudents(studentsData);
-
-      // Auto-select first student if available
-      if (studentsData.length > 0) {
-        setSelectedStudent(studentsData[0]);
-        await loadHealthCheckResults(
-          studentsData[0].id || studentsData[0].studentID
-        );
-      }
-    } catch (error) {
-      console.error("Error loading students:", error);
-      setError("Không thể tải danh sách học sinh");
-    } finally {
-      setLoading(false);
-    }
-  }, [getToken, loadHealthCheckResults]);
-
-  useEffect(() => {
-    loadStudents();
-  }, [loadStudents]);
-
-  const handleStudentChange = async (student) => {
-    setSelectedStudent(student);
-    if (student) {
-      await loadHealthCheckResults(student.id || student.studentID);
-    }
-  };
-
-  const handleViewDetails = (campaignResult) => {
-    setSelectedResult(campaignResult);
-    setViewMode("detail");
-  };
-
-  const handleBackToTable = () => {
-    setViewMode("history");
+  // Handle modal close
+  const handleCloseModal = () => {
+    setShowModal(false);
     setSelectedResult(null);
+    setHealthCheckDetail(null);
   };
 
-  const handleViewModeChange = (mode) => {
-    setViewMode(mode);
-    setSelectedResult(null);
-  };
-
+  // Helper function to format date
   const formatDate = (dateInput) => {
-    if (!dateInput) return "Chưa có thông tin";
+    if (!dateInput) return "Chưa cập nhật";
+    
     try {
-      const convertedDate = convertJavaDateArray(dateInput);
-      if (convertedDate && convertedDate.isValid()) {
-        return convertedDate.format("DD/MM/YYYY");
+      if (Array.isArray(dateInput)) {
+        const [year, month, day] = dateInput;
+        return `${day}/${month}/${year}`;
       }
-      // Fallback to original method
-      return new Date(dateInput).toLocaleDateString("vi-VN");
-    } catch (error) {
-      console.error("Error formatting date:", dateInput, error);
-      return "Ngày không hợp lệ";
+      return dayjs(dateInput).format("DD/MM/YYYY");
+    } catch {
+      return "Chưa cập nhật";
     }
   };
 
-  const formatDateTime = (dateTimeInput) => {
-    if (!dateTimeInput) return "Chưa có thông tin";
-    try {
-      const convertedDate = convertJavaDateArray(dateTimeInput);
-      if (convertedDate && convertedDate.isValid()) {
-        return convertedDate.format("HH:mm DD/MM/YYYY");
-      }
-      // Fallback to original method
-      return new Date(dateTimeInput).toLocaleString("vi-VN");
-    } catch (error) {
-      console.error("Error formatting datetime:", dateTimeInput, error);
-      return "Thời gian không hợp lệ";
-    }
-  };
-
+  // Get status text
   const getStatusText = (status) => {
-    switch (status) {
-      case "NORMAL":
-        return "Bình thường";
-      case "ABNORMAL":
-        return "Bất thường";
-      case "REQUIRES_ATTENTION":
-        return "Cần chú ý";
-      case "MINOR_CONCERN":
-        return "Cần theo dõi";
-      case "PENDING":
-        return "Đang chờ";
-      case "COMPLETED":
-        return "Hoàn thành";
-      default:
-        return status || "Chưa có thông tin";
-    }
-  };
-
-  const getCategoryValue = (category, result) => {
-    // Format category-specific details
-    switch (category) {
-      case "HEARING":
-        if (result.hearingDetails) {
-          const hearing = result.hearingDetails;
-          if (hearing.leftEar !== undefined && hearing.rightEar !== undefined) {
-            let hearingResult = `Tai trái: ${hearing.leftEar}dB, Tai phải: ${hearing.rightEar}dB`;
-
-            // Add description if available
-            if (hearing.description) {
-              hearingResult += ` - ${hearing.description}`;
-            }
-
-            // Add status interpretation
-            const avgHearing = (hearing.leftEar + hearing.rightEar) / 2;
-            if (avgHearing <= 25) {
-              hearingResult += " (Nghe bình thường)";
-            } else if (avgHearing <= 40) {
-              hearingResult += " (Suy giảm thính lực nhẹ)";
-            } else if (avgHearing <= 55) {
-              hearingResult += " (Suy giảm thính lực trung bình)";
-            } else {
-              hearingResult += " (Suy giảm thính lực nặng)";
-            }
-
-            return hearingResult;
-          }
-        }
-        break;
-
-      case "VISION":
-        if (result.visionDetails) {
-          const vision = result.visionDetails;
-          if (
-            vision.visionLeft !== undefined &&
-            vision.visionRight !== undefined
-          ) {
-            let visionResult = `Mắt trái: ${vision.visionLeft}, Mắt phải: ${vision.visionRight}`;
-
-            // Add glasses information if available
-            if (vision.needsGlasses) {
-              visionResult += " (Cần đeo kính)";
-            }
-
-            // Add description if available
-            if (vision.visionDescription) {
-              visionResult += ` - ${vision.visionDescription}`;
-            }
-
-            return visionResult;
-          }
-        }
-        break;
-
-      case "ORAL":
-        if (result.oralDetails) {
-          const oral = result.oralDetails;
-          let oralResult = "";
-
-          if (oral.cavitiesCount !== undefined) {
-            oralResult = `Răng sâu: ${oral.cavitiesCount} răng`;
-          }
-
-          if (oral.teethCondition) {
-            oralResult += oralResult
-              ? `, Tình trạng răng: ${oral.teethCondition}`
-              : `Tình trạng răng: ${oral.teethCondition}`;
-          }
-
-          if (oral.gumsCondition) {
-            oralResult += oralResult
-              ? `, Nướu: ${oral.gumsCondition}`
-              : `Nướu: ${oral.gumsCondition}`;
-          }
-
-          if (oral.gingivitis) {
-            oralResult += oralResult ? ", Viêm nướu: Có" : "Viêm nướu: Có";
-          }
-
-          if (oralResult) {
-            return oralResult;
-          }
-        }
-        break;
-
-      case "SKIN":
-        if (result.skinDetails) {
-          const skin = result.skinDetails;
-          if (skin.skinCondition) {
-            return `Tình trạng da: ${skin.skinCondition}`;
-          }
-        }
-        break;
-
-      case "RESPIRATORY":
-        if (result.respiratoryDetails) {
-          const respiratory = result.respiratoryDetails;
-          if (respiratory.breathingRate !== undefined) {
-            return `Nhịp thở: ${respiratory.breathingRate} lần/phút`;
-          }
-        }
-        break;
-    }
-
-    // Check if we have recommendations or notes to display
-    if (result.recommendations) {
-      return result.recommendations;
-    }
-
-    // If no specific details are available, return a generic message
-    return result.resultNotes || "Bình thường";
-  };
-
-  const getStatusClass = (status) => {
-    switch (status) {
-      case "NORMAL":
-        return "status-normal";
-      case "ABNORMAL":
-        return "status-abnormal";
-      case "REQUIRES_ATTENTION":
-        return "status-attention";
-      case "MINOR_CONCERN":
-        return "status-minor-concern";
-      case "PENDING":
-        return "status-pending";
-      case "COMPLETED":
-        return "status-completed";
-      default:
-        return "";
-    }
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "NORMAL":
-        return "#52c41a";
-      case "ABNORMAL":
-        return "#f5222d";
-      case "REQUIRES_ATTENTION":
-        return "#faad14";
-      case "MINOR_CONCERN":
-        return "#fa8c16";
-      case "PENDING":
-        return "#1890ff";
-      case "COMPLETED":
-        return "#52c41a";
-      default:
-        return "#d9d9d9";
-    }
-  };
-
-  const getCategoryText = (category) => {
-    switch (category) {
-      case "VISION":
-        return "Thị lực";
-      case "HEARING":
-        return "Thính lực";
-      case "ORAL":
-        return "Răng miệng";
-      case "SKIN":
-        return "Da liễu";
-      case "RESPIRATORY":
-        return "Hô hấp";
-      case "GENERAL":
-        return "Tổng quát";
-      default:
-        return category || "Khác";
-    }
-  };
-
-  // Format detail key names to be more readable
-  const formatDetailKey = (key) => {
-    switch (key) {
-      // Vision fields
-      case "visionLeft":
-        return "Mắt trái";
-      case "visionRight":
-        return "Mắt phải";
-      case "visionLeftWithGlass":
-        return "Mắt trái (với kính)";
-      case "visionRightWithGlass":
-        return "Mắt phải (với kính)";
-      case "needsGlasses":
-        return "Cần đeo kính";
-      case "visionDescription":
-        return "Mô tả thị lực";
-      case "eyeMovement":
-        return "Chuyển động mắt";
-      case "eyePressure":
-        return "Áp lực mắt";
-      // Hearing fields
-      case "leftEar":
-        return "Tai trái";
-      case "rightEar":
-        return "Tai phải";
-      case "hearingAcuity":
-        return "Độ nhạy thính giác";
-      case "tympanometry":
-        return "Đo nhĩ lượng";
-      case "earWaxPresent":
-        return "Có ráy tai";
-      case "earInfection":
-        return "Nhiễm trùng tai";
-      // Oral fields
-      case "teethCondition":
-        return "Tình trạng răng";
-      case "gumsCondition":
-        return "Tình trạng nướu";
-      case "tongueCondition":
-        return "Tình trạng lưỡi";
-      case "oralHygiene":
-        return "Vệ sinh răng miệng";
-      case "cavitiesCount":
-        return "Số răng sâu";
-      case "plaquePresent":
-        return "Có mảng bám";
-      case "gingivitis":
-        return "Viêm nướu";
-      case "mouthUlcers":
-        return "Loét miệng";
-      // Skin fields
-      case "skinColor":
-        return "Màu da";
-      case "skinTone":
-        return "Tông da";
-      case "rashes":
-        return "Phát ban";
-      case "lesions":
-        return "Tổn thương";
-      case "dryness":
-        return "Khô da";
-      case "skinCondition":
-        return "Tình trạng da";
-      case "hasAllergies":
-        return "Có dị ứng";
-      case "eczema":
-        return "Chàm";
-      case "psoriasis":
-        return "Vẩy nến";
-      case "skinInfection":
-        return "Nhiễm trùng da";
-      case "allergies":
-        return "Dị ứng";
-      case "acne":
-        return "Mụn trứng cá";
-      case "scars":
-        return "Sẹo";
-      case "birthmarks":
-        return "Nốt ruồi/bớt";
-      case "treatment":
-        return "Điều trị";
-      case "followUpDate":
-        return "Ngày tái khám";
-      // Respiratory fields
-      case "breathingRate":
-        return "Nhịp thở";
-      case "breathingSound":
-        return "Âm thở";
-      case "wheezing":
-        return "Thở khò khè";
-      case "cough":
-        return "Ho";
-      case "breathingDifficulty":
-        return "Khó thở";
-      case "oxygenSaturation":
-        return "Độ bão hòa oxy";
-      case "chestExpansion":
-        return "Độ giãn nở lồng ngực";
-      case "lungSounds":
-        return "Âm phổi";
-      case "asthmaHistory":
-        return "Tiền sử hen suyễn";
-      case "allergicRhinitis":
-        return "Viêm mũi dị ứng";
-      // Common fields
-      case "doctorName":
-        return "Bác sĩ thực hiện";
-      case "dateOfExamination":
-        return "Ngày khám";
-      case "description":
-        return "Mô tả";
-      case "recommendations":
-        return "Khuyến nghị";
-      case "isAbnormal":
-        return "Bất thường";
-      case "id":
-        return "ID";
-      default:
-        return (
-          key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, " $1")
-        );
-    }
-  };
-
-  // Helper function to format JSON details
-  const formatDetails = (details) => {
-    if (!details || typeof details !== "object") {
-      return "Không có thông tin chi tiết";
-    }
-
-    try {
-      if (Array.isArray(details)) {
-        return details.map((item, index) => (
-          <div key={index} className="detail-item">
-            {Object.entries(item)
-              .filter(([key]) => key !== "healthProfile") // Bỏ qua healthProfile
-              .map(([key, value]) => (
-                <div key={key}>
-                  <strong>{formatDetailKey(key)}:</strong>{" "}
-                  {formatValue(key, value)}
-                </div>
-              ))}
-          </div>
-        ));
-      } else {
-        return Object.entries(details)
-          .filter(([key]) => key !== "healthProfile") // Bỏ qua healthProfile
-          .map(([key, value]) => (
-            <div key={key}>
-              <strong>{formatDetailKey(key)}:</strong> {formatValue(key, value)}
-            </div>
-          ));
-      }
-    } catch (error) {
-      console.error("Error formatting details:", error);
-      return "Lỗi hiển thị chi tiết";
-    }
-  };
-
-  // Helper function to format values based on their type
-  const formatValue = (key, value) => {
-    if (value === null || value === undefined) return "N/A";
-
-    // Format boolean values
-    if (typeof value === "boolean") {
-      if (
-        key.startsWith("is") ||
-        key.includes("Present") ||
-        key.includes("has") ||
-        [
-          "rashes",
-          "lesions",
-          "dryness",
-          "wheezing",
-          "cough",
-          "breathingDifficulty",
-          "needsGlasses",
-          "gingivitis",
-          "mouthUlcers",
-          "eczema",
-          "psoriasis",
-          "skinInfection",
-          "allergies",
-          "acne",
-          "scars",
-          "birthmarks",
-          "asthmaHistory",
-          "allergicRhinitis",
-        ].includes(key)
-      ) {
-        return value ? "Có" : "Không";
-      }
-    }
-
-    // Format date values
-    if (
-      key.includes("Date") ||
-      key.includes("Time") ||
-      key === "performedAt" ||
-      key === "createdAt" ||
-      key === "updatedAt"
-    ) {
-      try {
-        const convertedDate = convertJavaDateArray(value);
-        if (convertedDate && convertedDate.isValid()) {
-          return convertedDate.format("DD/MM/YYYY HH:mm");
-        }
-        // Fallback to original method for regular date strings
-        if (
-          typeof value === "string" &&
-          (value.includes("-") || value.includes("/"))
-        ) {
-          return new Date(value).toLocaleDateString("vi-VN");
-        }
-        return value;
-      } catch (error) {
-        console.error("Error formatting date in formatValue:", value, error);
-        return "Ngày không hợp lệ";
-      }
-    }
-
-    return value.toString();
-  };
-
-  // Function to get detailed information for tooltip
-  const getDetailedInfo = (category, result) => {
-    const details = {
-      basicInfo: {
-        category: getCategoryText(category),
-        status: getStatusText(result.status),
-        date: formatDateTime(result.performedAt),
-        nurse: result.nurseName || "N/A",
-      },
-      specificDetails: {},
+    const statusMap = {
+      NORMAL: "Bình thường",
+      ABNORMAL: "Bất thường",
+      NEEDS_FOLLOW_UP: "Cần theo dõi",
+      PENDING: "Chờ kết quả"
     };
-
-    switch (category) {
-      case "HEARING":
-        if (result.hearingDetails) {
-          const hearing = result.hearingDetails;
-          details.specificDetails = {
-            leftEar: `${hearing.leftEar}dB`,
-            rightEar: `${hearing.rightEar}dB`,
-            description: hearing.description || "Không có mô tả",
-            dateOfExamination: hearing.dateOfExamination
-              ? formatDate(hearing.dateOfExamination)
-              : "N/A",
-            doctorName: hearing.doctorName || "N/A",
-            isAbnormal: hearing.isAbnormal ? "Có" : "Không",
-          };
-        }
-        break;
-      case "VISION":
-        if (result.visionDetails) {
-          const vision = result.visionDetails;
-          details.specificDetails = {
-            visionLeft: vision.visionLeft || "N/A",
-            visionRight: vision.visionRight || "N/A",
-            needsGlasses: vision.needsGlasses ? "Có" : "Không",
-            visionDescription: vision.visionDescription || "Không có mô tả",
-          };
-        }
-        break;
-      case "ORAL":
-        if (result.oralDetails) {
-          const oral = result.oralDetails;
-          details.specificDetails = {
-            cavitiesCount: oral.cavitiesCount || "0",
-            teethCondition: oral.teethCondition || "N/A",
-            gumsCondition: oral.gumsCondition || "N/A",
-            gingivitis: oral.gingivitis ? "Có" : "Không",
-            oralHygiene: oral.oralHygiene || "N/A",
-          };
-        }
-        break;
-    }
-
-    return details;
+    return statusMap[status] || status;
   };
 
-  if (loading && students.length === 0) {
+  // Get category text
+  const getCategoryText = (category) => {
+    const categoryMap = {
+      VISION: "Thị lực",
+      HEARING: "Thính lực", 
+      ORAL: "Răng miệng",
+      SKIN: "Da liễu",
+      RESPIRATORY: "Hô hấp"
+    };
+    return categoryMap[category] || category;
+  };
+
+  // Define table columns for Ant Design Table
+  const columns = [
+    {
+      title: 'STT',
+      dataIndex: 'index',
+      key: 'index',
+      width: 60,
+      align: 'center',
+      render: (_, __, index) => index + 1,
+    },
+    {
+      title: 'Tên học sinh',
+      dataIndex: 'studentName',
+      key: 'studentName',
+      align: 'left',
+      render: (text) => text || "N/A",
+    },
+    {
+      title: 'Loại khám',
+      dataIndex: 'category',
+      key: 'category',
+      align: 'center',
+      render: (category) => getCategoryText(category),
+    },
+    {
+      title: 'Ngày khám',
+      dataIndex: 'performedAt',
+      key: 'performedAt',
+      align: 'center',
+      render: (date) => formatDate(date),
+    },
+    {
+      title: 'Trạng thái',
+      dataIndex: 'status',
+      key: 'status',
+      align: 'center',
+      render: (status) => (
+        <Text>{getStatusText(status)}</Text>
+      ),
+    },
+    {
+      title: 'Thao tác',
+      key: 'action',
+      align: 'center',
+      width: 120,
+      render: (_, record) => (
+        <Button 
+          type="primary" 
+          icon={<EyeOutlined />}
+          onClick={() => handleViewDetails(record)}
+          size="small"
+        >
+          Xem chi tiết
+        </Button>
+      ),
+    },
+  ];
+
+  if (loading) {
     return (
       <div className="health-check-results">
-        <div className="loading-state">
-          <i className="fas fa-spinner fa-spin"></i>
-          <p>Đang tải thông tin...</p>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
+          <Spin size="large" tip="Đang tải kết quả khám sức khỏe..." />
         </div>
       </div>
     );
   }
 
-  // Debug render state
+  if (error) {
+    return (
+      <div className="health-check-results">
+        <Alert
+          message="Có lỗi xảy ra"
+          description={error}
+          type="error"
+          showIcon
+          action={
+            <Button onClick={loadHealthCheckResults} type="primary">
+              Thử lại
+            </Button>
+          }
+          style={{ margin: '20px' }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="health-check-results">
-      <div className="health-check-results-header">
-        {students.length > 1 && (
-          <div className="student-selector">
-            <label htmlFor="student-select">Chọn học sinh:</label>
-            <select
-              id="student-select"
-              value={selectedStudent?.id || selectedStudent?.studentID || ""}
-              onChange={(e) => {
-                const student = students.find(
-                  (s) => (s.id || s.studentID) === parseInt(e.target.value)
-                );
-                handleStudentChange(student);
-              }}
-            >
-              {students.map((student) => (
-                <option
-                  key={student.id || student.studentID}
-                  value={student.id || student.studentID}
-                >
-                  {student.firstName} {student.lastName} - {student.className}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
+      <div className="page-header" style={{ marginBottom: '20px' }}>
+        <h3>Kết quả khám sức khỏe</h3>
       </div>
 
-      {error && (
-        <div className="error-state">
-          <i className="fas fa-exclamation-triangle"></i>
-          <p>{error}</p>
-          <button onClick={loadStudents} className="retry-btn">
-            Thử lại
-          </button>
-        </div>
-      )}
+      <Table
+        columns={columns}
+        dataSource={healthCheckResults}
+        rowKey="resultId"
+        pagination={{
+          pageSize: 10,
+          showSizeChanger: true,
+          showQuickJumper: true,
+          showTotal: (total, range) => 
+            `${range[0]}-${range[1]} của ${total} kết quả`,
+        }}
+        locale={{
+          emptyText: 'Không có kết quả khám sức khỏe nào'
+        }}
+        scroll={{ x: 800 }}
+      />
 
-      {loading && selectedStudent && (
-        <div className="loading-state">
-          <i className="fas fa-spinner fa-spin"></i>
-          <p>Đang tải kết quả khám sức khỏe...</p>
-        </div>
-      )}
-
-      {!loading &&
-        selectedStudent &&
-        healthCheckResults.length === 0 &&
-        historyData.length === 0 && (
-          <div className="no-results">
-            <i className="fas fa-clipboard-list"></i>
-            <h3>Chưa có kết quả khám sức khỏe</h3>
-            <p>
-              Học sinh {selectedStudent.firstName} {selectedStudent.lastName}{" "}
-              chưa có kết quả khám sức khỏe nào.
-            </p>
-
-            <div className="status-summary">
-              <div className="summary-item">
-                <span className="summary-label">Học sinh:</span>
-                <span className="summary-value">
-                  {selectedStudent.firstName} {selectedStudent.lastName}
-                </span>
-              </div>
-              <div className="summary-item">
-                <span className="summary-label">Lớp:</span>
-                <span className="summary-value">
-                  {selectedStudent.className || "Chưa có thông tin"}
-                </span>
-              </div>
-              <div className="summary-item">
-                <span className="summary-label">Trạng thái API:</span>
-                <span className="summary-value">
-                  {error ? "Có lỗi" : "Hoạt động bình thường"}
-                </span>
-              </div>
+      {/* Modal for health check details */}
+      <Modal
+        title="Chi tiết kết quả khám sức khỏe"
+        open={showModal}
+        onCancel={handleCloseModal}
+        footer={[
+          <Button key="close" onClick={handleCloseModal}>
+            Đóng
+          </Button>
+        ]}
+        width={800}
+        destroyOnClose
+      >
+        {detailLoading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
+            <Spin size="large" tip="Đang tải kết quả khám..." />
+          </div>
+        ) : healthCheckDetail ? (
+          <div style={{ padding: '0' }}>
+            {/* Section 1: Student Information */}
+            <div style={{ marginBottom: '24px' }}>
+              <Title level={5} style={{ marginBottom: '16px', color: '#1890ff' }}>
+                Thông tin học sinh
+              </Title>
+              <Row gutter={[24, 16]}>
+                <Col span={12}>
+                  <div style={{ display: 'flex', marginBottom: '8px' }}>
+                    <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>Họ tên:</Text>
+                    <Text>{healthCheckDetail.studentName || selectedResult?.studentName || "N/A"}</Text>
+                  </div>
+                </Col>
+                <Col span={12}>
+                  <div style={{ display: 'flex', marginBottom: '8px' }}>
+                    <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>Lớp:</Text>
+                    <Text>{healthCheckDetail.studentClass || selectedResult?.studentClass || "N/A"}</Text>
+                  </div>
+                </Col>
+                <Col span={12}>
+                  <div style={{ display: 'flex', marginBottom: '8px' }}>
+                    <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>Ngày sinh:</Text>
+                    <Text>{formatDate(healthCheckDetail.dateOfBirth)}</Text>
+                  </div>
+                </Col>
+                <Col span={12}>
+                  <div style={{ display: 'flex', marginBottom: '8px' }}>
+                    <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>Ngày khám:</Text>
+                    <Text>{formatDate(healthCheckDetail.performedAt || selectedResult?.performedAt)}</Text>
+                  </div>
+                </Col>
+              </Row>
             </div>
 
-            {error && (
-              <div className="error-details">
-                <h4>⚠️ Chi tiết lỗi:</h4>
-                <p>{error}</p>
-              </div>
+            <Divider />
+
+            {/* Section 2: Campaign Information */}
+            {healthCheckDetail.campaign && (
+              <>
+                <div style={{ marginBottom: '24px' }}>
+                  <Title level={5} style={{ marginBottom: '16px', color: '#1890ff' }}>
+                    Thông tin chiến dịch khám
+                  </Title>
+                  <Row gutter={[24, 16]}>
+                    <Col span={12}>
+                      <div style={{ display: 'flex', marginBottom: '8px' }}>
+                        <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>Tên chiến dịch:</Text>
+                        <Text>{healthCheckDetail.campaign.name || "N/A"}</Text>
+                      </div>
+                    </Col>
+                    <Col span={12}>
+                      <div style={{ display: 'flex', marginBottom: '8px' }}>
+                        <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>Địa điểm:</Text>
+                        <Text>{healthCheckDetail.campaign.location || "N/A"}</Text>
+                      </div>
+                    </Col>
+                    <Col span={12}>
+                      <div style={{ display: 'flex', marginBottom: '8px' }}>
+                        <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>Ngày bắt đầu:</Text>
+                        <Text>{formatDate(healthCheckDetail.campaign.startDate)}</Text>
+                      </div>
+                    </Col>
+                    <Col span={12}>
+                      <div style={{ display: 'flex', marginBottom: '8px' }}>
+                        <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>Ngày kết thúc:</Text>
+                        <Text>{formatDate(healthCheckDetail.campaign.endDate)}</Text>
+                      </div>
+                    </Col>
+                    <Col span={24}>
+                      <div style={{ display: 'flex', marginBottom: '8px' }}>
+                        <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>Mô tả:</Text>
+                        <Text>{healthCheckDetail.campaign.description || "N/A"}</Text>
+                      </div>
+                    </Col>
+                  </Row>
+                </div>
+                <Divider />
+              </>
             )}
 
-            <div className="possible-reasons">
-              <h4>🤔 Các nguyên nhân có thể:</h4>
-              <ul>
-                <li>Y tá chưa ghi nhận kết quả khám cho học sinh này</li>
-                <li>
-                  Kết quả đã được ghi nhận nhưng chưa được gửi đến hệ thống
-                </li>
-                <li>Có lỗi trong quá trình đồng bộ dữ liệu</li>
-                <li>Học sinh chưa tham gia bất kỳ đợt khám sức khỏe nào</li>
-              </ul>
+            {/* Section 3: Body Metrics */}
+            <div style={{ marginBottom: '24px' }}>
+              <Title level={5} style={{ marginBottom: '16px', color: '#1890ff' }}>
+                Chỉ số cơ thể
+              </Title>
+              <Row gutter={[24, 16]}>
+                <Col span={12}>
+                  <div style={{ display: 'flex', marginBottom: '8px' }}>
+                    <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>Cân nặng:</Text>
+                    <Text>{healthCheckDetail.weight || selectedResult?.weight || "N/A"} kg</Text>
+                  </div>
+                </Col>
+                <Col span={12}>
+                  <div style={{ display: 'flex', marginBottom: '8px' }}>
+                    <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>Chiều cao:</Text>
+                    <Text>{healthCheckDetail.height || selectedResult?.height || "N/A"} cm</Text>
+                  </div>
+                </Col>
+                <Col span={12}>
+                  <div style={{ display: 'flex', marginBottom: '8px' }}>
+                    <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>BMI:</Text>
+                    <Text>{healthCheckDetail.bmi || selectedResult?.bmi || "N/A"}</Text>
+                  </div>
+                </Col>
+                <Col span={12}>
+                  <div style={{ display: 'flex', marginBottom: '8px' }}>
+                    <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>Kết luận:</Text>
+                    <Text>{getStatusText(healthCheckDetail.status || selectedResult?.status)}</Text>
+                  </div>
+                </Col>
+              </Row>
             </div>
 
-            <div className="next-steps">
-              <h4>📋 Các bước tiếp theo:</h4>
-              <ol>
-                <li>
-                  Kiểm tra với Y tá trường học xem đã có kết quả khám chưa
-                </li>
-                <li>Đảm bảo học sinh đã tham gia đợt khám sức khỏe</li>
-                <li>Liên hệ với trường học để xác nhận tình trạng</li>
-                <li>Thử làm mới trang để tải lại dữ liệu</li>
-              </ol>
+            <Divider />
 
-              <div className="action-buttons">
-                <button
-                  onClick={() =>
-                    loadHealthCheckResults(
-                      selectedStudent.id || selectedStudent.studentID
-                    )
-                  }
-                  className="refresh-btn"
-                >
-                  🔄 Làm mới dữ liệu
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-      {!loading && historyData.length > 0 && (
-        <div className="view-mode-controls">
-          <div className="control-buttons">
-            <button
-              className={`view-mode-btn ${
-                viewMode === "history" ? "active" : ""
-              }`}
-              onClick={() => handleViewModeChange("history")}
-            >
-              <i className="fas fa-history"></i> Lịch sử tổng hợp
-            </button>
-            <button
-              className={`view-mode-btn ${
-                viewMode === "table" ? "active" : ""
-              }`}
-              onClick={() => handleViewModeChange("table")}
-            >
-              <i className="fas fa-table"></i> Theo chiến dịch
-            </button>
-            <button
-              className={`view-mode-btn ${
-                viewMode === "cards" ? "active" : ""
-              }`}
-              onClick={() => handleViewModeChange("cards")}
-            >
-              <i className="fas fa-th-large"></i> Dạng thẻ
-            </button>
-          </div>
-        </div>
-      )}
-
-      {!loading && historyData.length > 0 && viewMode === "history" && (
-        <div className="history-view-container">
-          <div className="history-header">
-            <h3>Lịch Sử Khám Sức Khỏe Tổng Hợp</h3>
-            <div className="history-summary">
-              <span className="summary-item">
-                <i className="fas fa-clipboard-check"></i>
-                Tổng cộng: {historyData.length} kết quả
-              </span>
-              <span className="summary-item">
-                <i className="fas fa-filter"></i>
-                Đang hiển thị: {filteredHistoryData.length} kết quả
-              </span>
-            </div>
-          </div>
-          <div className="filters-container">
-            <div className="filter-group">
-              <label htmlFor="category-filter">Loại kết quả:</label>
-              <select
-                id="category-filter"
-                value={filters.category}
-                onChange={(e) => handleFilterChange("category", e.target.value)}
-              >
-                <option value="">Tất cả</option>
-                <option value="VISION">Thị lực</option>
-                <option value="HEARING">Thính lực</option>
-                <option value="ORAL">Răng miệng</option>
-                <option value="SKIN">Da liễu</option>
-                <option value="RESPIRATORY">Hô hấp</option>
-                <option value="GENERAL">Tổng quát</option>
-              </select>
-            </div>
-            <div className="filter-group">
-              <label htmlFor="status-filter">Trạng thái:</label>
-              <select
-                id="status-filter"
-                value={filters.status}
-                onChange={(e) => handleFilterChange("status", e.target.value)}
-              >
-                <option value="">Tất cả</option>
-                <option value="NORMAL">Bình thường</option>
-                <option value="ABNORMAL">Bất thường</option>
-                <option value="REQUIRES_ATTENTION">Cần chú ý</option>
-              </select>
-            </div>
-            <div className="filter-group">
-              <label htmlFor="date-range-filter">Khoảng thời gian:</label>
-              <select
-                id="date-range-filter"
-                value={filters.dateRange}
-                onChange={(e) =>
-                  handleFilterChange("dateRange", e.target.value)
-                }
-              >
-                <option value="all">Tất cả</option>
-                <option value="last30">30 ngày gần đây</option>
-                <option value="last90">90 ngày gần đây</option>
-                <option value="lastYear">1 năm gần đây</option>
-              </select>
-            </div>
-            <button onClick={clearFilters} className="clear-filters-btn">
-              Xóa bộ lọc
-            </button>
-          </div>
-          <div className="history-table-container">
-            <table className="history-table">
-              <thead>
-                <tr>
-                  <th>Ngày khám</th>
-                  <th>Loại khám</th>
-                  <th>Chiến dịch</th>
-                  <th>Kết quả</th>
-                  <th>Trạng thái</th>
-                  <th>Chỉ số</th>
-                  <th>Y tá</th>
-                  <th>Ghi chú</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredHistoryData.map((item) => (
-                  <tr key={item.id}>
-                    <td className="date-cell">
-                      {formatDate(item.performedAt)}
-                    </td>
-                    <td className="category-cell">
-                      <span className="category-badge">
-                        {getCategoryText(item.category)}
-                      </span>
-                    </td>
-                    <td className="campaign-cell">
-                      <div className="campaign-info">
-                        <strong>{item.campaignName}</strong>
-                        {item.campaignLocation && (
-                          <div className="campaign-location">
-                            <i className="fas fa-map-marker-alt"></i>
-                            {item.campaignLocation}
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="result-cell">
-                      <div className="result-summary">
-                        <div
-                          className="result-value clickable"
-                          onClick={() =>
-                            setSelectedTooltip(
-                              selectedTooltip === item.id ? null : item.id
-                            )
-                          }
-                          title="Nhấp để xem chi tiết"
-                        >
-                          {getCategoryValue(item.category, item)}
-                          <i className="fas fa-info-circle result-info-icon"></i>
+            {/* Category-specific Details */}
+            {healthCheckDetail.categoryDetails && Object.keys(healthCheckDetail.categoryDetails).length > 0 && (
+              <div style={{ marginBottom: '24px' }}>
+                <Title level={5} style={{ marginBottom: '16px', color: '#1890ff' }}>
+                  Chi tiết khám chuyên khoa
+                </Title>
+                <Row gutter={[24, 16]}>
+                  {/* VISION Category */}
+                  {(healthCheckDetail.category || selectedResult?.category) === 'VISION' && (
+                    <>
+                      <Col span={12}>
+                        <div style={{ display: 'flex', marginBottom: '8px' }}>
+                          <Text strong style={{ minWidth: '140px', marginRight: '8px' }}>Thị lực mắt trái:</Text>
+                          <Text>{healthCheckDetail.categoryDetails.visionLeft || "N/A"}/10</Text>
                         </div>
-                        {item.recommendations && (
-                          <div className="result-recommendations">
-                            <small>
-                              <strong>Khuyến nghị:</strong>{" "}
-                              {item.recommendations}
-                            </small>
-                          </div>
-                        )}
-                        {selectedTooltip === item.id && (
-                          <div className="result-tooltip">
-                            <div className="tooltip-header">
-                              <strong>
-                                Chi tiết khám {getCategoryText(item.category)}
-                              </strong>
-                              <button
-                                className="tooltip-close"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedTooltip(null);
-                                }}
-                              >
-                                ×
-                              </button>
-                            </div>
-                            <div className="tooltip-content">
-                              <div className="tooltip-basic-info">
-                                <p>
-                                  <strong>Trạng thái:</strong>{" "}
-                                  {getStatusText(item.status)}
-                                </p>
-                                <p>
-                                  <strong>Ngày khám:</strong>{" "}
-                                  {convertJavaDateArray(
-                                    item.performedAt
-                                  )?.format("HH:mm DD/MM/YYYY") ||
-                                    "Chưa cập nhật"}
-                                </p>
-                                <p>
-                                  <strong>Y tá:</strong>{" "}
-                                  {item.nurseName || "N/A"}
-                                </p>
-                              </div>
-                              {item.resultNotes && (
-                                <div className="tooltip-notes">
-                                  <p>
-                                    <strong>Ghi chú:</strong> {item.resultNotes}
-                                  </p>
-                                </div>
-                              )}
-                              {item.recommendations && (
-                                <div className="tooltip-recommendations">
-                                  <p>
-                                    <strong>Khuyến nghị:</strong>{" "}
-                                    {item.recommendations}
-                                  </p>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="status-cell">
-                      <span
-                        className={`status-badge ${getStatusClass(
-                          item.status
-                        )}`}
-                      >
-                        {getStatusText(item.status)}
-                      </span>
-                    </td>
-                    <td className="metrics-cell">
-                      <div className="metrics-info">
-                        {item.height && (
-                          <div className="metric-item">
-                            <span className="metric-label">Cao:</span>
-                            <span className="metric-value">
-                              {item.height}cm
-                            </span>
-                          </div>
-                        )}
-                        {item.weight && (
-                          <div className="metric-item">
-                            <span className="metric-label">Nặng:</span>
-                            <span className="metric-value">
-                              {item.weight}kg
-                            </span>
-                          </div>
-                        )}
-                        {item.bmi && (
-                          <div className="metric-item">
-                            <span className="metric-label">BMI:</span>
-                            <span className="metric-value">
-                              {item.bmi.toFixed(1)}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="nurse-cell">{item.nurseName || "N/A"}</td>
-                    <td className="notes-cell">
-                      {item.resultNotes ? (
-                        <div className="notes-content" title={item.resultNotes}>
-                          {item.resultNotes.length > 50
-                            ? item.resultNotes.substring(0, 50) + "..."
-                            : item.resultNotes}
+                      </Col>
+                      <Col span={12}>
+                        <div style={{ display: 'flex', marginBottom: '8px' }}>
+                          <Text strong style={{ minWidth: '140px', marginRight: '8px' }}>Thị lực mắt phải:</Text>
+                          <Text>{healthCheckDetail.categoryDetails.visionRight || "N/A"}/10</Text>
                         </div>
-                      ) : (
-                        <span className="no-notes">Không có ghi chú</span>
+                      </Col>
+                      {healthCheckDetail.categoryDetails.visionLeftWithGlass !== undefined && healthCheckDetail.categoryDetails.visionLeftWithGlass !== null && (
+                        <Col span={12}>
+                          <div style={{ display: 'flex', marginBottom: '8px' }}>
+                            <Text strong style={{ minWidth: '140px', marginRight: '8px' }}>Mắt trái (có kính):</Text>
+                            <Text>{healthCheckDetail.categoryDetails.visionLeftWithGlass === 0 ? "Không có" : `${healthCheckDetail.categoryDetails.visionLeftWithGlass}/10`}</Text>
+                          </div>
+                        </Col>
                       )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            {filteredHistoryData.length === 0 && (
-              <div className="no-results-message">
-                <i className="fas fa-search"></i>
-                <p>Không tìm thấy kết quả nào phù hợp với bộ lọc đã chọn.</p>
-                <button onClick={clearFilters} className="clear-filters-btn">
-                  Xóa bộ lọc để xem tất cả
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {!loading && historyData.length > 0 && viewMode === "table" && (
-        <div className="results-table-container">
-          <div className="table-header">
-            <h3>Kết Quả Khám Sức Khỏe Theo Chiến Dịch</h3>
-          </div>
-          <div className="results-table-wrapper">
-            <table className="results-table">
-              <thead>
-                <tr>
-                  <th>Chiến dịch</th>
-                  <th>Ngày khám</th>
-                  <th>Địa điểm</th>
-                  <th>Trạng thái</th>
-                  <th>Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                {healthCheckResults.map((campaignResult) => (
-                  <tr key={campaignResult.campaign.id}>
-                    <td>
-                      <div className="campaign-info">
-                        <strong>{campaignResult.campaign.name}</strong>
-                        {campaignResult.campaign.description && (
-                          <div className="campaign-desc">
-                            {campaignResult.campaign.description}
+                      {healthCheckDetail.categoryDetails.visionRightWithGlass !== undefined && healthCheckDetail.categoryDetails.visionRightWithGlass !== null && (
+                        <Col span={12}>
+                          <div style={{ display: 'flex', marginBottom: '8px' }}>
+                            <Text strong style={{ minWidth: '140px', marginRight: '8px' }}>Mắt phải (có kính):</Text>
+                            <Text>{healthCheckDetail.categoryDetails.visionRightWithGlass === 0 ? "Không có" : `${healthCheckDetail.categoryDetails.visionRightWithGlass}/10`}</Text>
                           </div>
-                        )}
-                      </div>
-                    </td>
-                    <td>
-                      {formatDate(campaignResult.campaign.startDate)} -{" "}
-                      {formatDate(campaignResult.campaign.endDate)}
-                    </td>
-                    <td>
-                      {campaignResult.campaign.location || "Chưa có thông tin"}
-                    </td>
-                    <td>
-                      <span className="status-indicator">
-                        {campaignResult.hasResults
-                          ? "Đã có kết quả"
-                          : "Chưa có kết quả"}
-                      </span>
-                    </td>
-                    <td>
-                      <button
-                        className="view-details-btn"
-                        onClick={() => handleViewDetails(campaignResult)}
-                        disabled={!campaignResult.hasResults}
-                      >
-                        Xem chi tiết
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {!loading &&
-        historyData.length > 0 &&
-        viewMode === "detail" &&
-        selectedResult && (
-          <div className="detail-view-container">
-            <div className="detail-header">
-              <button className="back-btn" onClick={handleBackToTable}>
-                <i className="fas fa-arrow-left"></i> Quay lại lịch sử
-              </button>
-              <h3>Chi Tiết Kết Quả Khám Sức Khỏe</h3>
-            </div>
-
-            <div className="health-check-report">
-              <div className="report-header">
-                <h2>KẾT QUẢ KHÁM SỨC KHỎE HỌC SINH</h2>
-              </div>
-
-              <div className="student-report-info">
-                <div className="info-row">
-                  <span className="label">Họ tên:</span>
-                  <span className="value">{selectedStudent.name}</span>
-                </div>
-                <div className="info-row">
-                  <span className="label">Ngày tháng năm sinh:</span>
-                  <span className="value">
-                    {selectedStudent?.dateOfBirth
-                      ? formatDate(selectedStudent?.dateOfBirth)
-                      : "N/A"}
-                  </span>
-                </div>
-                <div className="info-row">
-                  <span className="label">Lớp:</span>
-                  <span className="value">{selectedStudent.className}</span>
-                </div>
-                <div className="info-row">
-                  <span className="label">Ngày khám:</span>
-                  <span className="value">
-                    {convertJavaDateArray(
-                      selectedResult.overallResults?.performedAt
-                    )?.format("HH:mm DD/MM/YYYY") || "Chưa cập nhật"}
-                  </span>
-                </div>
-              </div>
-
-              <div className="campaign-info-section">
-                <h3>Thông Tin Chiến Dịch</h3>
-                <div className="info-row">
-                  <span className="label">Tên chiến dịch:</span>
-                  <span className="value">{selectedResult.campaign.name}</span>
-                </div>
-                <div className="info-row">
-                  <span className="label">Mô tả:</span>
-                  <span className="value">
-                    {selectedResult.campaign.description || "Không có mô tả"}
-                  </span>
-                </div>
-                <div className="info-row">
-                  <span className="label">Thời gian:</span>
-                  <span className="value">
-                    {formatDate(selectedResult.campaign.startDate)} -{" "}
-                    {formatDate(selectedResult.campaign.endDate)}
-                  </span>
-                </div>
-                <div className="info-row">
-                  <span className="label">Địa điểm:</span>
-                  <span className="value">
-                    {selectedResult.campaign.location || "Chưa có thông tin"}
-                  </span>
-                </div>
-              </div>
-
-              <div className="health-metrics-section">
-                <h3>Chỉ Số Sức Khỏe</h3>
-                {selectedResult.overallResults?.height && (
-                  <div className="info-row">
-                    <span className="label">Chiều cao:</span>
-                    <span className="value">
-                      {selectedResult.overallResults.height} cm
-                    </span>
-                    <span className="conclusion">Bình thường</span>
-                  </div>
-                )}
-                {selectedResult.overallResults?.weight && (
-                  <div className="info-row">
-                    <span className="label">Cân nặng:</span>
-                    <span className="value">
-                      {selectedResult.overallResults.weight} kg
-                    </span>
-                    <span className="conclusion">Bình thường</span>
-                  </div>
-                )}
-                {selectedResult.overallResults?.bmi && (
-                  <div className="info-row">
-                    <span className="label">BMI:</span>
-                    <span className="value">
-                      {selectedResult.overallResults.bmi.toFixed(1)}
-                    </span>
-                    <span className="conclusion">Bình thường</span>
-                  </div>
-                )}
-              </div>
-              {console.log(selectedResult.categoryResults)}
-
-              {selectedResult.categoryResults &&
-                Object.keys(selectedResult.categoryResults).length > 0 && (
-                  <div className="category-results-section">
-                    <h3>Kết Quả Khám Chi Tiết</h3>
-                    {Object.entries(selectedResult.categoryResults).map(
-                      ([resultId, result]) => (
-                        <div key={resultId} className="category-result">
-                          <div className="info-row">
-                            <span className="label">
-                              {getCategoryText(result.category)}:
-                            </span>
-                            <span className="value">
-                              {getCategoryValue(result.category, result)}
-                            </span>
-                            <span
-                              className={`conclusion ${getStatusClass(
-                                result.status
-                              )}`}
-                            >
-                              {getStatusText(result.status)}
-                            </span>
-                          </div>
-
-                          {result.resultNotes && (
-                            <div className="detail-row">
-                              <span className="label">Ghi chú:</span>
-                              <span className="value">
-                                {result.resultNotes}
-                              </span>
-                            </div>
-                          )}
-
-                          {result.recommendations && (
-                            <div className="detail-row">
-                              <span className="label">Khuyến nghị:</span>
-                              <span className="value">
-                                {result.recommendations}
-                              </span>
-                            </div>
-                          )}
-
-                          {/* Add any other specific fields that might be in the data */}
-                          {convertJavaDateArray(result.performedAt)?.format(
-                            "HH:mm DD/MM/YYYY"
-                          ) && (
-                            <div className="detail-row">
-                              <span className="label">Ngày thực hiện:</span>
-                              <span className="value">
-                                {convertJavaDateArray(
-                                  result.performedAt
-                                )?.format("HH:mm DD/MM/YYYY") ||
-                                  "Chưa cập nhật"}
-                              </span>
-                            </div>
-                          )}
-
-                          {result.nurseName && (
-                            <div className="detail-row">
-                              <span className="label">Y tá thực hiện:</span>
-                              <span className="value">{result.nurseName}</span>
-                            </div>
-                          )}
-
-                          {/* Display specific details based on category */}
-                          {result.category === "VISION" &&
-                            result.visionDetails && (
-                              <div className="detail-row">
-                                <span className="label">Chi tiết thị lực:</span>
-                                <span className="value">
-                                  {formatDetails(result.visionDetails)}
-                                </span>
-                              </div>
-                            )}
-
-                          {result.category === "HEARING" &&
-                            result.hearingDetails && (
-                              <div className="detail-row">
-                                <span className="label">
-                                  Chi tiết thính lực:
-                                </span>
-                                <span className="value">
-                                  {formatDetails(result.hearingDetails)}
-                                </span>
-                              </div>
-                            )}
-
-                          {result.category === "ORAL" && result.oralDetails && (
-                            <div className="detail-row">
-                              <span className="label">
-                                Chi tiết răng miệng:
-                              </span>
-                              <span className="value">
-                                {formatDetails(result.oralDetails)}
-                              </span>
-                            </div>
-                          )}
-
-                          {result.category === "SKIN" && result.skinDetails && (
-                            <div className="detail-row">
-                              <span className="label">Chi tiết da liễu:</span>
-                              <span className="value">
-                                {formatDetails(result.skinDetails)}
-                              </span>
-                            </div>
-                          )}
-
-                          {result.category === "RESPIRATORY" &&
-                            result.respiratoryDetails && (
-                              <div className="detail-row">
-                                <span className="label">Chi tiết hô hấp:</span>
-                                <span className="value">
-                                  {formatDetails(result.respiratoryDetails)}
-                                </span>
-                              </div>
-                            )}
+                        </Col>
+                      )}
+                      <Col span={12}>
+                        <div style={{ display: 'flex', marginBottom: '8px' }}>
+                          <Text strong style={{ minWidth: '140px', marginRight: '8px' }}>Cần đeo kính:</Text>
+                          <Text>{healthCheckDetail.categoryDetails.needsGlasses ? "Có" : "Không"}</Text>
                         </div>
-                      )
-                    )}
-                  </div>
-                )}
-
-              {(!selectedResult.categoryResults ||
-                Object.keys(selectedResult.categoryResults).length === 0) && (
-                <div className="no-detailed-results">
-                  <p>Chưa có kết quả chi tiết cho đợt khám này.</p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-      {!loading && historyData.length > 0 && viewMode === "cards" && (
-        <div className="results-container">
-          {healthCheckResults.map((campaignResult) => (
-            <div
-              key={campaignResult.campaign.id}
-              className="campaign-result-card"
-            >
-              <div className="campaign-header">
-                <h3>{campaignResult.campaign.name}</h3>
-                <div className="campaign-meta">
-                  <span>
-                    <i className="fas fa-calendar"></i>{" "}
-                    {formatDate(campaignResult.campaign.startDate)} -{" "}
-                    {formatDate(campaignResult.campaign.endDate)}
-                  </span>
-                  {campaignResult.campaign.location && (
-                    <span>
-                      <i className="fas fa-map-marker-alt"></i>{" "}
-                      {campaignResult.campaign.location}
-                    </span>
+                      </Col>
+                      {healthCheckDetail.categoryDetails.description && (
+                        <Col span={24}>
+                          <div style={{ display: 'flex', marginBottom: '8px' }}>
+                            <Text strong style={{ minWidth: '140px', marginRight: '8px' }}>Mô tả:</Text>
+                            <Text>{healthCheckDetail.categoryDetails.description}</Text>
+                          </div>
+                        </Col>
+                      )}
+                      {healthCheckDetail.categoryDetails.recommendations && (
+                        <Col span={24}>
+                          <div style={{ display: 'flex', marginBottom: '8px' }}>
+                            <Text strong style={{ minWidth: '140px', marginRight: '8px' }}>Khuyến nghị:</Text>
+                            <Text>{healthCheckDetail.categoryDetails.recommendations}</Text>
+                          </div>
+                        </Col>
+                      )}
+                      {healthCheckDetail.categoryDetails.doctorName && (
+                        <Col span={24}>
+                          <div style={{ display: 'flex', marginBottom: '8px' }}>
+                            <Text strong style={{ minWidth: '140px', marginRight: '8px' }}>Bác sĩ: </Text>
+                            <Text>{healthCheckDetail.categoryDetails.doctorName}</Text>
+                          </div>
+                        </Col>
+                      )}
+                    </>
                   )}
-                </div>
+
+                  {/* HEARING Category */}
+                  {(healthCheckDetail.category || selectedResult?.category) === 'HEARING' && (
+                    <>
+                      <Col span={12}>
+                        <div style={{ display: 'flex', marginBottom: '8px' }}>
+                          <Text strong style={{ minWidth: '140px', marginRight: '8px' }}>Tai trái:</Text>
+                          <Text>{healthCheckDetail.categoryDetails.leftEar || "N/A"}</Text>
+                        </div>
+                      </Col>
+                      <Col span={12}>
+                        <div style={{ display: 'flex', marginBottom: '8px' }}>
+                          <Text strong style={{ minWidth: '140px', marginRight: '8px' }}>Tai phải:</Text>
+                          <Text>{healthCheckDetail.categoryDetails.rightEar || "N/A"}</Text>
+                        </div>
+                      </Col>
+                      {healthCheckDetail.categoryDetails.description && (
+                        <Col span={24}>
+                          <div style={{ display: 'flex', marginBottom: '8px' }}>
+                            <Text strong style={{ minWidth: '140px', marginRight: '8px' }}>Mô tả:</Text>
+                            <Text>{healthCheckDetail.categoryDetails.description}</Text>
+                          </div>
+                        </Col>
+                      )}
+                      {healthCheckDetail.categoryDetails.recommendations && (
+                        <Col span={24}>
+                          <div style={{ display: 'flex', marginBottom: '8px' }}>
+                            <Text strong style={{ minWidth: '140px', marginRight: '8px' }}>Khuyến nghị:</Text>
+                            <Text>{healthCheckDetail.categoryDetails.recommendations}</Text>
+                          </div>
+                        </Col>
+                      )}
+                      {healthCheckDetail.categoryDetails.recommendations && (
+                        <Col span={24}>
+                          <div style={{ display: 'flex', marginBottom: '8px' }}>
+                            <Text strong style={{ minWidth: '140px', marginRight: '8px' }}>Khuyến nghị:</Text>
+                            <Text>{healthCheckDetail.categoryDetails.recommendations}</Text>
+                          </div>
+                        </Col>
+                      )}
+                      {healthCheckDetail.categoryDetails.doctorName && (
+                        <Col span={24}>
+                          <div style={{ display: 'flex', marginBottom: '8px' }}>
+                            <Text strong style={{ minWidth: '140px', marginRight: '8px' }}>Bác sĩ: </Text>
+                            <Text>{healthCheckDetail.categoryDetails.doctorName}</Text>
+                          </div>
+                        </Col>
+                      )}
+                    </>
+                  )}
+
+                  {/* ORAL Category */}
+                  {(healthCheckDetail.category || selectedResult?.category) === 'ORAL' && (
+                    <>
+                      <Col span={12}>
+                        <div style={{ display: 'flex', marginBottom: '8px' }}>
+                          <Text strong style={{ minWidth: '140px', marginRight: '8px' }}>Tình trạng răng:</Text>
+                          <Text>{healthCheckDetail.categoryDetails.teethCondition || "N/A"}</Text>
+                        </div>
+                      </Col>
+                      <Col span={12}>
+                        <div style={{ display: 'flex', marginBottom: '8px' }}>
+                          <Text strong style={{ minWidth: '140px', marginRight: '8px' }}>Tình trạng nướu:</Text>
+                          <Text>{healthCheckDetail.categoryDetails.gumsCondition || "N/A"}</Text>
+                        </div>
+                      </Col>
+                      <Col span={12}>
+                        <div style={{ display: 'flex', marginBottom: '8px' }}>
+                          <Text strong style={{ minWidth: '140px', marginRight: '8px' }}>Tình trạng lưỡi:</Text>
+                          <Text>{healthCheckDetail.categoryDetails.tongueCondition || "N/A"}</Text>
+                        </div>
+                      </Col>
+                      {healthCheckDetail.categoryDetails.description && (
+                        <Col span={24}>
+                          <div style={{ display: 'flex', marginBottom: '8px' }}>
+                            <Text strong style={{ minWidth: '140px', marginRight: '8px' }}>Mô tả:</Text>
+                            <Text>{healthCheckDetail.categoryDetails.description}</Text>
+                          </div>
+                        </Col>
+                      )}
+                      {healthCheckDetail.categoryDetails.recommendations && (
+                        <Col span={24}>
+                          <div style={{ display: 'flex', marginBottom: '8px' }}>
+                            <Text strong style={{ minWidth: '140px', marginRight: '8px' }}>Khuyến nghị:</Text>
+                            <Text>{healthCheckDetail.categoryDetails.recommendations}</Text>
+                          </div>
+                        </Col>
+                      )}
+                      {healthCheckDetail.categoryDetails.doctorName && (
+                        <Col span={24}>
+                          <div style={{ display: 'flex', marginBottom: '8px' }}>
+                            <Text strong style={{ minWidth: '140px', marginRight: '8px' }}>Bác sĩ: </Text>
+                            <Text>{healthCheckDetail.categoryDetails.doctorName}</Text>
+                          </div>
+                        </Col>
+                      )}
+                    </>
+                  )}
+
+                  {/* SKIN Category */}
+                  {(healthCheckDetail.category || selectedResult?.category) === 'SKIN' && (
+                    <>
+                      <Col span={12}>
+                        <div style={{ display: 'flex', marginBottom: '8px' }}>
+                          <Text strong style={{ minWidth: '140px', marginRight: '8px' }}>Màu da:</Text>
+                          <Text>{healthCheckDetail.categoryDetails.skinColor || "N/A"}</Text>
+                        </div>
+                      </Col>
+                      <Col span={12}>
+                        <div style={{ display: 'flex', marginBottom: '8px' }}>
+                          <Text strong style={{ minWidth: '140px', marginRight: '8px' }}>Phát ban:</Text>
+                          <Text>{healthCheckDetail.categoryDetails.rashes}</Text>
+                        </div>
+                      </Col>
+                      <Col span={12}>
+                        <div style={{ display: 'flex', marginBottom: '8px' }}>
+                          <Text strong style={{ minWidth: '140px', marginRight: '8px' }}>Tổn thương:</Text>
+                          <Text>{healthCheckDetail.categoryDetails.lesions}</Text>
+                        </div>
+                      </Col>
+                      <Col span={12}>
+                        <div style={{ display: 'flex', marginBottom: '8px' }}>
+                          <Text strong style={{ minWidth: '140px', marginRight: '8px' }}>Khô da:</Text>
+                          <Text>{healthCheckDetail.categoryDetails.dryness}</Text>
+                        </div>
+                      </Col>
+                      <Col span={12}>
+                        <div style={{ display: 'flex', marginBottom: '8px' }}>
+                          <Text strong style={{ minWidth: '140px', marginRight: '8px' }}>Eczema:</Text>
+                          <Text>{healthCheckDetail.categoryDetails.eczema}</Text>
+                        </div>
+                      </Col>
+                      <Col span={12}>
+                        <div style={{ display: 'flex', marginBottom: '8px' }}>
+                          <Text strong style={{ minWidth: '140px', marginRight: '8px' }}>Psoriasis:</Text>
+                          <Text>{healthCheckDetail.categoryDetails.psoriasis}</Text>
+                        </div>
+                      </Col>
+                      <Col span={12}>
+                        <div style={{ display: 'flex', marginBottom: '8px' }}>
+                          <Text strong style={{ minWidth: '140px', marginRight: '8px' }}>Nhiễm trùng da:</Text>
+                          <Text>{healthCheckDetail.categoryDetails.skinInfection}</Text>
+                        </div>
+                      </Col>
+                      <Col span={12}>
+                        <div style={{ display: 'flex', marginBottom: '8px' }}>
+                          <Text strong style={{ minWidth: '140px', marginRight: '8px' }}>Dị ứng:</Text>
+                          <Text>{healthCheckDetail.categoryDetails.allergies}</Text>
+                        </div>
+                      </Col>
+                      {healthCheckDetail.categoryDetails.description && (
+                        <Col span={24}>
+                          <div style={{ display: 'flex', marginBottom: '8px' }}>
+                            <Text strong style={{ minWidth: '140px', marginRight: '8px' }}>Mô tả:</Text>
+                            <Text>{healthCheckDetail.categoryDetails.description}</Text>
+                          </div>
+                        </Col>
+                      )}
+                      {healthCheckDetail.categoryDetails.treatment && (
+                        <Col span={24}>
+                          <div style={{ display: 'flex', marginBottom: '8px' }}>
+                            <Text strong style={{ minWidth: '140px', marginRight: '8px' }}>Điều trị:</Text>
+                            <Text>{healthCheckDetail.categoryDetails.treatment}</Text>
+                          </div>
+                        </Col>
+                      )}
+                      {healthCheckDetail.categoryDetails.recommendations && (
+                        <Col span={24}>
+                          <div style={{ display: 'flex', marginBottom: '8px' }}>
+                            <Text strong style={{ minWidth: '140px', marginRight: '8px' }}>Khuyến nghị:</Text>
+                            <Text>{healthCheckDetail.categoryDetails.recommendations}</Text>
+                          </div>
+                        </Col>
+                      )}
+                      {healthCheckDetail.categoryDetails.doctorName && (
+                        <Col span={24}>
+                          <div style={{ display: 'flex', marginBottom: '8px' }}>
+                            <Text strong style={{ minWidth: '140px', marginRight: '8px' }}>Bác sĩ: </Text>
+                            <Text>{healthCheckDetail.categoryDetails.doctorName}</Text>
+                          </div>
+                        </Col>
+                      )}
+                    </>
+                  )}
+
+                  {/* RESPIRATORY Category */}
+                  {(healthCheckDetail.category || selectedResult?.category) === 'RESPIRATORY' && (
+                    <>
+                      <Col span={12}>
+                        <div style={{ display: 'flex', marginBottom: '8px' }}>
+                          <Text strong style={{ minWidth: '140px', marginRight: '8px' }}>Nhịp thở:</Text>
+                          <Text>{healthCheckDetail.categoryDetails.breathingRate || "N/A"}</Text>
+                        </div>
+                      </Col>
+                      <Col span={12}>
+                        <div style={{ display: 'flex', marginBottom: '8px' }}>
+                          <Text strong style={{ minWidth: '140px', marginRight: '8px' }}>Âm thanh thở:</Text>
+                          <Text>{healthCheckDetail.categoryDetails.breathingSound || "N/A"}</Text>
+                        </div>
+                      </Col>
+                      <Col span={12}>
+                        <div style={{ display: 'flex', marginBottom: '8px' }}>
+                          <Text strong style={{ minWidth: '140px', marginRight: '8px' }}>Khò khè:</Text>
+                          <Text>{healthCheckDetail.categoryDetails.wheezing}</Text>
+                        </div>
+                      </Col>
+                      <Col span={12}>
+                        <div style={{ display: 'flex', marginBottom: '8px' }}>
+                          <Text strong style={{ minWidth: '140px', marginRight: '8px' }}>Ho:</Text>
+                          <Text>{healthCheckDetail.categoryDetails.cough}</Text>
+                        </div>
+                      </Col>
+                      <Col span={12}>
+                        <div style={{ display: 'flex', marginBottom: '8px' }}>
+                          <Text strong style={{ minWidth: '140px', marginRight: '8px' }}>Khó thở:</Text>
+                          <Text>{healthCheckDetail.categoryDetails.breathingDifficulty}</Text>
+                        </div>
+                      </Col>
+                      {healthCheckDetail.categoryDetails.description && (
+                        <Col span={24}>
+                          <div style={{ display: 'flex', marginBottom: '8px' }}>
+                            <Text strong style={{ minWidth: '140px', marginRight: '8px' }}>Mô tả:</Text>
+                            <Text>{healthCheckDetail.categoryDetails.description}</Text>
+                          </div>
+                        </Col>
+                      )}
+                      {healthCheckDetail.categoryDetails.recommendations && (
+                        <Col span={24}>
+                          <div style={{ display: 'flex', marginBottom: '8px' }}>
+                            <Text strong style={{ minWidth: '140px', marginRight: '8px' }}>Khuyến nghị:</Text>
+                            <Text>{healthCheckDetail.categoryDetails.recommendations}</Text>
+                          </div>
+                        </Col>
+                      )}
+                      {healthCheckDetail.categoryDetails.doctorName && (
+                        <Col span={24}>
+                          <div style={{ display: 'flex', marginBottom: '8px' }}>
+                            <Text strong style={{ minWidth: '140px', marginRight: '8px' }}>Bác sĩ: </Text>
+                            <Text>{healthCheckDetail.categoryDetails.doctorName}</Text>
+                          </div>
+                        </Col>
+                      )}
+                    </>
+                  )}
+                </Row>
               </div>
+            )}
 
-              {campaignResult.campaign.description && (
-                <div className="campaign-description">
-                  <p>{campaignResult.campaign.description}</p>
-                </div>
-              )}
+            {/* General examination details */}
+            <Divider />
+            <div style={{ marginBottom: '24px' }}>
+              <Title level={5} style={{ marginBottom: '16px', color: '#1890ff' }}>
+                Kết luận
+              </Title>
+              <Row gutter={[24, 16]}>
+                <Col span={24}>
+                  <div style={{ display: 'flex', marginBottom: '8px' }}>
+                    <Text strong style={{ minWidth: '140px', marginRight: '8px' }}>Ghi chú kết quả:</Text>
+                    <Text>{healthCheckDetail.resultNotes || "Không có ghi chú"}</Text>
+                  </div>
+                </Col>
 
-              {/* Overall measurements section */}
-              {campaignResult.overallResults &&
-                Object.keys(campaignResult.overallResults).length > 0 && (
-                  <div className="overall-measurements">
-                    <h4>Chỉ số tổng quát</h4>
-                    <div className="measurements-grid">
-                      {campaignResult.overallResults.height && (
-                        <div className="measurement-item">
-                          <label>Chiều cao:</label>
-                          <span>{campaignResult.overallResults.height} cm</span>
-                        </div>
-                      )}
-                      {campaignResult.overallResults.weight && (
-                        <div className="measurement-item">
-                          <label>Cân nặng:</label>
-                          <span>{campaignResult.overallResults.weight} kg</span>
-                        </div>
-                      )}
-                      {campaignResult.overallResults.bmi && (
-                        <div className="measurement-item">
-                          <label>BMI:</label>
-                          <span>
-                            {campaignResult.overallResults.bmi.toFixed(1)}
-                          </span>
-                        </div>
-                      )}
-                      {campaignResult.overallResults.performedAt && (
-                        <div className="measurement-item">
-                          <label>Ngày khám:</label>
-                          <span>
-                            {convertJavaDateArray(
-                              campaignResult.overallResults.performedAt
-                            )?.format("HH:mm DD/MM/YYYY") || "Chưa cập nhật"}
-                          </span>
-                        </div>
-                      )}
-                      {campaignResult.overallResults.nurseName && (
-                        <div className="measurement-item">
-                          <label>Y tá thực hiện:</label>
-                          <span>{campaignResult.overallResults.nurseName}</span>
-                        </div>
-                      )}
+                {healthCheckDetail.recommendations && (
+                  <Col span={24}>
+                    <div style={{ display: 'flex', marginBottom: '8px' }}>
+                      <Text strong style={{ minWidth: '140px', marginRight: '8px' }}>Khuyến nghị:</Text>
+                      <Text>{healthCheckDetail.recommendations}</Text>
                     </div>
-                  </div>
+                  </Col>
                 )}
-
-              {/* Category results section */}
-              {campaignResult.categoryResults &&
-                Object.keys(campaignResult.categoryResults).length > 0 && (
-                  <div className="results-grid">
-                    {Object.entries(campaignResult.categoryResults).map(
-                      ([resultId, result]) => (
-                        <div key={resultId} className="result-card">
-                          <div className="result-header">
-                            <h4>{getCategoryText(result.category)}</h4>
-                            <span
-                              className="status-badge"
-                              style={{
-                                backgroundColor: getStatusColor(result.status),
-                              }}
-                            >
-                              {getStatusText(result.status)}
-                            </span>
-                          </div>
-
-                          <div className="result-details">
-                            {result.resultNotes && (
-                              <div className="result-notes">
-                                <label>Ghi chú:</label>
-                                <p>{result.resultNotes}</p>
-                              </div>
-                            )}
-
-                            {result.recommendations && (
-                              <div className="recommendations">
-                                <label>Khuyến nghị:</label>
-                                <p>{result.recommendations}</p>
-                              </div>
-                            )}
-
-                            {/* Category-specific details */}
-                            {result.category === "VISION" &&
-                              result.visionDetails && (
-                                <div className="category-details">
-                                  <label>Chi tiết thị lực:</label>
-                                  <div className="details-content">
-                                    {formatDetails(result.visionDetails)}
-                                  </div>
-                                </div>
-                              )}
-
-                            {result.category === "HEARING" &&
-                              result.hearingDetails && (
-                                <div className="category-details">
-                                  <label>Chi tiết thính lực:</label>
-                                  <div className="details-content">
-                                    {formatDetails(result.hearingDetails)}
-                                  </div>
-                                </div>
-                              )}
-
-                            {result.category === "ORAL" &&
-                              result.oralDetails && (
-                                <div className="category-details">
-                                  <label>Chi tiết răng miệng:</label>
-                                  <div className="details-content">
-                                    {formatDetails(result.oralDetails)}
-                                  </div>
-                                </div>
-                              )}
-
-                            {result.category === "SKIN" &&
-                              result.skinDetails && (
-                                <div className="category-details">
-                                  <label>Chi tiết da liễu:</label>
-                                  <div className="details-content">
-                                    {formatDetails(result.skinDetails)}
-                                  </div>
-                                </div>
-                              )}
-
-                            {result.category === "RESPIRATORY" &&
-                              result.respiratoryDetails && (
-                                <div className="category-details">
-                                  <label>Chi tiết hô hấp:</label>
-                                  <div className="details-content">
-                                    {formatDetails(result.respiratoryDetails)}
-                                  </div>
-                                </div>
-                              )}
-
-                            <div className="result-meta">
-                              <span>
-                                <i className="fas fa-clock"></i>{" "}
-                                {formatDateTime(result.performedAt)}
-                              </span>
-                              {result.nurseName && (
-                                <span>
-                                  <i className="fas fa-user-md"></i> Y tá:{" "}
-                                  {result.nurseName}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    )}
-                  </div>
-                )}
-
-              {(!campaignResult.categoryResults ||
-                Object.keys(campaignResult.categoryResults).length === 0) && (
-                <div className="no-category-results">
-                  <p>Chưa có kết quả chi tiết cho đợt khám này.</p>
-                </div>
-              )}
+              </Row>
             </div>
-          ))}
-        </div>
-      )}
+          </div>
+        ) : (
+          <Alert
+            message="Không có dữ liệu"
+            description="Không có dữ liệu khám sức khỏe cho học sinh này."
+            type="warning"
+            showIcon
+          />
+        )}
+      </Modal>
     </div>
   );
 };

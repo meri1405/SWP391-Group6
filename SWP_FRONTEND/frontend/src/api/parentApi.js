@@ -736,29 +736,26 @@ export const parentApi = {
     }
   },
 
-  // Health Check Results endpoints
-  getHealthCheckResults: async (campaignId, studentId, token = getTokenFromStorage()) => {
+  // Get all health check results for parent's children (summary)
+  getAllHealthCheckResultsForParent: async (token = getTokenFromStorage()) => {
     try {
       const authAxios = createAuthAxios(token);
-      const response = await authAxios.get(
-        `/api/parent/health-check/campaigns/${campaignId}/students/${studentId}/results`
-      );
+      const response = await authAxios.get("/api/health-results/parent");
       return response.data;
     } catch (error) {
-      console.error("Error fetching health check results:", error);
+      console.error("Error fetching all health check results for parent:", error);
       throw error;
     }
   },
 
-  getAllHealthCheckResultsForStudent: async (studentId, token = getTokenFromStorage()) => {
+  // Get detailed health check result by result ID
+  getHealthCheckResultDetail: async (resultId, token = getTokenFromStorage()) => {
     try {
       const authAxios = createAuthAxios(token);
-      const response = await authAxios.get(
-        `/api/parent/health-check/students/${studentId}/results`
-      );
+      const response = await authAxios.get(`/api/health-results/${resultId}`);
       return response.data;
     } catch (error) {
-      console.error("Error fetching all health check results for student:", error);
+      console.error("Error fetching health check result detail:", error);
       throw error;
     }
   },
