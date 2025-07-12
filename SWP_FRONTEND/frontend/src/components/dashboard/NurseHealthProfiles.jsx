@@ -381,7 +381,11 @@ const NurseHealthProfiles = () => {
       title: "Giới tính",
       dataIndex: "gender",
       key: "gender",
-      render: (gender) => gender === "MALE" ? "Nam" : gender === "FEMALE" ? "Nữ" : "N/A",
+      render: (gender) => {
+        if (gender === "M" || gender === "MALE") return "Nam";
+        if (gender === "F" || gender === "FEMALE") return "Nữ";
+        return "N/A";
+      },
     },
     {
       title: "Địa chỉ",

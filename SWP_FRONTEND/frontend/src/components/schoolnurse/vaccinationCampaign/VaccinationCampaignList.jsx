@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Table,
   Card,
@@ -16,12 +16,9 @@ import {
   EditOutlined,
   DeleteOutlined,
   EyeOutlined,
-  CheckCircleOutlined,
-  CloseCircleOutlined,
-  SendOutlined,
-  FileAddOutlined,
 } from "@ant-design/icons";
-import dayjs from "dayjs";
+import { formatDate } from "../../../utils/timeUtils";
+import dayjs from "dayjs"; // For date range filtering
 import { vaccinationCampaignApi } from "../../../api/vaccinationCampaignApi";
 
 const { Option } = Select;
@@ -35,11 +32,7 @@ const VaccinationCampaignList = ({ onCreateNew, onViewDetails }) => {
   const [confirmDeleteModal, setConfirmDeleteModal] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState(null);
 
-  useEffect(() => {
-    fetchCampaigns();
-  }, [filterStatus, dateRange]);
-
-  const fetchCampaigns = async () => {
+  const fetchCampaigns = useCallback(async () => {
     setLoading(true);
     try {
       const data = await vaccinationCampaignApi.getAllCampaigns();
@@ -71,7 +64,11 @@ const VaccinationCampaignList = ({ onCreateNew, onViewDetails }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filterStatus, dateRange]);
+
+  useEffect(() => {
+    fetchCampaigns();
+  }, [fetchCampaigns]);
 
   const handleDelete = async (campaign) => {
     setSelectedCampaign(campaign);
@@ -155,10 +152,7 @@ const VaccinationCampaignList = ({ onCreateNew, onViewDetails }) => {
         if (!date || date === "null" || date === "undefined") {
           return "Chưa có thông tin";
         }
-        const dayjsDate = dayjs(date);
-        return dayjsDate.isValid()
-          ? dayjsDate.format("DD/MM/YYYY HH:mm")
-          : "Chưa có thông tin";
+        return formatDate(date) || "Chưa có thông tin";
       },
     },
     {
