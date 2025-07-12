@@ -62,8 +62,8 @@ const ManagerOverview = () => {
       console.error("Error fetching dashboard data:", error);
       // Set fallback data if APIs fail
       setDashboardStats({
-        vaccination: { pending: 0, total: 3, approved: 2, completed: 1, rejected: 0, inProgress: 0 },
-        healthCheck: { pending: 0, total: 3, approved: 2, completed: 1, cancelled: 0, inProgress: 0 },
+        vaccination: { pending: 1, total: 3, approved: 2, completed: 1, rejected: 0, inProgress: 0 },
+        healthCheck: { pending: 2, total: 3, approved: 2, completed: 1, cancelled: 0, inProgress: 0 },
         medicalEvents: { total: 1, emergency: 0, resolved: 1, pending: 0 },
         inventory: { totalSupplies: 156, lowStockItems: 23, outOfStockItems: 5, pendingRestockRequests: 4 },
         systemHealth: { 
@@ -103,9 +103,17 @@ const ManagerOverview = () => {
     // Use data from API if available
     const monthlyData = monthlyTrends?.monthlyData || [];
     
-    const vaccinationData = monthlyData.map(month => month.vaccinationCampaigns || 0);
+    console.log("Monthly trends data:", monthlyTrends);
+    console.log("Monthly data array:", monthlyData);
+    
+    const vaccinationData = monthlyData.map(month => {
+      console.log(`Month ${month.month}: vaccination=${month.vaccinationCampaigns}, healthCheck=${month.healthCheckCampaigns}`);
+      return month.vaccinationCampaigns || 0;
+    });
     const healthCheckData = monthlyData.map(month => month.healthCheckCampaigns || 0);
     const medicalEventsData = monthlyData.map(month => month.medicalEvents || 0);
+
+    console.log("Processed data:", { vaccinationData, healthCheckData, medicalEventsData });
 
     // Fallback to sample data if API data is not available
     const fallbackVaccinationData = [2, 4, 1, 3, 2, 5, 3, 6, 4, 2, 3, 4];
@@ -146,6 +154,9 @@ const ManagerOverview = () => {
     const healthCheck = dashboardStats?.healthCheck || {};
     const medicalEvents = dashboardStats?.medicalEvents || {};
 
+    // Calculate total pending campaigns (vaccination + health check)
+    const totalPendingCampaigns = (vaccination.pending || 0) + (healthCheck.pending || 0);
+
     return {
       labels: [
         "Chiến dịch chờ duyệt",
@@ -156,7 +167,7 @@ const ManagerOverview = () => {
       datasets: [
         {
           data: [
-            vaccination.pending || 0,
+            totalPendingCampaigns,
             medicalEvents.total || 0,
             vaccination.total || 0,
             healthCheck.total || 0,
@@ -232,21 +243,13 @@ const ManagerOverview = () => {
   return (
     <div className="dashboard-overview">
       <h2>Tổng quan Y tế Học đường</h2>
-      
-      {/* Debug Button - Remove this in production */}
-      <button 
-        onClick={fetchAllData} 
-        style={{ marginBottom: "16px", padding: "8px 16px", backgroundColor: "#1890ff", color: "white", border: "none", borderRadius: "4px" }}
-      >
-        🔄 Refresh Data (Debug)
-      </button>
 
       <Spin spinning={loading}>
         {/* Main Statistics Grid */}
         <div className="stats-grid">
           <div className="stat-card">
             <div className="stat-info">
-              <h3>{dashboardStats?.vaccination?.pending || 0}</h3>
+              <h3>{(dashboardStats?.vaccination?.pending || 0) + (dashboardStats?.healthCheck?.pending || 0)}</h3>
               <p>Chiến dịch chờ duyệt</p>
             </div>
           </div>

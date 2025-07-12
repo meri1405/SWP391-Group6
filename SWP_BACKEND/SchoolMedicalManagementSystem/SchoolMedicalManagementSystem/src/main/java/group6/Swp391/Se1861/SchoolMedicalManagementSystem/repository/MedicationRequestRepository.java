@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -26,4 +27,9 @@ public interface MedicationRequestRepository extends JpaRepository<MedicationReq
 
     // Find all medication requests by status
     List<MedicationRequest> findByStatus(String status);
+
+    // Dashboard statistics methods
+    long countByStatus(String status);
+    long countByRequestDateBetween(LocalDate start, LocalDate end);
+    long countByStatusAndRequestDateBetween(String status, LocalDate start, LocalDate end);
 }

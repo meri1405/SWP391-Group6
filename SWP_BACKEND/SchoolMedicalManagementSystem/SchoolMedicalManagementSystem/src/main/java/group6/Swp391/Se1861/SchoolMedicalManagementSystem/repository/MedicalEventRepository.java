@@ -48,4 +48,9 @@ public interface MedicalEventRepository extends JpaRepository<MedicalEvent, Long
 
     @Query("SELECT COUNT(me) FROM MedicalEvent me JOIN me.student s WHERE me.eventType = :eventType AND me.occurrenceTime BETWEEN :startDate AND :endDate AND s.isDisabled = false")
     long countByEventTypeAndDateRange(EventType eventType, LocalDateTime startDate, LocalDateTime endDate);
+
+    // Dashboard statistics methods
+    long countByProcessed(boolean processed);
+    long countByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
+    long countByProcessedAndCreatedAtBetween(boolean processed, LocalDateTime start, LocalDateTime end);
 }

@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -52,4 +53,12 @@ public interface HealthCheckCampaignRepository extends JpaRepository<HealthCheck
     
     @Query("SELECT COUNT(hcc) FROM HealthCheckCampaign hcc WHERE hcc.status = :status")
     long countByStatus(@Param("status") CampaignStatus status);
+    
+    /**
+     * Count health check campaigns created between two dates
+     */
+    long countByCreatedAtBetween(LocalDateTime startDate, LocalDateTime endDate);
+
+    // Dashboard statistics methods
+    long countByStatusAndCreatedAtBetween(CampaignStatus status, LocalDateTime start, LocalDateTime end);
 }

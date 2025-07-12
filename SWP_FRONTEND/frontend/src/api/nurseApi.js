@@ -993,6 +993,137 @@ export const nurseApi = {
       };
     }
   },
+
+  // Dashboard Statistics APIs
+  getDashboardStatistics: async (filterParams = {}) => {
+    try {
+      const token = getTokenFromStorage();
+      const authAxios = createAuthAxios(token);
+      
+      // Log the filter parameters being sent
+      console.log("Sending dashboard statistics request with params:", filterParams);
+      
+      const params = new URLSearchParams();
+      if (filterParams.filterType) params.append('filterType', filterParams.filterType);
+      if (filterParams.date) params.append('date', filterParams.date);
+      if (filterParams.month) params.append('month', filterParams.month);
+      if (filterParams.year) params.append('year', filterParams.year);
+      if (filterParams.startDate) params.append('startDate', filterParams.startDate);
+      if (filterParams.endDate) params.append('endDate', filterParams.endDate);
+      
+      const requestUrl = `/api/nurse/dashboard/statistics?${params.toString()}`;
+      console.log("Making request to:", requestUrl);
+      
+      const response = await authAxios.get(requestUrl);
+      
+      console.log("Dashboard statistics response:", response.data);
+      
+      return {
+        success: true,
+        data: response.data,
+        message: "Dashboard statistics loaded successfully"
+      };
+    } catch (error) {
+      console.error("Error getting dashboard statistics:", error);
+      return {
+        success: false,
+        data: null,
+        message: error.response?.data?.message || "Failed to load dashboard statistics"
+      };
+    }
+  },
+
+  getTodayStatistics: async () => {
+    try {
+      const token = getTokenFromStorage();
+      const authAxios = createAuthAxios(token);
+      
+      console.log("Making request to today's statistics endpoint");
+      
+      const response = await authAxios.get('/api/nurse/dashboard/statistics/today');
+      
+      console.log("Today's statistics response:", response.data);
+      
+      return {
+        success: true,
+        data: response.data,
+        message: "Today's statistics loaded successfully"
+      };
+    } catch (error) {
+      console.error("Error getting today's statistics:", error);
+      return {
+        success: false,
+        data: null,
+        message: error.response?.data?.message || "Failed to load today's statistics"
+      };
+    }
+  },
+
+  getMonthStatistics: async () => {
+    try {
+      const token = getTokenFromStorage();
+      const authAxios = createAuthAxios(token);
+      
+      const response = await authAxios.get('/api/nurse/dashboard/statistics/month');
+      
+      return {
+        success: true,
+        data: response.data,
+        message: "Monthly statistics loaded successfully"
+      };
+    } catch (error) {
+      console.error("Error getting monthly statistics:", error);
+      return {
+        success: false,
+        data: null,
+        message: error.response?.data?.message || "Failed to load monthly statistics"
+      };
+    }
+  },
+
+  getYearStatistics: async () => {
+    try {
+      const token = getTokenFromStorage();
+      const authAxios = createAuthAxios(token);
+      
+      const response = await authAxios.get('/api/nurse/dashboard/statistics/year');
+      
+      return {
+        success: true,
+        data: response.data,
+        message: "Yearly statistics loaded successfully"
+      };
+    } catch (error) {
+      console.error("Error getting yearly statistics:", error);
+      return {
+        success: false,
+        data: null,
+        message: error.response?.data?.message || "Failed to load yearly statistics"
+      };
+    }
+  },
+
+  getAllTimeStatistics: async () => {
+    try {
+      const token = getTokenFromStorage();
+      const authAxios = createAuthAxios(token);
+      
+      const response = await authAxios.get('/api/nurse/dashboard/statistics/all-time');
+      
+      return {
+        success: true,
+        data: response.data,
+        message: "All-time statistics loaded successfully"
+      };
+    } catch (error) {
+      console.error("Error getting all-time statistics:", error);
+      return {
+        success: false,
+        data: null,
+        message: error.response?.data?.message || "Failed to load all-time statistics"
+      };
+    }
+  }
 };
 
 export default nurseApi;

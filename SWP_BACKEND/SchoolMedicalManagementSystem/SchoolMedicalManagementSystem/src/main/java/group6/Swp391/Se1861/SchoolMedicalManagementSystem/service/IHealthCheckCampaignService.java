@@ -78,4 +78,13 @@ public interface IHealthCheckCampaignService {
      * @return The number of notifications sent
      */
     int sendHealthCheckResultNotificationsToParents(Long campaignId, List<Long> studentIds, String notificationContent, boolean useDefaultTemplate);
+    
+    /**
+     * Get health check campaigns count by month and year
+     * 
+     * @param year The year to filter by
+     * @param month The month to filter by (1-12)
+     * @return The count of campaigns created in the specified month
+     */
+    long getCampaignsCountByMonth(int year, int month);
 }

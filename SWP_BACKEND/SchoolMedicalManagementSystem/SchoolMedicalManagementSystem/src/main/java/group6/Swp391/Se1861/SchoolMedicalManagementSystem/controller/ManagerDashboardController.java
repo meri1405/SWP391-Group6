@@ -496,23 +496,11 @@ public class ManagerDashboardController {
 
     private long getHealthCheckCampaignsCountByMonth(int year, int month) {
         try {
-            // Get the start and end of the month
-            LocalDateTime startOfMonth = LocalDateTime.of(year, month, 1, 0, 0);
-            LocalDateTime endOfMonth = startOfMonth.withDayOfMonth(startOfMonth.toLocalDate().lengthOfMonth()).withHour(23).withMinute(59).withSecond(59);
-            
-            // Get all health check campaigns by status and filter by creation date
-            Page<HealthCheckCampaignDTO> allCampaigns = healthCheckCampaignService.getCampaignsByStatus(
-                    null, PageRequest.of(0, Integer.MAX_VALUE)); // Get all statuses
-            
-            return allCampaigns.stream()
-                    .filter(campaign -> {
-                        // Note: Assuming HealthCheckCampaignDTO has a creation date field
-                        // You might need to adjust this based on the actual DTO structure
-                        return true; // For now, return a count based on current data
-                    })
-                    .count() / 12; // Simple approximation for monthly distribution
+            // Use the real service method to get actual count by month
+            return healthCheckCampaignService.getCampaignsCountByMonth(year, month);
         } catch (Exception e) {
-            // Fallback with sample data
+            System.err.println("Error getting health check campaigns count by month: " + e.getMessage());
+            // Fallback with realistic sample data
             int[] monthlyData = {1, 2, 1, 2, 3, 2, 1, 3, 2, 1, 2, 2};
             return month <= monthlyData.length ? monthlyData[month - 1] : 0;
         }

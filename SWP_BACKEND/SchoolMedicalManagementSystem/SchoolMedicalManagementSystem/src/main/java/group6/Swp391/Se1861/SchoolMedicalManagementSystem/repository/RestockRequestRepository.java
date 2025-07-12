@@ -34,4 +34,8 @@ public interface RestockRequestRepository extends JpaRepository<RestockRequest, 
     
     @Query("SELECT COUNT(r) FROM RestockRequest r WHERE r.status = :status")
     long countByStatus(@Param("status") RestockRequest.RestockStatus status);
+
+    // Dashboard statistics methods
+    long countByRequestDateBetween(java.time.LocalDateTime start, java.time.LocalDateTime end);
+    long countByStatusAndRequestDateBetween(RestockRequest.RestockStatus status, java.time.LocalDateTime start, java.time.LocalDateTime end);
 }
