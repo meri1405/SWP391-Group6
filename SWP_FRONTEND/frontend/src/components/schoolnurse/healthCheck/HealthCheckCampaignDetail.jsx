@@ -418,6 +418,17 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
     }
   };
 
+  const convertJavaDateArray = (dateArray) => {
+        if (!dateArray || !Array.isArray(dateArray)) return null;
+        try {
+          const [year, month, day, hour = 0, minute = 0, second = 0] = dateArray;
+          return dayjs(`${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:${second.toString().padStart(2, '0')}`);
+        } catch (error) {
+          console.error("Error converting date array:", dateArray, error);
+          return null;
+        }
+    };
+
   const getActionButtons = () => {
     if (!campaign) return null;
 
@@ -648,20 +659,6 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
       ),
     },
     {
-      title: 'Ghi chú',
-      dataIndex: 'resultNotes',
-      key: 'resultNotes',
-      ellipsis: true,
-      width: 150,
-    },
-    {
-      title: 'Khuyến nghị',
-      dataIndex: 'recommendations',
-      key: 'recommendations',
-      ellipsis: true,
-      width: 150,
-    },
-    {
       title: 'Y tá thực hiện',
       dataIndex: 'nurseName',
       key: 'nurseName',
@@ -672,7 +669,7 @@ const HealthCheckCampaignDetail = ({ campaignId, onBack, onEdit }) => {
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 130,
-      render: (date) => date ? dayjs(date).format('DD/MM/YYYY HH:mm') : '',
+      render: (date) => date ? convertJavaDateArray(date)?.format("HH:mm DD/MM/YYYY") : '',
     }
   ];
 
