@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
-import { Modal, Form, Input, Button, message, Typography, Steps, Alert } from "antd";
+import React, { useEffect } from "react";
+import { Modal, Form, Input, Button, Typography, Steps, Alert } from "antd";
 import { LockOutlined, MailOutlined, SafetyOutlined, UserOutlined } from "@ant-design/icons";
-import { sendOtpForPasswordChange, verifyOtpAndChangePasswordWithUsername } from "../api/userApi";
+import { useFirstTimeLogin } from "../hooks/useFirstTimeLogin";
+import { getFormRules } from "../utils/firstTimeLoginValidation";
 
 const { Title, Text } = Typography;
 const { Step } = Steps;
@@ -15,10 +16,26 @@ const FirstTimeLoginModal = ({
   onCancel 
 }) => {
   const [form] = Form.useForm();
-  const [currentStep, setCurrentStep] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(0);
-  const [passwordStrength, setPasswordStrength] = useState({ score: 0, text: "", color: "" });
+  
+  // Use the custom hook for managing state and logic
+  const {
+    currentStep,
+    loading,
+    timeLeft,
+    passwordStrength,
+    handleSendOtp,
+    handleResendOtp,
+    handleSubmit,
+    handlePasswordChange,
+    formatTime
+  } = useFirstTimeLogin({ 
+    visible, 
+    email, 
+    currentUsername, 
+    onComplete 
+  });
+
+  const formRules = getFormRules();
 
   // Reset form when modal opens/closes or currentUsername changes
   useEffect(() => {
@@ -28,167 +45,11 @@ const FirstTimeLoginModal = ({
       });
     } else if (!visible) {
       form.resetFields();
-      setCurrentStep(0);
-      setTimeLeft(0);
-      setPasswordStrength({ score: 0, text: "", color: "" });
     }
   }, [visible, currentUsername, form]);
-
-  // Timer for OTP countdown
-  useEffect(() => {
-    let timer;
-    if (timeLeft > 0) {
-      timer = setInterval(() => {
-        setTimeLeft(prev => prev - 1);
-      }, 1000);
-    }
-    return () => clearInterval(timer);
-  }, [timeLeft]);
-
-  // Password strength checker
-  const checkPasswordStrength = (password) => {
-    if (!password) return { score: 0, text: "", color: "" };
-
-    let score = 0;
-    let feedback = [];
-
-    if (password.length >= 8) score += 1;
-    else feedback.push("ít nhất 8 ký tự");
-
-    if (/[a-z]/.test(password)) score += 1;
-    else feedback.push("chữ thường");
-
-    if (/[A-Z]/.test(password)) score += 1;
-    else feedback.push("chữ hoa");
-
-    if (/\d/.test(password)) score += 1;
-    else feedback.push("số");
-
-    if (/[@$!%*?&]/.test(password)) score += 1;
-    else feedback.push("ký tự đặc biệt");
-
-    const strengthLevels = [
-      { text: "Rất yếu", color: "#ff4d4f" },
-      { text: "Yếu", color: "#ff7a45" },
-      { text: "Trung bình", color: "#ffa940" },
-      { text: "Khá", color: "#52c41a" },
-      { text: "Mạnh", color: "#389e0d" },
-    ];
-
-    return {
-      score,
-      text: strengthLevels[score] ? strengthLevels[score].text : "Rất yếu",
-      color: strengthLevels[score] ? strengthLevels[score].color : "#ff4d4f",
-      feedback: score >= 3 
-        ? score === 5 
-          ? "Mật khẩu mạnh!" 
-          : "Mật khẩu đạt yêu cầu!"
-        : `Cần thêm: ${feedback.join(", ")}`,
-    };
-  };
-
-  const validatePassword = (password) => {
-    if (!password) return false;
-    const hasValidLength = password.length >= 8 && password.length <= 50;
-    const noSpaces = !password.includes(" ");
-    if (!hasValidLength || !noSpaces) return false;
-
-    let score = 0;
-    if (password.length >= 8) score += 1;
-    if (/[a-z]/.test(password)) score += 1;
-    if (/[A-Z]/.test(password)) score += 1;
-    if (/\d/.test(password)) score += 1;
-    if (/[@$!%*?&]/.test(password)) score += 1;
-
-    return score >= 3;
-  };
-
-  const handleSendOtp = async () => {
-    setLoading(true);
-    try {
-      const result = await sendOtpForPasswordChange(email);
-      if (result.ok) {
-        setTimeLeft(300); // 5 minutes
-        setCurrentStep(1);
-        message.success("Mã OTP đã được gửi đến email của bạn!");
-      } else {
-        message.error(result.data?.message || "Không thể gửi OTP. Vui lòng thử lại.");
-      }
-    } catch {
-      message.error("Lỗi hệ thống. Vui lòng thử lại sau.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleResendOtp = async () => {
-    setLoading(true);
-    try {
-      const result = await sendOtpForPasswordChange(email);
-      if (result.ok) {
-        setTimeLeft(300); // Reset to 5 minutes
-        message.success("Mã OTP mới đã được gửi!");
-      } else {
-        message.error(result.data?.message || "Không thể gửi lại OTP.");
-      }
-    } catch {
-      message.error("Lỗi hệ thống. Vui lòng thử lại sau.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSubmit = async () => {
-    try {
-      const values = await form.validateFields();
-      
-      if (!validatePassword(values.newPassword)) {
-        message.error("Mật khẩu phải đạt độ mạnh 'Trung bình' trở lên!");
-        return;
-      }
-
-      if (values.newPassword !== values.confirmPassword) {
-        message.error("Mật khẩu xác nhận không khớp!");
-        return;
-      }
-
-      // Validate username
-      const username = values.newUsername?.trim();
-      if (!username || username.length < 3 || username.length > 30) {
-        message.error("Tên đăng nhập phải từ 3-30 ký tự!");
-        return;
-      }
-
-      if (!/^[a-zA-Z0-9._-]+$/.test(username)) {
-        message.error("Tên đăng nhập chỉ được chứa chữ cái, số, dấu chấm, gạch dưới và gạch ngang!");
-        return;
-      }
-
-      setLoading(true);
-      const result = await verifyOtpAndChangePasswordWithUsername(
-        email, 
-        values.otp, 
-        values.newPassword, 
-        username
-      );
-      
-      if (result.ok) {
-        message.success("Đổi mật khẩu và tên đăng nhập thành công! Vui lòng đăng nhập lại.");
-        onComplete();
-      } else {
-        message.error(result.data?.message || "Mã OTP không hợp lệ hoặc đã hết hạn.");
-      }
-    } catch {
-      message.error("Vui lòng điền đầy đủ thông tin.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+      // Handle form submission with validation
+  const onFinish = async (values) => {
+    await handleSubmit(values);
   };
 
   return (
@@ -244,14 +105,11 @@ const FirstTimeLoginModal = ({
       )}
 
       {currentStep === 1 && (
-        <Form form={form} layout="vertical" onFinish={handleSubmit}>
+        <Form form={form} layout="vertical" onFinish={onFinish}>
           <Form.Item
             label="Mã OTP"
             name="otp"
-            rules={[
-              { required: true, message: "Vui lòng nhập mã OTP!" },
-              { len: 6, message: "Mã OTP phải có 6 chữ số!" }
-            ]}
+            rules={formRules.otp}
           >
             <Input
               placeholder="Nhập mã OTP 6 chữ số"
@@ -284,15 +142,7 @@ const FirstTimeLoginModal = ({
           <Form.Item
             label="Tên đăng nhập mới"
             name="newUsername"
-            rules={[
-              { required: true, message: "Vui lòng nhập tên đăng nhập!" },
-              { min: 3, message: "Tên đăng nhập phải có ít nhất 3 ký tự!" },
-              { max: 30, message: "Tên đăng nhập không được quá 30 ký tự!" },
-              {
-                pattern: /^[a-zA-Z0-9._-]+$/,
-                message: "Tên đăng nhập chỉ được chứa chữ cái, số, dấu chấm, gạch dưới và gạch ngang!"
-              }
-            ]}
+            rules={formRules.newUsername}
             extra="Bạn có thể giữ nguyên tên đăng nhập hiện tại hoặc thay đổi thành tên mới"
           >
             <Input
@@ -304,27 +154,11 @@ const FirstTimeLoginModal = ({
           <Form.Item
             label="Mật khẩu mới"
             name="newPassword"
-            rules={[
-              { required: true, message: "Vui lòng nhập mật khẩu mới!" },
-              { min: 8, message: "Mật khẩu phải có ít nhất 8 ký tự!" },
-              { max: 50, message: "Mật khẩu không được quá 50 ký tự!" },
-              {
-                validator: (_, value) => {
-                  if (!value) return Promise.resolve();
-                  if (value.includes(" ")) {
-                    return Promise.reject(new Error("Mật khẩu không được chứa khoảng trắng!"));
-                  }
-                  if (!validatePassword(value)) {
-                    return Promise.reject(new Error("Mật khẩu phải đạt độ mạnh 'Trung bình' trở lên!"));
-                  }
-                  return Promise.resolve();
-                },
-              },
-            ]}
+            rules={formRules.newPassword}
           >
             <Input.Password
               placeholder="Nhập mật khẩu mới"
-              onChange={(e) => setPasswordStrength(checkPasswordStrength(e.target.value))}
+              onChange={(e) => handlePasswordChange(e.target.value)}
             />
           </Form.Item>
 
@@ -340,17 +174,7 @@ const FirstTimeLoginModal = ({
             label="Xác nhận mật khẩu"
             name="confirmPassword"
             dependencies={['newPassword']}
-            rules={[
-              { required: true, message: "Vui lòng xác nhận mật khẩu!" },
-              ({ getFieldValue }) => ({
-                validator(_, value) {
-                  if (!value || getFieldValue('newPassword') === value) {
-                    return Promise.resolve();
-                  }
-                  return Promise.reject(new Error('Mật khẩu xác nhận không khớp!'));
-                },
-              }),
-            ]}
+            rules={formRules.confirmPassword(form.getFieldValue)}
           >
             <Input.Password placeholder="Nhập lại mật khẩu mới" />
           </Form.Item>
