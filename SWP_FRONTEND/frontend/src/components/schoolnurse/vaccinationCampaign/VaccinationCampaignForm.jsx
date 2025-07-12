@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React from "react";
 import {
   Form,
   Input,
@@ -10,144 +10,33 @@ import {
   Row,
   Col,
   Divider,
-  message,
   Spin,
   Typography,
 } from "antd";
 import { SaveOutlined, CloseOutlined } from "@ant-design/icons";
-import dayjs from "dayjs";
-import { nurseApi } from "../../../api/nurseApi";
-import { vaccinationCampaignApi } from "../../../api/vaccinationCampaignApi";
+import { useVaccinationCampaignForm } from "../../../hooks/useVaccinationCampaignForm";
+import { vaccinationCampaignValidation } from "../../../utils/vaccinationCampaignValidation";
 
 const { TextArea } = Input;
 const { Option } = Select;
 const { Title } = Typography;
 
 const VaccinationCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
-  const [form] = Form.useForm();
-  const [vaccinationRules, setVaccinationRules] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [calculatingCount, setCalculatingCount] = useState(false);
-  const isEditing = !!campaign;
+  // Use the custom hook for all form logic and state management
+  const {
+    form,
+    vaccinationRules,
+    isEditing,
+    loading,
+    submitting,
+    calculatingCount,
+    handleSubmit,
+    onRuleChange,
+    getInitialValues,
+  } = useVaccinationCampaignForm(campaign, onSuccess);
 
-  const calculateEstimatedVaccineCount = useCallback(
-    async (ruleId) => {
-      if (!ruleId) return;
-
-      setCalculatingCount(true);
-      try {
-        const response =
-          await vaccinationCampaignApi.getEligibleStudentsCountByRule(ruleId);
-        const eligibleCount = response.eligibleCount || 0;
-
-        form.setFieldsValue({
-          estimatedVaccineCount: eligibleCount,
-        });
-
-        if (eligibleCount > 0) {
-          message.success(
-            `Tìm thấy ${eligibleCount} học sinh thỏa mãn điều kiện tiêm chủng`
-          );
-        } else {
-          message.info(
-            "Không có học sinh nào thỏa mãn điều kiện tiêm chủng hiện tại"
-          );
-        }
-      } catch (error) {
-        console.error("Error calculating estimated vaccine count:", error);
-        message.error("Không thể tính toán số lượng vaccine dự kiến");
-        form.setFieldsValue({
-          estimatedVaccineCount: 0,
-        });
-      } finally {
-        setCalculatingCount(false);
-      }
-    },
-    [form]
-  );
-
-  useEffect(() => {
-    fetchVaccinationRules();
-    if (isEditing) {
-      // Set form values from campaign data
-      form.setFieldsValue({
-        ...campaign,
-        scheduledDate: campaign.scheduledDate
-          ? dayjs(campaign.scheduledDate)
-          : null,
-        location: "Tại Trường", // Always override with fixed location
-      });
-
-      // Recalculate estimated vaccine count for edited campaign
-      if (campaign.vaccinationRuleId) {
-        calculateEstimatedVaccineCount(campaign.vaccinationRuleId);
-      }
-    }
-  }, [campaign, form, isEditing, calculateEstimatedVaccineCount]);
-
-  const fetchVaccinationRules = async () => {
-    setLoading(true);
-    try {
-      const rules = await nurseApi.getAllVaccinationRules();
-      setVaccinationRules(rules);
-    } catch (error) {
-      message.error("Không thể tải danh sách quy tắc tiêm chủng");
-      console.error("Error fetching vaccination rules:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSubmit = async (values) => {
-    setSubmitting(true);
-    try {
-      const campaignData = {
-        ...values,
-        scheduledDate: values.scheduledDate
-          ? values.scheduledDate.format("YYYY-MM-DDTHH:mm:ss")
-          : null,
-      };
-
-      let result;
-      if (isEditing) {
-        result = await vaccinationCampaignApi.updateCampaign(
-          campaign.id,
-          campaignData
-        );
-        message.success("Cập nhật chiến dịch tiêm chủng thành công");
-      } else {
-        result = await vaccinationCampaignApi.createCampaign(campaignData);
-        message.success("Tạo chiến dịch tiêm chủng mới thành công");
-      }
-      onSuccess(result);
-    } catch (error) {
-      message.error(
-        `Không thể ${isEditing ? "cập nhật" : "tạo"} chiến dịch tiêm chủng`
-      );
-      console.error(
-        `Error ${isEditing ? "updating" : "creating"} campaign:`,
-        error
-      );
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const onRuleChange = (ruleId) => {
-    const selectedRule = vaccinationRules.find((rule) => rule.id === ruleId);
-    if (selectedRule) {
-      form.setFieldsValue({
-        vaccineBrand: "", // Clear any previous brand to let user specify
-        additionalInfo: `Vắc xin ${selectedRule.name}, liều ${
-          selectedRule.doesNumber
-        }.\n${selectedRule.description || ""}`,
-      });
-
-      // Tính toán số lượng vaccine dự kiến
-      calculateEstimatedVaccineCount(ruleId);
-    }
-  };
+  // Get validation rules
+  const validationRules = vaccinationCampaignValidation.getFormValidationRules();
 
   if (loading) {
     return (
@@ -174,10 +63,7 @@ const VaccinationCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
         form={form}
         layout="vertical"
         onFinish={handleSubmit}
-        initialValues={{
-          estimatedVaccineCount: 0,
-          location: "Tại Trường",
-        }}
+        initialValues={getInitialValues()}
       >
         <Row gutter={16}>
           <Col span={12}>
@@ -188,9 +74,7 @@ const VaccinationCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
                   Tên chiến dịch <span style={{ color: "red" }}>*</span>
                 </span>
               }
-              rules={[
-                { required: true, message: "Vui lòng nhập tên chiến dịch" },
-              ]}
+              rules={validationRules.name}
             >
               <Input placeholder="Nhập tên chiến dịch tiêm chủng" />
             </Form.Item>
@@ -203,9 +87,7 @@ const VaccinationCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
                   Quy tắc tiêm chủng <span style={{ color: "red" }}>*</span>
                 </span>
               }
-              rules={[
-                { required: true, message: "Vui lòng chọn quy tắc tiêm chủng" },
-              ]}
+              rules={validationRules.vaccinationRuleId}
             >
               <Select
                 placeholder="Chọn quy tắc tiêm chủng"
@@ -230,44 +112,14 @@ const VaccinationCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
                   Ngày thực hiện <span style={{ color: "red" }}>*</span>
                 </span>
               }
-              rules={[
-                { required: true, message: "Vui lòng chọn ngày thực hiện" },
-                {
-                  validator: (_, value) => {
-                    if (!value) {
-                      return Promise.resolve();
-                    }
-
-                    const today = dayjs();
-
-                    // Kiểm tra ngày thực hiện phải là ngày tương lai (sau hôm nay)
-                    if (
-                      value.isBefore(today, "day") ||
-                      value.isSame(today, "day")
-                    ) {
-                      return Promise.reject(
-                        new Error("Ngày thực hiện phải là ngày tương lai")
-                      );
-                    }
-
-                    return Promise.resolve();
-                  },
-                },
-              ]}
+              rules={validationRules.scheduledDate}
             >
               <DatePicker
                 showTime
                 format="DD/MM/YYYY HH:mm"
                 style={{ width: "100%" }}
                 placeholder="Chọn ngày và giờ thực hiện"
-                disabledDate={(current) => {
-                  // Vô hiệu hóa tất cả ngày từ hôm nay trở về trước
-                  return (
-                    current &&
-                    (current.isBefore(dayjs(), "day") ||
-                      current.isSame(dayjs(), "day"))
-                  );
-                }}
+                disabledDate={vaccinationCampaignValidation.isDateDisabled}
               />
             </Form.Item>
           </Col>
@@ -279,7 +131,7 @@ const VaccinationCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
                   Địa điểm <span style={{ color: "red" }}>*</span>
                 </span>
               }
-              rules={[{ required: true, message: "Vui lòng nhập địa điểm" }]}
+              rules={validationRules.location}
             >
               <Input
                 value="Tại Trường"
@@ -305,18 +157,7 @@ const VaccinationCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
                   <span style={{ color: "red" }}>*</span>
                 </span>
               }
-              rules={[
-                {
-                  required: true,
-                  message:
-                    "Vui lòng chọn quy tắc tiêm chủng để tính toán số lượng vaccine",
-                },
-                {
-                  type: "number",
-                  min: 0,
-                  message: "Số lượng vaccine phải lớn hơn hoặc bằng 0",
-                },
-              ]}
+              rules={validationRules.estimatedVaccineCount}
               extra={
                 calculatingCount
                   ? "Đang tính toán..."
@@ -342,7 +183,7 @@ const VaccinationCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
               Mô tả chiến dịch <span style={{ color: "red" }}>*</span>
             </span>
           }
-          rules={[{ required: true, message: "Vui lòng nhập mô tả" }]}
+          rules={validationRules.description}
         >
           <TextArea
             rows={3}
@@ -358,9 +199,7 @@ const VaccinationCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
               <span style={{ color: "red" }}>*</span>
             </span>
           }
-          rules={[
-            { required: true, message: "Vui lòng nhập hướng dẫn chăm sóc" },
-          ]}
+          rules={validationRules.prePostCareInstructions}
         >
           <TextArea
             rows={4}

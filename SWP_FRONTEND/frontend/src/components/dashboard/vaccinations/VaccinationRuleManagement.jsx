@@ -209,7 +209,7 @@ const VaccinationRuleManagement = () => {
       ),
     },
     {
-      title: "Ngày tối thiểu sau mũi trước",
+      title: "Ngày tối thiểu",
       dataIndex: "intervalDays",
       key: "intervalDays",
       width: 150,
