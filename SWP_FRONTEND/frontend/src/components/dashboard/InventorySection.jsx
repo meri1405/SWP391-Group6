@@ -34,6 +34,7 @@ import { medicalSupplyApi } from "../../api/medicalSupplyApi";
 import { unitConversionApi } from "../../api/unitConversionApi";
 import webSocketService from "../../services/webSocketService";
 import dayjs from "dayjs";
+import { formatDate } from "../../utils/timeUtils";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -543,7 +544,7 @@ const InventorySection = () => {
       title: "Ngày yêu cầu",
       dataIndex: "requestDate",
       key: "requestDate",
-      render: (date) => dayjs(date).format("DD/MM/YYYY HH:mm"),
+      render: (date) => formatDate(date),
     },
     {
       title: "Độ ưu tiên",
@@ -1656,13 +1657,13 @@ const InventorySection = () => {
                 {selectedRequest.requestedByName || "Không có thông tin"}
               </Descriptions.Item>
               <Descriptions.Item label="Ngày yêu cầu">
-                {dayjs(selectedRequest.requestDate).format("DD/MM/YYYY HH:mm")}
+                {formatDate(selectedRequest.requestDate)}
               </Descriptions.Item>
               <Descriptions.Item label="Độ ưu tiên">
-                {selectedRequest.priority}
+                {selectedRequest.priority === "HIGH" ? "Cao" : selectedRequest.priority === "MEDIUM" ? "Trung bình" : "Thấp"}
               </Descriptions.Item>
               <Descriptions.Item label="Trạng thái">
-                {selectedRequest.status}
+                {selectedRequest.status === "PENDING" ? "Chờ duyệt" : selectedRequest.status === "APPROVED" ? "Đã duyệt" : "Từ chối"}
               </Descriptions.Item>
               <Descriptions.Item label="Lý do" span={3}>
                 {selectedRequest.reason || "Không có lý do"}

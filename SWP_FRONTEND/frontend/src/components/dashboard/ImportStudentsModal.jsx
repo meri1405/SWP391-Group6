@@ -111,18 +111,6 @@ const ImportStudentsModal = ({ visible, onCancel, onSuccess }) => {
     onCancel();
   };
 
-  const formatGuideItems = [
-    'File phải có định dạng .xlsx hoặc .xls',
-    'Sử dụng template đã cung cấp để đảm bảo đúng định dạng',
-    'Các cột bắt buộc: Họ học sinh, Tên học sinh, Ngày sinh học sinh, Giới tính học sinh, Lớp',
-    'Định dạng ngày sinh: DD/MM/YYYY',
-    'Học sinh phải từ 2 đến 12 tuổi',
-    'Giới tính: M (Nam) hoặc F (Nữ)',
-    'Thông tin phụ huynh là tùy chọn nhưng nếu có phải điền đầy đủ họ tên và số điện thoại',
-    'Số điện thoại phụ huynh phải có 10 số và đúng đầu số Việt Nam',
-    `Các đầu số hợp lệ: Viettel (${VIETNAMESE_MOBILE_PREFIXES.slice(0,12).join(', ')}), Mobifone (${VIETNAMESE_MOBILE_PREFIXES.slice(12,18).join(', ')}), Vinaphone (${VIETNAMESE_MOBILE_PREFIXES.slice(18,24).join(', ')}), và các nhà mạng khác`
-  ];
-
   return (
     <Modal
       title={
@@ -184,20 +172,6 @@ const ImportStudentsModal = ({ visible, onCancel, onSuccess }) => {
           showIcon
           icon={<InfoCircleOutlined />}
         />
-
-        {/* Yêu cầu định dạng */}
-        <div>
-          <Title level={5}>Yêu cầu định dạng file:</Title>          <List
-            size="small"
-            dataSource={formatGuideItems}
-            renderItem={item => (
-              <List.Item className="import-guide-list">
-                <Text>• {item}</Text>
-              </List.Item>
-            )}
-            className="import-guide-list"
-          />
-        </div>
 
         <Divider />
 

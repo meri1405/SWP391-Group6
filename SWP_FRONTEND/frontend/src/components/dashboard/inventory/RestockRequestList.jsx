@@ -22,7 +22,7 @@ import {
   EyeOutlined,
 } from "@ant-design/icons";
 import { restockRequestApi } from "../../../api/restockRequestApi";
-import dayjs from "dayjs";
+import { formatDate } from "../../../utils/timeUtils";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -216,7 +216,7 @@ const RestockRequestList = () => {
       title: "Thời gian yêu cầu",
       dataIndex: "requestDate",
       key: "requestDate",
-      render: (date) => dayjs(date).format("DD/MM/YYYY HH:mm"),
+      render: (date) => formatDate(date),
       sorter: (a, b) => new Date(a.requestDate) - new Date(b.requestDate),
     },
     {
