@@ -1,4 +1,4 @@
-const API_BASE_URL = "http://localhost:8080/api";
+const API_BASE_URL = "https://swp391-group6.onrender.com";
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem("token");

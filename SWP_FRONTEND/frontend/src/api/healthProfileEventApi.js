@@ -3,7 +3,7 @@
 
 // Direct API configuration to avoid circular imports
 const API_CONFIG = {
-  BASE_URL: "http://localhost:8080/api",
+  BASE_URL: "https://swp391-group6.onrender.com/api",
 };
 
 const getAuthHeaders = () => {

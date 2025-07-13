@@ -57,7 +57,6 @@ public class SecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        // Use secure BCryptPasswordEncoder for password hashing
         return new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder();
     }
 
@@ -66,39 +65,44 @@ public class SecurityConfig {
         http.cors(cors -> cors.configure(http))
             .csrf(csrf -> csrf.disable())
             .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))            .authorizeHttpRequests(auth ->
-                auth.requestMatchers("/api/auth/**").permitAll()
-                    .requestMatchers("/api/public/**").permitAll()
-                    .requestMatchers("/oauth2/**").permitAll()
-                    .requestMatchers("/login/oauth2/**").permitAll()
-                    .requestMatchers("/ws/**").permitAll()  // Allow WebSocket endpoint
-                    .requestMatchers("/api/password/reset-request").permitAll()  // Allow public access to password reset request
-                    .requestMatchers("/api/password/verify-otp").permitAll()  // Allow public access to OTP verification
-                    .requestMatchers("/api/password/reset-password").permitAll()  // Allow public access to password reset
-                    .requestMatchers("/api/nurse/students/test").permitAll()  // Debug endpoint
-                    .requestMatchers("/api/test/**").permitAll()  // Test endpoints for debugging
-                    .requestMatchers("/api/nurse/students/debug-user").authenticated()  // Any authenticated user
-                    .requestMatchers("/api/nurse/students/all").authenticated()  // Any authenticated user
-                    .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                    .requestMatchers("/api/manager/**").hasRole("MANAGER")
-                    .requestMatchers("/api/nurse/**").hasRole("SCHOOLNURSE")
-                    .requestMatchers("/api/schoolnurse/**").hasRole("SCHOOLNURSE")
-                    .requestMatchers("/api/parent/**").hasRole("PARENT")
-                    .requestMatchers("/api/medical-events/**").hasAnyRole("PARENT", "SCHOOLNURSE", "MANAGER")
-                    .requestMatchers("/api/health-check/campaigns").hasAnyRole( "SCHOOLNURSE", "MANAGER")
-                    .requestMatchers("/api/health-check/forms").hasAnyRole("SCHOOLNURSE", "MANAGER", "PARENT")
-                    .requestMatchers("/api/health-check/results").hasAnyRole("SCHOOLNURSE", "MANAGER", "PARENT")
-                    .anyRequest().authenticated()
-            ).oauth2Login(oauth2 ->
-                oauth2.authorizationEndpoint(authEndpoint ->
-                        authEndpoint.baseUri("/oauth2/authorize"))
-                    .redirectionEndpoint(redirectEndpoint ->
-                        redirectEndpoint.baseUri("/login/oauth2/code/*"))
-                    .userInfoEndpoint(userInfo ->
-                        userInfo.userService(customOAuth2UserService))
-                    .successHandler(oAuth2SuccessHandler)
-                    .failureHandler(oAuth2FailureHandler)
-            );        http.authenticationProvider(authenticationProvider());
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/api/public/**").permitAll()
+                .requestMatchers("/api/otp/**").permitAll() // ✅ Cho phép endpoint OTP public
+                .requestMatchers("/oauth2/**").permitAll()
+                .requestMatchers("/login/oauth2/**").permitAll()
+                .requestMatchers("/ws/**").permitAll()
+                .requestMatchers("/api/password/reset-request").permitAll()
+                .requestMatchers("/api/password/verify-otp").permitAll()
+                .requestMatchers("/api/password/reset-password").permitAll()
+                .requestMatchers("/api/nurse/students/test").permitAll()
+                .requestMatchers("/api/test/**").permitAll()
+                .requestMatchers("/api/nurse/students/debug-user").authenticated()
+                .requestMatchers("/api/nurse/students/all").authenticated()
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                .requestMatchers("/api/manager/**").hasRole("MANAGER")
+                .requestMatchers("/api/nurse/**").hasRole("SCHOOLNURSE")
+                .requestMatchers("/api/schoolnurse/**").hasRole("SCHOOLNURSE")
+                .requestMatchers("/api/parent/**").hasRole("PARENT")
+                .requestMatchers("/api/medical-events/**").hasAnyRole("PARENT", "SCHOOLNURSE", "MANAGER")
+                .requestMatchers("/api/health-check/campaigns").hasAnyRole("SCHOOLNURSE", "MANAGER")
+                .requestMatchers("/api/health-check/forms").hasAnyRole("SCHOOLNURSE", "MANAGER", "PARENT")
+                .requestMatchers("/api/health-check/results").hasAnyRole("SCHOOLNURSE", "MANAGER", "PARENT")
+                .anyRequest().authenticated()
+            )
+            .oauth2Login(oauth2 -> oauth2
+                .authorizationEndpoint(authEndpoint ->
+                    authEndpoint.baseUri("/oauth2/authorize"))
+                .redirectionEndpoint(redirectEndpoint ->
+                    redirectEndpoint.baseUri("/login/oauth2/code/*"))
+                .userInfoEndpoint(userInfo ->
+                    userInfo.userService(customOAuth2UserService))
+                .successHandler(oAuth2SuccessHandler)
+                .failureHandler(oAuth2FailureHandler)
+            );
+
+        http.authenticationProvider(authenticationProvider());
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

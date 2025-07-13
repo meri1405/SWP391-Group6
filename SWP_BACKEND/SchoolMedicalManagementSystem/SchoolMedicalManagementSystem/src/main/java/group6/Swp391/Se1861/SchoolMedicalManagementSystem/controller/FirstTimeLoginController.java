@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = {"http://localhost:5173"})
+@CrossOrigin(origins = {"http://localhost:5173", "https://schoolmedical-system.web.app"})
 public class FirstTimeLoginController {
 
     private final IFirstTimeLoginService firstTimeLoginService;

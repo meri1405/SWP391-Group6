@@ -104,7 +104,7 @@ class WebSocketService {
         if (!this.webSocketDisabled) {
           // Create SockJS connection with token in URL
           const wsUrl = `${
-            import.meta.env.VITE_API_BASE_URL || "http://localhost:8080"
+            import.meta.env.VITE_API_BASE_URL || "https://swp391-group6.onrender.com"
           }/ws?token=${encodeURIComponent(token)}`;
           console.log(
             "Connecting to WebSocket URL:",
