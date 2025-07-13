@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_BASE_URL = "http://localhost:8080";
+const API_BASE_URL = "https://swp391-group6.onrender.com";
 
 // Helper function to get token from localStorage
 const getTokenFromStorage = () => {

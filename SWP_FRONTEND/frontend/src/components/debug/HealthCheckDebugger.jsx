@@ -8,7 +8,7 @@ const HealthCheckDebugger = () => {
   const [error, setError] = useState(null);
 
   const API_BASE_URL =
-    import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+    import.meta.env.VITE_API_BASE_URL || "https://swp391-group6.onrender.com";
 
   const testDebugEndpoint = async () => {
     if (!campaignId) {

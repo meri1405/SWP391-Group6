@@ -20,7 +20,10 @@ import java.util.Map;
 @RequestMapping("/api/admin/medication")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = {
+        "http://localhost:5173",
+        "https://schoolmedical-system.web.app"
+})
 public class AdminMedicationController {
 
     private final IMedicationScheduleService medicationScheduleService;

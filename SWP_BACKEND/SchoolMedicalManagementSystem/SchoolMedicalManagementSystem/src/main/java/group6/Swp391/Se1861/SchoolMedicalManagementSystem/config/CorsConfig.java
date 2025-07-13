@@ -20,18 +20,15 @@ public class CorsConfig {
     public CorsFilter corsFilter() {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
+
         config.setAllowCredentials(true);
-        
-        // Parse allowed origins from application properties
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowedMethods(List.of("*"));
+
+        // Set allowed origins (from property + hardcoded dev)
         List<String> origins = Arrays.asList(allowedOrigins.split(","));
-        origins.forEach(config::addAllowedOrigin);
-        
-        // Add development origins for local testing
-        config.addAllowedOrigin("http://localhost:3000");
-        config.addAllowedOrigin("http://localhost:5173"); // Vite development server
-        
-        config.addAllowedHeader("*");
-        config.addAllowedMethod("*");
+        config.setAllowedOrigins(origins); // Use set instead of add repeatedly
+
         source.registerCorsConfiguration("/**", config);
         return new CorsFilter(source);
     }
