@@ -24,4 +24,5 @@ public class VisionDTO {
     private boolean needsGlasses;
     private boolean isAbnormal;
     private String recommendations;
+    private Long healthResult;
 }

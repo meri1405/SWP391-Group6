@@ -699,7 +699,7 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
                         .filter(existing -> existing.getId().equals(visionDTO.getId()) ||
                                 existing.getDateOfExamination().equals(visionDTO.getDateOfExamination()))
                         .findFirst().orElse(null);
-                      if (existingVisionRecord != null) {
+                      if (existingVisionRecord != null && existingVisionRecord.getHealthCheckResult() != null) {
                         // Update fields if they have changed
                         existingVisionRecord.setVisionLeft(visionDTO.getVisionLeft());
                         existingVisionRecord.setVisionRight(visionDTO.getVisionRight());
@@ -747,7 +747,7 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
                         .filter(existing -> existing.getId().equals(hearingDTO.getId()) ||
                                 existing.getDateOfExamination().equals(hearingDTO.getDateOfExamination()))
                         .findFirst().orElse(null);
-                      if (existingHearingRecord != null) {
+                      if (existingHearingRecord != null && existingHearingRecord.getHealthCheckResult() != null) {
                         // Update fields if they have changed
                         existingHearingRecord.setLeftEar(hearingDTO.getLeftEar());
                         existingHearingRecord.setRightEar(hearingDTO.getRightEar());
@@ -807,7 +807,8 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
                                 (existing.getVaccineName().equalsIgnoreCase(vaccinationDTO.getVaccineName()) &&
                                  existing.getDoseNumber() == vaccinationDTO.getDoseNumber() &&
                                  existing.getDateOfVaccination().equals(vaccinationDTO.getDateOfVaccination())))
-                        .findFirst().orElse(null);                      if (existingVaccination != null) {
+                        .findFirst().orElse(null);
+                    if (existingVaccination != null && existingVaccination.getSource() != VaccinationHistory.VaccinationSource.SCHOOL_ADMINISTERED) {
                         // Update fields if they have changed
                         existingVaccination.setManufacturer(vaccinationDTO.getManufacturer());
                         existingVaccination.setDateOfVaccination(vaccinationDTO.getDateOfVaccination());
@@ -1046,6 +1047,7 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
                         visionDTO.setVisionRightWithGlass(vision.getVisionRightWithGlass());
                         visionDTO.setVisionDescription(vision.getVisionDescription());
                         visionDTO.setDateOfExamination(vision.getDateOfExamination());
+                        visionDTO.setHealthResult(vision.getHealthCheckResult().getId() != null ? vision.getHealthCheckResult().getId() : null);
                         return visionDTO;
                     })
                     .collect(Collectors.toList());
@@ -1060,6 +1062,7 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
                         hearingDTO.setRightEar(hearing.getRightEar());
                         hearingDTO.setDescription(hearing.getDescription());
                         hearingDTO.setDateOfExamination(hearing.getDateOfExamination());
+                        hearingDTO.setHealthResult(hearing.getHealthCheckResult().getId() != null ? hearing.getHealthCheckResult().getId() : null);
                         return hearingDTO;
                     })
                     .collect(Collectors.toList());
