@@ -718,7 +718,7 @@ const Login = () => {
       // Build absolute URL for OAuth
       const oauthUrl = API_ENDPOINTS.auth.googleOAuth.startsWith("http")
         ? API_ENDPOINTS.auth.googleOAuth
-        : `https://schoolmedical-system.web.app/${API_ENDPOINTS.auth.googleOAuth}`;
+        : `${API_BASE_URL}${API_ENDPOINTS.auth.googleOAuth}`;
 
       console.log("Final OAuth URL:", oauthUrl);
 
