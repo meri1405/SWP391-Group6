@@ -41,4 +41,6 @@ public interface VaccinationFormRepository extends JpaRepository<VaccinationForm
     
     @Query("SELECT COUNT(vf) FROM VaccinationForm vf WHERE vf.campaign = :campaign AND vf.confirmationStatus = 'CONFIRMED'")
     Long countConfirmedFormsByCampaign(@Param("campaign") VaccinationCampaign campaign);
+    
+    List<VaccinationForm> findByConfirmationStatusAndSentDateIsNotNull(VaccinationForm.ConfirmationStatus status);
 }

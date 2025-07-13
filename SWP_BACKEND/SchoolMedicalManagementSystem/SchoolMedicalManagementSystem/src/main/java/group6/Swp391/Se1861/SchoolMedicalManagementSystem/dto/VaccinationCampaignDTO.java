@@ -22,6 +22,9 @@ public class VaccinationCampaignDTO {
     private String status;
     private String prePostCareInstructions;
     private Integer estimatedVaccineCount;
+    private String rejectionReason;
+    private LocalDateTime rejectedDate;
+    private Boolean reminderSent;
     private Long vaccinationRuleId;
     private String vaccinationRuleName;
     private Long createdById;

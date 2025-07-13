@@ -14,6 +14,8 @@ import {
   Popconfirm,
   Form,
   Spin,
+  Tooltip,
+  Alert,
 } from "antd";
 import notificationEventService from "../../services/notificationEventService";
 import {
@@ -21,9 +23,17 @@ import {
   CloseOutlined,
   EyeOutlined,
   CheckCircleOutlined,
+  ClockCircleOutlined,
+  ExclamationCircleOutlined,
 } from "@ant-design/icons";
 import managerApi from "../../api/managerApi";
 import { formatDate } from "../../utils/timeUtils";
+import {
+  validateManagerCampaignAction,
+  getTimeValidationStatus,
+  formatTimeRemaining,
+  shouldShowReminderWarning,
+} from "../../utils/vaccinationTimeValidation";
 import "../../styles/ManagerVaccination.css";
 
 const { TextArea } = Input;
@@ -119,6 +129,16 @@ const ManagerVaccinationManagement = () => {
   }, [activeTab, fetchPendingCampaigns, fetchCampaignsByStatus]);
 
   const handleApproveCampaign = async (campaignId) => {
+    // Find the campaign to validate timing
+    const campaign = getCurrentData().find(c => c.id === campaignId);
+    if (campaign) {
+      const validation = validateManagerCampaignAction(campaign.createdDate);
+      if (!validation.canAct) {
+        message.error(validation.message);
+        return;
+      }
+    }
+
     setLoading(true);
     try {
       const response = await managerApi.approveVaccinationCampaign(campaignId);
@@ -140,7 +160,8 @@ const ManagerVaccinationManagement = () => {
         }
       }
     } catch (error) {
-      message.error("Lỗi khi phê duyệt chiến dịch");
+      const errorMessage = error.response?.data?.message || "Lỗi khi phê duyệt chiến dịch";
+      message.error(errorMessage);
       console.error("Error approving campaign:", error);
     } finally {
       setLoading(false);
@@ -178,6 +199,16 @@ const ManagerVaccinationManagement = () => {
   };
 
   const handleRejectCampaign = async (campaignId, reason) => {
+    // Find the campaign to validate timing
+    const campaign = getCurrentData().find(c => c.id === campaignId) || selectedCampaign;
+    if (campaign) {
+      const validation = validateManagerCampaignAction(campaign.createdDate);
+      if (!validation.canAct) {
+        message.error(validation.message);
+        return;
+      }
+    }
+
     setLoading(true);
     try {
       const response = await managerApi.rejectVaccinationCampaign(
@@ -204,7 +235,8 @@ const ManagerVaccinationManagement = () => {
         }
       }
     } catch (error) {
-      message.error("Lỗi khi từ chối chiến dịch");
+      const errorMessage = error.response?.data?.message || "Lỗi khi từ chối chiến dịch";
+      message.error(errorMessage);
       console.error("Error rejecting campaign:", error);
     } finally {
       setLoading(false);
@@ -232,6 +264,138 @@ const ManagerVaccinationManagement = () => {
     };
     const statusInfo = statusMap[status] || { color: "default", text: status };
     return <Badge status={statusInfo.color} text={statusInfo.text} />;
+  };
+
+  // Helper function to render time-sensitive action buttons
+  const renderTimeValidatedActions = (record) => {
+    const validation = validateManagerCampaignAction(record.createdDate);
+    const timeStatus = getTimeValidationStatus(validation);
+    const showWarning = shouldShowReminderWarning(record.createdDate, record.reminderSent);
+
+    return (
+      <Space size="small" wrap>
+        <Button
+          type="default"
+          icon={<EyeOutlined />}
+          size="small"
+          onClick={() => showCampaignDetail(record.id)}
+          style={{ borderRadius: 4 }}
+          title="Xem chi tiết"
+        >
+        </Button>
+        
+        {record.status === "PENDING" && (
+          <>
+            {/* Time warning indicator */}
+            {(showWarning || !validation.canAct) && (
+              <Tooltip 
+                title={
+                  !validation.canAct 
+                    ? validation.message 
+                    : `Đã gửi nhắc nhở sau 12 giờ. ${validation.message}`
+                }
+              >
+                <Tag 
+                  color={!validation.canAct ? "red" : "orange"}
+                  icon={!validation.canAct ? <ExclamationCircleOutlined /> : <ClockCircleOutlined />}
+                  style={{ margin: 0, fontSize: "11px", padding: "2px 6px" }}
+                >
+                  {!validation.canAct ? "Hết hạn" : `${formatTimeRemaining(validation.remainingHours)} còn lại`}
+                </Tag>
+              </Tooltip>
+            )}
+
+            <Popconfirm
+              title="Phê duyệt chiến dịch"
+              description={
+                <div>
+                  <p>Bạn có chắc chắn muốn phê duyệt chiến dịch này?</p>
+                  {!validation.canAct && (
+                    <Alert
+                      message="Cảnh báo: Đã quá thời hạn phê duyệt (24 giờ)"
+                      type="error"
+                      size="small"
+                      style={{ marginTop: 8 }}
+                    />
+                  )}
+                </div>
+              }
+              onConfirm={() => handleApproveCampaign(record.id)}
+              okText="Phê duyệt"
+              cancelText="Hủy"
+              placement="topRight"
+              disabled={!validation.canAct}
+            >
+              <Button
+                type="primary"
+                icon={<CheckOutlined />}
+                size="small"
+                disabled={!validation.canAct}
+                style={{
+                  borderRadius: 4,
+                  backgroundColor: validation.canAct ? "#52c41a" : "#d9d9d9",
+                  borderColor: validation.canAct ? "#52c41a" : "#d9d9d9",
+                }}
+                title={validation.canAct ? "Duyệt chiến dịch" : validation.message}
+              >
+              </Button>
+            </Popconfirm>
+            
+            <Button
+              danger
+              icon={<CloseOutlined />}
+              size="small"
+              disabled={!validation.canAct}
+              onClick={() => {
+                if (validation.canAct) {
+                  setSelectedCampaign(record);
+                  setRejectModalVisible(true);
+                } else {
+                  message.error(validation.message);
+                }
+              }}
+              style={{ borderRadius: 4 }}
+              title={validation.canAct ? "Từ chối chiến dịch" : validation.message}
+            >
+            </Button>
+          </>
+        )}
+        
+        {record.status === "IN_PROGRESS" && (
+          <Popconfirm
+            title="Hoàn thành chiến dịch"
+            description={
+              <div>
+                <p>
+                  Bạn có chắc chắn muốn đánh dấu chiến dịch này là hoàn thành?
+                </p>
+                <p style={{ color: "#666", fontSize: "12px", margin: 0 }}>
+                  Hành động này không thể hoàn tác.
+                </p>
+              </div>
+            }
+            onConfirm={() => handleCompleteCampaign(record.id)}
+            okText="Hoàn thành"
+            cancelText="Hủy"
+            placement="topRight"
+            okButtonProps={{ danger: false, type: "primary" }}
+          >
+            <Button
+              type="primary"
+              icon={<CheckCircleOutlined />}
+              size="small"
+              style={{
+                borderRadius: 4,
+                backgroundColor: "#1890ff",
+                borderColor: "#1890ff",
+              }}
+              title="Đánh dấu chiến dịch hoàn thành (chỉ Manager)"
+            >
+            </Button>
+          </Popconfirm>
+        )}
+      </Space>
+    );
   };
 
   const columns = [
@@ -292,101 +456,52 @@ const ManagerVaccinationManagement = () => {
       title: "Người duyệt",
       dataIndex: "approvedByName",
       key: "approvedByName",
-      width: "15%",
+      width: "12%",
       render: (text) => text || "Chưa duyệt",
+    },
+    {
+      title: "Thời hạn",
+      key: "timeRemaining",
+      width: "15%",
+      render: (_, record) => {
+        if (record.status !== "PENDING") {
+          return <Text type="secondary">-</Text>;
+        }
+        
+        const validation = validateManagerCampaignAction(record.createdDate);
+        const showWarning = shouldShowReminderWarning(record.createdDate, record.reminderSent);
+        
+        if (!validation.canAct) {
+          return (
+            <Tag color="red" icon={<ExclamationCircleOutlined />}>
+              Đã hết hạn
+            </Tag>
+          );
+        }
+        
+        if (showWarning) {
+          return (
+            <Tooltip title="Đã gửi nhắc nhở sau 12 giờ">
+              <Tag color="orange" icon={<ClockCircleOutlined />}>
+                {formatTimeRemaining(validation.remainingHours)}
+              </Tag>
+            </Tooltip>
+          );
+        }
+        
+        return (
+          <Tag color="green">
+            {formatTimeRemaining(validation.remainingHours)}
+          </Tag>
+        );
+      },
     },
     {
       title: "Thao tác",
       key: "actions",
-      width: "220px",
+      width: "280px",
       fixed: "right",
-      render: (_, record) => (
-        <Space size="small" wrap>
-          <Button
-            type="default"
-            icon={<EyeOutlined />}
-            size="small"
-            onClick={() => showCampaignDetail(record.id)}
-            style={{ borderRadius: 4 }}
-            title="Xem chi tiết"
-          >
-            Xem
-          </Button>
-          {record.status === "PENDING" && (
-            <>
-              <Popconfirm
-                title="Phê duyệt chiến dịch"
-                description="Bạn có chắc chắn muốn phê duyệt chiến dịch này?"
-                onConfirm={() => handleApproveCampaign(record.id)}
-                okText="Phê duyệt"
-                cancelText="Hủy"
-                placement="topRight"
-              >
-                <Button
-                  type="primary"
-                  icon={<CheckOutlined />}
-                  size="small"
-                  style={{
-                    borderRadius: 4,
-                    backgroundColor: "#52c41a",
-                    borderColor: "#52c41a",
-                  }}
-                  title="Duyệt chiến dịch"
-                >
-                  Duyệt
-                </Button>
-              </Popconfirm>
-              <Button
-                danger
-                icon={<CloseOutlined />}
-                size="small"
-                onClick={() => {
-                  setSelectedCampaign(record);
-                  setRejectModalVisible(true);
-                }}
-                style={{ borderRadius: 4 }}
-                title="Từ chối chiến dịch"
-              >
-                Từ chối
-              </Button>
-            </>
-          )}
-          {record.status === "IN_PROGRESS" && (
-            <Popconfirm
-              title="Hoàn thành chiến dịch"
-              description={
-                <div>
-                  <p>
-                    Bạn có chắc chắn muốn đánh dấu chiến dịch này là hoàn thành?
-                  </p>
-                  <p style={{ color: "#666", fontSize: "12px", margin: 0 }}>
-                    Hành động này không thể hoàn tác.
-                  </p>
-                </div>
-              }
-              onConfirm={() => handleCompleteCampaign(record.id)}
-              okText="Hoàn thành"
-              cancelText="Hủy"
-              placement="topRight"
-              okButtonProps={{ danger: false, type: "primary" }}
-            >
-              <Button
-                type="primary"
-                icon={<CheckCircleOutlined />}
-                size="small"
-                style={{
-                  borderRadius: 4,
-                  backgroundColor: "#1890ff",
-                  borderColor: "#1890ff",
-                }}
-                title="Đánh dấu chiến dịch hoàn thành (chỉ Manager)"
-              >
-                Hoàn thành
-              </Button>
-            </Popconfirm>
-          )}
-        </Space>
-      ),
+      render: (_, record) => renderTimeValidatedActions(record),
     },
   ];
 
@@ -563,36 +678,61 @@ const ManagerVaccinationManagement = () => {
           >
             Đóng
           </Button>,
-          selectedCampaign?.status === "PENDING" && (
-            <Button
-              key="reject"
-              danger
-              onClick={() => {
-                setDetailModalVisible(false);
-                setRejectModalVisible(true);
-              }}
-              style={{ borderRadius: 8 }}
-            >
-              Từ chối
-            </Button>
-          ),
-          selectedCampaign?.status === "PENDING" && (
-            <Popconfirm
-              key="approve"
-              title="Phê duyệt chiến dịch"
-              description="Bạn có chắc chắn muốn phê duyệt chiến dịch này?"
-              onConfirm={() => {
-                handleApproveCampaign(selectedCampaign.id);
-                setDetailModalVisible(false);
-              }}
-              okText="Phê duyệt"
-              cancelText="Hủy"
-            >
-              <Button type="primary" style={{ borderRadius: 8 }}>
-                Phê duyệt
-              </Button>
-            </Popconfirm>
-          ),
+          selectedCampaign?.status === "PENDING" && (() => {
+            const validation = validateManagerCampaignAction(selectedCampaign.createdDate);
+            return [
+              <Button
+                key="reject"
+                danger
+                disabled={!validation.canAct}
+                onClick={() => {
+                  if (validation.canAct) {
+                    setDetailModalVisible(false);
+                    setRejectModalVisible(true);
+                  } else {
+                    message.error(validation.message);
+                  }
+                }}
+                style={{ borderRadius: 8 }}
+                title={validation.canAct ? "Từ chối chiến dịch" : validation.message}
+              >
+                Từ chối
+              </Button>,
+              <Popconfirm
+                key="approve"
+                title="Phê duyệt chiến dịch"
+                description={
+                  <div>
+                    <p>Bạn có chắc chắn muốn phê duyệt chiến dịch này?</p>
+                    {!validation.canAct && (
+                      <Alert
+                        message="Cảnh báo: Đã quá thời hạn phê duyệt (24 giờ)"
+                        type="error"
+                        size="small"
+                        style={{ marginTop: 8 }}
+                      />
+                    )}
+                  </div>
+                }
+                onConfirm={() => {
+                  handleApproveCampaign(selectedCampaign.id);
+                  setDetailModalVisible(false);
+                }}
+                okText="Phê duyệt"
+                cancelText="Hủy"
+                disabled={!validation.canAct}
+              >
+                <Button 
+                  type="primary" 
+                  style={{ borderRadius: 8 }}
+                  disabled={!validation.canAct}
+                  title={validation.canAct ? "Phê duyệt chiến dịch" : validation.message}
+                >
+                  Phê duyệt
+                </Button>
+              </Popconfirm>
+            ];
+          })(),
         ]}
         width={900}
         style={{ top: 20 }}

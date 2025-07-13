@@ -37,7 +37,7 @@ public interface IVaccinationCampaignService {
     
     List<VaccinationFormDTO> generateVaccinationForms(Long campaignId, User nurse);
     
-    List<VaccinationFormDTO> sendFormsToParents(Long campaignId, User nurse);
+    List<VaccinationFormDTO> sendFormsToParents(Long campaignId, User nurse, String customMessage);
     
     // Form management
     List<VaccinationFormDTO> getCampaignForms(Long campaignId);

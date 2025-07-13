@@ -1,7 +1,7 @@
 import React from "react";
 import { Button, Space, Tooltip, Tag, Typography, Popconfirm } from "antd";
 import { EyeOutlined, CheckCircleOutlined } from "@ant-design/icons";
-import dayjs from "dayjs";
+import { formatDate } from "../../../utils/timeUtils";
 import { getEventTypeConfig, getSeverityConfig } from "../../../utils/configUtils";
 
 const { Text } = Typography;
@@ -22,7 +22,7 @@ export const createMedicalEventColumns = (onViewEvent, onProcessEvent, isViewOnl
     dataIndex: "occurrenceTime",
     key: "occurrenceTime", 
     width: 140,
-    render: (text) => dayjs(text).format("DD/MM/YYYY HH:mm"),
+    render: (text) => formatDate(text),
   },
   {
     title: "Học sinh",
@@ -77,7 +77,7 @@ export const createMedicalEventColumns = (onViewEvent, onProcessEvent, isViewOnl
         {processed && record.processedTime && (
           <div>
             <Text type="secondary" style={{ fontSize: "12px" }}>
-              {dayjs(record.processedTime).format("DD/MM HH:mm")}
+              {formatDate(record.processedTime)}
             </Text>
           </div>
         )}

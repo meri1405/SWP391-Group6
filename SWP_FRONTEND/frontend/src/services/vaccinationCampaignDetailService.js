@@ -79,17 +79,17 @@ export class VaccinationCampaignDetailService {
   }
 
   /**
-   * Send vaccination forms to parents
+   * Send vaccination forms to parents with optional custom message
    */
-  static async sendFormsToParents(campaignId, campaignStatus) {
+  static async sendFormsToParents(campaignId, campaignStatus, customMessage = null) {
     if (campaignStatus !== "APPROVED" && campaignStatus !== "IN_PROGRESS") {
       message.error("Chỉ có thể gửi mẫu đơn cho chiến dịch đã được duyệt hoặc đang thực hiện");
       throw new Error("Invalid campaign status for sending forms");
     }
 
     try {
-      await vaccinationCampaignApi.sendFormsToParents(campaignId);
-      message.success("Đã gửi mẫu đơn tiêm chủng đến phụ huynh");
+      const result = await vaccinationCampaignApi.sendFormsToParents(campaignId, customMessage);
+      message.success(result.message || "Đã gửi mẫu đơn tiêm chủng đến phụ huynh");
     } catch (error) {
       console.error("Error sending forms:", error);
       message.error("Không thể gửi mẫu đơn tiêm chủng");

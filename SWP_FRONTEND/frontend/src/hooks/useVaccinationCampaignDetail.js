@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { VaccinationCampaignDetailService } from "../services/vaccinationCampaignDetailService";
 
 export const useVaccinationCampaignDetail = (campaignId) => {
@@ -23,15 +23,9 @@ export const useVaccinationCampaignDetail = (campaignId) => {
   const [confirmCompleteModal, setConfirmCompleteModal] = useState(false);
   const [showEditNotesModal, setShowEditNotesModal] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
+  const [showCustomMessageModal, setShowCustomMessageModal] = useState(false);
 
-  // Fetch campaign data on mount or when campaignId changes
-  useEffect(() => {
-    if (campaignId) {
-      fetchCampaignData();
-    }
-  }, [campaignId]);
-
-  const fetchCampaignData = async () => {
+  const fetchCampaignData = useCallback(async () => {
     setLoading(true);
     try {
       const data = await VaccinationCampaignDetailService.fetchCampaignData(campaignId);
@@ -45,7 +39,14 @@ export const useVaccinationCampaignDetail = (campaignId) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [campaignId]);
+
+  // Fetch campaign data on mount or when campaignId changes
+  useEffect(() => {
+    if (campaignId) {
+      fetchCampaignData();
+    }
+  }, [campaignId, fetchCampaignData]);
 
   const handleGenerateForms = async () => {
     setFormGenerateLoading(true);
@@ -60,10 +61,10 @@ export const useVaccinationCampaignDetail = (campaignId) => {
     }
   };
 
-  const handleSendForms = async () => {
+  const handleSendForms = async (customMessage = null) => {
     setFormSendLoading(true);
     try {
-      await VaccinationCampaignDetailService.sendFormsToParents(campaignId, campaign.status);
+      await VaccinationCampaignDetailService.sendFormsToParents(campaignId, campaign.status, customMessage);
       await fetchCampaignData(); // Refresh data
     } catch (error) {
       // Error handling is done in the service
@@ -158,6 +159,15 @@ export const useVaccinationCampaignDetail = (campaignId) => {
     setConfirmCompleteModal(false);
   };
 
+  // Custom message modal handlers
+  const openCustomMessageModal = () => {
+    setShowCustomMessageModal(true);
+  };
+
+  const closeCustomMessageModal = () => {
+    setShowCustomMessageModal(false);
+  };
+
   return {
     // Data
     campaign,
@@ -180,6 +190,7 @@ export const useVaccinationCampaignDetail = (campaignId) => {
     confirmCompleteModal,
     showEditNotesModal,
     selectedRecord,
+    showCustomMessageModal,
     
     // Actions
     fetchCampaignData,
@@ -196,5 +207,7 @@ export const useVaccinationCampaignDetail = (campaignId) => {
     closeEditNotesModal,
     openCompleteModal,
     closeCompleteModal,
+    openCustomMessageModal,
+    closeCustomMessageModal,
   };
 };

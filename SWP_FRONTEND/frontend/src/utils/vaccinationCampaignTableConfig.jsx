@@ -13,6 +13,19 @@ import {
 } from "./vaccinationCampaignUtils.jsx";
 
 /**
+ * Check if vaccination can be performed based on scheduled time
+ */
+const canPerformVaccination = (campaign) => {
+  if (!campaign?.scheduledDate) return false;
+  
+  const now = new Date();
+  const scheduledDate = new Date(campaign.scheduledDate);
+  
+  // Allow vaccination from the scheduled date onwards
+  return now >= scheduledDate;
+};
+
+/**
  * Get column configuration for eligible students table
  */
 export const getEligibleStudentsColumns = () => [
@@ -80,7 +93,8 @@ export const getIneligibleStudentsColumns = () => {
 export const getVaccinationFormsColumns = (
   records, 
   isCampaignCompleted, 
-  openVaccinationForm
+  openVaccinationForm,
+  campaign
 ) => [
   {
     title: "Mã học sinh",
@@ -125,42 +139,57 @@ export const getVaccinationFormsColumns = (
   {
     title: "Hành động",
     key: "action",
-    render: (_, record) => (
-      <Space size="small">
-        {record.confirmationStatus === "CONFIRMED" &&
-        !records.find((r) => r.vaccinationFormId === record.id) ? (
-          <Button
-            type="primary"
-            size="small"
-            onClick={() => openVaccinationForm(record)}
-            icon={<MedicineBoxOutlined />}
-            disabled={isCampaignCompleted}
-          >
-            Tiêm chủng
-          </Button>
-        ) : (
-          <Tooltip title="Xem ghi chú">
-            <Button
-              type="default"
-              size="small"
-              icon={<InfoCircleOutlined />}
-              onClick={() => {
-                if (record.parentNotes) {
-                  Modal.info({
-                    title: "Ghi chú của phụ huynh",
-                    content: record.parentNotes,
-                    okText: "Đóng",
-                  });
-                } else {
-                  message.info("Không có ghi chú");
-                }
-              }}
-              disabled={!record.parentNotes}
-            />
-          </Tooltip>
-        )}
-      </Space>
-    ),
+    render: (_, record) => {
+      const canVaccinate = canPerformVaccination(campaign);
+      const isConfirmedAndNotVaccinated = record.confirmationStatus === "CONFIRMED" &&
+        !records.find((r) => r.vaccinationFormId === record.id);
+      
+      return (
+        <Space size="small">
+          {isConfirmedAndNotVaccinated ? (
+            <Tooltip
+              title={
+                !canVaccinate
+                  ? `Chỉ có thể tiêm chủng từ ngày ${formatDate(campaign?.scheduledDate)} trở đi`
+                  : isCampaignCompleted
+                  ? "Chiến dịch đã hoàn thành"
+                  : "Thực hiện tiêm chủng"
+              }
+            >
+              <Button
+                type="primary"
+                size="small"
+                onClick={() => openVaccinationForm(record)}
+                icon={<MedicineBoxOutlined />}
+                disabled={isCampaignCompleted || !canVaccinate}
+              >
+                Tiêm chủng
+              </Button>
+            </Tooltip>
+          ) : (
+            <Tooltip title="Xem ghi chú">
+              <Button
+                type="default"
+                size="small"
+                icon={<InfoCircleOutlined />}
+                onClick={() => {
+                  if (record.parentNotes) {
+                    Modal.info({
+                      title: "Ghi chú của phụ huynh",
+                      content: record.parentNotes,
+                      okText: "Đóng",
+                    });
+                  } else {
+                    message.info("Không có ghi chú");
+                  }
+                }}
+                disabled={!record.parentNotes}
+              />
+            </Tooltip>
+          )}
+        </Space>
+      );
+    },
   },
 ];
 

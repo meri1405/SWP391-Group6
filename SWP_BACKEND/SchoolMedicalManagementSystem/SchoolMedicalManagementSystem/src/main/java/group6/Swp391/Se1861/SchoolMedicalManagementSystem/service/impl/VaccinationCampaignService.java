@@ -494,10 +494,9 @@ public class VaccinationCampaignService implements IVaccinationCampaignService {
         }
     }
 
-    // Continue with remaining methods...
     @Override
     @Transactional
-    public List<VaccinationFormDTO> sendFormsToParents(Long campaignId, User nurse) {
+    public List<VaccinationFormDTO> sendFormsToParents(Long campaignId, User nurse, String customMessage) {
         VaccinationCampaign campaign = campaignRepository.findById(campaignId)
                 .orElseThrow(() -> new IllegalArgumentException("Campaign not found"));
 
@@ -516,7 +515,8 @@ public class VaccinationCampaignService implements IVaccinationCampaignService {
                         vaccineName,
                         form.getLocation(),
                         form.getScheduledDate() != null ? formatDateTime(form.getScheduledDate()) : null,
-                        form
+                        form,
+                        customMessage
                 );
 
                 form.setSentDate(LocalDateTime.now());
@@ -778,6 +778,9 @@ public class VaccinationCampaignService implements IVaccinationCampaignService {
         dto.setStatus(campaign.getStatus().toString());
         dto.setPrePostCareInstructions(campaign.getPrePostCareInstructions());
         dto.setEstimatedVaccineCount(campaign.getEstimatedVaccineCount());
+        dto.setRejectionReason(campaign.getRejectionReason());
+        dto.setRejectedDate(campaign.getRejectedDate());
+        dto.setReminderSent(campaign.getReminderSent());
         
         if (campaign.getVaccinationRule() != null) {
             dto.setVaccinationRuleId(campaign.getVaccinationRule().getId());
@@ -816,6 +819,8 @@ public class VaccinationCampaignService implements IVaccinationCampaignService {
         dto.setParentNotes(form.getParentNotes());
         dto.setAdditionalInfo(form.getAdditionalInfo());
         dto.setIsActive(form.getIsActive());
+        dto.setReminderSent(form.getReminderSent());
+        dto.setResponseDate(form.getResponseDate());
         
         if (form.getCampaign() != null) {
             dto.setCampaignId(form.getCampaign().getId());

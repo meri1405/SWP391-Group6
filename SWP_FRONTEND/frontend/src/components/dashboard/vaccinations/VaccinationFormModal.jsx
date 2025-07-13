@@ -1,4 +1,6 @@
 import React from "react";
+import { Alert, Tag, Tooltip } from "antd";
+import { ClockCircleOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
 import { useVaccinationFormModal } from "../../../hooks/useVaccinationFormModal";
 import {
   formatGender,
@@ -12,6 +14,11 @@ import {
   canModifyForm
 } from "../../../utils/vaccinationFormModalUtils";
 import { formatDate } from "../../../utils/timeUtils";
+import {
+  validateParentFormAction,
+  formatTimeRemaining,
+  shouldShowFormReminderWarning,
+} from "../../../utils/vaccinationTimeValidation";
 import "../../../styles/VaccinationFormModal.css";
 
 const VaccinationFormModal = ({
@@ -98,6 +105,48 @@ const VaccinationFormModal = ({
                   {getStatusText(form.confirmationStatus)}
                 </div>
               </div>
+              
+              {/* Time validation warning for pending forms */}
+              {form.confirmationStatus === "PENDING" && form.sentDate && (() => {
+                const validation = validateParentFormAction(form.sentDate);
+                const showWarning = shouldShowFormReminderWarning(form.sentDate, form.reminderSent);
+                
+                if (!validation.canAct) {
+                  return (
+                    <Alert
+                      message="Phiếu đã hết hạn"
+                      description={`Thời hạn phản hồi đã kết thúc (${validation.hoursElapsed} giờ đã trôi qua, giới hạn 48 giờ). Vui lòng liên hệ nhà trường để được hỗ trợ.`}
+                      type="error"
+                      showIcon
+                      style={{ margin: "16px 0" }}
+                      icon={<ExclamationCircleOutlined />}
+                    />
+                  );
+                }
+                
+                if (showWarning || validation.remainingHours <= 6) {
+                  return (
+                    <Alert
+                      message={showWarning ? "Nhắc nhở đã được gửi" : "Sắp hết thời hạn phản hồi"}
+                      description={
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <ClockCircleOutlined />
+                          <span>
+                            Còn {formatTimeRemaining(validation.remainingHours)} để phản hồi phiếu tiêm chủng
+                            {showWarning && " (Hệ thống đã gửi nhắc nhở sau 24 giờ)"}
+                          </span>
+                        </div>
+                      }
+                      type="warning"
+                      showIcon
+                      style={{ margin: "16px 0" }}
+                    />
+                  );
+                }
+                
+                return null;
+              })()}
+              
               <div className="form-content">
                 <div className="info-section">
                   <h4>Thông tin vắc xin</h4>
@@ -188,24 +237,58 @@ const VaccinationFormModal = ({
                   </div>
                 )}
               </div>
-              {canModifyForm(form.confirmationStatus) && (
-                <div className="form-actions">
-                  <button
-                    className="btn btn-success"
-                    onClick={handleConfirmClick}
-                  >
-                    <i className="fas fa-check"></i>
-                    Đồng ý tiêm chủng
-                  </button>
-                  <button
-                    className="btn btn-danger"
-                    onClick={handleDeclineClick}
-                  >
-                    <i className="fas fa-times"></i>
-                    Từ chối tiêm chủng
-                  </button>
-                </div>
-              )}
+              {canModifyForm(form.confirmationStatus) && (() => {
+                // Check time validation for parent actions
+                if (form.sentDate) {
+                  const validation = validateParentFormAction(form.sentDate);
+                  
+                  if (!validation.canAct) {
+                    return (
+                      <div className="form-actions">
+                        <Alert
+                          message="Không thể thực hiện hành động"
+                          description="Đã quá thời hạn phản hồi (48 giờ). Vui lòng liên hệ nhà trường để được hỗ trợ."
+                          type="error"
+                          showIcon
+                        />
+                      </div>
+                    );
+                  }
+                }
+                
+                return (
+                  <div className="form-actions">
+                    {form.sentDate && (() => {
+                      const validation = validateParentFormAction(form.sentDate);
+                      if (validation.remainingHours <= 6) {
+                        return (
+                          <div style={{ marginBottom: "16px" }}>
+                            <Tag color="orange" icon={<ClockCircleOutlined />}>
+                              Còn {formatTimeRemaining(validation.remainingHours)} để phản hồi
+                            </Tag>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+                    
+                    <button
+                      className="btn btn-success"
+                      onClick={handleConfirmClick}
+                    >
+                      <i className="fas fa-check"></i>
+                      Đồng ý tiêm chủng
+                    </button>
+                    <button
+                      className="btn btn-danger"
+                      onClick={handleDeclineClick}
+                    >
+                      <i className="fas fa-times"></i>
+                      Từ chối tiêm chủng
+                    </button>
+                  </div>
+                );
+              })()}
             </div>
           )}
         </div>

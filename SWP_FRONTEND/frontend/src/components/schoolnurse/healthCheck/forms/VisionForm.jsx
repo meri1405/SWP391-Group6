@@ -53,8 +53,8 @@ const VisionForm = ({ categoryData, onDataChange, readOnly }) => (
               </Text>
               <InputNumber
                 min={0}
-                max={20}
-                step={0.1}
+                max={10}
+                step={1}
                 value={categoryData.visionLeft}
                 onChange={(value) =>
                   onDataChange("VISION", "visionLeft", value || 0)
@@ -71,8 +71,8 @@ const VisionForm = ({ categoryData, onDataChange, readOnly }) => (
               </Text>
               <InputNumber
                 min={0}
-                max={20}
-                step={0.1}
+                max={10}
+                step={1}
                 value={categoryData.visionRight}
                 onChange={(value) =>
                   onDataChange("VISION", "visionRight", value || 0)
@@ -87,8 +87,8 @@ const VisionForm = ({ categoryData, onDataChange, readOnly }) => (
               <Text strong>Thị lực mắt trái (có kính)</Text>
               <InputNumber
                 min={0}
-                max={20}
-                step={0.1}
+                max={10}
+                step={1}
                 value={categoryData.visionLeftWithGlass}
                 onChange={(value) =>
                   onDataChange(
@@ -107,8 +107,8 @@ const VisionForm = ({ categoryData, onDataChange, readOnly }) => (
               <Text strong>Thị lực mắt phải (có kính)</Text>
               <InputNumber
                 min={0}
-                max={20}
-                step={0.1}
+                max={10}
+                step={1}
                 value={categoryData.visionRightWithGlass}
                 onChange={(value) =>
                   onDataChange(

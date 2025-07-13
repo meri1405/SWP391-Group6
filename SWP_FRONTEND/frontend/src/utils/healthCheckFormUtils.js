@@ -9,6 +9,12 @@
  */
 export const getInitialCategoryData = (category) => {
   switch (category) {
+    case "BASIC_INFO":
+      return {
+        height: null,
+        weight: null,
+        bmi: null
+      };
     case "VISION":
       return {
         visionLeft: "",
@@ -112,6 +118,10 @@ export const initializeFormData = (campaign) => {
     height: "",
   };
   
+  // Always include BASIC_INFO (not as a category, but as required basic information)
+  initialData.BASIC_INFO = getInitialCategoryData("BASIC_INFO");
+  
+  // Add campaign categories
   if (campaign?.categories) {
     campaign.categories.forEach((category) => {
       initialData[category] = getInitialCategoryData(category);
@@ -133,6 +143,13 @@ export const mapExistingResultsToFormData = (studentResults, campaign) => {
   const loadedData = {
     weight: studentResults.weight || studentResults.overallResults?.weight || "",
     height: studentResults.height || studentResults.overallResults?.height || "",
+  };
+
+  // Always include BASIC_INFO (not as a category, but as required basic information)
+  loadedData.BASIC_INFO = {
+    height: studentResults.height || studentResults.overallResults?.height || null,
+    weight: studentResults.weight || studentResults.overallResults?.weight || null,
+    bmi: studentResults.bmi || studentResults.overallResults?.bmi || null,
   };
 
   // Load category-specific data if available

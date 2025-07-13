@@ -52,6 +52,15 @@ public class VaccinationCampaign {
     @Column(name = "estimatedVaccineCount")
     private Integer estimatedVaccineCount;
 
+    @Column(name = "rejectionReason")
+    private String rejectionReason;
+
+    @Column(name = "rejectedDate")
+    private LocalDateTime rejectedDate;
+
+    @Column(name = "reminderSent", nullable = false)
+    private Boolean reminderSent = false;
+
     @ManyToOne
     @JoinColumn(name = "vaccinationRuleId", referencedColumnName = "id")
     private VaccinationRule vaccinationRule;
@@ -72,5 +81,13 @@ public class VaccinationCampaign {
 
     public enum CampaignStatus {
         PENDING, APPROVED, REJECTED, IN_PROGRESS, COMPLETED, CANCELLED
+    }
+
+    // Lifecycle callbacks
+    @PrePersist
+    protected void onCreate() {
+        if (reminderSent == null) {
+            reminderSent = false;
+        }
     }
 }

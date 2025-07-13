@@ -43,6 +43,7 @@ import {
 } from "../../../utils/vaccinationCampaignTableConfig.jsx";
 import VaccinationResultForm from "./VaccinationResultForm";
 import EditVaccinationNotesForm from "./EditVaccinationNotesForm";
+import CustomMessageModal from "./CustomMessageModal";
 
 const { Title } = Typography;
 
@@ -69,6 +70,7 @@ const VaccinationCampaignDetail = ({ campaignId, onBack, onEdit }) => {
     confirmCompleteModal,
     showEditNotesModal,
     selectedRecord,
+    showCustomMessageModal,
     
     // Actions
     handleGenerateForms,
@@ -84,6 +86,8 @@ const VaccinationCampaignDetail = ({ campaignId, onBack, onEdit }) => {
     closeEditNotesModal,
     openCompleteModal,
     closeCompleteModal,
+    openCustomMessageModal,
+    closeCustomMessageModal,
   } = useVaccinationCampaignDetail(campaignId);
 
   // Calculate statistics and permissions
@@ -98,13 +102,20 @@ const VaccinationCampaignDetail = ({ campaignId, onBack, onEdit }) => {
     handleCompleteCampaign(statistics);
   };
 
+  // Handle sending forms with custom message
+  const handleSendFormsWithMessage = (customMessage) => {
+    handleSendForms(customMessage);
+    closeCustomMessageModal();
+  };
+
   // Get table columns
   const eligibleStudentsColumns = getEligibleStudentsColumns();
   const ineligibleStudentsColumns = getIneligibleStudentsColumns();
   const vaccinationFormsColumns = getVaccinationFormsColumns(
     records, 
     permissions.isCampaignCompleted, 
-    openVaccinationForm
+    openVaccinationForm,
+    campaign
   );
   const vaccinationRecordsColumns = getVaccinationRecordsColumns(
     permissions.isCampaignCompleted, 
@@ -285,7 +296,7 @@ const VaccinationCampaignDetail = ({ campaignId, onBack, onEdit }) => {
                 type="primary"
                 icon={<SendOutlined />}
                 loading={formSendLoading}
-                onClick={handleSendForms}
+                onClick={openCustomMessageModal}
               >
                 {forms.some((form) => form.sentDate)
                   ? "Gửi đơn còn lại đến phụ huynh"
@@ -650,6 +661,16 @@ const VaccinationCampaignDetail = ({ campaignId, onBack, onEdit }) => {
           />
         </div>
       </Modal>
+
+      {/* Custom Message Modal */}
+      <CustomMessageModal
+        visible={showCustomMessageModal}
+        onCancel={closeCustomMessageModal}
+        onSubmit={handleSendFormsWithMessage}
+        loading={formSendLoading}
+        campaignName={campaign?.name}
+        formsCount={forms.filter(form => !form.sentDate).length}
+      />
     </div>
   );
 };

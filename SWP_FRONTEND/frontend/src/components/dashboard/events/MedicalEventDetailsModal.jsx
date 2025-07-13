@@ -1,6 +1,6 @@
 import React from "react";
 import { Modal, Button, Row, Col, Typography, Tag } from "antd";
-import dayjs from "dayjs";
+import { formatDate } from "../../../utils/timeUtils";
 import { getEventTypeConfig, getSeverityConfig } from "../../../utils/configUtils";
 import { getSupplyName } from "../../../utils/medicalEventUtils";
 
@@ -39,7 +39,7 @@ const MedicalEventDetailsModal = ({
           </Col>
           <Col xs={24} sm={12}>
             <Text strong>Thời gian:</Text>{" "}
-            {dayjs(selectedEvent.occurrenceTime).format("DD/MM/YYYY HH:mm")}
+            {formatDate(selectedEvent.occurrenceTime)}
           </Col>
           <Col xs={24} sm={12}>
             <Text strong>Học sinh:</Text> {selectedEvent.student?.firstName}{" "}
@@ -81,7 +81,7 @@ const MedicalEventDetailsModal = ({
             <>
               <Col xs={24} sm={12}>
                 <Text strong>Thời gian xử lý:</Text>{" "}
-                {dayjs(selectedEvent.processedTime).format("DD/MM/YYYY HH:mm")}
+                {formatDate(selectedEvent.processedTime)}
               </Col>
               <Col xs={24} sm={12}>
                 <Text strong>Người xử lý:</Text>{" "}
@@ -95,7 +95,7 @@ const MedicalEventDetailsModal = ({
           </Col>
           <Col xs={24} sm={12}>
             <Text strong>Ngày tạo:</Text>{" "}
-            {dayjs(selectedEvent.createdAt).format("DD/MM/YYYY HH:mm")}
+            {formatDate(selectedEvent.createdAt)}
           </Col>
           {selectedEvent.suppliesUsed && selectedEvent.suppliesUsed.length > 0 && (
             <Col xs={24}>

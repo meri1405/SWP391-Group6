@@ -49,6 +49,14 @@ export const vaccinationCampaignValidation = {
       return Promise.reject(new Error("Ngày thực hiện phải là ngày tương lai"));
     }
 
+    // Business rule: Campaign date must be at least 4 days from creation
+    const minimumDate = today.add(4, "day");
+    if (value.isBefore(minimumDate, "day")) {
+      return Promise.reject(
+        new Error(`Ngày tiêm phải cách ít nhất 4 ngày từ hôm nay (tối thiểu: ${minimumDate.format("DD/MM/YYYY")})`)
+      );
+    }
+
     return Promise.resolve();
   },
 
@@ -117,11 +125,13 @@ export const vaccinationCampaignValidation = {
    * @returns {boolean} True if date should be disabled
    */
   isDateDisabled: (current) => {
-    // Disable all dates from today and before
-    return (
-      current &&
-      (current.isBefore(dayjs(), "day") || current.isSame(dayjs(), "day"))
-    );
+    if (!current) return false;
+    
+    const today = dayjs();
+    const minimumDate = today.add(4, "day");
+    
+    // Disable all dates before the minimum required date (4 days from today)
+    return current.isBefore(minimumDate, "day");
   },
 
   /**
