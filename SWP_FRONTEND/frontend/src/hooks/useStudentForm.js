@@ -15,6 +15,7 @@ import {
   validateCompleteParentInfo,
   hasAtLeastOneParent
 } from "../services/studentFormService";
+import notificationEventService from "../services/notificationEventService";
 
 /**
  * Custom hook for managing student form state and logic
@@ -187,6 +188,9 @@ export const useStudentForm = (onSuccess, onCancel) => {
       handleReset();
       onSuccess && onSuccess(response);
       onCancel();
+      
+      // Trigger notification refresh
+      notificationEventService.triggerRefresh();
       
     } catch (error) {
       message.error(error.message || "Có lỗi xảy ra khi tạo học sinh và phụ huynh");

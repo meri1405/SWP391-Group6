@@ -42,6 +42,7 @@ public class MedicationScheduleService implements IMedicationScheduleService {
     // Date formatters for consistent date formatting in notifications
     private static final DateTimeFormatter DATETIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm, dd/MM/yyyy");
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     /**
      * Format LocalDateTime to HH:mm, dd/MM/yyyy
@@ -55,6 +56,13 @@ public class MedicationScheduleService implements IMedicationScheduleService {
      */
     private String formatTime(LocalTime time) {
         return time != null ? time.format(TIME_FORMATTER) : "N/A";
+    }
+
+    /**
+     * Format LocalDate to dd/MM/yyyy
+     */
+    private String formatDate(LocalDate date) {
+        return date != null ? date.format(DATE_FORMATTER) : "N/A";
     }
 
     /**
@@ -543,14 +551,22 @@ public class MedicationScheduleService implements IMedicationScheduleService {
             Student student = schedule.getItemRequest().getMedicationRequest().getStudent();
             String medicationName = schedule.getItemRequest().getItemName();
             String scheduledTime = formatTime(schedule.getScheduledTime());
+            String scheduledDate = formatDate(LocalDate.now());
             
             String title = "Lịch uống thuốc bị bỏ lỡ";
             String message = String.format(
-                "Học sinh %s %s đã bỏ lỡ lịch uống thuốc '%s' lúc %s. Hệ thống đã tự động đánh dấu là bỏ lỡ.",
+                "Học sinh: %s %s (Lớp: %s)\n" +
+                "Thuốc: %s\n" +
+                "Thời gian dự kiến: %s, %s\n" +
+                "Hệ thống đã tự động đánh dấu là 'Bỏ lỡ' do quá %d phút chưa được cập nhật.\n" +
+                "Vui lòng kiểm tra và liên hệ phụ huynh nếu cần thiết.",
                 student.getLastName(),
                 student.getFirstName(),
+                student.getClassName() != null ? student.getClassName() : "N/A",
                 medicationName,
-                scheduledTime
+                scheduledTime,
+                scheduledDate,
+                overdueThresholdMinutes
             );
             
             notificationService.createGeneralNotification(
@@ -560,8 +576,11 @@ public class MedicationScheduleService implements IMedicationScheduleService {
                 "MEDICATION_MISSED_AUTO"
             );
             
+            log.info("Sent missed medication notification to nurse {} for student {} - medication: {}",
+                    nurse.getFullName(), student.getFullName(), medicationName);
+            
         } catch (Exception e) {
-            System.err.println("Error sending missed medication notification: " + e.getMessage());
+            log.error("Error sending missed medication notification to nurse: {}", e.getMessage(), e);
         }
     }
 }

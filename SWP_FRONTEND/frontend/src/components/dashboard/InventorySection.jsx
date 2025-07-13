@@ -18,6 +18,7 @@ import {
   Descriptions,
   Divider,
 } from "antd";
+import notificationEventService from "../../services/notificationEventService";
 import {
   PlusOutlined,
   EditOutlined,
@@ -1164,6 +1165,10 @@ const InventorySection = () => {
 
       await restockRequestApi.approveRequest(requestId, approvalData);
       messageApi.success("Đã duyệt yêu cầu bổ sung");
+      
+      // Trigger notification refresh for navbar
+      notificationEventService.triggerRefresh();
+      
       fetchRestockRequests();
       setShowApprovalModal(false);
     } catch (error) {
@@ -1191,6 +1196,10 @@ const InventorySection = () => {
 
       await restockRequestApi.rejectRequest(requestId, rejectionData);
       messageApi.success("Đã từ chối yêu cầu bổ sung");
+      
+      // Trigger notification refresh for navbar
+      notificationEventService.triggerRefresh();
+      
       fetchRestockRequests();
     } catch (error) {
       console.error("Error rejecting request:", error);

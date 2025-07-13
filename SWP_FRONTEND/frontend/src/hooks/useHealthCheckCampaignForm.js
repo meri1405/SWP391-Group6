@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Form } from 'antd';
 import { healthCheckCampaignService } from '../services/healthCheckCampaignService';
 import { formDataHelpers } from './useHealthCheckCampaignValidation';
+import notificationEventService from '../services/notificationEventService';
 
 /**
  * Custom hook for managing Health Check Campaign Form state and logic
@@ -113,6 +114,8 @@ export const useHealthCheckCampaignForm = (campaign, onSuccess) => {
         result = await healthCheckCampaignService.updateCampaign(campaign.id, campaignData);
       } else {
         result = await healthCheckCampaignService.createCampaign(campaignData);
+        // Trigger notification refresh when creating new health check campaign (which sends to managers)
+        notificationEventService.triggerRefresh();
       }
       
       onSuccess(result);

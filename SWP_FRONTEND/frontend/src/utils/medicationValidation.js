@@ -6,7 +6,7 @@ import dayjs from 'dayjs';
  */
 export const medicationValidation = {
   /**
-   * Validate start date - cannot be in the past
+   * Validate start date - must be at least 1 day after today
    * @param {dayjs.Dayjs} date - Date to validate
    * @returns {Promise} Validation promise
    */
@@ -14,8 +14,10 @@ export const medicationValidation = {
     if (!date) return Promise.resolve();
     
     const today = dayjs().startOf('day');
-    if (date.isBefore(today)) {
-      return Promise.reject(new Error('Ngày bắt đầu không thể là ngày trong quá khứ'));
+    const minimumStartDate = today.add(1, 'day'); // At least 1 day after today
+    
+    if (date.isBefore(minimumStartDate)) {
+      return Promise.reject(new Error('Ngày bắt đầu uống thuốc phải tối thiểu là 1 ngày sau ngày tạo yêu cầu'));
     }
     return Promise.resolve();
   },
@@ -239,13 +241,14 @@ export const medicationValidation = {
  */
 export const medicationDateUtils = {
   /**
-   * Disable past dates in date picker
+   * Disable dates that are today or in the past (only allow dates from tomorrow onwards)
    * @param {dayjs.Dayjs} current - Current date being evaluated
    * @returns {boolean} Whether the date should be disabled
    */
   disabledDate(current) {
-    // Disable all dates before today
-    return current && current.isBefore(dayjs().startOf('day'));
+    // Disable all dates before tomorrow (including today)
+    const tomorrow = dayjs().add(1, 'day').startOf('day');
+    return current && current.isBefore(tomorrow);
   },
 
   /**
@@ -254,8 +257,8 @@ export const medicationDateUtils = {
    */
   getDefaultDateRange() {
     return {
-      startDate: dayjs(),
-      endDate: dayjs().add(7, 'day')
+      startDate: dayjs().add(1, 'day'), // Start from tomorrow (minimum 1 day after request)
+      endDate: dayjs().add(8, 'day') // End after 7 days from start date
     };
   },
 

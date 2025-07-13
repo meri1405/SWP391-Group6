@@ -39,6 +39,7 @@ import {
 } from "@ant-design/icons";
 import { nurseApi } from "../../api/nurseApi";
 import HealthProfileEventsModal from "../common/HealthProfileEventsModal";
+import notificationEventService from "../../services/notificationEventService";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 
@@ -560,6 +561,9 @@ const NurseHealthProfiles = () => {
 
         // Refresh the profiles list
         await loadHealthProfiles();
+        
+        // Trigger notification refresh
+        notificationEventService.triggerRefresh();
       } else {
         message.error(response.message || "Không thể duyệt hồ sơ sức khỏe.");
       }
@@ -637,6 +641,9 @@ const NurseHealthProfiles = () => {
           console.error("Error refreshing profiles:", loadError);
           // Không hiển thị lỗi cho người dùng vì đã hiển thị thông báo thành công
         }
+        
+        // Trigger notification refresh
+        notificationEventService.triggerRefresh();
       } else {
         message.error(
           "Không thể từ chối hồ sơ sức khỏe. Vui lòng thử lại sau."

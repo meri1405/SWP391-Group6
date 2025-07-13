@@ -8,6 +8,7 @@ import webSocketService from "../../../services/webSocketService";
 import { VaccinationFormModal } from "../vaccinations";
 import "../../../styles/Notifications.css";
 import { HealthCheckFormModal } from "../health";
+import { formatTimeAgo } from "../../../utils/timeUtils";
 const Notifications = ({ role = "parent" }) => {
   const [filter, setFilter] = useState("all");
   const [notifications, setNotifications] = useState([]);
@@ -19,6 +20,7 @@ const Notifications = ({ role = "parent" }) => {
   const [showHealthCheckModal, setShowHealthCheckModal] = useState(false);
   const [selectedHealthCheckFormId, setSelectedHealthCheckFormId] =
     useState(null);
+  const [_timeUpdateTrigger, setTimeUpdateTrigger] = useState(0);
 
   const { getToken } = useAuth();
 
@@ -236,41 +238,6 @@ const Notifications = ({ role = "parent" }) => {
     );
   }, []);
 
-  const formatTimeAgo = useCallback((dateInput) => {
-    if (!dateInput) return "Không xác định";
-
-    let notificationDate;
-    
-    // Check if dateInput is an array (LocalDateTime format from backend)
-    if (Array.isArray(dateInput)) {
-      notificationDate = convertLocalDateTimeArray(dateInput);
-    } else {
-      // Handle string date format
-      notificationDate = new Date(dateInput);
-    }
-
-    // Check if date conversion was successful
-    if (!notificationDate || isNaN(notificationDate.getTime())) {
-      return "Không xác định";
-    }
-
-    const now = new Date();
-    const diffInMs = now - notificationDate;
-    const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
-    const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
-    const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
-
-    if (diffInMinutes < 1) {
-      return "Vừa xong";
-    } else if (diffInMinutes < 60) {
-      return `${diffInMinutes} phút trước`;
-    } else if (diffInHours < 24) {
-      return `${diffInHours} giờ trước`;
-    } else {
-      return `${diffInDays} ngày trước`;
-    }
-  }, []);
-
   // Helper function to check if content is HTML
   const isHtmlContent = useCallback((content) => {
     if (!content) return false;
@@ -389,7 +356,7 @@ const Notifications = ({ role = "parent" }) => {
         setLoading(false);
       }
     }
-  }, [getToken, determineActionRequired, api, formatTimeAgo]);
+  }, [getToken, determineActionRequired, api]);
 
   const setupWebSocketConnection = useCallback(async () => {
     const token = getToken();
@@ -468,6 +435,15 @@ const Notifications = ({ role = "parent" }) => {
       webSocketService.removeMessageHandler("/queue/notifications");
     };
   }, [loadNotifications, setupWebSocketConnection]);
+
+  // Update time display every minute
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeUpdateTrigger(prev => prev + 1);
+    }, 60000); // Update every minute
+
+    return () => clearInterval(timer);
+  }, []);
 
   // Helper functions for formatting
   const formatVietnameseDate = useCallback((dateInput) => {
@@ -690,7 +666,9 @@ const Notifications = ({ role = "parent" }) => {
                 </div>
                 <div className="notification-meta">
                   <h3>{notification.title}</h3>
-                  <span className="notification-time">{notification.time}</span>
+                  <span className="notification-time">
+                    {formatTimeAgo(notification.date || notification.createdAt)}
+                  </span>
                   {notification.priority === "high" && (
                     <span className="priority-badge high">Khẩn cấp</span>
                   )}

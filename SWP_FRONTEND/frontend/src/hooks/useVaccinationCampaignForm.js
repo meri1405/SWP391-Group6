@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Form } from "antd";
 import dayjs from "dayjs";
 import { VaccinationCampaignFormService } from "../services/vaccinationCampaignFormService";
+import notificationEventService from "../services/notificationEventService";
 
 /**
  * Custom hook for managing vaccination campaign form state and logic
@@ -95,6 +96,12 @@ export const useVaccinationCampaignForm = (campaign = null, onSuccess) => {
         isEditing,
         campaign
       );
+      
+      // Trigger notification refresh when creating new campaign (which sends to managers)
+      if (!isEditing) {
+        notificationEventService.triggerRefresh();
+      }
+      
       onSuccess(result);
     } catch (error) {
       // Error handling is done in the service

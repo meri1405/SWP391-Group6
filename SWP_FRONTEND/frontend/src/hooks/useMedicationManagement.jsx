@@ -4,6 +4,7 @@ import { CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined } from '@
 import { useAuth } from '../contexts/AuthContext';
 import { medicationService } from '../services/medicationService';
 import { medicationValidation, medicationDateUtils } from '../utils/medicationValidation';
+import notificationEventService from '../services/notificationEventService';
 
 /**
  * Custom hook for medication management
@@ -215,6 +216,11 @@ export const useMedicationManagement = () => {
       
       // Close the modal
       setVisible(false);
+      
+      // Trigger notification refresh for new requests
+      if (!isEdit) {
+        notificationEventService.triggerRefresh();
+      }
     } catch {
       // Error handling is done in the service
     } finally {

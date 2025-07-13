@@ -85,7 +85,7 @@ public class NotificationService implements INotificationService {
             if (parent.getUsername() != null) {
                 messagingTemplate.convertAndSendToUser(
                         parent.getUsername(),
-                        "/topic/notifications",
+                        "/queue/notifications",
                         notificationDTO
                 );
             }
@@ -135,7 +135,7 @@ public class NotificationService implements INotificationService {
             if (recipient.getUsername() != null) {
                 messagingTemplate.convertAndSendToUser(
                         recipient.getUsername(),
-                        "/topic/notifications",
+                        "/queue/notifications",
                         notificationDTO
                 );
             }
@@ -190,7 +190,7 @@ public class NotificationService implements INotificationService {
             if (parent.getUsername() != null) {
                 messagingTemplate.convertAndSendToUser(
                         parent.getUsername(),
-                        "/topic/notifications",
+                        "/queue/notifications",
                         notificationDTO
                 );
             }
@@ -246,7 +246,7 @@ public class NotificationService implements INotificationService {
             if (parent.getUsername() != null) {
                 messagingTemplate.convertAndSendToUser(
                         parent.getUsername(),
-                        "/topic/notifications",
+                        "/queue/notifications",
                         notificationDTO
                 );
             }
@@ -396,7 +396,7 @@ public class NotificationService implements INotificationService {
             if (recipient.getUsername() != null) {
                 messagingTemplate.convertAndSendToUser(
                         recipient.getUsername(),
-                        "/topic/notifications",
+                        "/queue/notifications",
                         notificationDTO
                 );
             }
@@ -697,7 +697,7 @@ public class NotificationService implements INotificationService {
             if (recipient.getUsername() != null) {
                 messagingTemplate.convertAndSendToUser(
                         recipient.getUsername(),
-                        "/topic/notifications",
+                        "/queue/notifications",
                         notificationDTO
                 );
             }
@@ -801,6 +801,153 @@ public class NotificationService implements INotificationService {
             } catch (Exception e) {
                 System.err.println("Error sending WebSocket notification to manager: " + e.getMessage());
                 e.printStackTrace();
+            }
+        }
+    }
+    
+    /**
+     * Notify school nurses about a new medication request
+     */
+    @Transactional
+    @Override
+    public void notifyNursesAboutNewMedicationRequest(MedicationRequest medicationRequest) {
+        // Find all school nurses
+        List<User> nurses = userRepository.findByRole_RoleName("SCHOOLNURSE");
+        
+        System.out.println("NotificationService: Found " + nurses.size() + " nurses to notify about medication request ID: " + medicationRequest.getId());
+        
+        if (nurses.isEmpty()) {
+            System.out.println("Warning: No school nurses found to notify about medication request ID: " + medicationRequest.getId());
+            return;
+        }
+        
+        String title = "Yêu cầu thuốc mới từ phụ huynh";
+        String message = String.format(
+            "<p>Phụ huynh <strong>%s</strong> đã gửi yêu cầu thuốc cho học sinh <strong>%s</strong>.</p>" +
+            "<p>Vui lòng xem xét và phê duyệt yêu cầu này.</p>" +
+            "<p><em>Thời gian gửi: %s</em></p>",
+            medicationRequest.getParent().getFullName(),
+            medicationRequest.getStudent().getFullName(),
+            formatDate(medicationRequest.getRequestDate())
+        );
+        
+        System.out.println("NotificationService: Preparing medication request notification with title: '" + title + "'");
+        
+        // Notify each school nurse
+        for (User nurse : nurses) {
+            System.out.println("NotificationService: Creating notification for nurse ID: " + nurse.getId() + ", username: " + nurse.getUsername());
+            
+            Notification notification = new Notification();
+            notification.setTitle(title);
+            notification.setMessage(message);
+            notification.setNotificationType("MEDICATION_REQUEST_PENDING");
+            notification.setRecipient(nurse);
+            notification.setMedicationRequest(medicationRequest);
+            
+            Notification savedNotification = notificationRepository.save(notification);
+            NotificationDTO notificationDTO = convertToDTO(savedNotification);
+            
+            System.out.println("NotificationService: Saved notification ID: " + savedNotification.getId() + " for nurse ID: " + nurse.getId());
+            
+            // Send real-time notification via WebSocket
+            try {
+                if (nurse.getUsername() != null) {
+                    System.out.println("NotificationService: Sending WebSocket message to nurse: " + nurse.getUsername());
+                    messagingTemplate.convertAndSendToUser(
+                            nurse.getUsername(),
+                            "/queue/notifications",
+                            notificationDTO
+                    );
+                    System.out.println("NotificationService: WebSocket message sent successfully to nurse: " + nurse.getUsername());
+                } else {
+                    System.out.println("NotificationService: Cannot send WebSocket message - username is null for nurse ID: " + nurse.getId());
+                }
+            } catch (Exception e) {
+                System.err.println("Error sending WebSocket notification to nurse " + nurse.getId() + ": " + e.getMessage());
+            }
+        }
+    }
+    
+    /**
+     * Notify both parent and nurses about auto-rejected medication request
+     */
+    @Transactional
+    @Override
+    public void notifyAutoRejection(MedicationRequest medicationRequest) {
+        System.out.println("NotificationService: Notifying about auto-rejected medication request ID: " + medicationRequest.getId());
+        
+        // Notify parent about auto-rejection
+        if (medicationRequest.getParent() != null) {
+            String parentTitle = "Yêu cầu thuốc bị từ chối tự động";
+            String parentMessage = String.format(
+                "<p>Yêu cầu thuốc cho học sinh <strong>%s</strong> đã bị từ chối tự động.</p>" +
+                "<p><strong>Lý do:</strong> Quá thời hạn xử lý (6 giờ trước lần uống thuốc đầu tiên).</p>" +
+                "<p>Để đảm bảo an toàn, vui lòng tạo yêu cầu mới với thời gian phù hợp.</p>" +
+                "<p><em>Thời gian từ chối: %s</em></p>",
+                medicationRequest.getStudent().getFullName(),
+                formatDateTime(LocalDateTime.now())
+            );
+            
+            Notification parentNotification = new Notification();
+            parentNotification.setTitle(parentTitle);
+            parentNotification.setMessage(parentMessage);
+            parentNotification.setNotificationType("MEDICATION_REQUEST_AUTO_REJECTED");
+            parentNotification.setRecipient(medicationRequest.getParent());
+            parentNotification.setMedicationRequest(medicationRequest);
+            
+            Notification savedParentNotification = notificationRepository.save(parentNotification);
+            NotificationDTO parentNotificationDTO = convertToDTO(savedParentNotification);
+            
+            // Send real-time notification to parent
+            try {
+                if (medicationRequest.getParent().getUsername() != null) {
+                    messagingTemplate.convertAndSendToUser(
+                            medicationRequest.getParent().getUsername(),
+                            "/queue/notifications",
+                            parentNotificationDTO
+                    );
+                }
+            } catch (Exception e) {
+                System.err.println("Error sending WebSocket notification to parent: " + e.getMessage());
+            }
+        }
+        
+        // Notify all nurses about the auto-rejection
+        List<User> nurses = userRepository.findByRole_RoleName("SCHOOLNURSE");
+        
+        String nurseTitle = "Yêu cầu thuốc bị từ chối tự động";
+        String nurseMessage = String.format(
+            "<p>Yêu cầu thuốc của phụ huynh <strong>%s</strong> cho học sinh <strong>%s</strong> đã bị từ chối tự động.</p>" +
+            "<p><strong>Lý do:</strong> Quá thời hạn xử lý (6 giờ trước lần uống thuốc đầu tiên).</p>" +
+            "<p>Hệ thống đã tự động xử lý yêu cầu này.</p>" +
+            "<p><em>Thời gian từ chối: %s</em></p>",
+            medicationRequest.getParent().getFullName(),
+            medicationRequest.getStudent().getFullName(),
+            formatDateTime(LocalDateTime.now())
+        );
+        
+        for (User nurse : nurses) {
+            Notification nurseNotification = new Notification();
+            nurseNotification.setTitle(nurseTitle);
+            nurseNotification.setMessage(nurseMessage);
+            nurseNotification.setNotificationType("MEDICATION_REQUEST_AUTO_REJECTED");
+            nurseNotification.setRecipient(nurse);
+            nurseNotification.setMedicationRequest(medicationRequest);
+            
+            Notification savedNurseNotification = notificationRepository.save(nurseNotification);
+            NotificationDTO nurseNotificationDTO = convertToDTO(savedNurseNotification);
+            
+            // Send real-time notification to nurse
+            try {
+                if (nurse.getUsername() != null) {
+                    messagingTemplate.convertAndSendToUser(
+                            nurse.getUsername(),
+                            "/queue/notifications",
+                            nurseNotificationDTO
+                    );
+                }
+            } catch (Exception e) {
+                System.err.println("Error sending WebSocket notification to nurse " + nurse.getId() + ": " + e.getMessage());
             }
         }
     }
@@ -1267,7 +1414,7 @@ public class NotificationService implements INotificationService {
             if (parent.getUsername() != null) {
                 messagingTemplate.convertAndSendToUser(
                         parent.getUsername(),
-                        "/topic/notifications",
+                        "/queue/notifications",
                         notificationDTO
                 );
             }
@@ -1319,7 +1466,7 @@ public class NotificationService implements INotificationService {
             if (parent.getUsername() != null) {
                 messagingTemplate.convertAndSendToUser(
                         parent.getUsername(),
-                        "/topic/notifications",
+                        "/queue/notifications",
                         notificationDTO
                 );
             }
@@ -1372,7 +1519,7 @@ public class NotificationService implements INotificationService {
             if (parent.getUsername() != null) {
                 messagingTemplate.convertAndSendToUser(
                         parent.getUsername(),
-                        "/topic/notifications",
+                        "/queue/notifications",
                         notificationDTO
                 );
             }
@@ -1850,7 +1997,6 @@ public class NotificationService implements INotificationService {
             String message = String.format(
                 "<p><strong>Thân gửi Quý phụ huynh,</strong></p>" +
                 "<p>Nhà trường thông báo lịch khám sức khỏe của đợt khám \"<strong>%s</strong>\".</p>" +
-                "<div style='background-color: #f5f5f5; padding: 15px; border-left: 4px solid #007bff; margin: 15px 0;'>" +
                 "<h4 style='margin-top: 0; color: #007bff;'>Thông tin lịch khám:</h4>" +
                 "<ul style='margin: 10px 0;'>" +
                 "<li><strong>Thời gian:</strong> %s</li>" +
@@ -1860,7 +2006,6 @@ public class NotificationService implements INotificationService {
                 "<li><strong>Học sinh:</strong> %s - Lớp %s</li>" +
                 "</ul>" +
                 "%s" +
-                "</div>" +
                 "<p>Xin vui lòng chuẩn bị đầy đủ thông tin sức khỏe cơ bản và đưa học sinh đến đúng giờ.</p>" +
                 "<p><em>Trân trọng,<br>Ban Giám hiệu</em></p>",
                 campaign.getName(),
