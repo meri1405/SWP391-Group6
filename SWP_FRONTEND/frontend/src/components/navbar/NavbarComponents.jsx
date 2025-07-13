@@ -1,5 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { formatTimeAgo } from "../../utils/timeUtils";
 
 /**
  * Navigation links component
@@ -120,7 +121,7 @@ export const NotificationsDropdown = ({
                   {notification.text}
                 </p>
                 <span className="notification-time">
-                  {notification.time}
+                  {formatTimeAgo(notification.createdAt || notification.date)}
                 </span>
               </div>
             </Link>

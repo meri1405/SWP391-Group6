@@ -17,6 +17,7 @@ import {
   Row,
   Col,
 } from "antd";
+import notificationEventService from "../../services/notificationEventService";
 import {
   CheckOutlined,
   CloseOutlined,
@@ -62,6 +63,41 @@ const NurseMedicationRequests = () => {
 
   // Expand/collapse states for medication groups
   const [expandedGroups, setExpandedGroups] = useState({});
+
+  // Helper function to format time (HH:mm)
+  const formatTime = (time) => {
+    if (!time) return time;
+    
+    // Handle array format [hour, minute] from backend
+    if (Array.isArray(time) && time.length >= 2) {
+      const hour = time[0].toString().padStart(2, '0');
+      const minute = time[1].toString().padStart(2, '0');
+      return `${hour}:${minute}`;
+    }
+    
+    // Handle string format "HH:mm:ss.milliseconds" (legacy)
+    if (typeof time === 'string' && time.includes(':')) {
+      const timeParts = time.split(':');
+      if (timeParts.length >= 2) {
+        return `${timeParts[0]}:${timeParts[1]}`;
+      }
+    }
+    
+    return time;
+  };
+
+  // Helper function to format date
+  const formatDate = (date) => {
+    if (!date) return date;
+    
+    // Handle array format [year, month, day] from backend
+    if (Array.isArray(date) && date.length >= 3) {
+      return dayjs().year(date[0]).month(date[1] - 1).date(date[2]);
+    }
+    
+    // Handle string format (legacy)
+    return dayjs(date);
+  };
 
   // ReactQuill configuration for custom message editor
   const quillModules = {
@@ -124,16 +160,16 @@ const NurseMedicationRequests = () => {
           dosage: schedule.dosage ? `${schedule.dosage} ${schedule.unit || "đơn vị"}` : "N/A",
           frequency: schedule.frequency || 1,
           scheduleTimes: schedule.scheduledTime
-            ? [schedule.scheduledTime]
+            ? [formatTime(schedule.scheduledTime)]
             : Array.isArray(schedule.scheduleTimes)
-            ? schedule.scheduleTimes
+            ? schedule.scheduleTimes.map(time => formatTime(time))
             : schedule.times
-            ? schedule.times.split(",")
+            ? schedule.times.split(",").map(time => formatTime(time.trim()))
             : ["N/A"],
           startDate:
-            schedule.scheduledDate || schedule.startDate || schedule.start_date,
+            formatDate(schedule.scheduledDate || schedule.startDate || schedule.start_date),
           endDate:
-            schedule.endDate || schedule.end_date || schedule.scheduledDate,
+            formatDate(schedule.endDate || schedule.end_date || schedule.scheduledDate),
           status: schedule.status || "PENDING",
           parentNote: schedule.parentNote || schedule.parent_note || "",
           nurseNote: schedule.nurseNote || schedule.nurse_note || "",
@@ -197,6 +233,9 @@ const NurseMedicationRequests = () => {
           prev.filter((req) => req.id !== selectedRequest.id)
         );
 
+        // Trigger notification refresh for navbar
+        notificationEventService.triggerRefresh();
+
         setApproveModalVisible(false);
         setSelectedRequest(null);
         setApproveNote("");
@@ -212,7 +251,11 @@ const NurseMedicationRequests = () => {
         console.error("Error response:", error.response.data);
         console.error("Error status:", error.response.status);
 
-        if (error.response.status === 401) {
+        if (error.response.status === 400) {
+          message.error("Không thể duyệt yêu cầu này vì đã quá thời hạn 6 giờ trước lần uống thuốc đầu tiên. Yêu cầu có thể đã bị từ chối tự động.");
+          // Refresh the list to remove this request
+          fetchPendingRequests();
+        } else if (error.response.status === 401) {
           message.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
         } else if (error.response.status === 403) {
           message.error("Bạn không có quyền thực hiện hành động này.");
@@ -285,6 +328,9 @@ const NurseMedicationRequests = () => {
           prev.filter((req) => req.id !== selectedRequest.id)
         );
 
+        // Trigger notification refresh for navbar
+        notificationEventService.triggerRefresh();
+
         setRejectModalVisible(false);
         setSelectedRequest(null);
         setRejectNote("");
@@ -294,7 +340,27 @@ const NurseMedicationRequests = () => {
       }
     } catch (error) {
       console.error("Error rejecting request:", error);
-      message.error("Có lỗi xảy ra khi từ chối yêu cầu");
+      
+      // Xử lý lỗi chi tiết cho reject
+      if (error.response) {
+        if (error.response.status === 400) {
+          message.error("Không thể từ chối yêu cầu này vì đã quá thời hạn 6 giờ trước lần uống thuốc đầu tiên. Yêu cầu có thể đã bị từ chối tự động.");
+          // Refresh the list to remove this request
+          fetchPendingRequests();
+        } else if (error.response.status === 401) {
+          message.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+        } else if (error.response.status === 403) {
+          message.error("Bạn không có quyền thực hiện hành động này.");
+        } else if (error.response.status === 404) {
+          message.error("Không tìm thấy yêu cầu thuốc này.");
+        } else {
+          message.error(
+            error.response.data?.message || "Có lỗi xảy ra khi từ chối yêu cầu"
+          );
+        }
+      } else {
+        message.error("Không thể kết nối tới máy chủ. Vui lòng thử lại.");
+      }
     } finally {
       setRejectionLoading(false);
     }
@@ -484,7 +550,10 @@ const NurseMedicationRequests = () => {
             {record.frequency} lần/ngày
           </div>
           <div style={{ fontSize: "12px", color: "#666" }}>
-            {record.scheduleTimes.join(", ")}
+            {Array.isArray(record.scheduleTimes) 
+              ? record.scheduleTimes.map(time => formatTime(time)).join(", ")
+              : formatTime(record.scheduleTimes) || "N/A"
+            }
           </div>
         </div>
       ),
@@ -494,9 +563,9 @@ const NurseMedicationRequests = () => {
       key: "treatmentPeriod",
       render: (_, record) => (
         <div>
-          <div>{dayjs(record.startDate).format("DD/MM/YYYY")}</div>
+          <div>{formatDate(record.startDate).format("DD/MM/YYYY")}</div>
           <div style={{ fontSize: "12px", color: "#666" }}>
-            đến {dayjs(record.endDate).format("DD/MM/YYYY")}
+            đến {formatDate(record.endDate).format("DD/MM/YYYY")}
           </div>
         </div>
       ),
@@ -1119,11 +1188,13 @@ const NurseMedicationRequests = () => {
 
                           // Sort time slots for consistent display
                           scheduleTimes = scheduleTimes
-                            .map((time) => dayjs(time, "HH:mm"))
-                            .sort((a, b) =>
-                              a.isBefore(b) ? -1 : a.isAfter(b) ? 1 : 0
-                            )
-                            .map((time) => time.format("HH:mm"));
+                            .map((time) => formatTime(time))
+                            .filter(time => time && time !== "N/A")
+                            .sort((a, b) => {
+                              const timeA = dayjs(a, "HH:mm");
+                              const timeB = dayjs(b, "HH:mm");
+                              return timeA.isBefore(timeB) ? -1 : timeA.isAfter(timeB) ? 1 : 0;
+                            });
 
                           return scheduleTimes.length > 0 ? (
                             <span className="medication-schedule-times">

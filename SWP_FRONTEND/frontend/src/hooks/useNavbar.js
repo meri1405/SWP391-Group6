@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import webSocketService from "../services/webSocketService";
 import notificationService from "../services/notificationService";
+import notificationEventService from "../services/notificationEventService";
 
 /**
  * Custom hook for managing navbar state and functionality
@@ -14,6 +15,7 @@ export const useNavbar = () => {
   const [notificationCount, setNotificationCount] = useState(0);
   const [notifications, setNotifications] = useState([]);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
+  const [_timeUpdateTrigger, setTimeUpdateTrigger] = useState(0);
 
   // Auth context
   const { user, logout, isParent, isStaff, isSchoolNurse, isManager, getToken } = useAuth();
@@ -180,6 +182,18 @@ export const useNavbar = () => {
     };
   }, [isParent, isSchoolNurse, isManager, user, canSeeNotifications, loadNotifications, setupWebSocketConnection]);
 
+  // Listen for global notification refresh events
+  useEffect(() => {
+    if (user && canSeeNotifications) {
+      const cleanup = notificationEventService.addRefreshListener(() => {
+        console.log('Navbar: Received notification refresh event');
+        loadNotifications();
+      });
+
+      return cleanup;
+    }
+  }, [user, canSeeNotifications, loadNotifications]);
+
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -195,6 +209,15 @@ export const useNavbar = () => {
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
+  }, []);
+
+  // Update time display every minute
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeUpdateTrigger(prev => prev + 1);
+    }, 60000); // Update every minute
+
+    return () => clearInterval(timer);
   }, []);
 
   return {

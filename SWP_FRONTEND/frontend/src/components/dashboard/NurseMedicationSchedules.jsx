@@ -59,22 +59,59 @@ const NurseMedicationSchedules = () => {
   const [currentNote, setCurrentNote] = useState("");
   const [editingScheduleId, setEditingScheduleId] = useState(null);
 
+  // Helper function to format time (HH:mm)
+  const formatTime = (time) => {
+    if (!time) return time;
+    
+    // Handle array format [hour, minute] from backend
+    if (Array.isArray(time) && time.length >= 2) {
+      const hour = time[0].toString().padStart(2, '0');
+      const minute = time[1].toString().padStart(2, '0');
+      return `${hour}:${minute}`;
+    }
+    
+    // Handle string format "HH:mm:ss.milliseconds" (legacy)
+    if (typeof time === 'string' && time.includes(':')) {
+      const timeParts = time.split(':');
+      if (timeParts.length >= 2) {
+        return `${timeParts[0]}:${timeParts[1]}`;
+      }
+    }
+    
+    return time;
+  };
+
+  // Helper function to format date
+  const formatDate = (date) => {
+    if (!date) return date;
+    
+    // Handle array format [year, month, day] from backend
+    if (Array.isArray(date) && date.length >= 3) {
+      return dayjs().year(date[0]).month(date[1] - 1).date(date[2]);
+    }
+    
+    // Handle string format (legacy)
+    return dayjs(date);
+  };
+
   // Function to check if schedule can be updated based on current time
   const canUpdateSchedule = (scheduledDate, scheduledTime) => {
     const now = dayjs();
+    const formattedDate = formatDate(scheduledDate);
+    const formattedTime = formatTime(scheduledTime);
     const scheduleDateTime = dayjs(
-      `${scheduledDate} ${scheduledTime}`,
+      `${formattedDate.format('YYYY-MM-DD')} ${formattedTime}`,
       "YYYY-MM-DD HH:mm"
     );
 
     // Allow updates only from scheduled time onwards or future dates
     // Future dates are allowed for planning purposes
-    if (dayjs(scheduledDate).isAfter(now, "day")) {
+    if (formattedDate.isAfter(now, "day")) {
       return true;
     }
 
     // For today's schedules, only allow updates if we've reached or passed the time slot
-    if (dayjs(scheduledDate).isSame(now, "day")) {
+    if (formattedDate.isSame(now, "day")) {
       return now.isSameOrAfter(scheduleDateTime);
     }
 
@@ -85,16 +122,18 @@ const NurseMedicationSchedules = () => {
   // Function to get time remaining until schedule time
   const getTimeUntilSchedule = (scheduledDate, scheduledTime) => {
     const now = dayjs();
+    const formattedDate = formatDate(scheduledDate);
+    const formattedTime = formatTime(scheduledTime);
     const scheduleDateTime = dayjs(
-      `${scheduledDate} ${scheduledTime}`,
+      `${formattedDate.format('YYYY-MM-DD')} ${formattedTime}`,
       "YYYY-MM-DD HH:mm"
     );
 
     // For future dates, return the full date and time
-    if (dayjs(scheduledDate).isAfter(now, "day")) {
-      return `vào ${dayjs(scheduledDate).format(
+    if (formattedDate.isAfter(now, "day")) {
+      return `vào ${formattedDate.format(
         "DD/MM/YYYY"
-      )} ${scheduledTime}`;
+      )} ${formattedTime}`;
     }
 
     // For today's dates or past dates
@@ -291,13 +330,15 @@ const NurseMedicationSchedules = () => {
 
   const openEditNoteModal = (schedule) => {
     const now = dayjs();
+    const formattedDate = formatDate(schedule.scheduledDate);
+    const formattedTime = formatTime(schedule.scheduledTime);
     const scheduleDateTime = dayjs(
-      `${schedule.scheduledDate} ${schedule.scheduledTime}`,
+      `${formattedDate.format('YYYY-MM-DD')} ${formattedTime}`,
       "YYYY-MM-DD HH:mm"
     );
 
     // Kiểm tra nếu là ngày trong tương lai
-    if (dayjs(schedule.scheduledDate).isAfter(now, "day")) {
+    if (formattedDate.isAfter(now, "day")) {
       message.warning(
         `Chỉ có thể cập nhật ghi chú cho ngày hiện tại hoặc ngày đã qua`
       );
@@ -306,7 +347,7 @@ const NurseMedicationSchedules = () => {
 
     // Kiểm tra giờ uống thuốc
     if (
-      dayjs(schedule.scheduledDate).isSame(now, "day") &&
+      formattedDate.isSame(now, "day") &&
       now.isBefore(scheduleDateTime)
     ) {
       const timeRemaining = getTimeUntilSchedule(
@@ -520,7 +561,9 @@ const NurseMedicationSchedules = () => {
       dataIndex: "scheduledTime",
       key: "scheduledTime",
       render: (time) => (
-        <div style={{ textAlign: "center", fontWeight: "bold" }}>{time}</div>
+        <div style={{ textAlign: "center", fontWeight: "bold" }}>
+          {formatTime(time)}
+        </div>
       ),
       width: 80,
       align: "center",
@@ -531,7 +574,7 @@ const NurseMedicationSchedules = () => {
       key: "scheduledDate",
       render: (date) => (
         <div style={{ textAlign: "center" }}>
-          {dayjs(date).format("DD/MM/YYYY")}
+          {formatDate(date).format("DD/MM/YYYY")}
         </div>
       ),
       width: 100,
@@ -828,13 +871,13 @@ const NurseMedicationSchedules = () => {
                 <Text strong>Ngày:</Text>
                 <br />
                 <Text>
-                  {dayjs(selectedSchedule.scheduledDate).format("DD/MM/YYYY")}
+                  {formatDate(selectedSchedule.scheduledDate).format("DD/MM/YYYY")}
                 </Text>
               </Col>
               <Col span={12}>
                 <Text strong>Thời gian:</Text>
                 <br />
-                <Text>{selectedSchedule.scheduledTime}</Text>
+                <Text>{formatTime(selectedSchedule.scheduledTime)}</Text>
               </Col>
             </Row>
 

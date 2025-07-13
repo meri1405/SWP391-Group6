@@ -33,6 +33,7 @@ import {
 } from '@ant-design/icons';
 import { healthCheckApi, CAMPAIGN_STATUS_LABELS, HEALTH_CHECK_CATEGORY_LABELS } from '../../api/healthCheckApi';
 import { formatDate,  } from '../../utils/timeUtils';
+import notificationEventService from '../../services/notificationEventService';
 import '../../styles/ManagerHealthCheck.css';
 
 const { TextArea } = Input;
@@ -125,6 +126,9 @@ const ManagerHealthCheckManagement = () => {
       
       fetchStatistics();
       fetchCampaignsByStatus(activeTab);
+      
+      // Trigger notification refresh
+      notificationEventService.triggerRefresh();
     } catch (error) {
       message.error('Lỗi khi phê duyệt chiến dịch');
       console.error('Error approving campaign:', error);
@@ -148,6 +152,9 @@ const ManagerHealthCheckManagement = () => {
       
       fetchStatistics();
       fetchCampaignsByStatus(activeTab);
+      
+      // Trigger notification refresh
+      notificationEventService.triggerRefresh();
     } catch (error) {
       message.error('Lỗi khi từ chối chiến dịch');
       console.error('Error rejecting campaign:', error);

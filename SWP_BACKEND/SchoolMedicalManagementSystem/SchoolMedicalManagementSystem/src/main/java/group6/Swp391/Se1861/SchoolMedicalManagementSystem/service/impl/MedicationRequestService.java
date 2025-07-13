@@ -14,6 +14,7 @@ import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.MedicationR
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.StudentRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IMedicationRequestService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IMedicationScheduleService;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.INotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +33,7 @@ public class MedicationRequestService implements IMedicationRequestService {
     private final StudentRepository studentRepository;
     private final ItemRequestRepository itemRequestRepository;
     private final IMedicationScheduleService medicationScheduleService;
+    private final INotificationService notificationService;
 
     /**
      * Create a new medication request
@@ -77,6 +79,19 @@ public class MedicationRequestService implements IMedicationRequestService {
         // Create item requests
         List<ItemRequest> itemRequests = new ArrayList<>();
         for (ItemRequestDTO itemDTO : medicationRequestDTO.getItemRequests()) {
+            // Validate start date - must be at least 1 day after request date
+            LocalDate requestDate = LocalDate.now();
+            LocalDate minimumStartDate = requestDate.plusDays(1);
+            
+            if (itemDTO.getStartDate() != null && itemDTO.getStartDate().isBefore(minimumStartDate)) {
+                throw new IllegalArgumentException(
+                    String.format("Ngày bắt đầu uống thuốc '%s' phải tối thiểu là 1 ngày sau ngày tạo yêu cầu (%s). Ngày bắt đầu sớm nhất có thể là %s.", 
+                        itemDTO.getItemName(),
+                        requestDate.toString(),
+                        minimumStartDate.toString())
+                );
+            }
+            
             ItemRequest item = new ItemRequest();
             item.setItemName(itemDTO.getItemName());
             item.setPurpose(itemDTO.getPurpose());
@@ -115,6 +130,9 @@ public class MedicationRequestService implements IMedicationRequestService {
         // Update the medication request with the item requests
         savedRequest.setItemRequests(itemRequests);
         savedRequest = medicationRequestRepository.save(savedRequest);
+
+        // Send notification to school nurses about new medication request
+        notificationService.notifyNursesAboutNewMedicationRequest(savedRequest);
 
         // Convert back to DTO for response
         return convertToDTOWithScheduleTimes(savedRequest);
@@ -163,6 +181,11 @@ public class MedicationRequestService implements IMedicationRequestService {
         MedicationRequest request = medicationRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Medication request not found with id: " + requestId));
 
+        // Check if request can still be processed (not expired)
+        if (!canProcessMedicationRequest(request)) {
+            throw new IllegalStateException("Không thể duyệt yêu cầu này vì đã quá thời hạn 6 giờ trước lần uống thuốc đầu tiên");
+        }
+
         request.setStatus("APPROVED");
         request.setConfirm(true);
         request.setNurse(nurse);
@@ -186,6 +209,11 @@ public class MedicationRequestService implements IMedicationRequestService {
     public MedicationRequestDTO rejectMedicationRequest(Long requestId, User nurse, String note) {
         MedicationRequest request = medicationRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Medication request not found with id: " + requestId));
+
+        // Check if request can still be processed (not expired)
+        if (!canProcessMedicationRequest(request)) {
+            throw new IllegalStateException("Không thể từ chối yêu cầu này vì đã quá thời hạn 6 giờ trước lần uống thuốc đầu tiên");
+        }
 
         request.setStatus("REJECTED");
         request.setConfirm(true);
@@ -485,5 +513,112 @@ public class MedicationRequestService implements IMedicationRequestService {
     public MedicationRequest getMedicationRequestById(Long requestId) {
         return medicationRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Medication request not found with id: " + requestId));
+    }
+
+    /**
+     * Check if a medication request can still be processed by nurse
+     * (must be within 6 hours before first medication time)
+     * @param request the medication request
+     * @return true if can be processed, false otherwise
+     */
+    private boolean canProcessMedicationRequest(MedicationRequest request) {
+        if (request.getItemRequests() == null || request.getItemRequests().isEmpty()) {
+            return false;
+        }
+
+        // Find the earliest medication time from all items
+        LocalDateTime earliestMedicationTime = null;
+        
+        for (ItemRequest item : request.getItemRequests()) {
+            // Parse schedule times from note field
+            List<String> scheduleTimes = parseScheduleTimesFromNote(item.getNote());
+            
+            if (!scheduleTimes.isEmpty()) {
+                // Get the first time for this item
+                String firstTimeStr = scheduleTimes.get(0);
+                try {
+                    // Combine start date with first time
+                    LocalDateTime medicationDateTime = item.getStartDate().atTime(
+                        Integer.parseInt(firstTimeStr.split(":")[0]), // hour
+                        Integer.parseInt(firstTimeStr.split(":")[1])  // minute
+                    );
+                    
+                    if (earliestMedicationTime == null || medicationDateTime.isBefore(earliestMedicationTime)) {
+                        earliestMedicationTime = medicationDateTime;
+                    }
+                } catch (Exception e) {
+                    System.err.println("Error parsing medication time: " + e.getMessage());
+                }
+            }
+        }
+
+        if (earliestMedicationTime == null) {
+            return true; // If no valid times found, allow processing
+        }
+
+        // Check if current time is within 6 hours before earliest medication time
+        LocalDateTime deadline = earliestMedicationTime.minusHours(6);
+        LocalDateTime now = LocalDateTime.now();
+        
+        return now.isBefore(deadline);
+    }
+
+    /**
+     * Auto-reject expired medication requests (past 6 hours before first medication time)
+     * This method should be called by a scheduled task
+     */
+    @Transactional
+    public void autoRejectExpiredRequests() {
+        List<MedicationRequest> pendingRequests = medicationRequestRepository.findByStatus("PENDING");
+        
+        for (MedicationRequest request : pendingRequests) {
+            if (!canProcessMedicationRequest(request)) {
+                // Auto-reject the request
+                request.setStatus("REJECTED");
+                request.setConfirm(true);
+                request.setNurseNote("Tự động từ chối do quá thời hạn xử lý (6 giờ trước lần uống thuốc đầu tiên)");
+                
+                // Delete all associated medication schedules
+                for (ItemRequest itemRequest : request.getItemRequests()) {
+                    medicationScheduleService.deleteSchedulesForItemRequest(itemRequest.getId());
+                }
+                
+                medicationRequestRepository.save(request);
+                
+                // Send notifications to both parent and nurses
+                notificationService.notifyAutoRejection(request);
+            }
+        }
+    }
+
+    /**
+     * Parse schedule times from item note field
+     * @param note the note containing schedule times JSON
+     * @return list of schedule times
+     */
+    private List<String> parseScheduleTimesFromNote(String note) {
+        List<String> scheduleTimes = new ArrayList<>();
+        
+        if (note != null && note.contains("scheduleTimeJson:")) {
+            String[] parts = note.split("scheduleTimeJson:");
+            if (parts.length > 1) {
+                try {
+                    ObjectMapper mapper = new ObjectMapper();
+                    JsonNode rootNode = mapper.readTree(parts[1].trim());
+                    if (rootNode.has("scheduleTimes")) {
+                        JsonNode timesNode = rootNode.get("scheduleTimes");
+                        if (timesNode.isArray()) {
+                            for (JsonNode timeNode : timesNode) {
+                                scheduleTimes.add(timeNode.asText());
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    System.err.println("Error parsing schedule times: " + e.getMessage());
+                }
+            }
+        }
+        
+        return scheduleTimes;
     }
 }

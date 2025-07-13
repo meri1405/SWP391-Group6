@@ -1,6 +1,7 @@
 import React from 'react';
 import { DEFAULT_UNITS_BY_TYPE } from '../constants/index.js';
 import dayjs from 'dayjs';
+import { medicationDateUtils } from './medicationValidation.js';
 
 /**
  * UI utilities for medication management component
@@ -174,8 +175,9 @@ export const medicationUIUtils = {
   getNewMedicationItemDefaults(form) {
     // Get dates from first medication item if available
     const currentItems = form.getFieldValue("itemRequests") || [];
-    let startDate = dayjs();
-    let endDate = dayjs().add(7, "day");
+    const defaultDateRange = medicationDateUtils.getDefaultDateRange();
+    let startDate = defaultDateRange.startDate; // Tomorrow (minimum 1 day after request)
+    let endDate = defaultDateRange.endDate; // 7 days from start date
 
     if (currentItems.length > 0 && currentItems[0]) {
       // Copy dates from first medication item

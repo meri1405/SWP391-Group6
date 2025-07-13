@@ -16,6 +16,7 @@ import {
   DatePicker,
   Divider,
 } from "antd";
+import notificationEventService from "../../../services/notificationEventService";
 import {
   PlusOutlined,
   DeleteOutlined,
@@ -253,6 +254,9 @@ const RestockRequestForm = ({
 
         // Show success message first
         messageApi.success("Tạo yêu cầu nhập kho thành công!");
+
+        // Trigger notification refresh for navbar
+        notificationEventService.triggerRefresh();
 
         // Reset form and close modal
         form.resetFields();

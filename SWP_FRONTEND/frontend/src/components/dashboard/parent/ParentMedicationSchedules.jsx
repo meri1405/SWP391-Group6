@@ -46,7 +46,42 @@ const ParentMedicationSchedules = () => {
     const [selectedStatus, setSelectedStatus] = useState('ALL');
     const [selectedStudent, setSelectedStudent] = useState(null);
     const [detailModalVisible, setDetailModalVisible] = useState(false);
-    const [selectedSchedule, setSelectedSchedule] = useState(null);    // Status mapping - memoized to prevent re-renders
+    const [selectedSchedule, setSelectedSchedule] = useState(null);
+
+    // Helper function to format time (HH:mm)
+    const formatTime = (time) => {
+        if (!time) return time;
+        
+        // Handle array format [hour, minute] from backend
+        if (Array.isArray(time) && time.length >= 2) {
+            const hour = time[0].toString().padStart(2, '0');
+            const minute = time[1].toString().padStart(2, '0');
+            return `${hour}:${minute}`;
+        }
+        
+        // Handle string format "HH:mm:ss.milliseconds" (legacy)
+        if (typeof time === 'string' && time.includes(':')) {
+            const timeParts = time.split(':');
+            if (timeParts.length >= 2) {
+                return `${timeParts[0]}:${timeParts[1]}`;
+            }
+        }
+        
+        return time;
+    };
+
+    // Helper function to format date
+    const formatDate = (date) => {
+        if (!date) return date;
+        
+        // Handle array format [year, month, day] from backend
+        if (Array.isArray(date) && date.length >= 3) {
+            return dayjs().year(date[0]).month(date[1] - 1).date(date[2]);
+        }
+        
+        // Handle string format (legacy)
+        return dayjs(date);
+    };    // Status mapping - memoized to prevent re-renders
     const statusConfig = useMemo(() => ({
         PENDING: { color: 'orange', text: 'Chưa uống', icon: <ClockCircleOutlined /> },
         TAKEN: { color: 'green', text: 'Đã uống', icon: <CheckCircleOutlined /> },
@@ -249,7 +284,7 @@ const ParentMedicationSchedules = () => {
             key: 'scheduledTime',
             render: (time) => (
                 <div style={{ textAlign: 'center', fontWeight: 'bold' }}>
-                    {time}
+                    {formatTime(time)}
                 </div>
             ),
             width: 80,
@@ -261,7 +296,7 @@ const ParentMedicationSchedules = () => {
             key: 'scheduledDate',
             render: (date) => (
                 <div style={{ textAlign: 'center' }}>
-                    {dayjs(date).format('DD/MM/YYYY')}
+                    {formatDate(date).format('DD/MM/YYYY')}
                 </div>
             ),
             width: 100,
@@ -499,12 +534,12 @@ const ParentMedicationSchedules = () => {
                             <Col span={12}>
                                 <Text strong>Ngày:</Text>
                                 <br />
-                                <Text>{dayjs(selectedSchedule.scheduledDate).format('DD/MM/YYYY')}</Text>
+                                <Text>{formatDate(selectedSchedule.scheduledDate).format('DD/MM/YYYY')}</Text>
                             </Col>
                             <Col span={12}>
                                 <Text strong>Thời gian:</Text>
                                 <br />
-                                <Text>{selectedSchedule.scheduledTime}</Text>
+                                <Text>{formatTime(selectedSchedule.scheduledTime)}</Text>
                             </Col>
                         </Row>
                         

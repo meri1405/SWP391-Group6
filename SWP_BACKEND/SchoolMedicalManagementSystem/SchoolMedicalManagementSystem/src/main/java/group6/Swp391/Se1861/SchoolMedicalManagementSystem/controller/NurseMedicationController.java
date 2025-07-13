@@ -48,23 +48,27 @@ public class NurseMedicationController {
             @PathVariable Long requestId,
             @AuthenticationPrincipal User nurse,
             @RequestBody Map<String, String> requestBody) {
-        String nurseNote = requestBody.getOrDefault("nurseNote", "");
-        String customMessage = requestBody.getOrDefault("customMessage", "");
-        MedicationRequestDTO approvedRequest = medicationRequestService.approveMedicationRequest(requestId, nurse, nurseNote);
+        try {
+            String nurseNote = requestBody.getOrDefault("nurseNote", "");
+            String customMessage = requestBody.getOrDefault("customMessage", "");
+            MedicationRequestDTO approvedRequest = medicationRequestService.approveMedicationRequest(requestId, nurse, nurseNote);
 
-        // Send notification to parent with custom message or default message
-        String notificationMessage = !customMessage.isEmpty() 
-            ? customMessage 
-            : "Yêu cầu thuốc của bạn đã được Y tá " + nurse.getFullName() + " chấp nhận.";
-            
-        notificationService.createMedicationRequestNotification(
-                medicationRequestService.getMedicationRequestById(requestId),
-                "MEDICATION_REQUEST_APPROVED",
-                "Yêu cầu gửi thuốc đã được chấp nhận",
-                notificationMessage
-        );
+            // Send notification to parent with custom message or default message
+            String notificationMessage = !customMessage.isEmpty() 
+                ? customMessage 
+                : "Yêu cầu thuốc của bạn đã được Y tá " + nurse.getFullName() + " chấp nhận.";
+                
+            notificationService.createMedicationRequestNotification(
+                    medicationRequestService.getMedicationRequestById(requestId),
+                    "MEDICATION_REQUEST_APPROVED",
+                    "Yêu cầu gửi thuốc đã được chấp nhận",
+                    notificationMessage
+            );
 
-        return ResponseEntity.ok(approvedRequest);
+            return ResponseEntity.ok(approvedRequest);
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body(null);
+        }
     }    /**
      * Reject a medication request
      * @param requestId The request ID
@@ -79,29 +83,33 @@ public class NurseMedicationController {
             @PathVariable Long requestId,
             @AuthenticationPrincipal User nurse,
             @RequestBody Map<String, String> requestBody) {
-        String nurseNote = requestBody.getOrDefault("nurseNote", "");
-        String customMessage = requestBody.getOrDefault("customMessage", "");
-        MedicationRequestDTO rejectedRequest = medicationRequestService.rejectMedicationRequest(requestId, nurse, nurseNote);
+        try {
+            String nurseNote = requestBody.getOrDefault("nurseNote", "");
+            String customMessage = requestBody.getOrDefault("customMessage", "");
+            MedicationRequestDTO rejectedRequest = medicationRequestService.rejectMedicationRequest(requestId, nurse, nurseNote);
 
-        // Send notification to parent with custom message or default message with nurse note
-        String notificationMessage;
-        if (!customMessage.isEmpty()) {
-            notificationMessage = customMessage;
-        } else {
-            notificationMessage = "Yêu cầu thuốc của bạn đã bị Y tá " + nurse.getFullName() + " từ chối.";
-            if (!nurseNote.isEmpty()) {
-                notificationMessage += " Lý do: " + nurseNote;
+            // Send notification to parent with custom message or default message with nurse note
+            String notificationMessage;
+            if (!customMessage.isEmpty()) {
+                notificationMessage = customMessage;
+            } else {
+                notificationMessage = "Yêu cầu thuốc của bạn đã bị Y tá " + nurse.getFullName() + " từ chối.";
+                if (!nurseNote.isEmpty()) {
+                    notificationMessage += " Lý do: " + nurseNote;
+                }
             }
-        }
-            
-        notificationService.createMedicationRequestNotification(
-                medicationRequestService.getMedicationRequestById(requestId),
-                "MEDICATION_REQUEST_REJECTED",
-                "Yêu cầu gửi thuốc bị từ chối",
-                notificationMessage
-        );
+                
+            notificationService.createMedicationRequestNotification(
+                    medicationRequestService.getMedicationRequestById(requestId),
+                    "MEDICATION_REQUEST_REJECTED",
+                    "Yêu cầu gửi thuốc bị từ chối",
+                    notificationMessage
+            );
 
-        return ResponseEntity.ok(rejectedRequest);
+            return ResponseEntity.ok(rejectedRequest);
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body(null);
+        }
     }
 
     /**

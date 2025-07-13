@@ -275,9 +275,12 @@ const MedicationManagement = () => {
               Thông báo quan trọng:
             </div>
             <div>
-              Mỗi loại thuốc sẽ có thời gian bắt đầu, kết thúc và thời gian uống
+              • Mỗi loại thuốc sẽ có thời gian bắt đầu, kết thúc và thời gian uống
               riêng biệt. Bạn phải thiết lập đầy đủ thông tin cho từng loại
               thuốc.
+            </div>
+            <div style={{ marginTop: "5px", color: "#ff4d4f", fontWeight: "bold" }}>
+              • Ngày bắt đầu uống thuốc phải tối thiểu là 1 ngày sau ngày tạo yêu cầu.
             </div>
           </div>
 

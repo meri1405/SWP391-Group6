@@ -50,8 +50,14 @@ public class MedicationScheduleAutoUpdateService {
     @Scheduled(fixedRate = 600000) // 10 minutes = 600,000 milliseconds
     public void autoMarkOverdueSchedules() {
         try {
-            
+            log.debug("Starting regular auto-update check for overdue medication schedules");
             int skippedCount = medicationScheduleService.autoMarkOverdueSchedulesAsSkipped();
+            
+            if (skippedCount > 0) {
+                log.info("Regular auto-update completed: {} schedules marked as SKIPPED and nurses notified", skippedCount);
+            } else {
+                log.debug("Regular auto-update completed: No overdue schedules found");
+            }
             
         } catch (Exception e) {
             log.error("Error occurred during scheduled auto-update of medication schedules", e);
@@ -65,7 +71,14 @@ public class MedicationScheduleAutoUpdateService {
     @Scheduled(cron = "0 */3 7-18 * * *") // Every 3 minutes from 7 AM to 6 PM, every day
     public void autoMarkOverdueSchedulesDuringSchoolHours() {
         try {
+            log.debug("Starting school hours auto-update check for overdue medication schedules");
             int skippedCount = medicationScheduleService.autoMarkOverdueSchedulesAsSkipped();
+            
+            if (skippedCount > 0) {
+                log.info("School hours auto-update completed: {} schedules marked as SKIPPED and nurses notified", skippedCount);
+            } else {
+                log.debug("School hours auto-update completed: No overdue schedules found");
+            }
             
         } catch (Exception e) {
             log.error("Error occurred during school hours auto-update", e);

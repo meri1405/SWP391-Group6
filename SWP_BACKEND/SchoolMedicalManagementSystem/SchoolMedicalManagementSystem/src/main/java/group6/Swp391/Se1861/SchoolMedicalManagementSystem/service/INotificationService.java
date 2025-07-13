@@ -174,6 +174,16 @@ public interface INotificationService {
     void notifyManagersAboutRestockRequest(RestockRequest restockRequest);
     
     /**
+     * Notify school nurses about a new medication request
+     */
+    void notifyNursesAboutNewMedicationRequest(MedicationRequest medicationRequest);
+    
+    /**
+     * Notify both parent and nurses about auto-rejected medication request
+     */
+    void notifyAutoRejection(MedicationRequest medicationRequest);
+    
+    /**
      * Notify nurse about restock request approval
      */
     void notifyNurseAboutRestockRequestApproval(RestockRequest restockRequest);

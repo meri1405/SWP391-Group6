@@ -51,6 +51,7 @@ class NotificationService {
       title: notification.title,
       text: cleanNotificationText(notification.message, 80),
       time: formatTimeAgo(notification.createdAt),
+      createdAt: notification.createdAt, // Keep original date for real-time updates
       icon: this.getNotificationIcon(notification),
       read: notification.read,
     }));
@@ -132,6 +133,7 @@ class NotificationService {
       title: notification.title,
       text: cleanNotificationText(notification.message, 80),
       time: "Vừa xong",
+      createdAt: notification.createdAt, // Keep original date for real-time updates
       icon: this.getNotificationIcon(notification),
       read: false,
     };

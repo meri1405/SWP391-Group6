@@ -15,6 +15,7 @@ import {
   Form,
   Spin,
 } from "antd";
+import notificationEventService from "../../services/notificationEventService";
 import {
   CheckOutlined,
   CloseOutlined,
@@ -123,6 +124,10 @@ const ManagerVaccinationManagement = () => {
       const response = await managerApi.approveVaccinationCampaign(campaignId);
       if (response.success) {
         message.success("Phê duyệt chiến dịch thành công!");
+        
+        // Trigger notification refresh for navbar
+        notificationEventService.triggerRefresh();
+        
         fetchStatistics();
         if (activeTab === "pending") {
           fetchPendingCampaigns(pagination.current, pagination.pageSize);
@@ -181,6 +186,10 @@ const ManagerVaccinationManagement = () => {
       );
       if (response.success) {
         message.success("Từ chối chiến dịch thành công!");
+        
+        // Trigger notification refresh for navbar
+        notificationEventService.triggerRefresh();
+        
         setRejectModalVisible(false);
         form.resetFields();
         fetchStatistics();
