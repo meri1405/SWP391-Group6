@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { VaccinationFormModalService } from "../services/vaccinationFormModalService";
+import { validateParentFormAction } from "../utils/vaccinationTimeValidation";
 
 /**
  * Custom hook for managing vaccination form modal state and operations
@@ -94,6 +95,15 @@ export const useVaccinationFormModal = (vaccinationFormId, isOpen, onFormUpdated
    * Initialize confirm action
    */
   const handleConfirmClick = () => {
+    // Validate time constraints before allowing action
+    if (form && form.sentDate) {
+      const validation = validateParentFormAction(form.sentDate);
+      if (!validation.canAct) {
+        setError(validation.message);
+        return;
+      }
+    }
+    
     setConfirmAction("confirm");
     setShowConfirmDialog(true);
   };
@@ -102,6 +112,15 @@ export const useVaccinationFormModal = (vaccinationFormId, isOpen, onFormUpdated
    * Initialize decline action
    */
   const handleDeclineClick = () => {
+    // Validate time constraints before allowing action
+    if (form && form.sentDate) {
+      const validation = validateParentFormAction(form.sentDate);
+      if (!validation.canAct) {
+        setError(validation.message);
+        return;
+      }
+    }
+    
     setConfirmAction("decline");
     setShowConfirmDialog(true);
   };
@@ -110,6 +129,16 @@ export const useVaccinationFormModal = (vaccinationFormId, isOpen, onFormUpdated
    * Execute the confirmation/decline action
    */
   const handleConfirmSubmit = async () => {
+    // Final validation before submission
+    if (form && form.sentDate) {
+      const validation = validateParentFormAction(form.sentDate);
+      if (!validation.canAct) {
+        setError(validation.message);
+        setShowConfirmDialog(false);
+        return;
+      }
+    }
+    
     const result = await handleFormSubmission(confirmAction, notes);
     if (!result.success) {
       // Error is already set in handleFormSubmission

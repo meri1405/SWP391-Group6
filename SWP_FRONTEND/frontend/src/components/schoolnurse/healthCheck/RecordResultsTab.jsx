@@ -14,6 +14,7 @@ import {
   Table,
   Modal,
   Tag,
+  Tooltip,
 } from "antd";
 import {
   UserOutlined,
@@ -25,6 +26,7 @@ import {
 
 // Import custom hook and form components
 import { useHealthCheckResults } from "../../../hooks/useHealthCheckResults";
+import BasicInfoForm from "./forms/BasicInfoForm";
 import VisionForm from "./forms/VisionForm";
 import HearingForm from "./forms/HearingForm";
 import OralForm from "./forms/OralForm";
@@ -46,9 +48,11 @@ const RecordResultsTab = ({ campaignId, campaign, onRefreshData }) => {
     // Handlers
     handleStudentSelect,
     handleInputChange,
+    handleOverallMeasurementChange,
     handleSubmit,
     handleModalOk,
     handleModalCancel,
+    hasExistingResults,
   } = useHealthCheckResults(campaignId, campaign, onRefreshData);
 
   // Derived state for UI
@@ -92,18 +96,50 @@ const RecordResultsTab = ({ campaignId, campaign, onRefreshData }) => {
             width: 100,
           },
           {
+            title: "Trạng thái",
+            key: "status",
+            width: 120,
+            render: (_, record) => {
+              const studentId = record.id || record.studentID || record.studentCode;
+              const hasResults = hasExistingResults(studentId);
+              return hasResults ? (
+                <Tag color="green">
+                  <CheckCircleOutlined className="mr-1" />
+                  Đã khám
+                </Tag>
+              ) : (
+                <Tag color="blue">Chưa khám</Tag>
+              );
+            },
+          },
+          {
             title: "Thao tác",
             key: "action",
             width: 220,
-            render: (_, record) => (
-              <Button
-                type="primary"
-                size="small"
-                onClick={() => handleStudentSelect(record)}
-              >
-                Chọn
-              </Button>
-            ),
+            render: (_, record) => {
+              const studentId = record.id || record.studentID || record.studentCode;
+              const hasResults = hasExistingResults(studentId);
+              
+              return hasResults ? (
+                <Tooltip title="Học sinh này đã được ghi kết quả khám sức khỏe">
+                  <Button
+                    type="default"
+                    size="small"
+                    disabled={true}
+                  >
+                    Đã ghi kết quả
+                  </Button>
+                </Tooltip>
+              ) : (
+                <Button
+                  type="primary"
+                  size="small"
+                  onClick={() => handleStudentSelect(record)}
+                >
+                  Chọn
+                </Button>
+              );
+            },
           },
         ]}
         dataSource={students}
@@ -138,6 +174,17 @@ const RecordResultsTab = ({ campaignId, campaign, onRefreshData }) => {
       {/* Category tabs */}
       <div className="mb-6">
         <div className="flex flex-wrap gap-2 mb-4">
+          {/* Basic Info tag - always shown */}
+          <Tag
+            key="BASIC_INFO"
+            color={formData.BASIC_INFO && Object.keys(formData.BASIC_INFO).some(key => formData.BASIC_INFO[key]) ? "green" : "blue"}
+            className="px-4 py-2 cursor-pointer"
+          >
+            {formData.BASIC_INFO && Object.keys(formData.BASIC_INFO).some(key => formData.BASIC_INFO[key]) && <CheckCircleOutlined className="mr-1" />}
+            Thông tin cơ bản
+          </Tag>
+          
+          {/* Category tags */}
           {availableCategories.map((category) => {
             const isCompleted = completedCategories.includes(category);
             return (
@@ -160,6 +207,18 @@ const RecordResultsTab = ({ campaignId, campaign, onRefreshData }) => {
 
       {/* Form content */}
       <div className="space-y-6">
+        {/* Basic Info Form - Always shown first */}
+        {formData.BASIC_INFO && (
+          <BasicInfoForm
+            categoryData={formData.BASIC_INFO}
+            formData={formData}
+            onDataChange={handleInputChange}
+            onOverallChange={handleOverallMeasurementChange}
+            readOnly={false}
+          />
+        )}
+
+        {/* Category-specific forms */}
         {availableCategories.map((category) => (
           <div key={category} className="category-section">
             {category === "VISION" && formData.VISION && (
@@ -254,8 +313,8 @@ const RecordResultsTab = ({ campaignId, campaign, onRefreshData }) => {
           <strong>Học sinh:</strong> {selectedStudent?.fullName}
         </p>
         <p>
-          <strong>Số hạng mục đã hoàn thành:</strong> {completedCategories.length}/
-          {availableCategories.length}
+          <strong>Số hạng mục đã hoàn thành:</strong> {completedCategories.length + (formData.BASIC_INFO && Object.keys(formData.BASIC_INFO).some(key => formData.BASIC_INFO[key]) ? 1 : 0)}/
+          {availableCategories.length + 1}
         </p>
       </Modal>
     </div>

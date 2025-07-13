@@ -13,6 +13,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
@@ -26,6 +29,7 @@ public class VaccinationCampaignController {
 
     /**
      * Create a new vaccination campaign
+     * Business rule: Vaccination date must be at least 4 days after campaign creation
      */
     @PostMapping
     public ResponseEntity<?> createCampaign(
@@ -34,19 +38,62 @@ public class VaccinationCampaignController {
         try {
             System.out.println("Creating vaccination campaign with request: " + request);
             System.out.println("User: " + (nurse != null ? nurse.getUsername() : "null"));
+
+
+
+            // Validate vaccination date - must be at least 4 days from now
+            if (request.getScheduledDate() != null) {
+                LocalDate today = LocalDate.now();
+                LocalDate scheduledDate = request.getScheduledDate().toLocalDate();
+                long daysUntilStart = ChronoUnit.DAYS.between(today, scheduledDate);
+                
+                System.out.println("Date validation - Today: " + today + ", Scheduled: " + scheduledDate + ", Days until start: " + daysUntilStart);
+
+                if (daysUntilStart < 4) {
+                    System.out.println("Validation failed - daysUntilStart: " + daysUntilStart + " < 4");
+                    Map<String, Object> errorResponse = new HashMap<>();
+                    errorResponse.put("success", false);
+                    errorResponse.put("error", "Invalid vaccination date");
+                    errorResponse.put("message", "Vaccination date must be at least 4 days from today to allow sufficient preparation time.");
+                    errorResponse.put("minimumDate", today.plusDays(4).toString());
+                    errorResponse.put("providedDate", scheduledDate.toString());
+                    errorResponse.put("daysUntilStart", daysUntilStart);
+                    errorResponse.put("minimumDays", 4);
+                    return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+                } else {
+                    System.out.println("Date validation passed - daysUntilStart: " + daysUntilStart + " >= 4");
+                }
+            }
+            
             VaccinationCampaignDTO campaign = campaignService.createCampaign(nurse, request);
-            return new ResponseEntity<>(campaign, HttpStatus.CREATED);
+            
+            // Include timing information in response
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Vaccination campaign created successfully");
+            response.put("campaign", campaign);
+            
+            if (request.getScheduledDate() != null) {
+                LocalDate today = LocalDate.now();
+                LocalDate scheduledDate = request.getScheduledDate().toLocalDate();
+                long daysUntilStart = ChronoUnit.DAYS.between(today, scheduledDate);
+                response.put("daysUntilStart", daysUntilStart);
+            }
+            
+            return new ResponseEntity<>(response, HttpStatus.CREATED);
         } catch (IllegalArgumentException e) {
             System.err.println("Error creating vaccination campaign: " + e.getMessage());
             e.printStackTrace();
-            Map<String, String> errorResponse = new HashMap<>();
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
             errorResponse.put("error", e.getMessage());
             errorResponse.put("message", "Failed to create vaccination campaign: " + e.getMessage());
             return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
             System.err.println("Unexpected error creating vaccination campaign: " + e.getMessage());
             e.printStackTrace();
-            Map<String, String> errorResponse = new HashMap<>();
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
             errorResponse.put("error", "Internal server error");
             errorResponse.put("message", "An unexpected error occurred: " + e.getMessage());
             return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
@@ -178,17 +225,38 @@ public class VaccinationCampaignController {
     }
 
     /**
-     * Send forms to parents
+     * Send forms to parents with optional custom message
      */
     @PostMapping("/{id}/send-forms")
-    public ResponseEntity<List<VaccinationFormDTO>> sendFormsToParents(
+    public ResponseEntity<?> sendFormsToParents(
             @PathVariable Long id,
-            @AuthenticationPrincipal User nurse) {
+            @AuthenticationPrincipal User nurse,
+            @RequestBody(required = false) SendVaccinationFormsRequest request) {
         try {
-            List<VaccinationFormDTO> forms = campaignService.sendFormsToParents(id, nurse);
-            return ResponseEntity.ok(forms);
+            String customMessage = null;
+            if (request != null) {
+                customMessage = request.getCustomMessage();
+            }
+            
+            List<VaccinationFormDTO> forms = campaignService.sendFormsToParents(id, nurse, customMessage);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("forms", forms);
+            response.put("message", "Forms sent successfully to parents" + 
+                (customMessage != null && !customMessage.trim().isEmpty() ? " with custom message" : " with default template"));
+            response.put("sentCount", forms.size());
+            
+            return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
-            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", e.getMessage());
+            errorResponse.put("message", "Failed to send forms to parents: " + e.getMessage());
+            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Internal server error");
+            errorResponse.put("message", "An unexpected error occurred: " + e.getMessage());
+            return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 

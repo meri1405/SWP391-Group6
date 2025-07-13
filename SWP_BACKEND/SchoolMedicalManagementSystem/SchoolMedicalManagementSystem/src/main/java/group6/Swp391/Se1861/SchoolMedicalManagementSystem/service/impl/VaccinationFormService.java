@@ -61,6 +61,7 @@ public class VaccinationFormService implements IVaccinationFormService {
 
         form.setConfirmationStatus(VaccinationForm.ConfirmationStatus.CONFIRMED);
         form.setConfirmationDate(LocalDateTime.now());
+        form.setResponseDate(LocalDateTime.now());
         form.setParentNotes(parentNotes);
         form = formRepository.save(form);
 
@@ -92,6 +93,7 @@ public class VaccinationFormService implements IVaccinationFormService {
 
         form.setConfirmationStatus(VaccinationForm.ConfirmationStatus.DECLINED);
         form.setConfirmationDate(LocalDateTime.now());
+        form.setResponseDate(LocalDateTime.now());
         form.setParentNotes(parentNotes);        form = formRepository.save(form);
 
         // Notify nurse about decline
@@ -121,7 +123,7 @@ public class VaccinationFormService implements IVaccinationFormService {
     @Override
     @Transactional
     public void markFormsAsExpired() {
-        LocalDateTime expiredDate = LocalDateTime.now().minusDays(7);
+        LocalDateTime expiredDate = LocalDateTime.now().minusHours(48);
         
         List<VaccinationForm> expiredForms = formRepository.findByConfirmationStatus(VaccinationForm.ConfirmationStatus.PENDING)
                 .stream()
@@ -161,6 +163,8 @@ public class VaccinationFormService implements IVaccinationFormService {
         dto.setParentNotes(form.getParentNotes());
         dto.setAdditionalInfo(form.getAdditionalInfo());
         dto.setIsActive(form.getIsActive());
+        dto.setReminderSent(form.getReminderSent());
+        dto.setResponseDate(form.getResponseDate());
         
         if (form.getCampaign() != null) {
             dto.setCampaignId(form.getCampaign().getId());

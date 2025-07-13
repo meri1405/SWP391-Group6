@@ -651,7 +651,7 @@ public class NotificationService implements INotificationService {
     }
 
     /**
-     * Create vaccination consent form notification
+     * Create vaccination consent form notification with custom message
      */
     @Transactional
     @Override
@@ -661,25 +661,34 @@ public class NotificationService implements INotificationService {
             String vaccineName,
             String location,
             String scheduledDate,
-            VaccinationForm vaccinationForm) {
+            VaccinationForm vaccinationForm,
+            String customMessage) {
 
         String title = "Yêu cầu xác nhận tiêm chủng";
 
-        String message = "<p>Kính gửi Quý phụ huynh,</p>" +
-        "<p>Hệ thống trân trọng đề nghị Quý phụ huynh vui lòng xem xét và xác nhận việc tiêm chủng cho học sinh <strong>" +
-        studentName + "</strong> với loại vắc-xin <strong>" + vaccineName + "</strong>";
+        String message;
+        
+        // Use custom message if provided, otherwise use default template
+        if (customMessage != null && !customMessage.trim().isEmpty()) {
+            message = customMessage;
+        } else {
+            // Default template message
+            message = "<p>Kính gửi Quý phụ huynh,</p>" +
+            "<p>Hệ thống trân trọng đề nghị Quý phụ huynh vui lòng xem xét và xác nhận việc tiêm chủng cho học sinh <strong>" +
+            studentName + "</strong> với loại vắc-xin <strong>" + vaccineName + "</strong>";
 
-        if (location != null && !location.trim().isEmpty()) {
-            message += " tại địa điểm <strong>" + location + "</strong>";
-        }
-        if (scheduledDate != null && !scheduledDate.trim().isEmpty()) {
-            message += " vào thời gian <strong>" + scheduledDate + "</strong>";
-        }
+            if (location != null && !location.trim().isEmpty()) {
+                message += " tại địa điểm <strong>" + location + "</strong>";
+            }
+            if (scheduledDate != null && !scheduledDate.trim().isEmpty()) {
+                message += " vào thời gian <strong>" + scheduledDate + "</strong>";
+            }
 
-        message += ".</p>" +
-        "<p>Quý phụ huynh vui lòng thực hiện xác nhận trước thời hạn quy định để đảm bảo quyền lợi cho học sinh.</p>" +
-        "<p>Trân trọng,</p>" +
-        "<p><em>Hệ thống Quản lý Y Tế Học đường (SMMS)</em></p>";
+            message += ".</p>" +
+            "<p>Quý phụ huynh vui lòng thực hiện xác nhận trước thời hạn quy định để đảm bảo quyền lợi cho học sinh.</p>" +
+            "<p>Trân trọng,</p>" +
+            "<p><em>Hệ thống Quản lý Y Tế Học đường (SMMS)</em></p>";
+        }
         String notificationType = "VACCINATION_CONSENT_REQUIRED";
         
         Notification notification = new Notification();

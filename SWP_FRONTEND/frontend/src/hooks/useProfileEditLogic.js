@@ -113,8 +113,10 @@ export const useProfileEditLogic = ({
 
   // Load profile data on mount
   useEffect(() => {
-    fetchProfileData();
-  }, [fetchProfileData]);
+    if (fetchProfile) {
+      fetchProfileData();
+    }
+  }, [fetchProfileData, fetchProfile]);
 
   // Form validation
   const validateForm = useCallback(() => {

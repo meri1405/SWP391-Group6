@@ -58,6 +58,12 @@ public class VaccinationForm {
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
 
+    @Column(name = "reminder_sent", nullable = false)
+    private Boolean reminderSent = false;
+
+    @Column(name = "response_date")
+    private LocalDateTime responseDate;
+
     // Relationships
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "campaign_id", nullable = false)
@@ -104,6 +110,9 @@ public class VaccinationForm {
         }
         if (confirmationStatus == null) {
             confirmationStatus = ConfirmationStatus.PENDING;
+        }
+        if (reminderSent == null) {
+            reminderSent = false;
         }
     }
 

@@ -113,6 +113,7 @@ const VaccinationCampaignForm = ({ campaign = null, onCancel, onSuccess }) => {
                 </span>
               }
               rules={validationRules.scheduledDate}
+              extra="Ngày tiêm phải cách ít nhất 4 ngày từ hôm nay"
             >
               <DatePicker
                 showTime

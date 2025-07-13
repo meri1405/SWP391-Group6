@@ -6,19 +6,19 @@ import 'react-quill/dist/quill.snow.css';
 
 const { Title, Text } = Typography;
 
-const NotificationModal = ({ 
+const CustomMessageModal = ({ 
   visible, 
   onCancel, 
-  onConfirm, 
+  onSubmit, 
   loading = false,
-  studentCount = 0,
-  campaignName = ''
+  campaignName,
+  formsCount 
 }) => {
   const [form] = Form.useForm();
   
   // Default template content
   const getDefaultTemplate = (campaignName) => `<p>Kính gửi Quý phụ huynh,</p>
-<p>Nhà trường trân trọng thông báo về đợt khám sức khỏe "<strong>${campaignName || '[Tên chiến dịch]'}</strong>" sắp diễn ra.</p>
+<p>Nhà trường trân trọng gửi đến Quý phụ huynh đơn xin phép tiêm chủng cho học sinh trong chiến dịch "<strong>${campaignName || '[Tên chiến dịch]'}</strong>".</p>
 <p>Đây là một hoạt động quan trọng nhằm bảo vệ sức khỏe của các em học sinh. Kính đề nghị Quý phụ huynh xem xét và cho phép con em tham gia đợt khám sức khỏe này để đảm bảo sức khỏe tốt nhất cho các em.</p>
 <p>Vui lòng phản hồi qua hệ thống để xác nhận việc tham gia.</p>
 <p>Nếu có bất kỳ câu hỏi nào, Quý phụ huynh có thể liên hệ với nhà trường qua số điện thoại hoặc email đã cung cấp.</p>
@@ -40,7 +40,7 @@ const NotificationModal = ({
 
   const handleSubmit = () => {
     form.validateFields().then(() => {
-      onConfirm(customMessage.trim() || null);
+      onSubmit(customMessage.trim() || null);
     });
   };
 
@@ -56,7 +56,7 @@ const NotificationModal = ({
       title={
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <SendOutlined style={{ color: '#1890ff' }} />
-          <span>Gửi thông báo khám sức khỏe đến phụ huynh</span>
+          <span>Gửi đơn tiêm chủng đến phụ huynh</span>
         </div>
       }
       open={visible}
@@ -75,7 +75,7 @@ const NotificationModal = ({
             key="send-default"
             type="default"
             loading={loading}
-            onClick={() => onConfirm(null)}
+            onClick={() => onSubmit(null)}
             icon={<FileTextOutlined />}
           >
             Gửi mẫu mặc định
@@ -106,7 +106,7 @@ const NotificationModal = ({
     >
       <div style={{ marginBottom: '20px' }}>
         <Alert
-          message={`Sẽ gửi thông báo khám sức khỏe đến ${studentCount} phụ huynh cho chiến dịch "${campaignName}"`}
+          message={`Sẽ gửi ${formsCount} đơn tiêm chủng cho chiến dịch "${campaignName}"`}
           type="info"
           showIcon
           style={{ marginBottom: '16px' }}
@@ -158,4 +158,4 @@ const NotificationModal = ({
   );
 };
 
-export default NotificationModal;
+export default CustomMessageModal;

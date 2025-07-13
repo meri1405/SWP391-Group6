@@ -122,7 +122,7 @@ public interface INotificationService {
             User completedBy);
 
     /**
-     * Create vaccination consent form notification
+     * Create vaccination consent form notification with custom message
      */
     NotificationDTO createVaccinationConsentFormNotification(
             User recipient,
@@ -130,7 +130,8 @@ public interface INotificationService {
             String vaccineName,
             String location,
             String scheduledDate,
-            VaccinationForm vaccinationForm);
+            VaccinationForm vaccinationForm,
+            String customMessage);
 
 
     /**

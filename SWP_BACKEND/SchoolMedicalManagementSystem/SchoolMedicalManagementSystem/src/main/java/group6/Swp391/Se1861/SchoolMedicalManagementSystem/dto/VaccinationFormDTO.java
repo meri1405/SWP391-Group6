@@ -24,6 +24,8 @@ public class VaccinationFormDTO {
     private String parentNotes;
     private String additionalInfo;
     private Boolean isActive;
+    private Boolean reminderSent;
+    private LocalDateTime responseDate;
     
     // Campaign info
     private Long campaignId;

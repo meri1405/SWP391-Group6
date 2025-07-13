@@ -152,11 +152,13 @@ export const vaccinationCampaignApi = {
     }
   },
 
-  // Send forms to parents
-  sendFormsToParents: async (campaignId) => {
+  // Send forms to parents with optional custom message
+  sendFormsToParents: async (campaignId, customMessage = null) => {
     try {
+      const requestBody = customMessage ? { customMessage } : {};
       const response = await vaccinationApiClient.post(
-        `/nurse/vaccination-campaigns/${campaignId}/send-forms`
+        `/nurse/vaccination-campaigns/${campaignId}/send-forms`,
+        requestBody
       );
       return response.data;
     } catch (error) {
