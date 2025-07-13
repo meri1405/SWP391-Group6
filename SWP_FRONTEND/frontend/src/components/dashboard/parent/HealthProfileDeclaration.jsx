@@ -528,6 +528,12 @@ const HealthProfileDeclaration = ({ onProfileCreated }) => {
     setShowVaccinationRules(false);
   };
   const handleRemoveVaccination = (id) => {
+    // Find the vaccination record to check if it can be removed
+    const vaccinationRecord = vaccinationHistory.find(v => v.id === id || v.tempId === id);
+    if (vaccinationRecord && vaccinationRecord.source === 'SCHOOL_ADMINISTERED') {
+      message.warning('Không thể xóa thông tin tiêm chủng do trường quản lý');
+      return;
+    }
     setVaccinationHistory(
       vaccinationHistory.filter(
         (vaccination) => vaccination.id !== id && vaccination.tempId !== id
@@ -544,7 +550,7 @@ const HealthProfileDeclaration = ({ onProfileCreated }) => {
       visionRightWithGlass: parseInt(formData.visionRightWithGlass, 10) || 0,
       visionDescription: formData.visionDescription,
       dateOfExamination: formData.dateOfExamination
-        ? formData.dateOfExamination.format("YYYY-MM-DD")
+        ? (formData.dateOfExamination.format ? formData.dateOfExamination.format("YYYY-MM-DD") : formData.dateOfExamination)
         : null,
     };
     setVisionData([...visionData, newVision]);
@@ -552,6 +558,12 @@ const HealthProfileDeclaration = ({ onProfileCreated }) => {
   };
 
   const handleRemoveVision = (id) => {
+    // Find the vision record to check if it can be removed
+    const visionRecord = visionData.find(v => v.id === id || v.tempId === id);
+    if (visionRecord && (visionRecord.healthCheckResult || visionRecord.healthResult)) {
+      message.warning('Không thể xóa thông tin thị lực đã có kết quả khám sức khỏe');
+      return;
+    }
     setVisionData(
       visionData.filter((vision) => vision.id !== id && vision.tempId !== id)
     );
@@ -563,13 +575,21 @@ const HealthProfileDeclaration = ({ onProfileCreated }) => {
       leftEar: parseInt(formData.leftEar, 10) || 0,
       rightEar: parseInt(formData.rightEar, 10) || 0,
       description: formData.description,
-      dateOfExamination: formData.dateOfExamination,
+      dateOfExamination: formData.dateOfExamination
+        ? (formData.dateOfExamination.format ? formData.dateOfExamination.format("YYYY-MM-DD") : formData.dateOfExamination)
+        : null,
     };
     setHearingData([...hearingData, newHearing]);
     setHearingModalVisible(false);
   };
 
   const handleRemoveHearing = (id) => {
+    // Find the hearing record to check if it can be removed
+    const hearingRecord = hearingData.find(h => h.id === id || h.tempId === id);
+    if (hearingRecord && (hearingRecord.healthCheckResult || hearingRecord.healthResult)) {
+      message.warning('Không thể xóa thông tin thính lực đã có kết quả khám sức khỏe');
+      return;
+    }
     setHearingData(
       hearingData.filter(
         (hearing) => hearing.id !== id && hearing.tempId !== id
@@ -619,16 +639,31 @@ const HealthProfileDeclaration = ({ onProfileCreated }) => {
   };
 
   const handleEditVaccination = (vaccination) => {
+    // Check if vaccination is school-administered
+    if (vaccination.source === 'SCHOOL_ADMINISTERED') {
+      message.warning('Không thể chỉnh sửa thông tin tiêm chủng do trường quản lý');
+      return;
+    }
     setEditingVaccination(vaccination);
     setVaccinationModalVisible(true);
   };
 
   const handleEditVision = (vision) => {
+    // Check if vision record has health check result
+    if (vision.healthCheckResult || vision.healthResult) {
+      message.warning('Không thể chỉnh sửa thông tin thị lực đã có kết quả khám sức khỏe');
+      return;
+    }
     setEditingVision(vision);
     setVisionModalVisible(true);
   };
 
   const handleEditHearing = (hearing) => {
+    // Check if hearing record has health check result
+    if (hearing.healthCheckResult || hearing.healthResult) {
+      message.warning('Không thể chỉnh sửa thông tin thính lực đã có kết quả khám sức khỏe');
+      return;
+    }
     setEditingHearing(hearing);
     setHearingModalVisible(true);
   };
@@ -1609,6 +1644,10 @@ const HealthProfileDeclaration = ({ onProfileCreated }) => {
                                     onClick={() =>
                                       handleEditVaccination(vaccination)
                                     }
+                                    disabled={vaccination.source === 'SCHOOL_ADMINISTERED'}
+                                    title={vaccination.source === 'SCHOOL_ADMINISTERED' ? 
+                                      'Không thể chỉnh sửa thông tin tiêm chủng do trường quản lý' : 
+                                      (vaccination.status === "PENDING" ? "Hoàn thành" : "Sửa")}
                                   >
                                     {vaccination.status === "PENDING"
                                       ? "Hoàn thành"
@@ -1618,10 +1657,16 @@ const HealthProfileDeclaration = ({ onProfileCreated }) => {
                                     type="link"
                                     danger
                                     icon={<DeleteOutlined />}
+                                    disabled={vaccination.source === 'SCHOOL_ADMINISTERED'}
                                     onClick={() =>
                                       handleRemoveVaccination(
                                         vaccination.id || vaccination.tempId
                                       )
+                                    }
+                                    title={
+                                      vaccination.source === 'SCHOOL_ADMINISTERED' 
+                                        ? 'Không thể xóa - Do trường quản lý' 
+                                        : 'Xóa thông tin tiêm chủng'
                                     }
                                   >
                                     Xóa
@@ -1646,6 +1691,14 @@ const HealthProfileDeclaration = ({ onProfileCreated }) => {
                                           style={{ marginLeft: 8 }}
                                         >
                                           Đã hoàn thành
+                                        </Tag>
+                                      )}
+                                      {vaccination.source === 'SCHOOL_ADMINISTERED' && (
+                                        <Tag
+                                          color="blue"
+                                          style={{ marginLeft: 8 }}
+                                        >
+                                          Do trường quản lý
                                         </Tag>
                                       )}
                                     </div>
@@ -1720,33 +1773,13 @@ const HealthProfileDeclaration = ({ onProfileCreated }) => {
                       children: (
                         <>
                           <div style={{ marginBottom: "16px" }}>
-                            {visionData.length === 0 ? (
-                              <Button
-                                type="primary"
-                                icon={<EyeOutlined />}
-                                onClick={() => setVisionModalVisible(true)}
-                              >
-                                Thêm thông tin thị lực
-                              </Button>
-                            ) : (
-                              <div>
-                                <Alert
-                                  message="Thông tin thị lực đã được khai báo"
-                                  description="Bạn có thể xem chi tiết hoặc chỉnh sửa thông tin hiện có, nhưng không thể thêm mới."
-                                  type="info"
-                                  showIcon
-                                  style={{ marginBottom: "12px" }}
-                                />
-                                <Button
-                                  type="default"
-                                  icon={<EyeOutlined />}
-                                  disabled
-                                  style={{ opacity: 0.6 }}
-                                >
-                                  Không thể thêm mới
-                                </Button>
-                              </div>
-                            )}
+                            <Button
+                              type="primary"
+                              icon={<EyeOutlined />}
+                              onClick={() => setVisionModalVisible(true)}
+                            >
+                              Thêm thông tin thị lực
+                            </Button>
                           </div>
                           <List
                             dataSource={visionData}
@@ -1767,6 +1800,10 @@ const HealthProfileDeclaration = ({ onProfileCreated }) => {
                                     type="link"
                                     icon={<EditOutlined />}
                                     onClick={() => handleEditVision(vision)}
+                                    disabled={vision.healthCheckResult != null || vision.healthResult != null}
+                                    title={vision.healthCheckResult || vision.healthResult ? 
+                                      'Không thể chỉnh sửa thông tin thị lực đã có kết quả khám sức khỏe' : 
+                                      'Sửa thông tin thị lực'}
                                   >
                                     Sửa
                                   </Button>,
@@ -1774,10 +1811,16 @@ const HealthProfileDeclaration = ({ onProfileCreated }) => {
                                     type="link"
                                     danger
                                     icon={<DeleteOutlined />}
+                                    disabled={vision.healthCheckResult != null || vision.healthResult != null}
                                     onClick={() =>
                                       handleRemoveVision(
                                         vision.id || vision.tempId
                                       )
+                                    }
+                                    title={
+                                      vision.healthCheckResult || vision.healthResult 
+                                        ? 'Không thể xóa - Đã có kết quả khám sức khỏe' 
+                                        : 'Xóa thông tin thị lực'
                                     }
                                   >
                                     Xóa
@@ -1785,20 +1828,38 @@ const HealthProfileDeclaration = ({ onProfileCreated }) => {
                                 ]}
                               >
                                 <List.Item.Meta
-                                  title={`Khám thị lực - ${dayjs(
-                                    vision.dateOfExamination
-                                  ).format("DD/MM/YYYY")}`}
+                                  title={
+                                    <div>
+                                      {`Khám thị lực - ${dayjs(
+                                        vision.dateOfExamination
+                                      ).format("DD/MM/YYYY")}`}
+                                      {(vision.healthCheckResult || vision.healthResult) && (
+                                        <Tag
+                                          color="purple"
+                                          style={{ marginLeft: 8 }}
+                                        >
+                                          Có kết quả khám
+                                        </Tag>
+                                      )}
+                                    </div>
+                                  }
                                   description={
                                     <div>
                                       <p>
                                         Mắt trái: {vision.visionLeft}/10{" "}
-                                        {vision.visionLeftWithGlass &&
-                                          `(Có kính: ${vision.visionLeftWithGlass}/10)`}
+                                        {vision.visionLeftWithGlass > 0
+                                          ? `(Có kính: ${vision.visionLeftWithGlass}/10)`
+                                          : vision.visionLeftWithGlass === 0
+                                          ? "(Có kính: Không có)"
+                                          : ""}
                                       </p>
                                       <p>
                                         Mắt phải: {vision.visionRight}/10{" "}
-                                        {vision.visionRightWithGlass &&
-                                          `(Có kính: ${vision.visionRightWithGlass}/10)`}
+                                        {vision.visionRightWithGlass > 0
+                                          ? `(Có kính: ${vision.visionRightWithGlass}/10)`
+                                          : vision.visionRightWithGlass === 0
+                                          ? "(Có kính: Không có)"
+                                          : ""}
                                       </p>
                                       {vision.visionDescription && (
                                         <p>Mô tả: {vision.visionDescription}</p>
@@ -1819,33 +1880,13 @@ const HealthProfileDeclaration = ({ onProfileCreated }) => {
                       children: (
                         <>
                           <div style={{ marginBottom: "16px" }}>
-                            {hearingData.length === 0 ? (
-                              <Button
-                                type="primary"
-                                icon={<EyeOutlined />}
-                                onClick={() => setHearingModalVisible(true)}
-                              >
-                                Thêm thông tin thính lực
-                              </Button>
-                            ) : (
-                              <div>
-                                <Alert
-                                  message="Thông tin thính lực đã được khai báo"
-                                  description="Bạn có thể xem chi tiết hoặc chỉnh sửa thông tin hiện có, nhưng không thể thêm mới."
-                                  type="info"
-                                  showIcon
-                                  style={{ marginBottom: "12px" }}
-                                />
-                                <Button
-                                  type="default"
-                                  icon={<EyeOutlined />}
-                                  disabled
-                                  style={{ opacity: 0.6 }}
-                                >
-                                  Không thể thêm mới
-                                </Button>
-                              </div>
-                            )}
+                            <Button
+                              type="primary"
+                              icon={<EyeOutlined />}
+                              onClick={() => setHearingModalVisible(true)}
+                            >
+                              Thêm thông tin thính lực
+                            </Button>
                           </div>
                           <List
                             dataSource={hearingData}
@@ -1866,6 +1907,10 @@ const HealthProfileDeclaration = ({ onProfileCreated }) => {
                                     type="link"
                                     icon={<EditOutlined />}
                                     onClick={() => handleEditHearing(hearing)}
+                                    disabled={hearing.healthCheckResult != null || hearing.healthResult != null}
+                                    title={hearing.healthCheckResult || hearing.healthResult ? 
+                                      'Không thể chỉnh sửa thông tin thính lực đã có kết quả khám sức khỏe' : 
+                                      'Sửa thông tin thính lực'}
                                   >
                                     Sửa
                                   </Button>,
@@ -1873,10 +1918,16 @@ const HealthProfileDeclaration = ({ onProfileCreated }) => {
                                     type="link"
                                     danger
                                     icon={<DeleteOutlined />}
+                                    disabled={hearing.healthCheckResult != null || hearing.healthResult != null}
                                     onClick={() =>
                                       handleRemoveHearing(
                                         hearing.id || hearing.tempId
                                       )
+                                    }
+                                    title={
+                                      hearing.healthCheckResult || hearing.healthResult 
+                                        ? 'Không thể xóa - Đã có kết quả khám sức khỏe' 
+                                        : 'Xóa thông tin thính lực'
                                     }
                                   >
                                     Xóa
@@ -1884,9 +1935,21 @@ const HealthProfileDeclaration = ({ onProfileCreated }) => {
                                 ]}
                               >
                                 <List.Item.Meta
-                                  title={`Khám thính lực - ${dayjs(
-                                    hearing.dateOfExamination
-                                  ).format("DD/MM/YYYY")}`}
+                                  title={
+                                    <div>
+                                      {`Khám thính lực - ${dayjs(
+                                        hearing.dateOfExamination
+                                      ).format("DD/MM/YYYY")}`}
+                                      {(hearing.healthCheckResult || hearing.healthResult) && (
+                                        <Tag
+                                          color="purple"
+                                          style={{ marginLeft: 8 }}
+                                        >
+                                          Có kết quả khám
+                                        </Tag>
+                                      )}
+                                    </div>
+                                  }
                                   description={
                                     <div>
                                       <p>Tai trái: {hearing.leftEar}/10</p>
@@ -2515,16 +2578,20 @@ const HealthProfileDeclaration = ({ onProfileCreated }) => {
                   <strong>Thị lực mắt phải:</strong>{" "}
                   {viewDetailData.visionRight}/10
                 </p>
-                {viewDetailData.visionLeftWithGlass && (
+                {viewDetailData.visionLeftWithGlass !== undefined && viewDetailData.visionLeftWithGlass !== null && (
                   <p>
                     <strong>Thị lực mắt trái (có kính):</strong>{" "}
-                    {viewDetailData.visionLeftWithGlass}/10
+                    {viewDetailData.visionLeftWithGlass > 0 
+                      ? `${viewDetailData.visionLeftWithGlass}/10`
+                      : "Không có"}
                   </p>
                 )}
-                {viewDetailData.visionRightWithGlass && (
+                {viewDetailData.visionRightWithGlass !== undefined && viewDetailData.visionRightWithGlass !== null && (
                   <p>
                     <strong>Thị lực mắt phải (có kính):</strong>{" "}
-                    {viewDetailData.visionRightWithGlass}/10
+                    {viewDetailData.visionRightWithGlass > 0 
+                      ? `${viewDetailData.visionRightWithGlass}/10`
+                      : "Không có"}
                   </p>
                 )}
                 {viewDetailData.visionDescription && (
@@ -3572,7 +3639,25 @@ const InfectiousDiseaseModal = ({
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
-      onSubmit(values);
+      
+      // Format dates properly before submitting
+      const formattedValues = {
+        ...values,
+        dateDiagnosed: values.dateDiagnosed 
+          ? values.dateDiagnosed.format("YYYY-MM-DD") 
+          : null,
+        dateResolved: values.dateResolved 
+          ? values.dateResolved.format("YYYY-MM-DD") 
+          : null,
+        dateOfAdmission: values.dateOfAdmission 
+          ? values.dateOfAdmission.format("YYYY-MM-DD") 
+          : null,
+        dateOfDischarge: values.dateOfDischarge 
+          ? values.dateOfDischarge.format("YYYY-MM-DD") 
+          : null,
+      };
+      
+      onSubmit(formattedValues);
       form.resetFields();
     } catch (error) {
       console.error("Validation error:", error);
@@ -3636,9 +3721,7 @@ const InfectiousDiseaseModal = ({
         <Form.Item
           name="placeOfTreatment"
           label="Nơi điều trị"
-          rules={[{ required: true, message: "Vui lòng nhập nơi điều trị" }]}
         >
-          {" "}
           <Input placeholder="Tên bệnh viện, phòng khám..." />
         </Form.Item>
         <Row gutter={16}>

@@ -17,4 +17,5 @@ public class HearingDTO {
     private String doctorName;
     private LocalDate dateOfExamination;
     private Long healthProfileId;
+    private Long healthResult;
 }
