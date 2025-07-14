@@ -23,6 +23,7 @@ const SkinForm = ({ categoryData, handleInputChange, modalMode }) => (
     style={{
       background: "linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%)",
       border: "1px solid #ff9800",
+      marginTop: "20px",
     }}
   >
     <div className="mb-6">
@@ -33,7 +34,7 @@ const SkinForm = ({ categoryData, handleInputChange, modalMode }) => (
           style={{ backgroundColor: "#f57c00" }}
         />
         <Title level={3} style={{ margin: 0, color: "#e65100" }}>
-          Da (Skin Health)
+          Da
         </Title>
       </Space>
     </div>

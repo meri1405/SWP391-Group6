@@ -23,6 +23,7 @@ const VisionForm = ({ categoryData, onDataChange, readOnly }) => (
     style={{
       background: "linear-gradient(135deg, #e3f2fd 0%, #e8eaf6 100%)",
       border: "1px solid #2196f3",
+      marginTop: "20px",
     }}
   >
     <div className="mb-6">
@@ -33,7 +34,7 @@ const VisionForm = ({ categoryData, onDataChange, readOnly }) => (
           style={{ backgroundColor: "#1976d2" }}
         />
         <Title level={3} style={{ margin: 0, color: "#1976d2" }}>
-          Thị lực (Vision)
+          Thị lực
         </Title>
       </Space>
     </div>

@@ -15,7 +15,7 @@ const UserSearchAndFilter = ({
     <div className="filters-section">
       <div className="search-bar">
         <div className="search-input-wrapper">
-          <SearchOutlined className="search-icon" />
+          {/* <SearchOutlined className="search-icon" /> */}
           <input
             type="text"
             placeholder="Tìm kiếm theo tên hoặc email..."

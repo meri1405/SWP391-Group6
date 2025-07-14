@@ -23,6 +23,7 @@ const OralForm = ({ categoryData, handleInputChange, modalMode }) => (
     style={{
       background: "linear-gradient(135deg, #f3e5f5 0%, #fce4ec 100%)",
       border: "1px solid #9c27b0",
+      marginTop: "20px",
     }}
   >
     <div className="mb-6">
@@ -33,7 +34,7 @@ const OralForm = ({ categoryData, handleInputChange, modalMode }) => (
           style={{ backgroundColor: "#7b1fa2" }}
         />
         <Title level={3} style={{ margin: 0, color: "#6a1b9a" }}>
-          Răng miệng (Oral Health)
+          Răng miệng
         </Title>
       </Space>
     </div>

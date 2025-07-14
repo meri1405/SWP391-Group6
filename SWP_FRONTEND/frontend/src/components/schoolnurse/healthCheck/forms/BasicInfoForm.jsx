@@ -79,7 +79,7 @@ const BasicInfoForm = ({ categoryData, onDataChange, onOverallChange, formData, 
 
   return (
     <Card className="mb-6">
-      <div className="mb-4">
+      <div className="mb-4" style={{marginBottom: "0px"}}>
         <Title level={4} className="text-blue-600 mb-4">
           <UserOutlined className="mr-2" />
           Thông tin cơ bản
@@ -89,10 +89,10 @@ const BasicInfoForm = ({ categoryData, onDataChange, onOverallChange, formData, 
       <Row gutter={24}>
         {/* Height */}
         <Col span={8}>
-          <div className="mb-4">
+          <div className="mb-4" style={{marginBottom: "0px"}}>
             <label className="block mb-2 font-medium">
               <ColumnHeightOutlined className="mr-2 text-blue-500" />
-              Chiều cao (cm) *
+              Chiều cao (cm) <strong style={{ color: "red" }}>*</strong>
             </label>
             <InputNumber
               placeholder="Ví dụ: 150"
@@ -109,10 +109,10 @@ const BasicInfoForm = ({ categoryData, onDataChange, onOverallChange, formData, 
 
         {/* Weight */}
         <Col span={8}>
-          <div className="mb-4">
+          <div className="mb-4" style={{marginBottom: "0px"}}>
             <label className="block mb-2 font-medium">
               <ExperimentOutlined className="mr-2 text-green-500" />
-              Cân nặng (kg) *
+              Cân nặng (kg) <strong style={{ color: "red" }}>*</strong>
             </label>
             <InputNumber
               placeholder="Ví dụ: 45"
@@ -130,9 +130,9 @@ const BasicInfoForm = ({ categoryData, onDataChange, onOverallChange, formData, 
 
         {/* BMI */}
         <Col span={8}>
-          <div className="mb-4">
+          <div className="mb-4" style={{marginBottom: "0px"}}>
             <label className="block mb-2 font-medium">
-              BMI (tự động tính)
+              BMI
             </label>
             <div className="flex items-center space-x-2">
               <Input
