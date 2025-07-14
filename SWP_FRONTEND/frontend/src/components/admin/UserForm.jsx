@@ -4,10 +4,10 @@ import dayjs from 'dayjs';
 import { 
   validateVietnameseName, 
   validateVietnamesePhone, 
-  validateEmail, 
-  validateAddress
+  validateEmail
 } from '../../utils/formValidation';
 import { getMaxAgeForRole, ROLE_LABELS, getJobTitleForRole } from '../../constants/userRoles';
+import AddressSelector from "../common/AddressSelector";
 
 const UserForm = ({ 
   form, 
@@ -15,7 +15,7 @@ const UserForm = ({
   modalMode = 'add',
   existingUsers = [] 
 }) => {
-  
+  //validateAddress
   // Check for duplicate values
   const checkDuplicate = (value, field, currentUserId = null) => {
     return existingUsers.some(user => 
@@ -97,13 +97,13 @@ const UserForm = ({
   };
 
   // Address validation
-  const validateAddressField = (_, value) => {
-    const validation = validateAddress(value);
-    if (!validation.isValid) {
-      return Promise.reject(new Error(validation.message));
-    }
-    return Promise.resolve();
-  };
+  // const validateAddressField = (_, value) => {
+  //   const validation = validateAddress(value);
+  //   if (!validation.isValid) {
+  //     return Promise.reject(new Error(validation.message));
+  //   }
+  //   return Promise.resolve();
+  // };
 
   // Only allow numbers for phone input
   const handlePhoneKeyPress = (e) => {
@@ -252,16 +252,11 @@ const UserForm = ({
         <Form.Item
           label="Địa chỉ"
           name="address"
-          rules={[
-            { required: true, message: 'Vui lòng nhập địa chỉ!' },
-            { validator: validateAddressField }
-          ]}
+          rules={[{ required: true, message: "Vui lòng chọn địa chỉ" }]}
         >
-          <Input.TextArea
-            placeholder="Nhập địa chỉ đầy đủ (VD: 123 Đường ABC, Phường XYZ, Quận 1, TP.HCM)"
-            rows={3}
-            showCount
-            maxLength={200}
+          <AddressSelector
+              provinceLabel="Tỉnh/Thành phố"
+              wardLabel="Phường/Xã"
           />
         </Form.Item>
       </Form>

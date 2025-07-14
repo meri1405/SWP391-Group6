@@ -67,9 +67,9 @@ const RespiratoryForm = ({ categoryData, handleInputChange, modalMode }) => (
                 style={{ width: "100%", marginTop: 4 }}
                 disabled={modalMode === "view"}
               />
-              <AntText type="secondary" style={{ fontSize: "12px" }}>
+              <Text type="secondary" style={{ fontSize: "12px" }}>
                 Bình thường: 12-20 lần/phút
-              </AntText>
+              </Text>
             </div>
 
             <div>
@@ -89,9 +89,9 @@ const RespiratoryForm = ({ categoryData, handleInputChange, modalMode }) => (
                 style={{ width: "100%", marginTop: 4 }}
                 disabled={modalMode === "view"}
               />
-              <AntText type="secondary" style={{ fontSize: "12px" }}>
+              <Text type="secondary" style={{ fontSize: "12px" }}>
                 Bình thường: ≥ 95%
-              </AntText>
+              </Text>
             </div>
 
             <div>

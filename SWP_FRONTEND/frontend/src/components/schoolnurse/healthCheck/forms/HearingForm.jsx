@@ -25,6 +25,7 @@ const HearingForm = ({ categoryData, handleInputChange, modalMode }) => (
       borderRadius: "8px",
       border: "1px solid #e0e0e0",
       boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+      marginTop: "20px",
     }}
   >
     {/* Header */}
@@ -96,9 +97,9 @@ const HearingForm = ({ categoryData, handleInputChange, modalMode }) => (
                   size="large"
                   disabled={modalMode === "view"}
                 />
-                <AntText type="secondary" style={{ fontSize: "12px" }}>
+                <Text type="secondary" style={{ fontSize: "12px" }}>
                   Bình thường: ≤ 25dB
-                </AntText>
+                </Text>
               </div>
 
               <div>
@@ -120,9 +121,9 @@ const HearingForm = ({ categoryData, handleInputChange, modalMode }) => (
                   size="large"
                   disabled={modalMode === "view"}
                 />
-                <AntText type="secondary" style={{ fontSize: "12px" }}>
+                <Text type="secondary" style={{ fontSize: "12px" }}>
                   Bình thường: ≤ 25dB
-                </AntText>
+                </Text>
               </div>
 
               <div>
