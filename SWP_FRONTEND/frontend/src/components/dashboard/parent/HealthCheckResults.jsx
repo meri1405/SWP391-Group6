@@ -117,9 +117,10 @@ const HealthCheckResults = () => {
   const getStatusText = (status) => {
     const statusMap = {
       NORMAL: "Bình thường",
-      ABNORMAL: "Bất thường",
-      NEEDS_FOLLOW_UP: "Cần theo dõi",
-      PENDING: "Chờ kết quả"
+      MINOR_CONCERN: "Cần theo dõi",
+      NEEDS_ATTENTION: "Cần chú ý",
+      REQUIRES_FOLLOWUP: "Cần tái khám",
+      URGENT: "Khẩn cấp"
     };
     return statusMap[status] || status;
   };

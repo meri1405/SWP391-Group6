@@ -14,6 +14,7 @@ import {
 import { useAuth } from '../../../contexts/AuthContext';
 import { parentApi } from '../../../api/parentApi';
 import webSocketService from '../../../services/webSocketService';
+import { formatTimeAgo } from '../../../utils/timeUtils';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
@@ -101,25 +102,7 @@ const Overview = ({ userInfo: externalUserInfo }) => {
       default:
         return <FileTextOutlined />;
     }
-  }, [getNotificationType]);
-
-  const formatTimeAgo = useCallback((dateString) => {
-    if (!dateString) return 'Không xác định';
-    
-    const now = dayjs();
-    const notificationDate = dayjs(dateString);
-    const diffInDays = now.diff(notificationDate, 'day');
-    
-    if (diffInDays === 0) {
-      return 'Hôm nay';
-    } else if (diffInDays === 1) {
-      return 'Hôm qua';
-    } else if (diffInDays < 7) {
-      return `${diffInDays} ngày trước`;
-    } else {
-      return notificationDate.format('DD/MM/YYYY');
-    }
-  }, []);  // Function to load recent notifications from database
+  }, [getNotificationType]);  // Function to load recent notifications from database
   const loadRecentNotifications = useCallback(async () => {
     if (!isParent()) return;
     
@@ -148,7 +131,7 @@ const Overview = ({ userInfo: externalUserInfo }) => {
     } finally {
       setNotificationsLoading(false);
     }
-  }, [isParent, getToken, getNotificationType, formatTimeAgo, getNotificationIcon]);
+  }, [isParent, getToken, getNotificationType, getNotificationIcon]);
   // Setup WebSocket connection for real-time notifications
   const setupWebSocketConnection = useCallback(async () => {
     const token = getToken();

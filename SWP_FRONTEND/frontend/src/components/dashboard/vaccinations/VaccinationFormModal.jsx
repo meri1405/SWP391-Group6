@@ -1,9 +1,8 @@
 import React from "react";
-import { Alert, Tag, Tooltip } from "antd";
+import { Alert, Tag, Tooltip, Modal, Button, Typography, Row, Col, Divider, Spin } from "antd";
 import { ClockCircleOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
 import { useVaccinationFormModal } from "../../../hooks/useVaccinationFormModal";
 import {
-  formatGender,
   getStatusColor,
   getStatusText,
   validateFormSubmission,
@@ -13,13 +12,14 @@ import {
   getNotesLabel,
   canModifyForm
 } from "../../../utils/vaccinationFormModalUtils";
-import { formatDate } from "../../../utils/timeUtils";
+import { formatDate, parseDate } from "../../../utils/timeUtils";
 import {
   validateParentFormAction,
   formatTimeRemaining,
   shouldShowFormReminderWarning,
 } from "../../../utils/vaccinationTimeValidation";
-import "../../../styles/VaccinationFormModal.css";
+
+const { Title, Text } = Typography;
 
 const VaccinationFormModal = ({
   isOpen,
@@ -42,310 +42,401 @@ const VaccinationFormModal = ({
     handleNotesChange,
   } = useVaccinationFormModal(vaccinationFormId, isOpen, onFormUpdated);
 
+  // Helper function to format date for display (date only, no time)
+  const formatDateOnly = (dateInput) => {
+    if (!dateInput) return "Chưa có thông tin";
+
+    const date = parseDate(dateInput);
+    if (!date) return "Không hợp lệ";
+    
+    const day = date.getDate().toString().padStart(2, "0");
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    const year = date.getFullYear();
+
+    return `${day}/${month}/${year}`;
+  };
+
   if (!isOpen) return null;
 
   return (
-    <div className="vaccination-form-modal-overlay">
-      <div className="vaccination-form-modal">
-        <div className="vaccination-form-modal-header">
-          <h2>Chi tiết phiếu tiêm chủng</h2>
-          <button className="close-btn" onClick={onClose}>
-            <i className="fas fa-times"></i>
-          </button>
+    <Modal
+      title="Chi tiết phiếu tiêm chủng"
+      open={isOpen}
+      onCancel={onClose}
+      footer={
+        form && canModifyForm(form.confirmationStatus) && (() => {
+          // Check time validation for parent actions
+          if (form.sentDate) {
+            const validation = validateParentFormAction(form.sentDate);
+            
+            if (!validation.canAct) {
+              return [
+                <Button key="close" onClick={onClose}>
+                  Đóng
+                </Button>
+              ];
+            }
+          }
+          
+          return [
+            <Button key="decline" danger onClick={handleDeclineClick}>
+              Từ chối tiêm chủng
+            </Button>,
+            <Button key="confirm" type="primary" onClick={handleConfirmClick}>
+              Đồng ý tiêm chủng
+            </Button>
+          ];
+        })() || [
+          <Button key="close" onClick={onClose}>
+            Đóng
+          </Button>
+        ]
+      }
+      width={800}
+      destroyOnClose
+    >
+      {loading && (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
+          <Spin size="large" tip="Đang tải thông tin..." />
         </div>
+      )}
 
-        <div className="vaccination-form-modal-body">
-          {loading && (
-            <div className="loading-state">
-              <i className="fas fa-spinner fa-spin"></i>
-              <p>Đang tải thông tin...</p>
-            </div>
-          )}
+      {error && (
+        <Alert
+          message="Lỗi"
+          description={error}
+          type="error"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
+      )}
 
-          {error && (
-            <div className="error-state">
-              <i className="fas fa-exclamation-triangle"></i>
-              <p>{error}</p>
-            </div>
-          )}
-
-          {form && (
-            <div className="form-details">
-              {" "}
-              <div className="form-header">
-                <div className="student-info">
-                  <h3>{form.studentFullName}</h3>
-                  <div className="student-details">
-                    {form.studentDateOfBirth && (
-                      <p>
-                        <i className="fas fa-birthday-cake"></i> Ngày sinh:{" "}
-                        {formatDate(form.studentDateOfBirth)}
-                      </p>
-                    )}
-                    {form.studentGender && (
-                      <p>
-                        <i className="fas fa-user"></i> Giới tính:{" "}
-                        {formatGender(form.studentGender)}
-                      </p>
-                    )}
-                    {form.studentClassName && (
-                      <p>
-                        <i className="fas fa-graduation-cap"></i> Lớp:{" "}
-                        {form.studentClassName}
-                      </p>
-                    )}
-                  </div>
+      {form && (
+        <div style={{ padding: '0' }}>
+          {/* Section 1: Student Information */}
+          <div style={{ marginBottom: '24px' }}>
+            <Title level={5} style={{ marginBottom: '16px', color: '#1890ff' }}>
+              Thông tin học sinh
+            </Title>
+            <Row gutter={[24, 16]}>
+              <Col span={12}>
+                <div style={{ display: 'flex', marginBottom: '8px' }}>
+                  <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>Họ tên:</Text>
+                  <Text>{form.studentFullName || 'Chưa có thông tin'}</Text>
                 </div>
-                <div
-                  className="status-badge"
-                  style={{
-                    backgroundColor: getStatusColor(form.confirmationStatus),
-                  }}
-                >
-                  {getStatusText(form.confirmationStatus)}
+              </Col>
+              <Col span={12}>
+                <div style={{ display: 'flex', marginBottom: '8px' }}>
+                  <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>Lớp:</Text>
+                  <Text>{form.studentClassName || 'Chưa có thông tin'}</Text>
+                </div>
+              </Col>
+              <Col span={12}>
+                <div style={{ display: 'flex', marginBottom: '8px' }}>
+                  <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>Ngày sinh:</Text>
+                  <Text>{formatDateOnly(form.studentBirthDate)}</Text>
+                </div>
+              </Col>
+              <Col span={12}>
+                <div style={{ display: 'flex', marginBottom: '8px' }}>
+                  <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>Giới tính:</Text>
+                  <Text>{form.studentGender === 'M' ? 'Nam' : 'Nữ'}</Text>
+                </div>
+              </Col>
+              <Col span={12}>
+                <div style={{ display: 'flex', marginBottom: '8px' }}>
+                  <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>Trạng thái:</Text>
+                  <Text style={{ color: getStatusColor(form.confirmationStatus) }}>
+                    {getStatusText(form.confirmationStatus)}
+                  </Text>
+                </div>
+              </Col>
+            </Row>
+          </div>
+
+          {/* Time validation warning for pending forms */}
+          {form.confirmationStatus === "PENDING" && form.sentDate && (() => {
+            const validation = validateParentFormAction(form.sentDate);
+            const showWarning = shouldShowFormReminderWarning(form.sentDate, form.reminderSent);
+            
+            if (!validation.canAct) {
+              return (
+                <Alert
+                  message="Phiếu đã hết hạn"
+                  description={`Thời hạn phản hồi đã kết thúc (${validation.hoursElapsed} giờ đã trôi qua, giới hạn 48 giờ). Vui lòng liên hệ nhà trường để được hỗ trợ.`}
+                  type="error"
+                  showIcon
+                  style={{ margin: "16px 0" }}
+                  icon={<ExclamationCircleOutlined />}
+                />
+              );
+            }
+            
+            if (showWarning || validation.remainingHours <= 6) {
+              return (
+                <Alert
+                  message={showWarning ? "Nhắc nhở đã được gửi" : "Sắp hết thời hạn phản hồi"}
+                  description={
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <ClockCircleOutlined />
+                      <span>
+                        Còn {formatTimeRemaining(validation.remainingHours)} để phản hồi phiếu tiêm chủng
+                        {showWarning && " (Hệ thống đã gửi nhắc nhở sau 24 giờ)"}
+                      </span>
+                    </div>
+                  }
+                  type="warning"
+                  showIcon
+                  style={{ margin: "16px 0" }}
+                />
+              );
+            }
+            
+            return null;
+          })()}
+
+          <Divider />
+
+          {/* Section 2: Vaccine Information */}
+          <div style={{ marginBottom: '24px' }}>
+            <Title level={5} style={{ marginBottom: '16px', color: '#1890ff' }}>
+              Thông tin vắc xin
+            </Title>
+            <Row gutter={[24, 16]}>
+              <Col span={12}>
+                <div style={{ display: 'flex', marginBottom: '8px' }}>
+                  <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>Tên vắc xin:</Text>
+                  <Text>{form.vaccineName || 'Chưa có thông tin'}</Text>
+                </div>
+              </Col>
+              {form.vaccineBrand && (
+                <Col span={12}>
+                  <div style={{ display: 'flex', marginBottom: '8px' }}>
+                    <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>Thương hiệu:</Text>
+                    <Text>{form.vaccineBrand}</Text>
+                  </div>
+                </Col>
+              )}
+              <Col span={12}>
+                <div style={{ display: 'flex', marginBottom: '8px' }}>
+                  <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>Liều số:</Text>
+                  <Text>{form.doseNumber || 'Chưa có thông tin'}</Text>
+                </div>
+              </Col>
+              <Col span={12}>
+                <div style={{ display: 'flex', marginBottom: '8px' }}>
+                  <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>Ngày dự kiến:</Text>
+                  <Text>{formatDate(form.scheduledDate)}</Text>
+                </div>
+              </Col>
+              <Col span={12}>
+                <div style={{ display: 'flex', marginBottom: '8px' }}>
+                  <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>Địa điểm:</Text>
+                  <Text>{form.location || 'Chưa có thông tin'}</Text>
+                </div>
+              </Col>
+            </Row>
+          </div>
+
+          <Divider />
+
+          {/* Section 3: Campaign Information */}
+          <div style={{ marginBottom: '24px' }}>
+            <Title level={5} style={{ marginBottom: '16px', color: '#1890ff' }}>
+              Thông tin chiến dịch
+            </Title>
+            <Row gutter={[24, 16]}>
+              <Col span={12}>
+                <div style={{ display: 'flex', marginBottom: '8px' }}>
+                  <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>Tên chiến dịch:</Text>
+                  <Text>{form.campaignName || 'Chưa có thông tin'}</Text>
+                </div>
+              </Col>
+              <Col span={12}>
+                <div style={{ display: 'flex', marginBottom: '8px' }}>
+                  <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>Ngày tạo:</Text>
+                  <Text>{formatDate(form.createdDate)}</Text>
+                </div>
+              </Col>
+              <Col span={12}>
+                <div style={{ display: 'flex', marginBottom: '8px' }}>
+                  <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>Người tạo:</Text>
+                  <Text>{form.createdByName || 'Chưa có thông tin'}</Text>
+                </div>
+              </Col>
+            </Row>
+          </div>
+
+          {/* Section 4: Care Instructions */}
+          {form.prePostCareInstructions && (
+            <>
+              <Divider />
+              <div style={{ marginBottom: '24px' }}>
+                <Title level={5} style={{ marginBottom: '16px', color: '#1890ff' }}>
+                  Hướng dẫn chăm sóc trước/sau tiêm
+                </Title>
+                <div style={{ 
+                  padding: '12px', 
+                  backgroundColor: '#f5f5f5', 
+                  borderRadius: '6px',
+                  border: '1px solid #d9d9d9'
+                }}>
+                  {form.prePostCareInstructions.split("\n").map((line, index) => (
+                    <div key={index} style={{ marginBottom: index < form.prePostCareInstructions.split("\n").length - 1 ? '4px' : '0' }}>
+                      <Text>{line}</Text>
+                    </div>
+                  ))}
                 </div>
               </div>
-              
-              {/* Time validation warning for pending forms */}
-              {form.confirmationStatus === "PENDING" && form.sentDate && (() => {
-                const validation = validateParentFormAction(form.sentDate);
-                const showWarning = shouldShowFormReminderWarning(form.sentDate, form.reminderSent);
-                
-                if (!validation.canAct) {
-                  return (
-                    <Alert
-                      message="Phiếu đã hết hạn"
-                      description={`Thời hạn phản hồi đã kết thúc (${validation.hoursElapsed} giờ đã trôi qua, giới hạn 48 giờ). Vui lòng liên hệ nhà trường để được hỗ trợ.`}
-                      type="error"
-                      showIcon
-                      style={{ margin: "16px 0" }}
-                      icon={<ExclamationCircleOutlined />}
-                    />
-                  );
-                }
-                
-                if (showWarning || validation.remainingHours <= 6) {
-                  return (
-                    <Alert
-                      message={showWarning ? "Nhắc nhở đã được gửi" : "Sắp hết thời hạn phản hồi"}
-                      description={
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                          <ClockCircleOutlined />
-                          <span>
-                            Còn {formatTimeRemaining(validation.remainingHours)} để phản hồi phiếu tiêm chủng
-                            {showWarning && " (Hệ thống đã gửi nhắc nhở sau 24 giờ)"}
-                          </span>
-                        </div>
-                      }
-                      type="warning"
-                      showIcon
-                      style={{ margin: "16px 0" }}
-                    />
-                  );
-                }
-                
-                return null;
-              })()}
-              
-              <div className="form-content">
-                <div className="info-section">
-                  <h4>Thông tin vắc xin</h4>
-                  <div className="info-grid">
-                    <div className="info-item">
-                      <label>Tên vắc xin:</label>
-                      <span>{form.vaccineName}</span>
+            </>
+          )}
+
+          {/* Section 5: Additional Information */}
+          {form.additionalInfo && (
+            <>
+              <Divider />
+              <div style={{ marginBottom: '24px' }}>
+                <Title level={5} style={{ marginBottom: '16px', color: '#1890ff' }}>
+                  Thông tin bổ sung
+                </Title>
+                <div style={{ 
+                  padding: '12px', 
+                  backgroundColor: '#f5f5f5', 
+                  borderRadius: '6px',
+                  border: '1px solid #d9d9d9'
+                }}>
+                  {form.additionalInfo.split("\n").map((line, index) => (
+                    <div key={index} style={{ marginBottom: index < form.additionalInfo.split("\n").length - 1 ? '4px' : '0' }}>
+                      <Text>{line}</Text>
                     </div>
-                    {form.vaccineBrand && (
-                      <div className="info-item">
-                        <label>Thương hiệu:</label>
-                        <span>{form.vaccineBrand}</span>
-                      </div>
-                    )}
-                    <div className="info-item">
-                      <label>Liều số:</label>
-                      <span>{form.doseNumber}</span>
-                    </div>
-                    <div className="info-item">
-                      <label>Ngày dự kiến:</label>
-                      <span>{formatDate(form.scheduledDate)}</span>
-                    </div>
-                    <div className="info-item">
-                      <label>Địa điểm:</label> <span>{form.location}</span>
-                    </div>
-                  </div>
+                  ))}
                 </div>
+              </div>
+            </>
+          )}
 
-                {form.prePostCareInstructions && (
-                  <div className="info-section">
-                    <h4>Hướng dẫn chăm sóc trước/sau tiêm</h4>
-                    <div className="care-instructions">
-                      {form.prePostCareInstructions
-                        .split("\n")
-                        .map((line, index) => (
-                          <div key={index}>{line}</div>
-                        ))}
+          {/* Section 6: Confirmation Information */}
+          {form.confirmationDate && (
+            <>
+              <Divider />
+              <div style={{ marginBottom: '24px' }}>
+                <Title level={5} style={{ marginBottom: '16px', color: '#1890ff' }}>
+                  Thông tin xác nhận
+                </Title>
+                <Row gutter={[24, 16]}>
+                  <Col span={12}>
+                    <div style={{ display: 'flex', marginBottom: '8px' }}>
+                      <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>Ngày xác nhận:</Text>
+                      <Text>{formatDate(form.confirmationDate)}</Text>
                     </div>
-                  </div>
-                )}
-
-                {form.additionalInfo && (
-                  <div className="info-section">
-                    <h4>Thông tin bổ sung</h4>
-                    <div className="additional-info">
-                      {form.additionalInfo.split("\n").map((line, index) => (
-                        <div key={index}>{line}</div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <div className="info-section">
-                  <h4>Thông tin chiến dịch</h4>
-                  <div className="info-grid">
-                    <div className="info-item">
-                      <label>Tên chiến dịch:</label>
-                      <span>{form.campaignName}</span>
-                    </div>
-                    <div className="info-item">
-                      <label>Ngày tạo:</label>
-                      <span>{formatDate(form.createdDate)}</span>
-                    </div>
-                    <div className="info-item">
-                      <label>Người tạo:</label>
-                      <span>{form.createdByName}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {form.confirmationDate && (
-                  <div className="info-section">
-                    <h4>Thông tin xác nhận</h4>
-                    <div className="info-grid">
-                      <div className="info-item">
-                        <label>Ngày xác nhận:</label>
-                        <span>{formatDate(form.confirmationDate)}</span>
-                      </div>{" "}
-                      {form.parentNotes && (
-                        <div className="info-item full-width">
-                          <label>Ghi chú của phụ huynh:</label>
+                  </Col>
+                  {form.parentNotes && (
+                    <Col span={24}>
+                      <div style={{ marginBottom: '8px' }}>
+                        <Text strong style={{ marginBottom: '8px', display: 'block' }}>Ghi chú của phụ huynh:</Text>
+                        <div style={{ 
+                          padding: '12px', 
+                          backgroundColor: '#f5f5f5', 
+                          borderRadius: '6px',
+                          border: '1px solid #d9d9d9'
+                        }}>
                           {form.parentNotes.split("\n").map((line, index) => (
-                            <div key={index}>{line}</div>
+                            <div key={index} style={{ marginBottom: index < form.parentNotes.split("\n").length - 1 ? '4px' : '0' }}>
+                              <Text>{line}</Text>
+                            </div>
                           ))}
                         </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-              {canModifyForm(form.confirmationStatus) && (() => {
-                // Check time validation for parent actions
-                if (form.sentDate) {
-                  const validation = validateParentFormAction(form.sentDate);
-                  
-                  if (!validation.canAct) {
-                    return (
-                      <div className="form-actions">
-                        <Alert
-                          message="Không thể thực hiện hành động"
-                          description="Đã quá thời hạn phản hồi (48 giờ). Vui lòng liên hệ nhà trường để được hỗ trợ."
-                          type="error"
-                          showIcon
-                        />
                       </div>
-                    );
-                  }
-                }
-                
-                return (
-                  <div className="form-actions">
-                    {form.sentDate && (() => {
-                      const validation = validateParentFormAction(form.sentDate);
-                      if (validation.remainingHours <= 6) {
-                        return (
-                          <div style={{ marginBottom: "16px" }}>
-                            <Tag color="orange" icon={<ClockCircleOutlined />}>
-                              Còn {formatTimeRemaining(validation.remainingHours)} để phản hồi
-                            </Tag>
-                          </div>
-                        );
-                      }
-                      return null;
-                    })()}
-                    
-                    <button
-                      className="btn btn-success"
-                      onClick={handleConfirmClick}
-                    >
-                      <i className="fas fa-check"></i>
-                      Đồng ý tiêm chủng
-                    </button>
-                    <button
-                      className="btn btn-danger"
-                      onClick={handleDeclineClick}
-                    >
-                      <i className="fas fa-times"></i>
-                      Từ chối tiêm chủng
-                    </button>
-                  </div>
-                );
-              })()}
-            </div>
-          )}
-        </div>
-
-        {/* Confirmation Dialog */}
-        {showConfirmDialog && (
-          <div className="confirm-dialog-overlay">
-            <div className="confirm-dialog">
-              <div className="confirm-dialog-header">
-                <h3>{getConfirmationDialogTitle(confirmAction)}</h3>
-              </div>
-              <div className="confirm-dialog-body">
-                <p>{getConfirmationDialogMessage(confirmAction, form?.vaccineName)}</p>
-                <div className="notes-section">
-                  <label>{getNotesLabel(confirmAction)}</label>
-                  <textarea
-                    value={notes}
-                    onChange={(e) => handleNotesChange(e.target.value)}
-                    placeholder={getNotesPlaceholder(confirmAction)}
-                    rows={3}
-                    required={confirmAction === "decline"}
-                  />
-                </div>
-              </div>
-              <div className="confirm-dialog-actions">
-                <button
-                  className="btn btn-secondary"
-                  onClick={handleCancelConfirmation}
-                >
-                  Hủy
-                </button>
-                <button
-                  className={`btn ${
-                    confirmAction === "confirm" ? "btn-success" : "btn-danger"
-                  }`}
-                  onClick={handleConfirmSubmit}
-                  disabled={
-                    submitting || !validateFormSubmission(confirmAction, notes)
-                  }
-                >
-                  {submitting ? (
-                    <>
-                      <i className="fas fa-spinner fa-spin"></i>
-                      Đang xử lý...
-                    </>
-                  ) : confirmAction === "confirm" ? (
-                    "Xác nhận đồng ý"
-                  ) : (
-                    "Xác nhận từ chối"
+                    </Col>
                   )}
-                </button>
+                </Row>
               </div>
-            </div>
+            </>
+          )}
+
+          {/* Time remaining warning in content area for pending forms */}
+          {canModifyForm(form.confirmationStatus) && form.sentDate && (() => {
+            const validation = validateParentFormAction(form.sentDate);
+            if (validation.canAct && validation.remainingHours <= 6) {
+              return (
+                <div style={{ marginBottom: "16px" }}>
+                  <Tag color="orange" icon={<ClockCircleOutlined />}>
+                    Còn {formatTimeRemaining(validation.remainingHours)} để phản hồi
+                  </Tag>
+                </div>
+              );
+            }
+            return null;
+          })()}
+
+          {/* Action not allowed message */}
+          {canModifyForm(form.confirmationStatus) && form.sentDate && (() => {
+            const validation = validateParentFormAction(form.sentDate);
+            
+            if (!validation.canAct) {
+              return (
+                <Alert
+                  message="Không thể thực hiện hành động"
+                  description="Đã quá thời hạn phản hồi (48 giờ). Vui lòng liên hệ nhà trường để được hỗ trợ."
+                  type="error"
+                  showIcon
+                  style={{ marginBottom: 16 }}
+                />
+              );
+            }
+            return null;
+          })()}
+        </div>
+      )}
+
+      {/* Confirmation Dialog */}
+      {showConfirmDialog && (
+        <Modal
+          title={getConfirmationDialogTitle(confirmAction)}
+          open={showConfirmDialog}
+          onCancel={handleCancelConfirmation}
+          footer={[
+            <Button key="cancel" onClick={handleCancelConfirmation}>
+              Hủy
+            </Button>,
+            <Button
+              key="submit"
+              type={confirmAction === "confirm" ? "primary" : "danger"}
+              loading={submitting}
+              disabled={!validateFormSubmission(confirmAction, notes)}
+              onClick={handleConfirmSubmit}
+            >
+              {confirmAction === "confirm" ? "Xác nhận đồng ý" : "Xác nhận từ chối"}
+            </Button>
+          ]}
+          width={500}
+        >
+          <div style={{ marginBottom: '16px' }}>
+            <Text>{getConfirmationDialogMessage(confirmAction, form?.vaccineName)}</Text>
           </div>
-        )}
-      </div>
-    </div>
+          <div>
+            <Text strong style={{ display: 'block', marginBottom: '8px' }}>
+              {getNotesLabel(confirmAction)}
+            </Text>
+            <textarea
+              value={notes}
+              onChange={(e) => handleNotesChange(e.target.value)}
+              placeholder={getNotesPlaceholder(confirmAction)}
+              rows={3}
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                border: '1px solid #d9d9d9',
+                borderRadius: '6px',
+                resize: 'vertical',
+                fontFamily: 'inherit'
+              }}
+              required={confirmAction === "decline"}
+            />
+          </div>
+        </Modal>
+      )}
+    </Modal>
   );
 };
 
