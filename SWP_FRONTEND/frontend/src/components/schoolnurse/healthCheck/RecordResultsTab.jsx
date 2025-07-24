@@ -159,12 +159,14 @@ const RecordResultsTab = ({ campaignId, campaign, onRefreshData }) => {
     <Card className="mb-6">
       <div className="mb-6">
         <Title level={4} className="text-green-600">
-          <MedicineBoxOutlined className="mr-2" />
+          <MedicineBoxOutlined className="mr-2" style={{marginRight: "10px"}}/>
           Ghi kết quả khám sức khỏe
         </Title>
         <div className="bg-blue-50 p-4 rounded-lg">
           <Text strong>Học sinh: </Text>
           <Text className="text-blue-600">{selectedStudent?.fullName}</Text>
+        </div>
+        <div className="bg-blue-50 p-4 rounded-lg">
           <Text className="ml-4">
             <strong>Lớp:</strong> {selectedStudent?.className}
           </Text>
@@ -275,8 +277,12 @@ const RecordResultsTab = ({ campaignId, campaign, onRefreshData }) => {
       )}
 
       {/* Action buttons */}
-      <div className="mt-8 flex justify-end space-x-4">
-        <Button size="large" onClick={() => window.history.back()}>
+      <div className="mt-8 flex justify-end space-x-4" style={
+        {
+          marginTop: "20px",
+        }
+      }>
+        <Button size="large" onClick={() => window.history.back()} style={{ marginRight: "8px" }}>
           Hủy
         </Button>
         <Button

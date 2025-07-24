@@ -1515,8 +1515,10 @@ const InventorySection = () => {
             </Select>
           </Form.Item>
 
-          {activeTab === "medicines" && (
-            <Form.Item
+          {/* {activeTab === "medicines" && (
+            
+          )} */}
+          <Form.Item
               name="expirationDate"
               label="Hạn sử dụng"
               rules={[
@@ -1540,7 +1542,6 @@ const InventorySection = () => {
             >
               <Input type="date" min={new Date().toISOString().split("T")[0]} />
             </Form.Item>
-          )}
 
           <Form.Item
             name="supplier"
