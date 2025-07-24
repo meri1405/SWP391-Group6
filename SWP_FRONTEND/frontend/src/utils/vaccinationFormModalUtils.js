@@ -12,10 +12,10 @@ export const formatGender = (gender) => {
   if (!gender) return "Không có thông tin";
 
   switch (gender.toLowerCase()) {
-    case "male":
+    case 'M':
     case "nam":
       return "Nam";
-    case "female":
+    case 'F':
     case "nữ":
       return "Nữ";
     default:

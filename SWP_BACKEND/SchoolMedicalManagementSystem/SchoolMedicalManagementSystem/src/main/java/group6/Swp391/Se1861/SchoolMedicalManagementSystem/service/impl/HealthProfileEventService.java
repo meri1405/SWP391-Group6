@@ -42,7 +42,7 @@ public class HealthProfileEventService implements IHealthProfileEventService {
     @Override
     public void logCreateEvent(HealthProfile healthProfile, User modifiedByUser) {
         logEvent(healthProfile, modifiedByUser, HealthProfileEvent.ActionType.CREATE, 
-                "profile", null, "Profile created");
+                "Hồ sơ", null, "Tạo hồ sơ");
     }
 
     @Override
@@ -55,30 +55,30 @@ public class HealthProfileEventService implements IHealthProfileEventService {
     @Override
     public void logDeleteEvent(HealthProfile healthProfile, User modifiedByUser) {
         logEvent(healthProfile, modifiedByUser, HealthProfileEvent.ActionType.DELETE, 
-                "profile", "Profile active", "Profile deleted");
+                "Hồ sơ", "Hồ sơ hoạt động", "Xóa hồ sơ");
     }
 
     @Override
     public void logApproveEvent(HealthProfile healthProfile, User modifiedByUser, String nurseNote) {
         logEvent(healthProfile, modifiedByUser, HealthProfileEvent.ActionType.APPROVE, 
-                "status", "PENDING", "APPROVED");
+                "Trạng thái", "Đang chờ duyệt", "Đã duyệt");
         
         // Also log nurse note if provided
         if (nurseNote != null && !nurseNote.trim().isEmpty()) {
             logEvent(healthProfile, modifiedByUser, HealthProfileEvent.ActionType.UPDATE, 
-                    "nurseNote", null, nurseNote);
+                    "Ghi chú", null, nurseNote);
         }
     }
 
     @Override
     public void logRejectEvent(HealthProfile healthProfile, User modifiedByUser, String rejectionReason) {
         logEvent(healthProfile, modifiedByUser, HealthProfileEvent.ActionType.REJECT, 
-                "status", "PENDING", "REJECTED");
+                "Trạng thái", "Đang chờ duyệt", "Từ chối");
         
         // Also log rejection reason
         if (rejectionReason != null && !rejectionReason.trim().isEmpty()) {
             logEvent(healthProfile, modifiedByUser, HealthProfileEvent.ActionType.UPDATE, 
-                    "nurseNote", null, rejectionReason);
+                    "Ghi chú", null, rejectionReason);
         }
     }
 

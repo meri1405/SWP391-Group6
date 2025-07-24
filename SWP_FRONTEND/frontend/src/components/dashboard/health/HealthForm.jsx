@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { Modal, Button, Typography, Row, Col, Divider, Spin, Alert } from "antd";
 import { useAuth } from "../../../contexts/AuthContext";
 import { parentApi } from "../../../api/parentApi";
 import { HEALTH_CHECK_CATEGORY_LABELS } from "../../../api/healthCheckApi";
-import "../../../styles/VaccinationFormModal.css";
+import { formatDate, parseDate } from "../../../utils/timeUtils";
+
+const { Title, Text } = Typography;
 
 const HealthCheckFormModal = ({
   isOpen,
@@ -125,40 +128,17 @@ const HealthCheckFormModal = ({
     }
   };
   
-  const formatDate = (dateString) => {
-    if (!dateString) return "Chưa có thông tin";
+  const formatDateOnly = (dateInput) => {
+    if (!dateInput) return "Chưa có thông tin";
 
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) return "Không hợp lệ";
-      
-      const day = date.getDate().toString().padStart(2, "0");
-      const month = (date.getMonth() + 1).toString().padStart(2, "0");
-      const year = date.getFullYear();
+    const date = parseDate(dateInput);
+    if (!date) return "Không hợp lệ";
+    
+    const day = date.getDate().toString().padStart(2, "0");
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    const year = date.getFullYear();
 
-      return `${day}/${month}/${year}`;
-    } catch {
-      return "Không hợp lệ";
-    }
-  };
-
-  const formatDateTime = (dateTimeString) => {
-    if (!dateTimeString) return "Chưa có thông tin";
-
-    try {
-      const date = new Date(dateTimeString);
-      if (isNaN(date.getTime())) return "Không hợp lệ";
-      
-      const day = date.getDate().toString().padStart(2, "0");
-      const month = (date.getMonth() + 1).toString().padStart(2, "0");
-      const year = date.getFullYear();
-      const hours = date.getHours().toString().padStart(2, "0");
-      const minutes = date.getMinutes().toString().padStart(2, "0");
-
-      return `${day}/${month}/${year} ${hours}:${minutes}`;
-    } catch {
-      return "Không hợp lệ";
-    }
+    return `${day}/${month}/${year}`;
   };
 
   const getStatusColor = (status) => {
@@ -199,288 +179,319 @@ const HealthCheckFormModal = ({
   if (!isOpen) return null;
 
   return (
-    <div className="vaccination-form-modal-overlay">
-      <div className="vaccination-form-modal">
-        <div className="vaccination-form-modal-header">
-          <h2>Chi tiết phiếu đăng ký khám sức khỏe</h2>
-          <button className="close-btn" onClick={onClose}>
-            <i className="fas fa-times"></i>
-          </button>
+    <Modal
+      title="Chi tiết phiếu đăng ký khám sức khỏe"
+      open={isOpen}
+      onCancel={onClose}
+      footer={
+        form && form.status === "PENDING" ? [
+          <Button key="decline" danger onClick={handleDeclineClick}>
+            Từ chối khám sức khỏe
+          </Button>,
+          <Button key="confirm" type="primary" onClick={handleConfirmClick}>
+            Đồng ý khám sức khỏe
+          </Button>
+        ] : [
+          <Button key="close" onClick={onClose}>
+            Đóng
+          </Button>
+        ]
+      }
+      width={800}
+      destroyOnClose
+    >
+      {loading && (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
+          <Spin size="large" tip="Đang tải thông tin..." />
         </div>
+      )}
 
-        <div className="vaccination-form-modal-body">
-          {loading && (
-            <div className="loading-state">
-              <i className="fas fa-spinner fa-spin"></i>
-              <p>Đang tải thông tin...</p>
-            </div>
-          )}
+      {error && (
+        <Alert
+          message="Lỗi"
+          description={error}
+          type="error"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
+      )}
 
-          {error && (
-            <div className="error-state">
-              <i className="fas fa-exclamation-triangle"></i>
-              <p>{error}</p>
-            </div>
-          )}
-
-          {form && (
-            <div className="form-details">
-              {console.log("Form data for rendering:", form)}
-              <div className="form-header">
-                <div className="student-info">
-                  <h3>{form.studentFullName}</h3>
-                  <div className="student-details">
-                    {form.studentDateOfBirth && (
-                      <p>
-                        <i className="fas fa-birthday-cake"></i> Ngày sinh:{" "}
-                        {formatDate(form.studentDateOfBirth)}
-                      </p>
-                    )}
-                    {form.studentClassName && (
-                      <p>
-                        <i className="fas fa-graduation-cap"></i> Lớp:{" "}
-                        {form.studentClassName}
-                      </p>
-                    )}
-                  </div>
+      {form && (
+        <div style={{ padding: '0' }}>
+          {/* Section 1: Student Information */}
+          <div style={{ marginBottom: '24px' }}>
+            <Title level={5} style={{ marginBottom: '16px', color: '#1890ff' }}>
+              Thông tin học sinh
+            </Title>
+            <Row gutter={[24, 16]}>
+              <Col span={12}>
+                <div style={{ display: 'flex', marginBottom: '8px' }}>
+                  <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>Họ tên:</Text>
+                  <Text>{form.studentFullName || 'Chưa có thông tin'}</Text>
                 </div>
-                <div
-                  className="status-badge"
-                  style={{
-                    backgroundColor: getStatusColor(form.status),
-                  }}
-                >
-                  {getStatusText(form.status)}
+              </Col>
+              <Col span={12}>
+                <div style={{ display: 'flex', marginBottom: '8px' }}>
+                  <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>Lớp:</Text>
+                  <Text>{form.studentClassName || 'Chưa có thông tin'}</Text>
                 </div>
-              </div>
-              <div className="form-content">
-                {form.appointmentLocation && (
-                  <div className="info-grid">
-                    {
-                      form.appointmentTime && (
-                      <div className="info-item">
-                        <label>Thời gian hẹn:</label>
-                      <span>{formatDateTime(form.appointmentTime)}</span>
-                    </div>)
-                    }
-                    {
-                      form.appointmentLocation && (
-                        <div className="info-item">
-                          <label>Địa điểm khám:</label>
-                          <span>{form.appointmentLocation || 'Chưa có thông tin'}</span>
-                        </div>
-                      )
-                    }
-                    
-                    {form.checkedIn && (
-                      <div className="info-item">
-                        <label>Đã check-in:</label>
-                        <span style={{color: '#52c41a'}}>
-                          <i className="fas fa-check-circle"></i> Đã check-in 
-                          {form.checkedInAt && ` lúc ${formatDateTime(form.checkedInAt)}`}
-                        </span>
-                      </div>
-                    )}
-                    {form.reminderSent && (
-                      <div className="info-item">
-                        <label>Nhắc nhở:</label>
-                        <span style={{color: '#1890ff'}}>
-                          <i className="fas fa-bell"></i> Đã gửi nhắc nhở
-                        </span>
-                      </div>
-                    )}
+              </Col>
+              <Col span={12}>
+                <div style={{ display: 'flex', marginBottom: '8px' }}>
+                  <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>Ngày sinh:</Text>
+                  <Text>{formatDateOnly(form.studentDateOfBirth)}</Text>
                 </div>
-                )}
-                
-
-                {form.campaignDescription && (
-                  <div className="info-section">
-                    <h4>Mô tả chiến dịch</h4>
-                    <div className="campaign-description">
-                      {form.campaignDescription
-                        .split("\n")
-                        .map((line, index) => (
-                          <div key={index}>{line}</div>
-                        ))}
-                    </div>
-                  </div>
-                )}
-
-                <div className="info-section">
-                  <h4>Thông tin chiến dịch</h4>
-                  <div className="info-grid">
-                    <div className="info-item">
-                      <label>Tên chiến dịch:</label>
-                      <span>{form.campaignName || 'Chưa có thông tin'}</span>
-                    </div>
-                    <div className="info-item">
-                      <label>Ngày bắt đầu:</label>
-                      <span>{formatDate(form.campaignStartDate)}</span>
-                    </div>
-                    <div className="info-item">
-                      <label>Ngày kết thúc:</label>
-                      <span>{formatDate(form.campaignEndDate)}</span>
-                    </div>
-                    <div className="info-item">
-                      <label>Loại khám:</label>
-                      <span>
-                        {form.categories && form.categories.length > 0 
-                          ? form.categories.map(cat => getHealthCheckTypeText(cat)).join(', ')
-                          : 'Chưa có thông tin'
-                        }
-                      </span>
-                    </div>
-                    <div className="info-item">
-                      <label>Địa điểm chiến dịch:</label>
-                      <span>{form.location || 'Chưa có thông tin'}</span>
-                    </div>
-                    <div className="info-item">
-                      <label>Ngày tạo:</label>
-                      <span>{formatDateTime(form.createdAt)}</span>
-                    </div>
-                    {form.campaignNotes && (
-                      <div className="info-item full-width">
-                        <label>Ghi chú chiến dịch:</label>
-                        <div>{form.campaignNotes}</div>
-                      </div>
-                    )}
-                  </div>
+              </Col>
+              <Col span={12}>
+                <div style={{ display: 'flex', marginBottom: '8px' }}>
+                  <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>Trạng thái:</Text>
+                  <Text style={{ color: getStatusColor(form.status) }}>
+                    {getStatusText(form.status)}
+                  </Text>
                 </div>
-
-                <div className="info-section">
-                  <h4>Thông tin phụ huynh</h4>
-                  <div className="info-grid">
-                    <div className="info-item">
-                      <label>Họ tên:</label>
-                      <span>
-                        {form.parentFullName 
-                          ? `${form.parentFullName}`
-                          : 'Chưa có thông tin'
-                        }
-                      </span>
-                    </div>
-                    <div className="info-item">
-                      <label>Số điện thoại:</label>
-                      <span>{form.parentPhone || 'Chưa có thông tin'}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {form.respondedAt && (
-                  <div className="info-section">
-                    <h4>Thông tin phản hồi</h4>
-                    <div className="info-grid">
-                      <div className="info-item">
-                        <label>Ngày phản hồi:</label>
-                        <span>{formatDateTime(form.respondedAt)}</span>
-                      </div>
-                      {form.parentNote && (
-                        <div className="info-item full-width">
-                          <label>Ghi chú của phụ huynh:</label>
-                          <div style={{marginTop: '8px', padding: '10px', backgroundColor: '#f5f5f5', borderRadius: '4px'}}>
-                            {form.parentNote.split("\n").map((line, index) => (
-                              <div key={index}>{line}</div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-              {form.status === "PENDING" && (
-                <div className="form-actions">
-                  <button
-                    className="btn btn-success"
-                    onClick={handleConfirmClick}
-                  >
-                    <i className="fas fa-check"></i>
-                    Đồng ý khám sức khỏe
-                  </button>
-                  <button
-                    className="btn btn-danger"
-                    onClick={handleDeclineClick}
-                  >
-                    <i className="fas fa-times"></i>
-                    Từ chối khám sức khỏe
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Confirmation Dialog */}
-        {showConfirmDialog && (
-          <div className="confirm-dialog-overlay">
-            <div className="confirm-dialog">
-              <div className="confirm-dialog-header">
-                <h3>
-                  {confirmAction === "confirm"
-                    ? "Xác nhận đồng ý"
-                    : "Xác nhận từ chối"}
-                </h3>
-              </div>
-              <div className="confirm-dialog-body">
-                <p>
-                  {confirmAction === "confirm"
-                    ? `Bạn có chắc chắn muốn đồng ý cho con tham gia chiến dịch khám sức khỏe "${form?.campaignName}"?`
-                    : `Bạn có chắc chắn muốn từ chối cho con tham gia chiến dịch khám sức khỏe "${form?.campaignName}"?`}
-                </p>
-                <div className="notes-section">
-                  <label>
-                    Ghi chú{" "}
-                    {confirmAction === "decline" ? "(bắt buộc)" : "(tùy chọn)"}:
-                  </label>
-                  <textarea
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder={
-                      confirmAction === "confirm"
-                        ? "Ghi chú thêm (nếu có)..."
-                        : "Vui lòng ghi rõ lý do từ chối..."
-                    }
-                    rows={3}
-                    required={confirmAction === "decline"}
-                  />
-                </div>
-              </div>
-              <div className="confirm-dialog-actions">
-                <button
-                  className="btn btn-secondary"
-                  onClick={() => {
-                    setShowConfirmDialog(false);
-                    setNotes("");
-                  }}
-                >
-                  Hủy
-                </button>
-                <button
-                  className={`btn ${
-                    confirmAction === "confirm" ? "btn-success" : "btn-danger"
-                  }`}
-                  onClick={handleConfirmSubmit}
-                  disabled={
-                    submitting || (confirmAction === "decline" && !notes.trim())
-                  }
-                >
-                  {submitting ? (
-                    <>
-                      <i className="fas fa-spinner fa-spin"></i>
-                      Đang xử lý...
-                    </>
-                  ) : confirmAction === "confirm" ? (
-                    "Xác nhận đồng ý"
-                  ) : (
-                    "Xác nhận từ chối"
-                  )}
-                </button>
-              </div>
-            </div>
+              </Col>
+            </Row>
           </div>
-        )}
-      </div>
-    </div>
+
+          <Divider />
+
+          {/* Section 2: Campaign Information */}
+          <div style={{ marginBottom: '24px' }}>
+            <Title level={5} style={{ marginBottom: '16px', color: '#1890ff' }}>
+              Thông tin chiến dịch
+            </Title>
+            <Row gutter={[24, 16]}>
+              <Col span={12}>
+                <div style={{ display: 'flex', marginBottom: '8px' }}>
+                  <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>Tên chiến dịch:</Text>
+                  <Text>{form.campaignName || 'Chưa có thông tin'}</Text>
+                </div>
+              </Col>
+              <Col span={12}>
+                <div style={{ display: 'flex', marginBottom: '8px' }}>
+                  <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>Địa điểm:</Text>
+                  <Text>{form.location || 'Chưa có thông tin'}</Text>
+                </div>
+              </Col>
+              <Col span={12}>
+                <div style={{ display: 'flex', marginBottom: '8px' }}>
+                  <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>Ngày bắt đầu:</Text>
+                  <Text>{formatDateOnly(form.campaignStartDate)}</Text>
+                </div>
+              </Col>
+              <Col span={12}>
+                <div style={{ display: 'flex', marginBottom: '8px' }}>
+                  <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>Ngày kết thúc:</Text>
+                  <Text>{formatDateOnly(form.campaignEndDate)}</Text>
+                </div>
+              </Col>
+              <Col span={12}>
+                <div style={{ display: 'flex', marginBottom: '8px' }}>
+                  <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>Loại khám:</Text>
+                  <Text>
+                    {form.categories && form.categories.length > 0 
+                      ? form.categories.map(cat => getHealthCheckTypeText(cat)).join(', ')
+                      : 'Chưa có thông tin'
+                    }
+                  </Text>
+                </div>
+              </Col>
+              <Col span={12}>
+                <div style={{ display: 'flex', marginBottom: '8px' }}>
+                  <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>Ngày tạo:</Text>
+                  <Text>{formatDate(form.createdAt)}</Text>
+                </div>
+              </Col>
+              {form.campaignDescription && (
+                <Col span={24}>
+                  <div style={{ display: 'flex', marginBottom: '8px' }}>
+                    <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>Mô tả chiến dịch:</Text>
+                    <Text>{form.campaignDescription}</Text>
+                  </div>
+                </Col>
+              )}
+              {form.campaignNotes && (
+                <Col span={24}>
+                  <div style={{ display: 'flex', marginBottom: '8px' }}>
+                    <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>Ghi chú chiến dịch:</Text>
+                    <Text>{form.campaignNotes}</Text>
+                  </div>
+                </Col>
+              )}
+            </Row>
+          </div>
+
+          <Divider />
+
+          {/* Section 3: Appointment Information */}
+          {(form.appointmentTime || form.appointmentLocation) && (
+            <>
+              <div style={{ marginBottom: '24px' }}>
+                <Title level={5} style={{ marginBottom: '16px', color: '#1890ff' }}>
+                  Thông tin lịch hẹn
+                </Title>
+                <Row gutter={[24, 16]}>
+                  {form.appointmentTime && (
+                    <Col span={12}>
+                      <div style={{ display: 'flex', marginBottom: '8px' }}>
+                        <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>Thời gian hẹn:</Text>
+                        <Text>{formatDate(form.appointmentTime)}</Text>
+                      </div>
+                    </Col>
+                  )}
+                  {form.appointmentLocation && (
+                    <Col span={12}>
+                      <div style={{ display: 'flex', marginBottom: '8px' }}>
+                        <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>Địa điểm khám:</Text>
+                        <Text>{form.appointmentLocation}</Text>
+                      </div>
+                    </Col>
+                  )}
+                  {form.checkedIn && (
+                    <Col span={12}>
+                      <div style={{ display: 'flex', marginBottom: '8px' }}>
+                        <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>Check-in:</Text>
+                        <Text style={{ color: '#52c41a' }}>
+                          Đã check-in {form.checkedInAt && `lúc ${formatDate(form.checkedInAt)}`}
+                        </Text>
+                      </div>
+                    </Col>
+                  )}
+                  {form.reminderSent && (
+                    <Col span={12}>
+                      <div style={{ display: 'flex', marginBottom: '8px' }}>
+                        <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>Nhắc nhở:</Text>
+                        <Text style={{ color: '#1890ff' }}>Đã gửi nhắc nhở</Text>
+                      </div>
+                    </Col>
+                  )}
+                </Row>
+              </div>
+              <Divider />
+            </>
+          )}
+
+          {/* Section 4: Parent Information */}
+          <div style={{ marginBottom: '24px' }}>
+            <Title level={5} style={{ marginBottom: '16px', color: '#1890ff' }}>
+              Thông tin phụ huynh
+            </Title>
+            <Row gutter={[24, 16]}>
+              <Col span={12}>
+                <div style={{ display: 'flex', marginBottom: '8px' }}>
+                  <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>Họ tên:</Text>
+                  <Text>{form.parentFullName || 'Chưa có thông tin'}</Text>
+                </div>
+              </Col>
+              <Col span={12}>
+                <div style={{ display: 'flex', marginBottom: '8px' }}>
+                  <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>Số điện thoại:</Text>
+                  <Text>{form.parentPhone || 'Chưa có thông tin'}</Text>
+                </div>
+              </Col>
+            </Row>
+          </div>
+
+          {/* Section 5: Response Information */}
+          {form.respondedAt && (
+            <>
+              <Divider />
+              <div style={{ marginBottom: '24px' }}>
+                <Title level={5} style={{ marginBottom: '16px', color: '#1890ff' }}>
+                  Thông tin phản hồi
+                </Title>
+                <Row gutter={[24, 16]}>
+                  <Col span={12}>
+                    <div style={{ display: 'flex', marginBottom: '8px' }}>
+                      <Text strong style={{ minWidth: '120px', marginRight: '8px' }}>Ngày phản hồi:</Text>
+                      <Text>{formatDate(form.respondedAt)}</Text>
+                    </div>
+                  </Col>
+                  {form.parentNote && (
+                    <Col span={24}>
+                      <div style={{ marginBottom: '8px' }}>
+                        <Text strong style={{ marginBottom: '8px', display: 'block' }}>Ghi chú của phụ huynh:</Text>
+                        <div style={{ 
+                          padding: '12px', 
+                          backgroundColor: '#f5f5f5', 
+                          borderRadius: '6px',
+                          border: '1px solid #d9d9d9'
+                        }}>
+                          <Text>{form.parentNote}</Text>
+                        </div>
+                      </div>
+                    </Col>
+                  )}
+                </Row>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Confirmation Dialog */}
+      {showConfirmDialog && (
+        <Modal
+          title={confirmAction === "confirm" ? "Xác nhận đồng ý" : "Xác nhận từ chối"}
+          open={showConfirmDialog}
+          onCancel={() => {
+            setShowConfirmDialog(false);
+            setNotes("");
+          }}
+          footer={[
+            <Button key="cancel" onClick={() => {
+              setShowConfirmDialog(false);
+              setNotes("");
+            }}>
+              Hủy
+            </Button>,
+            <Button
+              key="submit"
+              type={confirmAction === "confirm" ? "primary" : "danger"}
+              loading={submitting}
+              disabled={confirmAction === "decline" && !notes.trim()}
+              onClick={handleConfirmSubmit}
+            >
+              {confirmAction === "confirm" ? "Xác nhận đồng ý" : "Xác nhận từ chối"}
+            </Button>
+          ]}
+          width={500}
+        >
+          <div style={{ marginBottom: '16px' }}>
+            <Text>
+              {confirmAction === "confirm"
+                ? `Bạn có chắc chắn muốn đồng ý cho con tham gia chiến dịch khám sức khỏe "${form?.campaignName}"?`
+                : `Bạn có chắc chắn muốn từ chối cho con tham gia chiến dịch khám sức khỏe "${form?.campaignName}"?`
+              }
+            </Text>
+          </div>
+          <div>
+            <Text strong style={{ display: 'block', marginBottom: '8px' }}>
+              Ghi chú {confirmAction === "decline" ? "(bắt buộc)" : "(tùy chọn)"}:
+            </Text>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder={
+                confirmAction === "confirm"
+                  ? "Ghi chú thêm (nếu có)..."
+                  : "Vui lòng ghi rõ lý do từ chối..."
+              }
+              rows={3}
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                border: '1px solid #d9d9d9',
+                borderRadius: '6px',
+                resize: 'vertical',
+                fontFamily: 'inherit'
+              }}
+              required={confirmAction === "decline"}
+            />
+          </div>
+        </Modal>
+      )}
+    </Modal>
   );
 };
 

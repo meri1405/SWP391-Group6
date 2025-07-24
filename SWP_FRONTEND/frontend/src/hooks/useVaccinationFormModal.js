@@ -33,6 +33,7 @@ export const useVaccinationFormModal = (vaccinationFormId, isOpen, onFormUpdated
         token
       );
       if (response.success) {
+        console.log("Vaccination form loaded:", response.form);
         setForm(response.form);
       } else {
         setError(response.message);
