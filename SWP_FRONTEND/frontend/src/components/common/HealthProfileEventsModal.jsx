@@ -55,6 +55,107 @@ const HealthProfileEventsModal = ({
   const [dateRange, setDateRange] = useState([]);
   const [actionTypeFilter, setActionTypeFilter] = useState("");
 
+  // Helper function to translate field names to Vietnamese
+  const translateFieldName = (fieldName) => {
+    const fieldMap = {
+      'status': 'Trạng thái',
+      'nurseNote': 'Ghi chú Y tá',
+      'note': 'Ghi chú',
+      'height': 'Chiều cao',
+      'weight': 'Cân nặng',
+      'bloodType': 'Nhóm máu',
+      'allergies': 'Dị ứng',
+      'chronicDiseases': 'Bệnh mãn tính',
+      'infectiousDiseases': 'Bệnh truyền nhiễm',
+      'treatments': 'Lịch sử điều trị',
+      'vaccinationHistory': 'Lịch sử tiêm chủng',
+      'vision': 'Thị lực',
+      'hearing': 'Thính lực',
+      'medicalHistory': 'Tiền sử bệnh',
+      'familyMedicalHistory': 'Tiền sử gia đình',
+      'emergencyContact': 'Liên hệ khẩn cấp',
+      'parentNote': 'Ghi chú phụ huynh',
+      'createdAt': 'Ngày tạo',
+      'updatedAt': 'Ngày cập nhật',
+      'description': 'Mô tả',
+      'allergyType': 'Loại dị ứng',
+      'severity': 'Mức độ nghiêm trọng',
+      'diseaseName': 'Tên bệnh',
+      'dateDiagnosed': 'Ngày chẩn đoán',
+      'dateResolved': 'Ngày khỏi bệnh',
+      'placeOfTreatment': 'Nơi điều trị',
+      'treatmentType': 'Loại điều trị',
+      'doctorName': 'Tên bác sĩ',
+      'dateOfAdmission': 'Ngày nhập viện',
+      'dateOfDischarge': 'Ngày xuất viện',
+      'vaccineName': 'Tên vắc xin',
+      'doseNumber': 'Số liều',
+      'dateOfVaccination': 'Ngày tiêm',
+      'manufacturer': 'Nhà sản xuất',
+      'placeOfVaccination': 'Nơi tiêm',
+      'administeredBy': 'Người thực hiện',
+      'visionLeft': 'Thị lực mắt trái',
+      'visionRight': 'Thị lực mắt phải',
+      'visionLeftWithGlass': 'Thị lực mắt trái (có kính)',
+      'visionRightWithGlass': 'Thị lực mắt phải (có kính)',
+      'hearingLeft': 'Thính lực tai trái',
+      'hearingRight': 'Thính lực tai phải',
+      'dateOfExamination': 'Ngày khám',
+      'onsetDate': 'Ngày bắt đầu',
+      'profile': 'Hồ sơ',
+      'rejectionReason': 'Lý do từ chối'
+    };
+    return fieldMap[fieldName] || fieldName;
+  };
+
+  // Helper function to translate status values to Vietnamese
+  const translateStatusValue = (value) => {
+    // Nếu value là null hoặc undefined, trả về dấu gạch ngang
+    if (!value) return '-';
+    
+    // Kiểm tra nếu value là ngày tháng và hợp lệ
+    if (typeof value === 'string' && (value.includes('-') || value.includes('/')) && dayjs(value).isValid()) {
+      return dayjs(value).format('DD/MM/YYYY');
+    }
+    
+    // Dịch các status value
+    const statusMap = {
+      'PENDING': 'Chờ duyệt',
+      'APPROVED': 'Đã duyệt',
+      'REJECTED': 'Từ chối',
+      'UNDER_TREATMENT': 'Đang điều trị',
+      'RECOVERED': 'Đã khỏi',
+      'STABLE': 'Ổn định',
+      'WORSENED': 'Đang xấu đi',
+      'RELAPSED': 'Tái phát',
+      'NEWLY_DIAGNOSED': 'Mới chẩn đoán',
+      'UNDER_OBSERVATION': 'Đang theo dõi',
+      'UNKNOWN': 'Không rõ',
+      'ISOLATED': 'Cách ly',
+      'UNTREATED': 'Chưa điều trị',
+      'ACTIVE': 'Đang điều trị',
+      'RESOLVED': 'Đã khỏi',
+      'MILD': 'Nhẹ',
+      'MODERATE': 'Trung bình',
+      'SEVERE': 'Nặng',
+      'true': 'Có',
+      'false': 'Không',
+      'M': 'Nam',
+      'F': 'Nữ',
+      'MALE': 'Nam',
+      'FEMALE': 'Nữ',
+      'A': 'A',
+      'B': 'B',
+      'AB': 'AB',
+      'O': 'O',
+      'Profile created': 'Hồ sơ được tạo',
+      'Profile updated': 'Hồ sơ được cập nhật',
+      'Profile approved': 'Hồ sơ được duyệt',
+      'Profile rejected': 'Hồ sơ bị từ chối'
+    };
+    return statusMap[value] || value;
+  };
+
   // Load events when modal opens or filters change
   const loadEvents = useCallback(async () => {
     setLoading(true);
@@ -162,15 +263,36 @@ const HealthProfileEventsModal = ({
       dataIndex: "modifiedAt",
       key: "modifiedAt",
       width: 150,
-      render: (date) => (
-        <div>
-          <div>{dayjs(date).format("DD/MM/YYYY")}</div>
-          <Text type="secondary" style={{ fontSize: 12 }}>
-            {dayjs(date).format("HH:mm:ss")}
-          </Text>
-        </div>
-      ),
-      sorter: (a, b) => dayjs(a.modifiedAt).unix() - dayjs(b.modifiedAt).unix(),
+      render: (date) => {
+        // Kiểm tra tính hợp lệ của ngày
+        if (!date || !dayjs(date).isValid()) {
+          return (
+            <div>
+              <div>-</div>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                -
+              </Text>
+            </div>
+          );
+        }
+        
+        return (
+          <div>
+            <div>{dayjs(date).format("DD/MM/YYYY")}</div>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              {dayjs(date).format("HH:mm:ss")}
+            </Text>
+          </div>
+        );
+      },
+      sorter: (a, b) => {
+        const dateA = dayjs(a.modifiedAt);
+        const dateB = dayjs(b.modifiedAt);
+        if (!dateA.isValid() && !dateB.isValid()) return 0;
+        if (!dateA.isValid()) return 1;
+        if (!dateB.isValid()) return -1;
+        return dateA.unix() - dateB.unix();
+      },
     },
     {
       title: "Hành động",
@@ -209,7 +331,9 @@ const HealthProfileEventsModal = ({
       dataIndex: "fieldChanged",
       key: "fieldChanged",
       width: 120,
-      render: (field) => field ? <Tag color="blue">{field}</Tag> : "-",
+      render: (field) => field ? (
+        <Tag color="blue">{translateFieldName(field)}</Tag>
+      ) : "-",
     },
     {
       title: "Giá trị cũ",
@@ -218,7 +342,7 @@ const HealthProfileEventsModal = ({
       width: 150,
       render: (value) => (
         <Text style={{ fontSize: 12, wordBreak: "break-word" }}>
-          {value || "-"}
+          {value ? translateStatusValue(value) : "-"}
         </Text>
       ),
     },
@@ -229,7 +353,7 @@ const HealthProfileEventsModal = ({
       width: 150,
       render: (value) => (
         <Text style={{ fontSize: 12, wordBreak: "break-word" }}>
-          {value || "-"}
+          {value ? translateStatusValue(value) : "-"}
         </Text>
       ),
     },

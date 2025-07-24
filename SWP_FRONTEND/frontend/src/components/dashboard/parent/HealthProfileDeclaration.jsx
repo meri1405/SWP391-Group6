@@ -2998,6 +2998,11 @@ const TreatmentModal = ({ open, onCancel, onSubmit, initialData, isEdit }) => {
       setSubmitting(true);
       const values = await form.validateFields();
 
+      // Validate required startDate specifically
+      if (!values.startDate) {
+        throw new Error("Vui lòng chọn ngày bắt đầu");
+      }
+
       // Format date fields and map to backend expected field names
       const formattedValues = {
         ...values,
@@ -3019,6 +3024,15 @@ const TreatmentModal = ({ open, onCancel, onSubmit, initialData, isEdit }) => {
       form.resetFields(); // Reset fields after modal is closed
     } catch (error) {
       console.error("Validation error:", error);
+      // Show specific error message for startDate validation
+      if (error.message === "Vui lòng chọn ngày bắt đầu") {
+        form.setFields([
+          {
+            name: 'startDate',
+            errors: [error.message],
+          },
+        ]);
+      }
     } finally {
       setSubmitting(false);
     }
