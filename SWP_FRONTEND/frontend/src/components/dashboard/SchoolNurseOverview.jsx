@@ -146,38 +146,47 @@ const SchoolNurseOverview = () => {
   const currentAlerts = urgentAlerts || (stats ? [
     // Generate alerts based on real data
     ...(stats.medicalEvents?.pendingEvents > 0 ? [{
+      title: 'Sự kiện y tế chưa giải quyết',
       message: `${stats.medicalEvents.pendingEvents} sự kiện y tế đang chờ xử lý`,
       type: "error",
       count: stats.medicalEvents.pendingEvents
     }] : []),
     ...(stats.medicationRequests?.pendingRequests > 0 ? [{
+      title: 'Yêu cầu thuốc chờ duyệt',
       message: `${stats.medicationRequests.pendingRequests} yêu cầu thuốc đang chờ duyệt`,
       type: "warning",
       count: stats.medicationRequests.pendingRequests
     }] : []),
     ...(stats.medicalInventory?.lowStockSupplies > 0 ? [{
+      title: 'Cảnh báo tồn kho thấp',
       message: `${stats.medicalInventory.lowStockSupplies} vật tư y tế sắp hết`,
       type: "warning",
       count: stats.medicalInventory.lowStockSupplies
     }] : []),
     ...(stats.medicalInventory?.expiredSupplies > 0 ? [{
+      title: 'Vật tư hết hạn',
       message: `${stats.medicalInventory.expiredSupplies} vật tư y tế đã hết hạn`,
       type: "error",
       count: stats.medicalInventory.expiredSupplies
     }] : []),
     ...(stats.healthProfiles?.pendingProfiles > 0 ? [{
+      title: 'Hồ sơ sức khỏe chờ duyệt',
       message: `${stats.healthProfiles.pendingProfiles} hồ sơ sức khỏe đang chờ duyệt`,
       type: "warning",
       count: stats.healthProfiles.pendingProfiles
     }] : [])
   ] : [
     {
+      title: "Cảnh báo vật tư sắp hết hạn",
       message: "12 vật tư y tế sắp hết hạn trong 7 ngày tới",
-      type: "warning"
+      type: "warning",
+      count: 12
     },
     {
+      title: "Sự kiện y tế chờ xử lý",
       message: "3 sự kiện y tế đang chờ xử lý",
-      type: "error"
+      type: "error",
+      count: 3
     }
   ]);
 

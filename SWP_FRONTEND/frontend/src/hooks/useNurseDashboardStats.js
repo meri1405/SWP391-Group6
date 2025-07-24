@@ -216,8 +216,8 @@ export const useNurseDashboardStats = () => {
     if (stats.medicalInventory?.lowStockSupplies > 0) {
       alerts.push({
         type: 'warning',
-        title: 'Low Stock Alert',
-        message: `${stats.medicalInventory.lowStockSupplies} medical supplies are running low`,
+        title: 'Cảnh báo tồn kho thấp',
+        message: `${stats.medicalInventory.lowStockSupplies} vật tư y tế đang sắp hết`,
         count: stats.medicalInventory.lowStockSupplies
       });
     }
@@ -226,8 +226,8 @@ export const useNurseDashboardStats = () => {
     if (stats.medicalInventory?.expiredSupplies > 0) {
       alerts.push({
         type: 'error',
-        title: 'Expired Supplies',
-        message: `${stats.medicalInventory.expiredSupplies} medical supplies have expired`,
+        title: 'Vật tư hết hạn',
+        message: `${stats.medicalInventory.expiredSupplies} vật tư y tế đã hết hạn`,
         count: stats.medicalInventory.expiredSupplies
       });
     }
@@ -236,8 +236,8 @@ export const useNurseDashboardStats = () => {
     if (stats.medicationRequests?.pendingRequests > 5) {
       alerts.push({
         type: 'info',
-        title: 'Pending Medication Requests',
-        message: `${stats.medicationRequests.pendingRequests} medication requests awaiting review`,
+        title: 'Yêu cầu thuốc chờ duyệt',
+        message: `${stats.medicationRequests.pendingRequests} yêu cầu thuốc đang chờ xem xét`,
         count: stats.medicationRequests.pendingRequests
       });
     }
@@ -246,8 +246,8 @@ export const useNurseDashboardStats = () => {
     if (stats.medicalEvents?.pendingEvents > 3) {
       alerts.push({
         type: 'warning',
-        title: 'Unresolved Medical Events',
-        message: `${stats.medicalEvents.pendingEvents} medical events need attention`,
+        title: 'Sự kiện y tế chưa giải quyết',
+        message: `${stats.medicalEvents.pendingEvents} sự kiện y tế cần được xử lý`,
         count: stats.medicalEvents.pendingEvents
       });
     }

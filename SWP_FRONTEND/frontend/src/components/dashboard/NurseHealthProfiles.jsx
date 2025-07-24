@@ -696,6 +696,25 @@ const NurseHealthProfiles = () => {
     );
   };
 
+  // Helper function to translate disease status to Vietnamese
+  const translateDiseaseStatus = (status) => {
+    const statusMap = {
+      'UNDER_TREATMENT': 'Đang điều trị',
+      'RECOVERED': 'Đã khỏi',
+      'STABLE': 'Ổn định',
+      'WORSENED': 'Đang xấu đi',
+      'RELAPSED': 'Tái phát',
+      'NEWLY_DIAGNOSED': 'Mới chẩn đoán',
+      'UNDER_OBSERVATION': 'Đang theo dõi',
+      'UNKNOWN': 'Không rõ',
+      'ISOLATED': 'Cách ly',
+      'UNTREATED': 'Chưa điều trị',
+      'ACTIVE': 'Đang điều trị',
+      'RESOLVED': 'Đã khỏi'
+    };
+    return statusMap[status] || status || 'Không xác định';
+  };
+
   const renderChronicDiseases = (diseases = []) => {
     if (!diseases || diseases.length === 0) {
       return <Text type="secondary">Không có thông tin bệnh mãn tính</Text>;
@@ -712,7 +731,7 @@ const NurseHealthProfiles = () => {
                 <div style={{ fontSize: "12px" }}>{disease.description}</div>
               )}
               <div style={{ fontSize: "12px", color: "#666" }}>
-                Trạng thái: {disease.status}
+                Trạng thái: {translateDiseaseStatus(disease.status)}
               </div>
               {disease.dateDiagnosed && (
                 <div style={{ fontSize: "12px" }}>
@@ -748,7 +767,7 @@ const NurseHealthProfiles = () => {
                 <div style={{ fontSize: "12px" }}>{disease.description}</div>
               )}
               <div style={{ fontSize: "12px", color: "#666" }}>
-                Trạng thái: {disease.status}
+                Trạng thái: {translateDiseaseStatus(disease.status)}
               </div>
               {disease.dateDiagnosed && (
                 <div style={{ fontSize: "12px" }}>
@@ -804,6 +823,11 @@ const NurseHealthProfiles = () => {
               {treatment.placeOfTreatment && (
                 <div style={{ fontSize: "12px" }}>
                   Nơi điều trị: {treatment.placeOfTreatment}
+                </div>
+              )}
+              {treatment.status && (
+                <div style={{ fontSize: "12px", color: "#666" }}>
+                  Trạng thái: {translateDiseaseStatus(treatment.status)}
                 </div>
               )}
             </div>
