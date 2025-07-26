@@ -17,6 +17,11 @@ public class RecordHealthCheckResultRequest {
     private Double height; // Student height in cm
     private Map<String, Object> detailedResults; // Detailed form data for each category
     
+    // Additional fields for frontend compatibility
+    private Boolean isComprehensiveSubmission; // Flag indicating this is a single comprehensive submission
+    private String primaryCategory; // The primary category selected for submission
+    private Map<String, Object> categorySelectionInfo; // Information about category selection for user feedback
+    
     @Data
     @AllArgsConstructor
     @NoArgsConstructor

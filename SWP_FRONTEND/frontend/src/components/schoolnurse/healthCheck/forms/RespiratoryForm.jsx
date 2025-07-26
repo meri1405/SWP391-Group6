@@ -18,7 +18,7 @@ const { Title, Text } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
 
-const RespiratoryForm = ({ categoryData, handleInputChange, modalMode }) => (
+const RespiratoryForm = ({ categoryData, onDataChange, modalMode }) => (
   <Card
     className="mb-6"
     style={{
@@ -57,7 +57,7 @@ const RespiratoryForm = ({ categoryData, handleInputChange, modalMode }) => (
                 max={200}
                 value={categoryData.breathingRate}
                 onChange={(value) =>
-                  handleInputChange(
+                  onDataChange(
                     "RESPIRATORY",
                     "breathingRate",
                     value || 0
@@ -79,7 +79,7 @@ const RespiratoryForm = ({ categoryData, handleInputChange, modalMode }) => (
                 max={100}
                 value={categoryData.oxygenSaturation}
                 onChange={(value) =>
-                  handleInputChange(
+                  onDataChange(
                     "RESPIRATORY",
                     "oxygenSaturation",
                     value || null
@@ -101,7 +101,7 @@ const RespiratoryForm = ({ categoryData, handleInputChange, modalMode }) => (
               <Input
                 value={categoryData.breathingSound}
                 onChange={(e) =>
-                  handleInputChange(
+                  onDataChange(
                     "RESPIRATORY",
                     "breathingSound",
                     e.target.value
@@ -118,7 +118,7 @@ const RespiratoryForm = ({ categoryData, handleInputChange, modalMode }) => (
               <Select
                 value={categoryData.lungSounds}
                 onChange={(value) =>
-                  handleInputChange("RESPIRATORY", "lungSounds", value)
+                  onDataChange("RESPIRATORY", "lungSounds", value)
                 }
                 style={{ width: "100%", marginTop: 4 }}
                 disabled={modalMode === "view"}
@@ -148,7 +148,7 @@ const RespiratoryForm = ({ categoryData, handleInputChange, modalMode }) => (
               <Select
                 value={categoryData.chestExpansion}
                 onChange={(value) =>
-                  handleInputChange("RESPIRATORY", "chestExpansion", value)
+                  onDataChange("RESPIRATORY", "chestExpansion", value)
                 }
                 style={{ width: "100%", marginTop: 4 }}
                 disabled={modalMode === "view"}
@@ -165,7 +165,7 @@ const RespiratoryForm = ({ categoryData, handleInputChange, modalMode }) => (
               <Input
                 value={categoryData.treatment}
                 onChange={(e) =>
-                  handleInputChange(
+                  onDataChange(
                     "RESPIRATORY",
                     "treatment",
                     e.target.value
@@ -183,7 +183,7 @@ const RespiratoryForm = ({ categoryData, handleInputChange, modalMode }) => (
                 type="date"
                 value={categoryData.followUpDate}
                 onChange={(e) =>
-                  handleInputChange(
+                  onDataChange(
                     "RESPIRATORY",
                     "followUpDate",
                     e.target.value
@@ -202,7 +202,7 @@ const RespiratoryForm = ({ categoryData, handleInputChange, modalMode }) => (
                 <Checkbox
                   checked={categoryData.asthmaHistory}
                   onChange={(e) =>
-                    handleInputChange(
+                    onDataChange(
                       "RESPIRATORY",
                       "asthmaHistory",
                       e.target.checked
@@ -217,7 +217,7 @@ const RespiratoryForm = ({ categoryData, handleInputChange, modalMode }) => (
                 <Checkbox
                   checked={categoryData.allergicRhinitis}
                   onChange={(e) =>
-                    handleInputChange(
+                    onDataChange(
                       "RESPIRATORY",
                       "allergicRhinitis",
                       e.target.checked
@@ -247,7 +247,7 @@ const RespiratoryForm = ({ categoryData, handleInputChange, modalMode }) => (
                 <Checkbox
                   checked={categoryData.wheezing}
                   onChange={(e) =>
-                    handleInputChange(
+                    onDataChange(
                       "RESPIRATORY",
                       "wheezing",
                       e.target.checked
@@ -262,7 +262,7 @@ const RespiratoryForm = ({ categoryData, handleInputChange, modalMode }) => (
                 <Checkbox
                   checked={categoryData.cough}
                   onChange={(e) =>
-                    handleInputChange(
+                    onDataChange(
                       "RESPIRATORY",
                       "cough",
                       e.target.checked
@@ -277,7 +277,7 @@ const RespiratoryForm = ({ categoryData, handleInputChange, modalMode }) => (
                 <Checkbox
                   checked={categoryData.breathingDifficulty}
                   onChange={(e) =>
-                    handleInputChange(
+                    onDataChange(
                       "RESPIRATORY",
                       "breathingDifficulty",
                       e.target.checked
@@ -294,7 +294,7 @@ const RespiratoryForm = ({ categoryData, handleInputChange, modalMode }) => (
                 <Input
                   value={categoryData.doctorName}
                   onChange={(e) =>
-                    handleInputChange(
+                    onDataChange(
                       "RESPIRATORY",
                       "doctorName",
                       e.target.value
@@ -310,7 +310,7 @@ const RespiratoryForm = ({ categoryData, handleInputChange, modalMode }) => (
                 <Checkbox
                   checked={categoryData.isAbnormal}
                   onChange={(e) =>
-                    handleInputChange(
+                    onDataChange(
                       "RESPIRATORY",
                       "isAbnormal",
                       e.target.checked
@@ -328,7 +328,7 @@ const RespiratoryForm = ({ categoryData, handleInputChange, modalMode }) => (
               <TextArea
                 value={categoryData.description}
                 onChange={(e) =>
-                  handleInputChange(
+                  onDataChange(
                     "RESPIRATORY",
                     "description",
                     e.target.value
@@ -346,7 +346,7 @@ const RespiratoryForm = ({ categoryData, handleInputChange, modalMode }) => (
               <TextArea
                 value={categoryData.recommendations}
                 onChange={(e) =>
-                  handleInputChange(
+                  onDataChange(
                     "RESPIRATORY",
                     "recommendations",
                     e.target.value

@@ -17,7 +17,7 @@ const { Title, Text } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
 
-const SkinForm = ({ categoryData, handleInputChange, modalMode }) => (
+const SkinForm = ({ categoryData, onDataChange, modalMode }) => (
   <Card
     className="mb-6"
     style={{
@@ -55,7 +55,7 @@ const SkinForm = ({ categoryData, handleInputChange, modalMode }) => (
               <Input
                 value={categoryData.skinColor}
                 onChange={(e) =>
-                  handleInputChange("SKIN", "skinColor", e.target.value)
+                  onDataChange("SKIN", "skinColor", e.target.value)
                 }
                 placeholder="Ví dụ: Hồng, vàng, xanh..."
                 style={{ width: "100%", marginTop: 4 }}
@@ -68,7 +68,7 @@ const SkinForm = ({ categoryData, handleInputChange, modalMode }) => (
               <Select
                 value={categoryData.skinTone}
                 onChange={(value) =>
-                  handleInputChange("SKIN", "skinTone", value)
+                  onDataChange("SKIN", "skinTone", value)
                 }
                 style={{ width: "100%", marginTop: 4 }}
                 disabled={modalMode === "view"}
@@ -86,7 +86,7 @@ const SkinForm = ({ categoryData, handleInputChange, modalMode }) => (
               <Input
                 value={categoryData.treatment}
                 onChange={(e) =>
-                  handleInputChange("SKIN", "treatment", e.target.value)
+                  onDataChange("SKIN", "treatment", e.target.value)
                 }
                 placeholder="Thuốc bôi, kem dưỡng ẩm..."
                 style={{ width: "100%", marginTop: 4 }}
@@ -100,7 +100,7 @@ const SkinForm = ({ categoryData, handleInputChange, modalMode }) => (
                 type="date"
                 value={categoryData.followUpDate}
                 onChange={(e) =>
-                  handleInputChange("SKIN", "followUpDate", e.target.value)
+                  onDataChange("SKIN", "followUpDate", e.target.value)
                 }
                 style={{ width: "100%", marginTop: 4 }}
                 disabled={modalMode === "view"}
@@ -123,7 +123,7 @@ const SkinForm = ({ categoryData, handleInputChange, modalMode }) => (
                 <Checkbox
                   checked={categoryData.rashes}
                   onChange={(e) =>
-                    handleInputChange("SKIN", "rashes", e.target.checked)
+                    onDataChange("SKIN", "rashes", e.target.checked)
                   }
                   disabled={modalMode === "view"}
                 >
@@ -134,7 +134,7 @@ const SkinForm = ({ categoryData, handleInputChange, modalMode }) => (
                 <Checkbox
                   checked={categoryData.lesions}
                   onChange={(e) =>
-                    handleInputChange("SKIN", "lesions", e.target.checked)
+                    onDataChange("SKIN", "lesions", e.target.checked)
                   }
                   disabled={modalMode === "view"}
                 >
@@ -145,7 +145,7 @@ const SkinForm = ({ categoryData, handleInputChange, modalMode }) => (
                 <Checkbox
                   checked={categoryData.dryness}
                   onChange={(e) =>
-                    handleInputChange("SKIN", "dryness", e.target.checked)
+                    onDataChange("SKIN", "dryness", e.target.checked)
                   }
                   disabled={modalMode === "view"}
                 >
@@ -156,7 +156,7 @@ const SkinForm = ({ categoryData, handleInputChange, modalMode }) => (
                 <Checkbox
                   checked={categoryData.eczema}
                   onChange={(e) =>
-                    handleInputChange("SKIN", "eczema", e.target.checked)
+                    onDataChange("SKIN", "eczema", e.target.checked)
                   }
                   disabled={modalMode === "view"}
                 >
@@ -167,7 +167,7 @@ const SkinForm = ({ categoryData, handleInputChange, modalMode }) => (
                 <Checkbox
                   checked={categoryData.psoriasis}
                   onChange={(e) =>
-                    handleInputChange("SKIN", "psoriasis", e.target.checked)
+                    onDataChange("SKIN", "psoriasis", e.target.checked)
                   }
                   disabled={modalMode === "view"}
                 >
@@ -178,7 +178,7 @@ const SkinForm = ({ categoryData, handleInputChange, modalMode }) => (
                 <Checkbox
                   checked={categoryData.skinInfection}
                   onChange={(e) =>
-                    handleInputChange(
+                    onDataChange(
                       "SKIN",
                       "skinInfection",
                       e.target.checked
@@ -193,7 +193,7 @@ const SkinForm = ({ categoryData, handleInputChange, modalMode }) => (
                 <Checkbox
                   checked={categoryData.allergies}
                   onChange={(e) =>
-                    handleInputChange("SKIN", "allergies", e.target.checked)
+                    onDataChange("SKIN", "allergies", e.target.checked)
                   }
                   disabled={modalMode === "view"}
                 >
@@ -204,7 +204,7 @@ const SkinForm = ({ categoryData, handleInputChange, modalMode }) => (
                 <Checkbox
                   checked={categoryData.acne}
                   onChange={(e) =>
-                    handleInputChange("SKIN", "acne", e.target.checked)
+                    onDataChange("SKIN", "acne", e.target.checked)
                   }
                   disabled={modalMode === "view"}
                 >
@@ -215,7 +215,7 @@ const SkinForm = ({ categoryData, handleInputChange, modalMode }) => (
                 <Checkbox
                   checked={categoryData.scars}
                   onChange={(e) =>
-                    handleInputChange("SKIN", "scars", e.target.checked)
+                    onDataChange("SKIN", "scars", e.target.checked)
                   }
                   disabled={modalMode === "view"}
                 >
@@ -226,7 +226,7 @@ const SkinForm = ({ categoryData, handleInputChange, modalMode }) => (
                 <Checkbox
                   checked={categoryData.birthmarks}
                   onChange={(e) =>
-                    handleInputChange("SKIN", "birthmarks", e.target.checked)
+                    onDataChange("SKIN", "birthmarks", e.target.checked)
                   }
                   disabled={modalMode === "view"}
                 >
@@ -242,7 +242,7 @@ const SkinForm = ({ categoryData, handleInputChange, modalMode }) => (
               <Input
                 value={categoryData.doctorName}
                 onChange={(e) =>
-                  handleInputChange("SKIN", "doctorName", e.target.value)
+                  onDataChange("SKIN", "doctorName", e.target.value)
                 }
                 placeholder="Nhập tên bác sĩ thực hiện khám"
                 style={{ width: "100%", marginTop: 4 }}
@@ -253,7 +253,7 @@ const SkinForm = ({ categoryData, handleInputChange, modalMode }) => (
             <Checkbox
               checked={categoryData.isAbnormal}
               onChange={(e) =>
-                handleInputChange("SKIN", "isAbnormal", e.target.checked)
+                onDataChange("SKIN", "isAbnormal", e.target.checked)
               }
               disabled={modalMode === "view"}
             >
@@ -276,7 +276,7 @@ const SkinForm = ({ categoryData, handleInputChange, modalMode }) => (
               <TextArea
                 value={categoryData.description}
                 onChange={(e) =>
-                  handleInputChange("SKIN", "description", e.target.value)
+                  onDataChange("SKIN", "description", e.target.value)
                 }
                 placeholder="Mô tả tình trạng da của học sinh..."
                 rows={3}
@@ -290,7 +290,7 @@ const SkinForm = ({ categoryData, handleInputChange, modalMode }) => (
               <TextArea
                 value={categoryData.recommendations}
                 onChange={(e) =>
-                  handleInputChange("SKIN", "recommendations", e.target.value)
+                  onDataChange("SKIN", "recommendations", e.target.value)
                 }
                 placeholder="Khuyến nghị chăm sóc da, điều trị..."
                 rows={3}

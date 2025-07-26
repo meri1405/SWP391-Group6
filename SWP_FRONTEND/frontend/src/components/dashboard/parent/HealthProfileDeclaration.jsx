@@ -1591,10 +1591,6 @@ const HealthProfileDeclaration = ({ onProfileCreated }) => {
                                               treatment.dateOfAdmission
                                             ).format("DD/MM/YYYY")
                                           : "Chưa cập nhật"}
-                                        {treatment.dateOfAdmission &&
-                                          ` - ${dayjs(
-                                            treatment.dateOfDischarge
-                                          ).format("DD/MM/YYYY")}`}
                                       </p>
                                     </div>
                                   }
@@ -2895,7 +2891,6 @@ const ChronicDiseaseModal = ({
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="dateDiagnosed" label="Ngày chẩn đoán">
-              {" "}
               <DatePicker
                 style={{ width: "100%" }}
                 placeholder="Chọn ngày chẩn đoán"
@@ -2919,7 +2914,6 @@ const ChronicDiseaseModal = ({
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="dateOfAdmission" label="Ngày nhập viện">
-              {" "}
               <DatePicker
                 style={{ width: "100%" }}
                 placeholder="Ngày nhập viện"
@@ -2998,11 +2992,6 @@ const TreatmentModal = ({ open, onCancel, onSubmit, initialData, isEdit }) => {
       setSubmitting(true);
       const values = await form.validateFields();
 
-      // Validate required startDate specifically
-      if (!values.startDate) {
-        throw new Error("Vui lòng chọn ngày bắt đầu");
-      }
-
       // Format date fields and map to backend expected field names
       const formattedValues = {
         ...values,
@@ -3024,15 +3013,7 @@ const TreatmentModal = ({ open, onCancel, onSubmit, initialData, isEdit }) => {
       form.resetFields(); // Reset fields after modal is closed
     } catch (error) {
       console.error("Validation error:", error);
-      // Show specific error message for startDate validation
-      if (error.message === "Vui lòng chọn ngày bắt đầu") {
-        form.setFields([
-          {
-            name: 'startDate',
-            errors: [error.message],
-          },
-        ]);
-      }
+      // Don't need custom handling since Ant Design form validation handles this
     } finally {
       setSubmitting(false);
     }
@@ -3082,7 +3063,6 @@ const TreatmentModal = ({ open, onCancel, onSubmit, initialData, isEdit }) => {
                 { required: true, message: "Vui lòng chọn ngày bắt đầu" },
               ]}
             >
-              {" "}
               <DatePicker
                 style={{ width: "100%" }}
                 placeholder="Ngày bắt đầu điều trị"
@@ -3093,7 +3073,6 @@ const TreatmentModal = ({ open, onCancel, onSubmit, initialData, isEdit }) => {
           </Col>
           <Col span={12}>
             <Form.Item name="endDate" label="Ngày kết thúc">
-              {" "}
               <DatePicker
                 style={{ width: "100%" }}
                 placeholder="Ngày kết thúc điều trị"
@@ -3477,7 +3456,6 @@ const VisionModal = ({
         </Row>
 
         <Form.Item name="dateOfExamination" label="Ngày khám">
-          {" "}
           <DatePicker
             style={{ width: "100%" }}
             placeholder="Chọn ngày khám thị lực"
@@ -3705,7 +3683,6 @@ const InfectiousDiseaseModal = ({
         </Form.Item>{" "}
         <Row gutter={16}>
           <Col span={12}>
-            {" "}
             <Form.Item
               name="dateDiagnosed"
               label="Ngày chẩn đoán"
@@ -3740,7 +3717,6 @@ const InfectiousDiseaseModal = ({
         </Form.Item>
         <Row gutter={16}>
           <Col span={12}>
-            {" "}
             <Form.Item name="dateOfAdmission" label="Ngày nhập viện">
               <DatePicker
                 style={{ width: "100%" }}

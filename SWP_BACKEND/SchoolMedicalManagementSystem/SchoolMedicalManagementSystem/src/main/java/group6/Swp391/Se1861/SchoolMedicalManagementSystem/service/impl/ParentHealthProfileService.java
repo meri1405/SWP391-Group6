@@ -678,7 +678,8 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
                 // Check if this is a new vision record (no ID or doesn't match existing)
                 if (visionDTO.getId() == null || existingVision.stream()
                     .noneMatch(existing -> existing.getId().equals(visionDTO.getId()) ||
-                              existing.getDateOfExamination().equals(visionDTO.getDateOfExamination()))) {
+                              (existing.getDateOfExamination() != null && visionDTO.getDateOfExamination() != null && 
+                               existing.getDateOfExamination().equals(visionDTO.getDateOfExamination())))) {
 
                     // Create new vision record
                     Vision newVision = new Vision();
@@ -697,7 +698,8 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
                     // Update existing vision record if needed
                     Vision existingVisionRecord = existingVision.stream()
                         .filter(existing -> existing.getId().equals(visionDTO.getId()) ||
-                                existing.getDateOfExamination().equals(visionDTO.getDateOfExamination()))
+                                (existing.getDateOfExamination() != null && visionDTO.getDateOfExamination() != null && 
+                                 existing.getDateOfExamination().equals(visionDTO.getDateOfExamination())))
                         .findFirst().orElse(null);
                       if (existingVisionRecord != null && existingVisionRecord.getHealthCheckResult() != null) {
                         // Update fields if they have changed
@@ -728,7 +730,8 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
                 // Check if this is a new hearing record (no ID or doesn't match existing)
                 if (hearingDTO.getId() == null || existingHearing.stream()
                     .noneMatch(existing -> existing.getId().equals(hearingDTO.getId()) ||
-                              existing.getDateOfExamination().equals(hearingDTO.getDateOfExamination()))) {
+                              (existing.getDateOfExamination() != null && hearingDTO.getDateOfExamination() != null && 
+                               existing.getDateOfExamination().equals(hearingDTO.getDateOfExamination())))) {
 
                     // Create new hearing record
                     Hearing newHearing = new Hearing();
@@ -745,7 +748,8 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
                     // Update existing hearing record if needed
                     Hearing existingHearingRecord = existingHearing.stream()
                         .filter(existing -> existing.getId().equals(hearingDTO.getId()) ||
-                                existing.getDateOfExamination().equals(hearingDTO.getDateOfExamination()))
+                                (existing.getDateOfExamination() != null && hearingDTO.getDateOfExamination() != null && 
+                                 existing.getDateOfExamination().equals(hearingDTO.getDateOfExamination())))
                         .findFirst().orElse(null);
                       if (existingHearingRecord != null && existingHearingRecord.getHealthCheckResult() != null) {
                         // Update fields if they have changed
@@ -1047,7 +1051,7 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
                         visionDTO.setVisionRightWithGlass(vision.getVisionRightWithGlass());
                         visionDTO.setVisionDescription(vision.getVisionDescription());
                         visionDTO.setDateOfExamination(vision.getDateOfExamination());
-                        visionDTO.setHealthResult(vision.getHealthCheckResult().getId() != null ? vision.getHealthCheckResult().getId() : null);
+                        visionDTO.setHealthResult( vision.getHealthCheckResult() != null ? vision.getHealthCheckResult().getId() : null);
                         return visionDTO;
                     })
                     .collect(Collectors.toList());
@@ -1062,7 +1066,7 @@ public class ParentHealthProfileService implements IParentHealthProfileService {
                         hearingDTO.setRightEar(hearing.getRightEar());
                         hearingDTO.setDescription(hearing.getDescription());
                         hearingDTO.setDateOfExamination(hearing.getDateOfExamination());
-                        hearingDTO.setHealthResult(hearing.getHealthCheckResult().getId() != null ? hearing.getHealthCheckResult().getId() : null);
+                        hearingDTO.setHealthResult(hearing.getHealthCheckResult() != null ? hearing.getHealthCheckResult().getId() : null);
                         return hearingDTO;
                     })
                     .collect(Collectors.toList());
