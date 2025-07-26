@@ -34,7 +34,7 @@ import { medicalSupplyApi } from "../../api/medicalSupplyApi";
 import { unitConversionApi } from "../../api/unitConversionApi";
 import webSocketService from "../../services/webSocketService";
 import dayjs from "dayjs";
-import { formatDate } from "../../utils/timeUtils";
+import { formatDate, parseDate } from "../../utils/timeUtils";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -63,6 +63,19 @@ const InventorySection = () => {
 
   // Add a ref to track if the component is mounted
   const isMounted = useRef(true);
+
+  const formatDateOnly = (dateInput) => {
+      if (!dateInput) return "Chưa có thông tin";
+  
+      const date = parseDate(dateInput);
+      if (!date) return "Không hợp lệ";
+      
+      const day = date.getDate().toString().padStart(2, "0");
+      const month = (date.getMonth() + 1).toString().padStart(2, "0");
+      const year = date.getFullYear();
+  
+      return `${day}/${month}/${year}`;
+  };
 
   // Helper function to get current user ID from JWT token
   const getCurrentUserId = () => {
@@ -359,7 +372,7 @@ const InventorySection = () => {
           };
         }
 
-        return <span style={style}>{expirationDate.format("DD/MM/YYYY")}</span>;
+        return <span style={style}>{formatDateOnly(record.expirationDate)}</span>;
       },
     },
     {
@@ -828,7 +841,16 @@ const InventorySection = () => {
 
   const handleEdit = (record) => {
     setEditingRecord(record);
-    form.setFieldsValue(record);
+    
+    // Convert date array format to HTML date input format (YYYY-MM-DD)
+    const formData = { ...record };
+    if (record.expirationDate && Array.isArray(record.expirationDate)) {
+      // Convert [year, month, day] to "YYYY-MM-DD"
+      const [year, month, day] = record.expirationDate;
+      formData.expirationDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    }
+    
+    form.setFieldsValue(formData);
     setShowAddModal(true);
   };
 
@@ -837,7 +859,7 @@ const InventorySection = () => {
     try {
       // Check if the item has expiration date and is expired
       if (record.expirationDate) {
-        const expirationDate = dayjs(record.expirationDate);
+        const expirationDate = formatDate(record.expirationDate);
         const today = dayjs();
         if (expirationDate.isBefore(today, "day")) {
           messageApi.error("Không thể kích hoạt vật tư đã hết hạn sử dụng");

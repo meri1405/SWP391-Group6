@@ -17,7 +17,7 @@ const { Title, Text } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
 
-const OralForm = ({ categoryData, handleInputChange, modalMode }) => (
+const OralForm = ({ categoryData, onDataChange, modalMode }) => (
   <Card
     className="mb-6"
     style={{
@@ -55,7 +55,7 @@ const OralForm = ({ categoryData, handleInputChange, modalMode }) => (
               <Input
                 value={categoryData.teethCondition}
                 onChange={(e) =>
-                  handleInputChange("ORAL", "teethCondition", e.target.value)
+                  onDataChange("ORAL", "teethCondition", e.target.value)
                 }
                 placeholder="Ví dụ: Tốt, có sâu răng, mất răng..."
                 style={{ width: "100%", marginTop: 4 }}
@@ -70,7 +70,7 @@ const OralForm = ({ categoryData, handleInputChange, modalMode }) => (
               <Input
                 value={categoryData.gumsCondition}
                 onChange={(e) =>
-                  handleInputChange("ORAL", "gumsCondition", e.target.value)
+                  onDataChange("ORAL", "gumsCondition", e.target.value)
                 }
                 placeholder="Ví dụ: Hồng, sưng, chảy máu..."
                 style={{ width: "100%", marginTop: 4 }}
@@ -85,7 +85,7 @@ const OralForm = ({ categoryData, handleInputChange, modalMode }) => (
               <Input
                 value={categoryData.tongueCondition}
                 onChange={(e) =>
-                  handleInputChange("ORAL", "tongueCondition", e.target.value)
+                  onDataChange("ORAL", "tongueCondition", e.target.value)
                 }
                 placeholder="Ví dụ: Bình thường, có vết loét..."
                 style={{ width: "100%", marginTop: 4 }}
@@ -98,7 +98,7 @@ const OralForm = ({ categoryData, handleInputChange, modalMode }) => (
               <Select
                 value={categoryData.oralHygiene}
                 onChange={(value) =>
-                  handleInputChange("ORAL", "oralHygiene", value)
+                  onDataChange("ORAL", "oralHygiene", value)
                 }
                 style={{ width: "100%", marginTop: 4 }}
                 disabled={modalMode === "view"}
@@ -128,7 +128,7 @@ const OralForm = ({ categoryData, handleInputChange, modalMode }) => (
                 max={32}
                 value={categoryData.cavitiesCount}
                 onChange={(value) =>
-                  handleInputChange("ORAL", "cavitiesCount", value || 0)
+                  onDataChange("ORAL", "cavitiesCount", value || 0)
                 }
                 placeholder="0"
                 style={{ width: "100%", marginTop: 4 }}
@@ -142,7 +142,7 @@ const OralForm = ({ categoryData, handleInputChange, modalMode }) => (
                 <Checkbox
                   checked={categoryData.plaquePresent}
                   onChange={(e) =>
-                    handleInputChange(
+                    onDataChange(
                       "ORAL",
                       "plaquePresent",
                       e.target.checked
@@ -157,7 +157,7 @@ const OralForm = ({ categoryData, handleInputChange, modalMode }) => (
                 <Checkbox
                   checked={categoryData.gingivitis}
                   onChange={(e) =>
-                    handleInputChange("ORAL", "gingivitis", e.target.checked)
+                    onDataChange("ORAL", "gingivitis", e.target.checked)
                   }
                   disabled={modalMode === "view"}
                 >
@@ -168,7 +168,7 @@ const OralForm = ({ categoryData, handleInputChange, modalMode }) => (
                 <Checkbox
                   checked={categoryData.mouthUlcers}
                   onChange={(e) =>
-                    handleInputChange("ORAL", "mouthUlcers", e.target.checked)
+                    onDataChange("ORAL", "mouthUlcers", e.target.checked)
                   }
                   disabled={modalMode === "view"}
                 >
@@ -181,7 +181,7 @@ const OralForm = ({ categoryData, handleInputChange, modalMode }) => (
                 <Input
                   value={categoryData.doctorName}
                   onChange={(e) =>
-                    handleInputChange("ORAL", "doctorName", e.target.value)
+                    onDataChange("ORAL", "doctorName", e.target.value)
                   }
                   placeholder="Nhập tên bác sĩ thực hiện khám"
                   style={{ width: "100%", marginTop: 4 }}
@@ -193,7 +193,7 @@ const OralForm = ({ categoryData, handleInputChange, modalMode }) => (
                 <Checkbox
                   checked={categoryData.isAbnormal}
                   onChange={(e) =>
-                    handleInputChange("ORAL", "isAbnormal", e.target.checked)
+                    onDataChange("ORAL", "isAbnormal", e.target.checked)
                   }
                   disabled={modalMode === "view"}
                 >
@@ -218,7 +218,7 @@ const OralForm = ({ categoryData, handleInputChange, modalMode }) => (
               <TextArea
                 value={categoryData.description}
                 onChange={(e) =>
-                  handleInputChange("ORAL", "description", e.target.value)
+                  onDataChange("ORAL", "description", e.target.value)
                 }
                 placeholder="Mô tả tình trạng răng miệng của học sinh..."
                 rows={3}
@@ -232,7 +232,7 @@ const OralForm = ({ categoryData, handleInputChange, modalMode }) => (
               <TextArea
                 value={categoryData.recommendations}
                 onChange={(e) =>
-                  handleInputChange("ORAL", "recommendations", e.target.value)
+                  onDataChange("ORAL", "recommendations", e.target.value)
                 }
                 placeholder="Khuyến nghị về vệ sinh, điều trị..."
                 rows={3}

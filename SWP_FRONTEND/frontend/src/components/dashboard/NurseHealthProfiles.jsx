@@ -366,9 +366,6 @@ const NurseHealthProfiles = () => {
           <div style={{ fontWeight: 500 }}>
             {record.lastName} {record.firstName}
           </div>
-          <div style={{ fontSize: "12px", color: "#666" }}>
-            ID: {record.studentID}
-          </div>
         </div>
       ),
       sorter: (a, b) => {

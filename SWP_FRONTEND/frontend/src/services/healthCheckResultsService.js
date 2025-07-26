@@ -66,7 +66,33 @@ class HealthCheckResultsService {
       return true;
     } catch (error) {
       console.error('Error recording health check result:', error);
-      message.error('Có lỗi xảy ra khi ghi nhận kết quả. Vui lòng thử lại.');
+      
+      // Handle specific error types
+      if (error.response) {
+        const status = error.response.status;
+        const errorMessage = error.response.data?.message || error.response.data?.error;
+        
+        if (status === 400) {
+          if (errorMessage && errorMessage.includes('Duplicate')) {
+            message.error('Học sinh này đã có kết quả khám sức khỏe. Không thể tạo kết quả mới.');
+          } else if (errorMessage && errorMessage.includes('constraint')) {
+            message.error('Có lỗi ràng buộc dữ liệu. Vui lòng kiểm tra lại thông tin.');
+          } else {
+            message.error(errorMessage || 'Dữ liệu không hợp lệ. Vui lòng kiểm tra lại thông tin nhập.');
+          }
+        } else if (status === 404) {
+          message.error('Không tìm thấy chiến dịch hoặc học sinh.');
+        } else if (status === 500) {
+          message.error('Lỗi máy chủ. Vui lòng liên hệ quản trị viên.');
+        } else {
+          message.error(errorMessage || 'Có lỗi xảy ra khi ghi nhận kết quả. Vui lòng thử lại.');
+        }
+      } else if (error.request) {
+        message.error('Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng.');
+      } else {
+        message.error('Có lỗi xảy ra khi ghi nhận kết quả. Vui lòng thử lại.');
+      }
+      
       return false;
     }
   }
@@ -85,59 +111,115 @@ class HealthCheckResultsService {
       height: formData.height || 0,
     };
 
-    // Transform form data to match backend DTO structure
-    const categoryResults = campaign.categories.map((category) => {
-      const categoryData = formData[category];
+    // Transform and clean form data for backend compatibility
+    const cleanedFormData = { ...formData };
+    
+    // Ensure hearing data has proper integer values
+    if (cleanedFormData.HEARING) {
+      cleanedFormData.HEARING = {
+        ...cleanedFormData.HEARING,
+        leftEar: parseInt(cleanedFormData.HEARING.leftEar) || 0,
+        rightEar: parseInt(cleanedFormData.HEARING.rightEar) || 0,
+      };
+    }
+
+    // Find the primary category with the most data to submit as main category
+    // This works around the backend constraint issue
+    const categoriesWithData = campaign.categories.filter(category => {
+      const categoryData = cleanedFormData[category];
+      if (!categoryData) return false;
+      
+      // Check if category has meaningful data
+      const hasData = Object.keys(categoryData).some(key => {
+        const value = categoryData[key];
+        if (key === 'dateOfExamination') return true; // Always include date
+        if (typeof value === 'boolean') return value; // Include if true
+        if (typeof value === 'number') return value > 0; // Include if > 0
+        if (typeof value === 'string') return value.trim().length > 0; // Include if not empty
+        return false;
+      });
+      
+      return hasData;
+    });
+
+    // **UPDATED: Process ALL categories with data instead of just primary**
+    console.log('Categories with data:', categoriesWithData);
+    
+    if (categoriesWithData.length === 0) {
+      throw new Error('Không có dữ liệu hợp lệ để lưu');
+    }
+
+    // Create category results for ALL categories with data
+    const categoryResults = categoriesWithData.map(category => {
+      const categoryData = cleanedFormData[category];
       let status = "NORMAL";
 
       // Determine status based on category-specific abnormal flags
-      if (
-        category === "ORAL" ||
-        category === "SKIN" ||
-        category === "RESPIRATORY"
-      ) {
-        if (categoryData.isAbnormal) {
-          status = categoryData.treatment ? "NEEDS_TREATMENT" : "ABNORMAL";
-        }
-      } else if (category === "VISION") {
-        // Consider abnormal if vision is below normal threshold or needs glasses
+      if (categoryData) {
         if (
-          categoryData.visionLeft < 1.0 ||
-          categoryData.visionRight < 1.0 ||
-          categoryData.needsGlasses ||
-          categoryData.isAbnormal
+          category === "ORAL" ||
+          category === "SKIN" ||
+          category === "RESPIRATORY"
         ) {
-          status = "ABNORMAL";
-        }
-      } else if (category === "HEARING") {
-        // Consider abnormal if hearing threshold is above normal
-        if (
-          categoryData.leftEar > 25 ||
-          categoryData.rightEar > 25 ||
-          categoryData.isAbnormal
-        ) {
-          status = "ABNORMAL";
+          if (categoryData.isAbnormal) {
+            status = categoryData.treatment ? "NEEDS_TREATMENT" : "ABNORMAL";
+          }
+        } else if (category === "VISION") {
+          // Consider abnormal if vision is below normal threshold or needs glasses
+          if (
+            categoryData.visionLeft < 1.0 ||
+            categoryData.visionRight < 1.0 ||
+            categoryData.needsGlasses ||
+            categoryData.isAbnormal
+          ) {
+            status = "ABNORMAL";
+          }
+        } else if (category === "HEARING") {
+          // Consider abnormal if hearing threshold is above normal
+          if (
+            categoryData.leftEar > 25 ||
+            categoryData.rightEar > 25 ||
+            categoryData.isAbnormal
+          ) {
+            status = "ABNORMAL";
+          }
         }
       }
 
       return {
-        category,
-        status,
-        notes:
-          categoryData.description ||
-          categoryData.visionDescription ||
-          categoryData.recommendations ||
-          "",
+        category: category,
+        status: status,
+        notes: categoryData?.description || 
+               categoryData?.visionDescription || 
+               categoryData?.recommendations || ""
       };
     });
 
+    console.log('Processing', categoryResults.length, 'categories:', categoryResults.map(c => c.category));
+
+    // Set primary category (first one or abnormal one)
+    const primaryCategory = categoriesWithData.find(category => {
+      const categoryData = cleanedFormData[category];
+      return categoryData && categoryData.isAbnormal;
+    }) || categoriesWithData[0];
+
+    // Ensure we send all categories to backend
     return {
       studentId: selectedStudent.studentID,
       campaignId: campaign.id,
-      categories: categoryResults,
+      categories: categoryResults, // Now contains ALL categories
       weight: overallMeasurements.weight,
       height: overallMeasurements.height,
-      detailedResults: formData, // Include detailed form data for backend processing
+      detailedResults: cleanedFormData, // Include all form data for backend processing
+      // Add flags to indicate this is a comprehensive submission
+      isComprehensiveSubmission: true,
+      primaryCategory: primaryCategory,
+      // Include metadata for user feedback
+      categorySelectionInfo: {
+        totalCategories: categoriesWithData.length,
+        allCategories: categoriesWithData,
+        selectionReason: 'all_categories'
+      },
     };
   }
 }

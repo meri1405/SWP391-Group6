@@ -32,8 +32,8 @@ export const getInitialCategoryData = (category) => {
       };
     case "HEARING":
       return {
-        leftEar: "",
-        rightEar: "",
+        leftEar: null,
+        rightEar: null,
         description: "",
         doctorName: "",
         hearingAcuity: "NORMAL",
@@ -263,6 +263,27 @@ export const validateFormData = (formData, modalMode) => {
   const errors = [];
   
   if (modalMode === 'record') {
+    // Check if at least one category has meaningful data
+    const healthCategories = ['VISION', 'HEARING', 'ORAL', 'SKIN', 'RESPIRATORY'];
+    const hasAtLeastOneCategory = healthCategories.some(category => {
+      const categoryData = formData[category];
+      if (!categoryData) return false;
+      
+      // Check if category has meaningful data
+      return Object.keys(categoryData).some(key => {
+        const value = categoryData[key];
+        if (key === 'dateOfExamination') return true; // Always include date
+        if (typeof value === 'boolean') return value; // Include if true
+        if (typeof value === 'number') return value > 0; // Include if > 0
+        if (typeof value === 'string') return value.trim().length > 0; // Include if not empty
+        return false;
+      });
+    });
+
+    if (!hasAtLeastOneCategory) {
+      errors.push('Vui lòng điền thông tin cho ít nhất một hạng mục khám sức khỏe');
+    }
+    
     // Validate required overall measurements
     if (!formData.weight) {
       errors.push('Cân nặng là bắt buộc');
@@ -281,13 +302,21 @@ export const validateFormData = (formData, modalMode) => {
       }
     }
     
-    // Validate hearing data if present
+    // Validate hearing data if present - enhanced validation
     if (formData.HEARING) {
-      if (formData.HEARING.leftEar === "" || formData.HEARING.leftEar === null) {
-        errors.push('Thính lực tai trái là bắt buộc');
+      const leftEar = formData.HEARING.leftEar;
+      const rightEar = formData.HEARING.rightEar;
+      
+      if (leftEar === "" || leftEar === null || leftEar === undefined || isNaN(Number(leftEar))) {
+        errors.push('Thính lực tai trái là bắt buộc và phải là một số hợp lệ (0-120 dB)');
+      } else if (Number(leftEar) < 0 || Number(leftEar) > 120) {
+        errors.push('Thính lực tai trái phải trong khoảng 0-120 dB');
       }
-      if (formData.HEARING.rightEar === "" || formData.HEARING.rightEar === null) {
-        errors.push('Thính lực tai phải là bắt buộc');
+      
+      if (rightEar === "" || rightEar === null || rightEar === undefined || isNaN(Number(rightEar))) {
+        errors.push('Thính lực tai phải là bắt buộc và phải là một số hợp lệ (0-120 dB)');
+      } else if (Number(rightEar) < 0 || Number(rightEar) > 120) {
+        errors.push('Thính lực tai phải phải trong khoảng 0-120 dB');
       }
     }
     

@@ -18,7 +18,7 @@ const { Title, Text } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
 
-const HearingForm = ({ categoryData, handleInputChange, modalMode }) => (
+const HearingForm = ({ categoryData, onDataChange, modalMode }) => (
   <Card
     style={{
       marginBottom: "24px",
@@ -86,9 +86,11 @@ const HearingForm = ({ categoryData, handleInputChange, modalMode }) => (
                   min={0}
                   max={120}
                   value={categoryData.leftEar}
-                  onChange={(value) =>
-                    handleInputChange("HEARING", "leftEar", value || 0)
-                  }
+                  onChange={(value) => {
+                    // Ensure we pass a valid number or null, not undefined
+                    const validValue = value !== null && value !== undefined && !isNaN(value) ? Number(value) : null;
+                    onDataChange("HEARING", "leftEar", validValue);
+                  }}
                   placeholder="Ví dụ: 20"
                   style={{
                     width: "100%",
@@ -110,9 +112,11 @@ const HearingForm = ({ categoryData, handleInputChange, modalMode }) => (
                   min={0}
                   max={120}
                   value={categoryData.rightEar}
-                  onChange={(value) =>
-                    handleInputChange("HEARING", "rightEar", value || 0)
-                  }
+                  onChange={(value) => {
+                    // Ensure we pass a valid number or null, not undefined
+                    const validValue = value !== null && value !== undefined && !isNaN(value) ? Number(value) : null;
+                    onDataChange("HEARING", "rightEar", validValue);
+                  }}
                   placeholder="Ví dụ: 20"
                   style={{
                     width: "100%",
@@ -133,7 +137,7 @@ const HearingForm = ({ categoryData, handleInputChange, modalMode }) => (
                 <Select
                   value={categoryData.hearingAcuity}
                   onChange={(value) =>
-                    handleInputChange("HEARING", "hearingAcuity", value)
+                    onDataChange("HEARING", "hearingAcuity", value)
                   }
                   style={{
                     width: "100%",
@@ -158,7 +162,7 @@ const HearingForm = ({ categoryData, handleInputChange, modalMode }) => (
                 <Select
                   value={categoryData.tympanometry}
                   onChange={(value) =>
-                    handleInputChange("HEARING", "tympanometry", value)
+                    onDataChange("HEARING", "tympanometry", value)
                   }
                   style={{
                     width: "100%",
@@ -211,7 +215,7 @@ const HearingForm = ({ categoryData, handleInputChange, modalMode }) => (
                   <Checkbox
                     checked={categoryData.earWaxPresent}
                     onChange={(e) =>
-                      handleInputChange(
+                      onDataChange(
                         "HEARING",
                         "earWaxPresent",
                         e.target.checked
@@ -225,7 +229,7 @@ const HearingForm = ({ categoryData, handleInputChange, modalMode }) => (
                   <Checkbox
                     checked={categoryData.earInfection}
                     onChange={(e) =>
-                      handleInputChange(
+                      onDataChange(
                         "HEARING",
                         "earInfection",
                         e.target.checked
@@ -245,7 +249,7 @@ const HearingForm = ({ categoryData, handleInputChange, modalMode }) => (
                 <Input
                   value={categoryData.doctorName}
                   onChange={(e) =>
-                    handleInputChange("HEARING", "doctorName", e.target.value)
+                    onDataChange("HEARING", "doctorName", e.target.value)
                   }
                   placeholder="Nhập tên bác sĩ thực hiện khám"
                   style={{ marginTop: "4px" }}
@@ -260,7 +264,7 @@ const HearingForm = ({ categoryData, handleInputChange, modalMode }) => (
                 <Checkbox
                   checked={categoryData.isAbnormal}
                   onChange={(e) =>
-                    handleInputChange(
+                    onDataChange(
                       "HEARING",
                       "isAbnormal",
                       e.target.checked
@@ -310,7 +314,7 @@ const HearingForm = ({ categoryData, handleInputChange, modalMode }) => (
                 <TextArea
                   value={categoryData.description}
                   onChange={(e) =>
-                    handleInputChange(
+                    onDataChange(
                       "HEARING",
                       "description",
                       e.target.value
@@ -335,7 +339,7 @@ const HearingForm = ({ categoryData, handleInputChange, modalMode }) => (
                 <TextArea
                   value={categoryData.recommendations}
                   onChange={(e) =>
-                    handleInputChange(
+                    onDataChange(
                       "HEARING",
                       "recommendations",
                       e.target.value

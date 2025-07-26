@@ -24,6 +24,8 @@ export const useHealthCheckResults = (campaignId, campaign, onRefreshData) => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [modalMode, setModalMode] = useState("record"); // 'record' or 'view'
   const [existingResults, setExistingResults] = useState({});
+  const [submissionAttempts, setSubmissionAttempts] = useState(0);
+  const [lastSubmissionTime, setLastSubmissionTime] = useState(null);
 
   // Fetch confirmed students and existing results when component mounts
   useEffect(() => {
@@ -116,12 +118,19 @@ export const useHealthCheckResults = (campaignId, campaign, onRefreshData) => {
 
   // Handle student selection for recording results
   const handleStudentSelect = (student) => {
+    // Double-check that student doesn't have existing results
+    const studentId = student.studentID || student.id;
+    if (hasExistingResults(studentId)) {
+      message.warning("Học sinh này đã có kết quả khám sức khỏe.");
+      return;
+    }
+    
     setSelectedStudent(student);
     
     // Initialize form data for this student
     const initialData = initializeFormData(campaign);
     
-    // Check if student has existing results and load them
+    // Check if student has existing results and load them (shouldn't happen after above check)
     const studentResults = existingResults[student.studentID];
     if (studentResults) {
       const loadedData = mapExistingResultsToFormData(studentResults, campaign);
@@ -150,6 +159,26 @@ export const useHealthCheckResults = (campaignId, campaign, onRefreshData) => {
       return;
     }
 
+    // Check if student already has results to prevent duplicates
+    const studentId = selectedStudent.studentID || selectedStudent.id;
+    if (hasExistingResults(studentId)) {
+      message.error("Học sinh này đã có kết quả khám sức khỏe. Không thể tạo kết quả mới.");
+      return;
+    }
+
+    // Prevent double submission with time-based debounce
+    const now = Date.now();
+    if (isSubmitting) {
+      message.warning("Đang xử lý... Vui lòng đợi.");
+      return;
+    }
+
+    // Prevent rapid successive submissions (less than 5 seconds apart)
+    if (lastSubmissionTime && (now - lastSubmissionTime) < 5000) {
+      message.warning("Vui lòng đợi một chút trước khi gửi lại.");
+      return;
+    }
+
     // Validate form data
     const validation = validateFormData(formData, modalMode);
     if (!validation.isValid) {
@@ -158,6 +187,9 @@ export const useHealthCheckResults = (campaignId, campaign, onRefreshData) => {
     }
 
     setIsSubmitting(true);
+    setLastSubmissionTime(now);
+    setSubmissionAttempts(prev => prev + 1);
+
     try {
       // Transform form data to backend format
       const resultData = healthCheckResultsService.transformFormDataToDTO(
@@ -166,10 +198,38 @@ export const useHealthCheckResults = (campaignId, campaign, onRefreshData) => {
         campaign
       );
 
+      // Show category selection info to user if multiple categories were filled
+      if (resultData.categorySelectionInfo) {
+        const { totalCategories, allCategories } = resultData.categorySelectionInfo;
+        
+        if (totalCategories > 1) {
+          const categoryNames = {
+            'HEARING': 'Thính giác',
+            'VISION': 'Thị giác', 
+            'ORAL': 'Răng miệng',
+            'SKIN': 'Da liễu',
+            'RESPIRATORY': 'Hô hấp'
+          };
+          
+          const categoryList = allCategories.map(cat => categoryNames[cat] || cat).join(', ');
+            
+          message.info({
+            content: `Hệ thống sẽ lưu tất cả ${totalCategories} hạng mục: ${categoryList}`,
+            duration: 6,
+          });
+        }
+      }
+
+      console.log('Submitting health check data:', resultData);
+
       // Submit to backend
       const success = await healthCheckResultsService.recordHealthCheckResult(resultData);
       
       if (success) {
+        // Reset submission tracking
+        setSubmissionAttempts(0);
+        setLastSubmissionTime(null);
+        
         // Close modal and reset form
         setIsModalVisible(false);
         setSelectedStudent(null);
@@ -187,9 +247,16 @@ export const useHealthCheckResults = (campaignId, campaign, onRefreshData) => {
         } catch (error) {
           console.error("Error refreshing results data:", error);
         }
+      } else {
+        // If submission failed, allow retry after a longer delay
+        setLastSubmissionTime(now - 3000); // Reduce the wait time for retry
       }
     } catch (error) {
       console.error("Error in handleSubmit:", error);
+      message.error("Có lỗi xảy ra khi lưu kết quả. Vui lòng thử lại sau.");
+      
+      // Reset timing to allow retry
+      setLastSubmissionTime(now - 3000);
     } finally {
       setIsSubmitting(false);
     }

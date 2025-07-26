@@ -20,7 +20,7 @@ public class HealthCheckResult {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne
+    @ManyToOne
     @JoinColumn(name = "formId", nullable = false)
     private HealthCheckForm form;
 

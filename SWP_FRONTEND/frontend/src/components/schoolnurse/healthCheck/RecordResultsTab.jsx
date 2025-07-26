@@ -290,9 +290,12 @@ const RecordResultsTab = ({ campaignId, campaign, onRefreshData }) => {
           size="large"
           onClick={handleSubmit}
           loading={isSubmitting}
-          disabled={!isFormValid}
+          disabled={!isFormValid || isSubmitting}
+          style={{
+            minWidth: "120px" // Prevent button size changes when loading
+          }}
         >
-          Lưu kết quả khám
+          {isSubmitting ? "Đang lưu..." : "Lưu kết quả khám"}
         </Button>
       </div>
     </Card>
@@ -313,15 +316,32 @@ const RecordResultsTab = ({ campaignId, campaign, onRefreshData }) => {
         okText="Xác nhận"
         cancelText="Hủy"
         confirmLoading={isSubmitting}
+        width={600}
       >
-        <p>Bạn có chắc chắn muốn lưu kết quả khám sức khỏe này không?</p>
-        <p>
-          <strong>Học sinh:</strong> {selectedStudent?.fullName}
-        </p>
-        <p>
-          <strong>Số hạng mục đã hoàn thành:</strong> {completedCategories.length + (formData.BASIC_INFO && Object.keys(formData.BASIC_INFO).some(key => formData.BASIC_INFO[key]) ? 1 : 0)}/
-          {availableCategories.length + 1}
-        </p>
+        <div className="space-y-4">
+          <p>Bạn có chắc chắn muốn lưu kết quả khám sức khỏe này không?</p>
+          <p>
+            <strong>Học sinh:</strong> {selectedStudent?.fullName}
+          </p>
+          <p>
+            <strong>Số hạng mục đã hoàn thành:</strong> {completedCategories.length + (formData.BASIC_INFO && Object.keys(formData.BASIC_INFO).some(key => formData.BASIC_INFO[key]) ? 1 : 0)}/
+            {availableCategories.length + 1}
+          </p>
+          
+          {/* Warning about multiple categories */}
+          {completedCategories.length > 1 && (
+            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-yellow-800 font-medium">⚠️ Lưu ý quan trọng:</p>
+              <p className="text-yellow-700 text-sm mt-2">
+                Do giới hạn hệ thống, hiện tại chỉ có thể lưu một hạng mục chính cho mỗi lần khám. 
+                Hệ thống sẽ ưu tiên lưu hạng mục có kết quả bất thường hoặc hạng mục đầu tiên.
+              </p>
+              <p className="text-yellow-700 text-sm mt-1">
+                <strong>Hạng mục đã hoàn thành:</strong> {completedCategories.join(", ")}
+              </p>
+            </div>
+          )}
+        </div>
       </Modal>
     </div>
   );

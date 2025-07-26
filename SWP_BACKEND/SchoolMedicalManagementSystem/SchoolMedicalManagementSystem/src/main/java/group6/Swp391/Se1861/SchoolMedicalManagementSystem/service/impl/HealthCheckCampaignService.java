@@ -876,6 +876,9 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
         System.out.println("DEBUG: Request weight: " + request.getWeight() + ", height: " + request.getHeight());
         System.out.println("DEBUG: Categories count: " + (request.getCategories() != null ? request.getCategories().size() : "null"));
         System.out.println("DEBUG: Detailed results keys: " + (request.getDetailedResults() != null ? request.getDetailedResults().keySet() : "null"));
+        System.out.println("DEBUG: Is comprehensive submission: " + request.getIsComprehensiveSubmission());
+        System.out.println("DEBUG: Primary category: " + request.getPrimaryCategory());
+        System.out.println("DEBUG: Category selection info: " + request.getCategorySelectionInfo());
         
         // Get the campaign and student
         HealthCheckCampaign campaign = getCampaignModelById(request.getCampaignId());
@@ -892,6 +895,13 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
         HealthCheckForm form = healthCheckFormRepository
             .findByCampaignAndStudent(campaign, student)
             .orElseThrow(() -> new RuntimeException("Health check form not found for student ID: " + student.getStudentID() + " and campaign ID: " + campaign.getId()));
+        
+        // Check if results already exist for this form to prevent duplicates
+        List<HealthCheckResult> existingResults = healthCheckResultRepository.findByForm(form);
+        if (!existingResults.isEmpty()) {
+            System.out.println("WARNING: Health check results already exist for form ID: " + form.getId());
+            throw new RuntimeException("Health check results already exist for this student and campaign");
+        }
         
         // Set check-in status and time
         LocalDateTime now = LocalDateTime.now();
@@ -921,23 +931,31 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
         
         // Get nurse information (for now, use campaign creator as nurse)
         User nurse = campaign.getCreatedBy();
-        
         LocalDate examinationDate = LocalDate.now();
         
-        // Process each category result
+        // **FIXED: Create HealthCheckResult for ALL categories instead of just one**
+        if (request.getCategories() == null || request.getCategories().isEmpty()) {
+            throw new RuntimeException("At least one category result is required");
+        }
+        
+        System.out.println("DEBUG: Processing " + request.getCategories().size() + " categories");
+        
+        // Process each category and create separate HealthCheckResult records
         for (RecordHealthCheckResultRequest.CategoryResult categoryResult : request.getCategories()) {
             String categoryStr = categoryResult.getCategory();
             HealthCheckCategory category = HealthCheckCategory.valueOf(categoryStr);
+            
+            System.out.println("DEBUG: Processing category: " + categoryStr);
             
             // Get the detailed data for this category
             @SuppressWarnings("unchecked")
             Map<String, Object> categoryData = (Map<String, Object>) detailedResults.get(categoryStr);
             if (categoryData == null) {
-                System.out.println("WARNING: No detailed data found for category: " + categoryStr);
+                System.out.println("WARNING: No detailed data found for category: " + categoryStr + ", skipping...");
                 continue;
             }
             
-            // Create HealthCheckResult record
+            // Create a separate HealthCheckResult record for this category
             HealthCheckResult healthCheckResult = new HealthCheckResult();
             healthCheckResult.setForm(form);
             healthCheckResult.setStudent(student);
@@ -957,25 +975,32 @@ public class HealthCheckCampaignService implements IHealthCheckCampaignService {
             ResultStatus status = determineResultStatus(categoryData, isAbnormal);
             healthCheckResult.setStatus(status);
             
-            // Set notes and recommendations
-            String notes = getStringValue(categoryData, "description");
+            // Set notes and recommendations from the category result or detailed data
+            String notes = categoryResult.getNotes();
+            if (notes == null || notes.isEmpty()) {
+                notes = getStringValue(categoryData, "description");
+            }
+            
             String recommendations = getStringValue(categoryData, "treatment");
             if (recommendations == null || recommendations.isEmpty()) {
                 recommendations = getStringValue(categoryData, "recommendations");
             }
+            
             healthCheckResult.setResultNotes(notes);
             healthCheckResult.setRecommendations(recommendations);
             
-            // First save the health check result to get its ID
+            // Save the health check result for this category
             HealthCheckResult savedResult = healthCheckResultRepository.save(healthCheckResult);
             
             // Save category-specific result with reference back to the saved health check result
             saveCategorySpecificResult(category, categoryData, healthProfile, examinationDate, savedResult);
             
-            System.out.println("DEBUG: Saved health check result for student " + student.getStudentID() + ", category: " + category + ", ID: " + savedResult.getId());
+            System.out.println("DEBUG: Successfully saved health check result for student " + student.getStudentID() + 
+                             ", category: " + category + ", ID: " + savedResult.getId());
         }
         
-        System.out.println("DEBUG: Successfully recorded all health check results for student " + student.getStudentID());
+        System.out.println("DEBUG: Successfully recorded health check results for student " + student.getStudentID() + 
+                         " - Total categories processed: " + request.getCategories().size());
     }
     
     private ResultStatus determineResultStatus(Map<String, Object> categoryData, boolean isAbnormal) {

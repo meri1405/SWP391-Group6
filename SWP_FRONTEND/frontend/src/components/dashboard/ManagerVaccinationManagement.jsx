@@ -98,6 +98,7 @@ const ManagerVaccinationManagement = () => {
         );
         console.log(response);
         setAllCampaigns(response.content || []);
+        console.log("Fetched campaigns:", response.content);
         setPagination((prev) => ({
           ...prev,
           current: page,
@@ -247,6 +248,7 @@ const ManagerVaccinationManagement = () => {
     try {
       const campaign = await managerApi.getVaccinationCampaignById(campaignId);
       setSelectedCampaign(campaign);
+      console.log("Selected campaign:", campaign);
       setDetailModalVisible(true);
     } catch (error) {
       message.error("Lỗi khi tải thông tin chi tiết chiến dịch");
@@ -785,7 +787,7 @@ const ManagerVaccinationManagement = () => {
                 color="green"
                 style={{ fontSize: "13px", padding: "4px 8px" }}
               >
-                {selectedCampaign.minAge && selectedCampaign.maxAge
+                {selectedCampaign.minAge !== undefined && selectedCampaign.maxAge !== undefined
                   ? `${Math.floor(selectedCampaign.minAge / 12)} - ${Math.floor(
                       selectedCampaign.maxAge / 12
                     )} tuổi`
