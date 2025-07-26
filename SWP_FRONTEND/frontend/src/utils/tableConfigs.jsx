@@ -14,6 +14,17 @@ import {
 /**
  * Get columns configuration for results table
  */
+
+const getStatusText = (status) => {
+    const statusMap = {
+      NORMAL: "Bình thường",
+      MINOR_CONCERN: "Cần theo dõi",
+      NEEDS_ATTENTION: "Cần chú ý",
+      REQUIRES_FOLLOWUP: "Cần tái khám",
+      URGENT: "Khẩn cấp"
+    };
+    return statusMap[status] || status;
+};
 export const getResultColumns = () => [
   {
     title: 'STT',
@@ -44,7 +55,7 @@ export const getResultColumns = () => [
     dataIndex: 'status',
     key: 'status',
     width: 100,
-    render: (status) => getResultStatusTag(status),
+    render: (status) => getResultStatusTag(getStatusText(status)),
   },
   {
     title: 'Bất thường',
