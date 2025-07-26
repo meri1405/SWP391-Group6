@@ -142,88 +142,84 @@ class HealthCheckResultsService {
       return hasData;
     });
 
-    // If we have multiple categories, prioritize the first one with abnormal status
-    // This helps avoid the duplicate entry constraint
-    let primaryCategory = categoriesWithData.find(category => {
+    // **UPDATED: Process ALL categories with data instead of just primary**
+    console.log('Categories with data:', categoriesWithData);
+    
+    if (categoriesWithData.length === 0) {
+      throw new Error('Không có dữ liệu hợp lệ để lưu');
+    }
+
+    // Create category results for ALL categories with data
+    const categoryResults = categoriesWithData.map(category => {
+      const categoryData = cleanedFormData[category];
+      let status = "NORMAL";
+
+      // Determine status based on category-specific abnormal flags
+      if (categoryData) {
+        if (
+          category === "ORAL" ||
+          category === "SKIN" ||
+          category === "RESPIRATORY"
+        ) {
+          if (categoryData.isAbnormal) {
+            status = categoryData.treatment ? "NEEDS_TREATMENT" : "ABNORMAL";
+          }
+        } else if (category === "VISION") {
+          // Consider abnormal if vision is below normal threshold or needs glasses
+          if (
+            categoryData.visionLeft < 1.0 ||
+            categoryData.visionRight < 1.0 ||
+            categoryData.needsGlasses ||
+            categoryData.isAbnormal
+          ) {
+            status = "ABNORMAL";
+          }
+        } else if (category === "HEARING") {
+          // Consider abnormal if hearing threshold is above normal
+          if (
+            categoryData.leftEar > 25 ||
+            categoryData.rightEar > 25 ||
+            categoryData.isAbnormal
+          ) {
+            status = "ABNORMAL";
+          }
+        }
+      }
+
+      return {
+        category: category,
+        status: status,
+        notes: categoryData?.description || 
+               categoryData?.visionDescription || 
+               categoryData?.recommendations || ""
+      };
+    });
+
+    console.log('Processing', categoryResults.length, 'categories:', categoryResults.map(c => c.category));
+
+    // Set primary category (first one or abnormal one)
+    const primaryCategory = categoriesWithData.find(category => {
       const categoryData = cleanedFormData[category];
       return categoryData && categoryData.isAbnormal;
     }) || categoriesWithData[0];
 
-    if (!primaryCategory) {
-      primaryCategory = "HEARING"; // Default fallback
-    }
-
-    // Store metadata about category selection for user feedback
-    const categorySelectionInfo = {
-      totalCategories: categoriesWithData.length,
-      selectedCategory: primaryCategory,
-      availableCategories: categoriesWithData,
-      selectionReason: categoriesWithData.length > 1 ? 
-        (cleanedFormData[primaryCategory]?.isAbnormal ? 'abnormal_priority' : 'first_available') : 
-        'single_category'
-    };
-
-    console.log('Category selection info:', categorySelectionInfo);
-
-    const primaryCategoryData = cleanedFormData[primaryCategory];
-    let status = "NORMAL";
-
-    // Determine status based on category-specific abnormal flags
-    if (primaryCategoryData) {
-      if (
-        primaryCategory === "ORAL" ||
-        primaryCategory === "SKIN" ||
-        primaryCategory === "RESPIRATORY"
-      ) {
-        if (primaryCategoryData.isAbnormal) {
-          status = primaryCategoryData.treatment ? "NEEDS_TREATMENT" : "ABNORMAL";
-        }
-      } else if (primaryCategory === "VISION") {
-        // Consider abnormal if vision is below normal threshold or needs glasses
-        if (
-          primaryCategoryData.visionLeft < 1.0 ||
-          primaryCategoryData.visionRight < 1.0 ||
-          primaryCategoryData.needsGlasses ||
-          primaryCategoryData.isAbnormal
-        ) {
-          status = "ABNORMAL";
-        }
-      } else if (primaryCategory === "HEARING") {
-        // Consider abnormal if hearing threshold is above normal
-        if (
-          primaryCategoryData.leftEar > 25 ||
-          primaryCategoryData.rightEar > 25 ||
-          primaryCategoryData.isAbnormal
-        ) {
-          status = "ABNORMAL";
-        }
-      }
-    }
-
-    // Submit only the primary category to avoid constraint violations
-    const categoryResults = [{
-      category: primaryCategory,
-      status,
-      notes:
-        primaryCategoryData?.description ||
-        primaryCategoryData?.visionDescription ||
-        primaryCategoryData?.recommendations ||
-        "",
-    }];
-
-    // Ensure we only send one comprehensive request
+    // Ensure we send all categories to backend
     return {
       studentId: selectedStudent.studentID,
       campaignId: campaign.id,
-      categories: categoryResults,
+      categories: categoryResults, // Now contains ALL categories
       weight: overallMeasurements.weight,
       height: overallMeasurements.height,
       detailedResults: cleanedFormData, // Include all form data for backend processing
-      // Add a flag to indicate this is a single comprehensive submission
+      // Add flags to indicate this is a comprehensive submission
       isComprehensiveSubmission: true,
       primaryCategory: primaryCategory,
       // Include metadata for user feedback
-      categorySelectionInfo: categorySelectionInfo,
+      categorySelectionInfo: {
+        totalCategories: categoriesWithData.length,
+        allCategories: categoriesWithData,
+        selectionReason: 'all_categories'
+      },
     };
   }
 }

@@ -200,7 +200,7 @@ export const useHealthCheckResults = (campaignId, campaign, onRefreshData) => {
 
       // Show category selection info to user if multiple categories were filled
       if (resultData.categorySelectionInfo) {
-        const { totalCategories, selectedCategory, selectionReason } = resultData.categorySelectionInfo;
+        const { totalCategories, allCategories } = resultData.categorySelectionInfo;
         
         if (totalCategories > 1) {
           const categoryNames = {
@@ -211,12 +211,10 @@ export const useHealthCheckResults = (campaignId, campaign, onRefreshData) => {
             'RESPIRATORY': 'Hô hấp'
           };
           
-          const reasonMessage = selectionReason === 'abnormal_priority' 
-            ? `(ưu tiên hạng mục có kết quả bất thường)`
-            : `(chọn hạng mục đầu tiên)`;
+          const categoryList = allCategories.map(cat => categoryNames[cat] || cat).join(', ');
             
           message.info({
-            content: `Hệ thống sẽ lưu hạng mục "${categoryNames[selectedCategory]}" ${reasonMessage}. Tổng ${totalCategories} hạng mục đã điền.`,
+            content: `Hệ thống sẽ lưu tất cả ${totalCategories} hạng mục: ${categoryList}`,
             duration: 6,
           });
         }
