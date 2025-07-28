@@ -86,10 +86,10 @@ const BasicInfoForm = ({ categoryData, onDataChange, onOverallChange, formData, 
         </Title>
       </div>
 
-      <Row gutter={24}>
+      <Row gutter={32}>
         {/* Height */}
         <Col span={8}>
-          <div className="mb-4" style={{marginBottom: "0px"}}>
+          <div className="mb-4" style={{marginBottom: "0px", padding: "0 8px"}}>
             <label className="block mb-2 font-medium">
               <ColumnHeightOutlined className="mr-2 text-blue-500" />
               Chiều cao (cm) <strong style={{ color: "red" }}>*</strong>
@@ -109,7 +109,7 @@ const BasicInfoForm = ({ categoryData, onDataChange, onOverallChange, formData, 
 
         {/* Weight */}
         <Col span={8}>
-          <div className="mb-4" style={{marginBottom: "0px"}}>
+          <div className="mb-4" style={{marginBottom: "0px", padding: "0 8px"}}>
             <label className="block mb-2 font-medium">
               <ExperimentOutlined className="mr-2 text-green-500" />
               Cân nặng (kg) <strong style={{ color: "red" }}>*</strong>
@@ -130,7 +130,7 @@ const BasicInfoForm = ({ categoryData, onDataChange, onOverallChange, formData, 
 
         {/* BMI */}
         <Col span={8}>
-          <div className="mb-4" style={{marginBottom: "0px"}}>
+          <div className="mb-4" style={{marginBottom: "0px", padding: "0 8px"}}>
             <label className="block mb-2 font-medium">
               BMI
             </label>

@@ -11,6 +11,7 @@ import {
   getPreVaccinationStatusTag,
   cleanNotesForDisplay,
 } from "./vaccinationCampaignUtils.jsx";
+import dayjs from "dayjs";
 
 /**
  * Check if vaccination can be performed based on scheduled time
@@ -18,11 +19,31 @@ import {
 const canPerformVaccination = (campaign) => {
   if (!campaign?.scheduledDate) return false;
   
-  const now = new Date();
-  const scheduledDate = new Date(campaign.scheduledDate);
+  const now = dayjs();
   
-  // Allow vaccination from the scheduled date onwards
-  return now >= scheduledDate;
+  // Handle array format from Java backend [year, month, day, hour, minute]
+  let scheduledDate;
+  if (Array.isArray(campaign.scheduledDate)) {
+    const [year, month, day, hour = 0, minute = 0] = campaign.scheduledDate;
+    scheduledDate = dayjs().year(year).month(month - 1).date(day).hour(hour).minute(minute);
+  } else {
+    scheduledDate = dayjs(campaign.scheduledDate);
+  }
+  
+  // Debug logging
+  console.log('[Vaccination Validation]', {
+    now: now.format('YYYY-MM-DD HH:mm:ss'),
+    scheduledDate: scheduledDate.format('YYYY-MM-DD HH:mm:ss'),
+    campaignScheduledDate: campaign.scheduledDate,
+    isArray: Array.isArray(campaign.scheduledDate),
+    isSameOrAfter: now.isSameOrAfter(scheduledDate, 'minute'),
+    isAfter: now.isAfter(scheduledDate),
+    isSame: now.isSame(scheduledDate, 'minute'),
+    canVaccinate: now.isSameOrAfter(scheduledDate, 'minute')
+  });
+  
+  // Allow vaccination from the scheduled date onwards (compare by minute for exact time)
+  return now.isSameOrAfter(scheduledDate, 'minute');
 };
 
 /**
@@ -144,13 +165,25 @@ export const getVaccinationFormsColumns = (
       const isConfirmedAndNotVaccinated = record.confirmationStatus === "CONFIRMED" &&
         !records.find((r) => r.vaccinationFormId === record.id);
       
+      // Debug logging for button state
+      console.log('[Button State]', {
+        studentName: record.studentFullName,
+        canVaccinate,
+        isConfirmedAndNotVaccinated,
+        confirmationStatus: record.confirmationStatus,
+        isCampaignCompleted,
+        campaignStatus: campaign?.status,
+        buttonDisabled: isCampaignCompleted || !canVaccinate,
+        reason: isCampaignCompleted ? 'Campaign completed' : !canVaccinate ? 'Time not reached' : 'Should be enabled'
+      });
+      
       return (
         <Space size="small">
           {isConfirmedAndNotVaccinated ? (
             <Tooltip
               title={
                 !canVaccinate
-                  ? `Chỉ có thể tiêm chủng từ ngày ${formatDate(campaign?.scheduledDate)} trở đi`
+                  ? `Chỉ có thể tiêm chủng từ ${formatDate(campaign?.scheduledDate)} trở đi`
                   : isCampaignCompleted
                   ? "Chiến dịch đã hoàn thành"
                   : "Thực hiện tiêm chủng"

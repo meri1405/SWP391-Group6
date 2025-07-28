@@ -24,6 +24,7 @@ const OralForm = ({ categoryData, onDataChange, modalMode }) => (
       background: "linear-gradient(135deg, #f3e5f5 0%, #fce4ec 100%)",
       border: "1px solid #9c27b0",
       marginTop: "20px",
+      marginBottom: "20px",
     }}
   >
     <div className="mb-6">

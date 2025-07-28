@@ -34,7 +34,7 @@ const RespiratoryForm = ({ categoryData, onDataChange, modalMode }) => (
           style={{ backgroundColor: "#d32f2f" }}
         />
         <Title level={3} style={{ margin: 0, color: "#c62828" }}>
-          Hô hấp (Respiratory)
+          Hô hấp
         </Title>
       </Space>
     </div>
