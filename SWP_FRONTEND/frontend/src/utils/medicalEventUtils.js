@@ -160,7 +160,7 @@ export const getSupplyName = (supplyId, supplyObject = null, medicalSupplies = [
 export const validateFormData = (values, healthProfileValid, healthProfileMessage) => {
   // Check if student has approved health profile
   if (!healthProfileValid) {
-    message.error("Không thể tạo sự kiện y tế: " + healthProfileMessage);
+            message.error("Không thể tạo xử lý sơ cứu: " + healthProfileMessage);
     return false;
   }
 

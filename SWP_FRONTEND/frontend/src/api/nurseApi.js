@@ -907,6 +907,35 @@ export const nurseApi = {
     }
   },
 
+  // Get all students for medication schedules
+  getAllStudents: async () => {
+    try {
+      const token = getTokenFromStorage();
+      if (!token) {
+        throw new Error("No authentication token found");
+      }
+
+      const authAxios = createAuthAxios(token);
+      const response = await authAxios.get(
+        `/api/nurse/students`
+      );
+
+      console.log("All students:", response.data);
+      return {
+        success: true,
+        data: response.data,
+        message: "Students loaded successfully"
+      };
+    } catch (error) {
+      console.error("Error getting all students:", error);
+      return {
+        success: false,
+        data: [],
+        message: error.response?.data?.message || "Failed to load students"
+      };
+    }
+  },
+
   // Get students without health profiles
   getStudentsWithoutHealthProfiles: async () => {
     try {

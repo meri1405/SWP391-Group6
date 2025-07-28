@@ -84,7 +84,7 @@ const MedicalEventManagement = () => {
   // Handle add event
   const handleAddEvent = () => {
     if (isViewOnly) {
-      message.warning("Bạn không có quyền thêm sự kiện y tế");
+              message.warning("Bạn không có quyền thêm xử lý sơ cứu");
       return;
     }
 
@@ -134,7 +134,7 @@ const MedicalEventManagement = () => {
         <div className="header-section">
           <Title level={3}>
             <MedicineBoxOutlined />{" "}
-            {isViewOnly ? "Xem sự kiện y tế" : "Quản lý sự kiện y tế"}
+            {isViewOnly ? "Xem xử lý sơ cứu" : "Quản lý xử lý sơ cứu"}
           </Title>
           {!isViewOnly && (
             <Button
@@ -142,7 +142,7 @@ const MedicalEventManagement = () => {
               icon={<PlusOutlined />}
               onClick={handleAddEvent}
             >
-              Thêm sự kiện y tế
+              Thêm xử lý sơ cứu
             </Button>
           )}
         </div>
@@ -181,7 +181,7 @@ const MedicalEventManagement = () => {
 
       {/* Add Event Modal */}
       <Modal
-        title="Thêm sự kiện y tế mới"
+        title="Thêm xử lý sơ cứu mới"
         open={modalVisible}
         onOk={() => form.submit()}
         onCancel={() => {

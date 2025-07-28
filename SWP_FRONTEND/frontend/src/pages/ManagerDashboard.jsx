@@ -181,7 +181,7 @@ const ManagerDashboard = () => {
     {
       key: "events",
       icon: <CalendarOutlined />,
-      label: "Sự kiện y tế",
+              label: "Xử lý sơ cứu",
     },
     {
       key: "inventory",

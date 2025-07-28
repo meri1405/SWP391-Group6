@@ -146,8 +146,8 @@ const SchoolNurseOverview = () => {
   const currentAlerts = urgentAlerts || (stats ? [
     // Generate alerts based on real data
     ...(stats.medicalEvents?.pendingEvents > 0 ? [{
-      title: 'Sự kiện y tế chưa giải quyết',
-      message: `${stats.medicalEvents.pendingEvents} sự kiện y tế đang chờ xử lý`,
+              title: 'Xử lý sơ cứu chưa giải quyết',
+        message: `${stats.medicalEvents.pendingEvents} xử lý sơ cứu đang chờ xử lý`,
       type: "error",
       count: stats.medicalEvents.pendingEvents
     }] : []),
@@ -183,8 +183,8 @@ const SchoolNurseOverview = () => {
       count: 12
     },
     {
-      title: "Sự kiện y tế chờ xử lý",
-      message: "3 sự kiện y tế đang chờ xử lý",
+              title: "Xử lý sơ cứu chờ xử lý",
+        message: "3 xử lý sơ cứu đang chờ xử lý",
       type: "error",
       count: 3
     }
@@ -397,7 +397,7 @@ const SchoolNurseOverview = () => {
           {/* Medical Events */}
           <Col xs={24} sm={12} lg={8}>
             <Card 
-              title="Sự kiện y tế" 
+              title="Xử lý sơ cứu" 
               className="stat-card events-card"
               extra={<AlertOutlined style={{ color: '#fa541c' }} />}
             >

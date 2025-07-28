@@ -92,7 +92,7 @@ const SchoolNurseChartsOverview = ({ currentViewMode = 'charts', onViewModeChang
         pending: stats.medicationIntake?.pendingDoses || 0
       },
       {
-        category: 'Sự kiện y tế',
+        category: 'Xử lý sơ cứu',
         approved: stats.medicalEvents?.resolvedEvents || 0,
         rejected: 0, // No rejected events
         pending: stats.medicalEvents?.pendingEvents || 0
@@ -279,7 +279,7 @@ const SchoolNurseChartsOverview = ({ currentViewMode = 'charts', onViewModeChang
         <Col xs={24} sm={6}>
           <Card>
             <Statistic
-              title="Sự kiện y tế"
+              title="Xử lý sơ cứu"
               value={stats.medicalEvents?.totalEvents || 0}
               prefix={<AlertOutlined style={{ color: '#fa541c' }} />}
               valueStyle={{ color: '#fa541c' }}
@@ -346,7 +346,7 @@ const SchoolNurseChartsOverview = ({ currentViewMode = 'charts', onViewModeChang
 
           {/* Medical Events - Radial Bar Chart */}
           <Col xs={24} lg={12}>
-            <Card title="Sự kiện y tế" extra={<AlertOutlined />}>
+            <Card title="Xử lý sơ cứu" extra={<AlertOutlined />}>
               <ResponsiveContainer width="100%" height={300}>
                 <RadialBarChart innerRadius="30%" outerRadius="90%" data={chartData.medicalEventsData}>
                   <RadialBar dataKey="value" cornerRadius={10} fill="#fa541c" />
@@ -468,7 +468,7 @@ const SchoolNurseChartsOverview = ({ currentViewMode = 'charts', onViewModeChang
           </Col>
           
           <Col xs={24} md={12}>
-            <Card title="Sự kiện y tế">
+            <Card title="Xử lý sơ cứu">
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
@@ -542,7 +542,7 @@ const SchoolNurseChartsOverview = ({ currentViewMode = 'charts', onViewModeChang
                   <RechartsTooltip content={<CustomTooltip />} />
                   <Legend />
                   <Line type="monotone" dataKey="medications" stroke="#1890ff" name="Yêu cầu thuốc" />
-                  <Line type="monotone" dataKey="events" stroke="#fa541c" name="Sự kiện y tế" />
+                  <Line type="monotone" dataKey="events" stroke="#fa541c" name="Xử lý sơ cứu" />
                   <Line type="monotone" dataKey="doses" stroke="#52c41a" name="Liều thuốc" />
                 </LineChart>
               </ResponsiveContainer>
@@ -595,7 +595,7 @@ const SchoolNurseChartsOverview = ({ currentViewMode = 'charts', onViewModeChang
                   <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#fa541c' }}>
                     {stats.medicalEvents?.totalEvents || 0}
                   </div>
-                  <div>Sự kiện y tế</div>
+                  <div>Xử lý sơ cứu</div>
                   <div style={{ marginTop: '8px' }}>
                     <Tag color="green">
                       {stats.medicalEvents?.resolvedEvents || 0} đã giải quyết

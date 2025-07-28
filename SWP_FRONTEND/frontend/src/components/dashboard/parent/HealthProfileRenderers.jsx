@@ -45,9 +45,7 @@ export const renderBasicInfo = (profile) => {
       <Descriptions.Item label="Ngày duyệt" span={1}>
         {formatDate(profile.updatedAt)}
       </Descriptions.Item>
-      <Descriptions.Item label="Y tá duyệt" span={1}>
-        {profile.additionalFields?.schoolNurseFullName || 'N/A'}
-      </Descriptions.Item>
+    
       <Descriptions.Item label="Trạng thái" span={1}>
         <Tag color="success">Đã duyệt</Tag>
       </Descriptions.Item>

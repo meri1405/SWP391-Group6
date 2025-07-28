@@ -160,9 +160,9 @@ public class MedicalEventService implements IMedicalEventService {
         User parent = student.getParent();
 
         if (parent != null) {
-            String title = "Cảnh Báo Sự Kiện Y Tế: " + student.getFirstName() + " " + student.getLastName();
+            String title = "Cảnh Báo Xử Lý Sơ Cứu: " + student.getFirstName() + " " + student.getLastName();
             StringBuilder message = new StringBuilder();
-            message.append("<p>Con của bạn đã gặp phải một sự kiện y tế</p>");
+            message.append("<p>Con của bạn đã gặp phải một xử lý sơ cứu</p>");
             message.append("<p><strong>Loại:</strong> ").append(translateEventType(medicalEvent.getEventType())).append("</p>");
             message.append("<p><strong>Mức độ nghiêm trọng:</strong> ").append(translateSeverityLevel(medicalEvent.getSeverityLevel())).append("</p>");
             message.append("<p><strong>Thời gian:</strong> ").append(formatDateTime(medicalEvent.getOccurrenceTime())).append("</p>");

@@ -33,7 +33,7 @@ class MedicalEventService {
       return sortedEvents;
     } catch (error) {
       console.error("Error loading medical events:", error);
-      message.error("Không thể tải danh sách sự kiện y tế");
+      message.error("Không thể tải danh sách xử lý sơ cứu");
       throw error;
     }
   }

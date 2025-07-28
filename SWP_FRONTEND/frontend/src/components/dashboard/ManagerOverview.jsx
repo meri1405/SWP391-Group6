@@ -138,7 +138,7 @@ const ManagerOverview = () => {
           borderWidth: 1,
         },
         {
-          label: "Sự kiện y tế",
+          label: "Xử lý sơ cứu",
           data: medicalEventsData.length > 0 ? medicalEventsData : fallbackMedicalEventsData,
           backgroundColor: "#1890ff",
           borderColor: "#1890ff",
@@ -160,7 +160,7 @@ const ManagerOverview = () => {
     return {
       labels: [
         "Chiến dịch chờ duyệt",
-        "Sự kiện y tế",
+        "Xử lý sơ cứu",
         "Tiêm chủng",
         "Khám sức khỏe",
       ],
@@ -257,7 +257,7 @@ const ManagerOverview = () => {
           <div className="stat-card">
             <div className="stat-info">
               <h3>{dashboardStats?.medicalEvents?.total || 0}</h3>
-              <p>Sự kiện y tế</p>
+              <p>Xử lý sơ cứu</p>
             </div>
           </div>
 
@@ -444,7 +444,7 @@ const ManagerOverview = () => {
                       {systemOverview?.recentActivity?.healthCheckCampaigns || 0}
                     </p>
                     <p>
-                      <strong>Sự kiện y tế:</strong>{" "}
+                      <strong>Xử lý sơ cứu:</strong>{" "}
                       {systemOverview?.recentActivity?.medicalEvents || 0}
                     </p>
                   </div>

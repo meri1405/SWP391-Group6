@@ -1,6 +1,8 @@
 import axios from "axios";
 
-const BASE_URL = "/api/restock-requests";
+// Sử dụng import.meta.env thay vì process.env cho Vite
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+const BASE_URL = `${API_BASE_URL}/api/restock-requests`;
 
 // Create a simple pub/sub mechanism for restock request updates
 const subscribers = [];
@@ -55,7 +57,13 @@ export const restockRequestApi = {
   // Get all restock requests
   getAllRequests: async () => {
     try {
-      const response = await axios.get(BASE_URL);
+      const token = localStorage.getItem('token');
+      const response = await axios.get(BASE_URL, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       return response.data;
     } catch (error) {
       console.error("Error fetching restock requests:", error);
@@ -78,7 +86,13 @@ export const restockRequestApi = {
   createRequest: async (requestData) => {
     try {
       console.log('[RestockRequestApi] Creating new restock request');
-      const response = await axios.post(BASE_URL, requestData);
+      const token = localStorage.getItem('token');
+      const response = await axios.post(BASE_URL, requestData, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       console.log('[RestockRequestApi] Request created successfully, notifying subscribers');
       // Notify subscribers about the new request
       restockRequestApi.notifySubscribers();
@@ -259,7 +273,19 @@ export const restockRequestApi = {
   createExtendedRestockRequest: async (requestData) => {
     try {
       console.log('[RestockRequestApi] Creating new extended restock request');
-      const response = await axios.post(`${BASE_URL}/extended`, requestData);
+      
+      // Get token from localStorage
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+      
+      const response = await axios.post(`${BASE_URL}/extended`, requestData, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       console.log('[RestockRequestApi] Extended request created successfully, notifying subscribers');
       
       // Notify subscribers about the new request

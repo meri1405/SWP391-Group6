@@ -125,6 +125,7 @@ const NurseMedicationRequests = () => {
     try {
       setLoading(true);
       const response = await nurseApi.getPendingMedicationRequests();
+      console.log("Pending requests from API:", response.data);
       if (response.success) {
         setMedicationRequests(response.data);
       } else {
@@ -460,12 +461,32 @@ const NurseMedicationRequests = () => {
     {
       title: "Thời gian sử dụng",
       key: "period",
-      render: (_, record) => (
-        <span>
-          {dayjs(record.startDate).format("DD/MM/YYYY")} -{" "}
-          {dayjs(record.endDate).format("DD/MM/YYYY")}
-        </span>
-      ),
+      render: (_, record) => {
+        // Since dates are now at item level, show min-max dates across all items
+        if (!record.itemRequests || record.itemRequests.length === 0) {
+          return "N/A";
+        }
+
+        const dates = record.itemRequests.map((item) => ({
+          start: dayjs(item.startDate),
+          end: dayjs(item.endDate),
+        }));
+
+        const minStart = dates.reduce(
+          (min, curr) => (curr.start.isBefore(min) ? curr.start : min),
+          dates[0].start
+        );
+        const maxEnd = dates.reduce(
+          (max, curr) => (curr.end.isAfter(max) ? curr.end : max),
+          dates[0].end
+        );
+
+        return (
+          <span>
+            {minStart.format("DD/MM/YYYY")} - {maxEnd.format("DD/MM/YYYY")}
+          </span>
+        );
+      },
     },
     {
       title: "Số loại thuốc",
@@ -1005,8 +1026,28 @@ const NurseMedicationRequests = () => {
                 {dayjs(selectedRequest.requestDate).format("DD/MM/YYYY")}
               </Descriptions.Item>
               <Descriptions.Item label="Thời gian sử dụng">
-                {dayjs(selectedRequest.startDate).format("DD/MM/YYYY")} -{" "}
-                {dayjs(selectedRequest.endDate).format("DD/MM/YYYY")}
+                {(() => {
+                  // Since dates are now at item level, show min-max dates across all items
+                  if (!selectedRequest.itemRequests || selectedRequest.itemRequests.length === 0) {
+                    return "N/A";
+                  }
+
+                  const dates = selectedRequest.itemRequests.map((item) => ({
+                    start: dayjs(item.startDate),
+                    end: dayjs(item.endDate),
+                  }));
+
+                  const minStart = dates.reduce(
+                    (min, curr) => (curr.start.isBefore(min) ? curr.start : min),
+                    dates[0].start
+                  );
+                  const maxEnd = dates.reduce(
+                    (max, curr) => (curr.end.isAfter(max) ? curr.end : max),
+                    dates[0].end
+                  );
+
+                  return `${minStart.format("DD/MM/YYYY")} - ${maxEnd.format("DD/MM/YYYY")}`;
+                })()}
               </Descriptions.Item>
               <Descriptions.Item label="Trạng thái">
                 {getStatusTag(selectedRequest.status)}

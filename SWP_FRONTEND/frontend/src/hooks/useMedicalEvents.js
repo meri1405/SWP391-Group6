@@ -74,7 +74,7 @@ export const useMedicalEvents = (isViewOnly) => {
   // Process event
   const processEvent = async (eventId) => {
     if (isViewOnly) {
-      message.warning("Bạn không có quyền xử lý sự kiện y tế");
+              message.warning("Bạn không có quyền xử lý sơ cứu");
       return false;
     }
 
@@ -93,7 +93,7 @@ export const useMedicalEvents = (isViewOnly) => {
   // Create new event
   const createEvent = async (values, healthProfileValid, healthProfileMessage) => {
     if (isViewOnly) {
-      message.error("Bạn không có quyền thêm sự kiện y tế");
+              message.error("Bạn không có quyền thêm xử lý sơ cứu");
       return false;
     }
 

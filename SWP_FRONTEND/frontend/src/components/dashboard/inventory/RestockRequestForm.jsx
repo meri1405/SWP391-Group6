@@ -180,42 +180,142 @@ const RestockRequestForm = ({
         return;
       }
 
-      // Validate only the required form fields
+      // Log current form values before validation
+      const currentValues = form.getFieldsValue();
+      console.log("[RestockRequestForm] Current form values:", currentValues);
+      
+      // Validate only the main form fields (priority and reason)
       const values = await form.validateFields(["priority", "reason"]);
       console.log("[RestockRequestForm] Form values:", values);
       console.log("[RestockRequestForm] Request items:", requestItems);
 
+      // Get user ID from JWT token
+      const getCurrentUserId = () => {
+        const token = localStorage.getItem("token");
+        if (token) {
+          try {
+            const base64Url = token.split(".")[1];
+            const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+            const jsonPayload = decodeURIComponent(
+              atob(base64)
+                .split("")
+                .map(function (c) {
+                  return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+                })
+                .join("")
+            );
+
+            const payload = JSON.parse(jsonPayload);
+            console.log("[RestockRequestForm] JWT payload:", payload);
+            
+            // Check for userId field
+            if (payload.userId) {
+              return Number(payload.userId);
+            }
+            
+            // Check for sub field (subject - usually email for OAuth2)
+            if (payload.sub) {
+              console.log("[RestockRequestForm] Found sub field:", payload.sub);
+              // For OAuth2, sub is usually email, not numeric ID
+              // We need to get user ID from backend using email
+              return null; // Will handle this case separately
+            }
+            
+            // Check for other possible ID fields
+            if (payload.id) {
+              return Number(payload.id);
+            }
+            
+            console.log("[RestockRequestForm] No user ID found in token payload");
+          } catch (err) {
+            console.error("Error parsing token:", err);
+          }
+        }
+        return null;
+      };
+
+      let userId = getCurrentUserId();
+      
+      // If we couldn't get user ID from token, try to get it from backend using email or username
+      if (!userId) {
+        try {
+          // Try email first, then username as fallback
+          const identifier = user.email || user.username;
+          if (identifier) {
+            console.log("[RestockRequestForm] Trying to get user ID from backend using identifier:", identifier);
+            
+            // Make API call to get user ID by email or username
+            const token = localStorage.getItem("token");
+            const response = await fetch(`http://localhost:8080/api/auth/user-by-email?email=${encodeURIComponent(identifier)}`, {
+              method: "GET",
+              headers: {
+                "Authorization": `Bearer ${token}`,
+                "Content-Type": "application/json"
+              }
+            });
+            
+            if (response.ok) {
+              const userData = await response.json();
+              userId = userData.id;
+              console.log("[RestockRequestForm] Got user ID from backend:", userId);
+            } else {
+              console.warn("[RestockRequestForm] Failed to get user ID from backend, using fallback");
+              userId = 1; // Fallback for testing
+            }
+          } else {
+            console.warn("[RestockRequestForm] No email or username available, using fallback");
+            userId = 1; // Fallback for testing
+          }
+        } catch (error) {
+          console.error("[RestockRequestForm] Error getting user ID from backend:", error);
+          userId = 1; // Fallback for testing
+        }
+      }
+      
+      if (!userId) {
+        console.error("[RestockRequestForm] User object:", user);
+        console.error("[RestockRequestForm] Could not extract user ID from token or backend");
+        messageApi.error("Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại!");
+        return;
+      }
+
       setSubmitting(true);
+
+      // Validate extendedRestockItems
+      if (!requestItems || requestItems.length === 0) {
+        messageApi.error("Vui lòng thêm ít nhất một vật tư vào yêu cầu.");
+        return;
+      }
 
       // Build the request data
       const requestData = {
-        requestedBy: user.id,
+        requestedBy: userId,
         priority: values.priority || "MEDIUM",
-        reason: values.reason,
+        reason: values.reason || "",
         status: "PENDING",
-        requestDate: new Date().toISOString(),
+        requestDate: dayjs().format('YYYY-MM-DDTHH:mm:ss'),
         extendedRestockItems: requestItems.map((item) => {
           const baseItem = {
             requestType: item.requestType || "EXISTING",
-            requestedDisplayQuantity: item.requestedQuantity,
-            requestedDisplayUnit: item.unit || item.baseUnit,
+            requestedDisplayQuantity: parseFloat(item.requestedQuantity) || 0,
+            requestedDisplayUnit: item.unit || item.baseUnit || "unit",
             notes: item.notes || "",
           };
 
           if (item.requestType === "NEW") {
             return {
               ...baseItem,
-              name: item.name,
-              category: item.category,
-              baseUnit: item.baseUnit,
-              displayUnit: item.displayUnit || item.baseUnit,
-              minStockLevelInBaseUnit: item.minStockLevel,
+              name: item.name || "",
+              category: item.category || "",
+              baseUnit: item.baseUnit || "unit",
+              displayUnit: item.displayUnit || item.baseUnit || "unit",
+              minStockLevelInBaseUnit: parseFloat(item.minStockLevel) || 0,
               supplier: item.supplier || "",
               location: item.location || "",
               description: item.description || "",
-              newExpirationDate: item.expirationDate,
+              newExpirationDate: item.expirationDate ? dayjs(item.expirationDate).format('YYYY-MM-DD') : null,
               isDisabled: true,
-              createdById: user.id,
+              createdById: userId,
             };
           } else if (item.requestType === "EXPIRED") {
             return {
@@ -243,6 +343,7 @@ const RestockRequestForm = ({
           return;
         }
         console.log("[RestockRequestForm] Session refreshed before submission");
+        console.log("[RestockRequestForm] Sending request data:", JSON.stringify(requestData, null, 2));
 
         // Create the restock request
         const createdRequest =
@@ -282,23 +383,48 @@ const RestockRequestForm = ({
         }
       } catch (error) {
         console.error("[RestockRequestForm] Error creating request:", error);
+        console.error("[RestockRequestForm] Error details:", {
+          status: error.response?.status,
+          data: error.response?.data,
+          message: error.message
+        });
+        
         if (error.response?.status === 401) {
           messageApi.error(
             "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!"
           );
-          // Optionally redirect to login page or refresh token
           return;
-        }
-        messageApi.error(
-          error.response?.data?.message ||
+        } else if (error.response?.status === 400) {
+          // Show detailed validation errors
+          const errorData = error.response?.data;
+          if (errorData?.message) {
+            messageApi.error(`Lỗi validation: ${errorData.message}`);
+          } else if (errorData?.errors) {
+            errorData.errors.forEach(err => {
+              messageApi.error(`Lỗi: ${err}`);
+            });
+          } else {
+            messageApi.error("Dữ liệu không hợp lệ. Vui lòng kiểm tra lại thông tin.");
+          }
+        } else {
+          messageApi.error(
+            error.response?.data?.message ||
             "Có lỗi xảy ra khi tạo yêu cầu. Vui lòng thử lại."
-        );
+          );
+        }
       }
     } catch (error) {
       console.error("[RestockRequestForm] Form validation error:", error);
+      console.error("[RestockRequestForm] Error details:", {
+        errorFields: error.errorFields,
+        values: error.values,
+        outOfDate: error.outOfDate
+      });
+      
       // Show which fields failed validation
       if (error.errorFields) {
         error.errorFields.forEach((field) => {
+          console.error(`[RestockRequestForm] Field error: ${field.name.join(".")} - ${field.errors.join(", ")}`);
           messageApi.error(
             `${field.name.join(".")} - ${field.errors.join(", ")}`
           );
@@ -592,6 +718,22 @@ const RestockRequestForm = ({
     }
   };
 
+  // Category configuration for medical supplies
+  const getCategoryTag = (category) => {
+    const config = {
+      painkiller: { color: "blue", text: "Giảm đau" },
+      antibiotic: { color: "purple", text: "Kháng sinh" },
+      vitamin: { color: "orange", text: "Vitamin" },
+      supplement: { color: "cyan", text: "Thực phẩm bổ sung" },
+      bandage: { color: "cyan", text: "Băng y tế" },
+      gloves: { color: "green", text: "Găng tay" },
+      equipment: { color: "geekblue", text: "Thiết bị" },
+      antiseptic: { color: "red", text: "Sát trung" },
+      medical_device: { color: "magenta", text: "Thiết bị y tế" },
+    };
+    return config[category] || { color: "default", text: category };
+  };
+
   // Table columns for restock items
   const itemColumns = [
     {
@@ -650,10 +792,12 @@ const RestockRequestForm = ({
       key: "additionalInfo",
       render: (_, record) => {
         if (record.requestType === "NEW") {
+          const categoryConfig = getCategoryTag(record.category);
           return (
-            <Text type="secondary">
-              Vật tư mới - {record.category || "Chưa phân loại"}
-            </Text>
+            <Space>
+              <Text type="secondary">Vật tư mới -</Text>
+              <Tag color={categoryConfig.color}>{categoryConfig.text}</Tag>
+            </Space>
           );
         }
 
@@ -761,8 +905,17 @@ const RestockRequestForm = ({
                 style={{ flex: 2 }}
                 rules={[
                   { required: true, message: "Vui lòng nhập lý do!" },
-                  { whitespace: true, message: "Lý do không được để trống!" },
-                  { min: 3, message: "Lý do phải có ít nhất 3 ký tự!" },
+                  { 
+                    validator: (_, value) => {
+                      if (!value || value.trim().length === 0) {
+                        return Promise.reject(new Error("Lý do không được để trống!"));
+                      }
+                      if (value.trim().length < 3) {
+                        return Promise.reject(new Error("Lý do phải có ít nhất 3 ký tự!"));
+                      }
+                      return Promise.resolve();
+                    }
+                  }
                 ]}
               >
                 <TextArea rows={2} placeholder="Nhập lý do cần nhập kho..." />
@@ -900,22 +1053,82 @@ const RestockRequestForm = ({
                             rules={[
                               {
                                 required: true,
-                                message: "Vui lòng nhập danh mục!",
+                                message: "Vui lòng chọn danh mục!",
                               },
                             ]}
                           >
-                            <Input placeholder="Nhập danh mục..." />
+                            <Select placeholder="Chọn danh mục...">
+                              <Option value="painkiller">
+                                <Tag color="blue">Giảm đau</Tag>
+                              </Option>
+                              <Option value="antibiotic">
+                                <Tag color="purple">Kháng sinh</Tag>
+                              </Option>
+                              <Option value="vitamin">
+                                <Tag color="orange">Vitamin</Tag>
+                              </Option>
+                              <Option value="supplement">
+                                <Tag color="cyan">Thực phẩm bổ sung</Tag>
+                              </Option>
+                              <Option value="bandage">
+                                <Tag color="cyan">Băng y tế</Tag>
+                              </Option>
+                              <Option value="gloves">
+                                <Tag color="green">Găng tay</Tag>
+                              </Option>
+                              <Option value="equipment">
+                                <Tag color="geekblue">Thiết bị</Tag>
+                              </Option>
+                              <Option value="antiseptic">
+                                <Tag color="red">Sát trung</Tag>
+                              </Option>
+                              <Option value="medical_device">
+                                <Tag color="magenta">Thiết bị y tế</Tag>
+                              </Option>
+                            </Select>
                           </Form.Item>
 
                           <Form.Item
                             name="newSupplySupplier"
                             label="Nhà cung cấp"
+                            rules={[
+                              {
+                                required: true,
+                                message: "Vui lòng nhập nhà cung cấp!",
+                              },
+                            ]}
                           >
                             <Input placeholder="Nhập nhà cung cấp..." />
                           </Form.Item>
 
-                          <Form.Item name="newSupplyLocation" label="Vị trí">
-                            <Input placeholder="Nhập vị trí lưu trữ..." />
+                          <Form.Item 
+                            name="newSupplyLocation" 
+                            label="Vị trí"
+                            rules={[
+                              {
+                                required: true,
+                                message: "Vui lòng chọn vị trí!",
+                              },
+                            ]}
+                          >
+                            <Select placeholder="Chọn vị trí" allowClear>
+                              <Option value="Kệ A1">Kệ A1</Option>
+                              <Option value="Kệ A2">Kệ A2</Option>
+                              <Option value="Kệ A3">Kệ A3</Option>
+                              <Option value="Kệ B1">Kệ B1</Option>
+                              <Option value="Kệ B2">Kệ B2</Option>
+                              <Option value="Kệ B3">Kệ B3</Option>
+                              <Option value="Kệ C1">Kệ C1</Option>
+                              <Option value="Kệ C2">Kệ C2</Option>
+                              <Option value="Kệ C3">Kệ C3</Option>
+                              <Option value="Kệ D1">Kệ D1</Option>
+                              <Option value="Kệ D2">Kệ D2</Option>
+                              <Option value="Kệ D3">Kệ D3</Option>
+                              <Option value="Kệ E1">Kệ E1</Option>
+                              <Option value="Kệ E2">Kệ E2</Option>
+                              <Option value="Kệ E3">Kệ E3</Option>
+                              <Option value="Kệ F1">Kệ F1</Option>
+                            </Select>
                           </Form.Item>
                         </div>
 
@@ -946,6 +1159,12 @@ const RestockRequestForm = ({
                           <Form.Item
                             name="newSupplyDisplayUnit"
                             label="Đơn vị hiển thị"
+                            rules={[
+                              {
+                                required: true,
+                                message: "Vui lòng chọn đơn vị hiển thị!",
+                              },
+                            ]}
                           >
                             <Select
                               placeholder="Chọn đơn vị hiển thị..."
@@ -979,6 +1198,10 @@ const RestockRequestForm = ({
                             name="newSupplyExpirationDate"
                             label="Ngày hết hạn"
                             rules={[
+                              {
+                                required: true,
+                                message: "Vui lòng chọn ngày hết hạn!",
+                              },
                               {
                                 validator: async (_, value) => {
                                   if (value && dayjs(value).isBefore(dayjs())) {
@@ -1018,6 +1241,12 @@ const RestockRequestForm = ({
                           name="newSupplyNotes"
                           label="Ghi chú"
                           style={{ flex: 2 }}
+                          rules={[
+                            {
+                              required: true,
+                              message: "Vui lòng nhập ghi chú!",
+                            },
+                          ]}
                         >
                           <Input placeholder="Thêm ghi chú..." />
                         </Form.Item>
@@ -1227,15 +1456,15 @@ const RestockRequestForm = ({
               <Table
                 columns={itemColumns}
                 dataSource={requestItems}
-                rowKey={(record) => {
+                rowKey={(record, index) => {
                   if (record.medicalSupplyId) {
-                    return `existing-${record.medicalSupplyId}`;
+                    return `existing-${record.medicalSupplyId}-${index}`;
                   } else if (record.requestType === "NEW") {
-                    return `new-${record.name}-${Date.now()}`;
+                    return `new-${record.name}-${index}`;
                   } else if (record.requestType === "EXPIRED") {
-                    return `expired-${record.medicalSupplyId}-${record.newExpirationDate}`;
+                    return `expired-${record.medicalSupplyId}-${record.newExpirationDate}-${index}`;
                   }
-                  return `item-${Date.now()}-${Math.random()}`;
+                  return `item-${index}`;
                 }}
                 pagination={false}
                 size="small"

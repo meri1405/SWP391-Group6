@@ -19,7 +19,7 @@ const MedicalEventDetailsModal = ({
 
   return (
     <Modal
-      title="Chi tiết sự kiện y tế"
+              title="Chi tiết xử lý sơ cứu"
       open={visible}
       onCancel={onClose}
       footer={[

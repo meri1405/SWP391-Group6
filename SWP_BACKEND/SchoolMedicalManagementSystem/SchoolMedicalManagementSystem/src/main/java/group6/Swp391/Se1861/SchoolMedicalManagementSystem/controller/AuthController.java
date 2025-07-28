@@ -1,6 +1,8 @@
 package group6.Swp391.Se1861.SchoolMedicalManagementSystem.controller;
 
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.dto.*;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.model.User;
+import group6.Swp391.Se1861.SchoolMedicalManagementSystem.repository.UserRepository;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IFirebaseOtpService;
 import group6.Swp391.Se1861.SchoolMedicalManagementSystem.service.IAuthService;
 import jakarta.validation.Valid;
@@ -9,6 +11,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 
 /**
  * Controller xử lý xác thực người dùng
@@ -23,6 +29,9 @@ public class AuthController {
     
     @Autowired
     private IFirebaseOtpService firebaseOtpService;
+    
+    @Autowired
+    private UserRepository userRepository;
     
     @Value("${app.firebase.project-id:}")
     private String firebaseProjectId;
@@ -148,6 +157,39 @@ public class AuthController {
             
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(new MessageResponse(e.getMessage()));
+        }
+    }
+
+    /**
+     * Get user ID by email or username
+     * Used for OAuth2 users where JWT token doesn't contain user ID
+     */
+    @GetMapping("/user-by-email")
+    public ResponseEntity<?> getUserByEmail(@RequestParam String email) {
+        try {
+            // Try to find by email first
+            Optional<User> userOpt = userRepository.findByEmail(email);
+            
+            // If not found by email, try by username
+            if (userOpt.isEmpty()) {
+                userOpt = userRepository.findByUsername(email);
+            }
+            
+            if (userOpt.isPresent()) {
+                User user = userOpt.get();
+                Map<String, Object> response = new HashMap<>();
+                response.put("id", user.getId());
+                response.put("username", user.getUsername());
+                response.put("firstName", user.getFirstName());
+                response.put("lastName", user.getLastName());
+                response.put("email", user.getEmail());
+                response.put("roleName", user.getRole().getRoleName());
+                return ResponseEntity.ok(response);
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(new MessageResponse("Error retrieving user information"));
         }
     }
 }

@@ -859,7 +859,7 @@ const InventorySection = () => {
     try {
       // Check if the item has expiration date and is expired
       if (record.expirationDate) {
-        const expirationDate = formatDate(record.expirationDate);
+        const expirationDate = dayjs(record.expirationDate);
         const today = dayjs();
         if (expirationDate.isBefore(today, "day")) {
           messageApi.error("Không thể kích hoạt vật tư đã hết hạn sử dụng");

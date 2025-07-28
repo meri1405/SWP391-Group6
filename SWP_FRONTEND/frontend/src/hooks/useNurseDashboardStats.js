@@ -246,8 +246,8 @@ export const useNurseDashboardStats = () => {
     if (stats.medicalEvents?.pendingEvents > 3) {
       alerts.push({
         type: 'warning',
-        title: 'Sự kiện y tế chưa giải quyết',
-        message: `${stats.medicalEvents.pendingEvents} sự kiện y tế cần được xử lý`,
+        title: 'Xử lý sơ cứu chưa giải quyết',
+        message: `${stats.medicalEvents.pendingEvents} xử lý sơ cứu cần được xử lý`,
         count: stats.medicalEvents.pendingEvents
       });
     }

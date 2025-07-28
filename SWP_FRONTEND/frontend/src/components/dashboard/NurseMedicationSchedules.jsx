@@ -104,19 +104,18 @@ const NurseMedicationSchedules = () => {
       "YYYY-MM-DD HH:mm"
     );
 
-    // Allow updates only from scheduled time onwards or future dates
-    // Future dates are allowed for planning purposes
-    if (formattedDate.isAfter(now, "day")) {
-      return true;
-    }
-
-    // For today's schedules, only allow updates if we've reached or passed the time slot
+    // Only allow updates for today's schedules and only if we've reached or passed the time slot
     if (formattedDate.isSame(now, "day")) {
       return now.isSameOrAfter(scheduleDateTime);
     }
 
-    // For past dates, allow updates if we're at or past the scheduled time
-    return now.isAfter(scheduleDateTime) || now.isSame(scheduleDateTime);
+    // For past dates, allow updates (for catching up missed medications)
+    if (formattedDate.isBefore(now, "day")) {
+      return true;
+    }
+
+    // For future dates, disable updates - only allow on the actual day
+    return false;
   };
 
   // Function to get time remaining until schedule time
@@ -220,24 +219,6 @@ const NurseMedicationSchedules = () => {
 
       setSchedules(validSchedules);
 
-      // Extract unique students for filter, with null checks
-      const uniqueStudents = [
-        ...new Map(
-          validSchedules
-            .filter((schedule) => schedule.studentId && schedule.studentName) // Filter out invalid entries
-            .map((schedule) => [
-              schedule.studentId,
-              {
-                id: schedule.studentId,
-                name: schedule.studentName,
-                className: schedule.className || "N/A",
-              },
-            ])
-        ).values(),
-      ];
-
-      setStudents(uniqueStudents);
-
       // Show informative message if no approved schedules found
       if (validSchedules.length === 0) {
         const selectedDateStr = selectedDate
@@ -273,6 +254,26 @@ const NurseMedicationSchedules = () => {
       setLoading(false);
     }
   }, [selectedDate, selectedStatus, selectedStudent, refreshSession]);
+
+  // Load students for dropdown
+  const loadStudents = useCallback(async () => {
+    try {
+      const response = await nurseApi.getAllStudents();
+      if (response.success) {
+        setStudents(response.data);
+      } else {
+        console.error("Failed to load students:", response.message);
+        message.error("Không thể tải danh sách học sinh");
+      }
+    } catch (error) {
+      console.error("Error loading students:", error);
+      message.error("Không thể tải danh sách học sinh");
+    }
+  }, []);
+
+  useEffect(() => {
+    loadStudents();
+  }, [loadStudents]);
 
   useEffect(() => {
     loadSchedules();
@@ -616,7 +617,22 @@ const NurseMedicationSchedules = () => {
                   size="small"
                   type="primary"
                   onClick={() => handleStatusUpdate(record.id, "TAKEN")}
+                  disabled={!canUpdateSchedule(record.scheduledDate, record.scheduledTime)}
                   style={{ width: "60px" }}
+                  title={
+                    !canUpdateSchedule(record.scheduledDate, record.scheduledTime)
+                      ? (() => {
+                          const formattedDate = formatDate(record.scheduledDate);
+                          const now = dayjs();
+                          if (formattedDate.isAfter(now, "day")) {
+                            return `Chỉ có thể cập nhật vào ngày ${formattedDate.format("DD/MM/YYYY")}`;
+                          } else if (formattedDate.isSame(now, "day")) {
+                            return `Chỉ có thể cập nhật từ ${formatTime(record.scheduledTime)} trở đi`;
+                          }
+                          return "Không thể cập nhật";
+                        })()
+                      : "Đánh dấu đã uống thuốc"
+                  }
                 >
                   Uống
                 </Button>
@@ -624,7 +640,22 @@ const NurseMedicationSchedules = () => {
                   size="small"
                   danger
                   onClick={() => handleStatusUpdate(record.id, "SKIPPED")}
+                  disabled={!canUpdateSchedule(record.scheduledDate, record.scheduledTime)}
                   style={{ width: "60px" }}
+                  title={
+                    !canUpdateSchedule(record.scheduledDate, record.scheduledTime)
+                      ? (() => {
+                          const formattedDate = formatDate(record.scheduledDate);
+                          const now = dayjs();
+                          if (formattedDate.isAfter(now, "day")) {
+                            return `Chỉ có thể cập nhật vào ngày ${formattedDate.format("DD/MM/YYYY")}`;
+                          } else if (formattedDate.isSame(now, "day")) {
+                            return `Chỉ có thể cập nhật từ ${formatTime(record.scheduledTime)} trở đi`;
+                          }
+                          return "Không thể cập nhật";
+                        })()
+                      : "Đánh dấu bỏ lỡ thuốc"
+                  }
                 >
                   Bỏ lỡ
                 </Button>
@@ -748,8 +779,11 @@ const NurseMedicationSchedules = () => {
               popupMatchSelectWidth={false}
             >
               {students.map((student) => (
-                <Option key={student.id} value={student.id}>
-                  {student.name} - {student.className}
+                <Option key={student.studentID || student.id} value={student.studentID || student.id}>
+                  {student.firstName && student.lastName 
+                    ? `${student.lastName} ${student.firstName}` 
+                    : student.name || student.studentName
+                  } - {student.className || student.class?.name || 'N/A'}
                 </Option>
               ))}
             </Select>
