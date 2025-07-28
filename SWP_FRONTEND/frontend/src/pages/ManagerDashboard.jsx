@@ -35,7 +35,8 @@ const ManagerDashboard = () => {
   const [searchParams] = useSearchParams();
   const [notificationCount, setNotificationCount] = useState(0);
   const [api, notificationContextHolder] = notification.useNotification();
-  const { user } = useAuth();
+  const [userInfo, setUserInfo] = useState(null);
+  const { user, isAuthenticated, isManager, getToken } = useAuth();
 
   // Function to update notification count
   const updateNotificationCount = useCallback(async () => {
@@ -51,6 +52,51 @@ const ManagerDashboard = () => {
       setNotificationCount(0);
     }
   }, [user]);
+
+  // Fetch detailed user profile from API
+  useEffect(() => {
+    // Redirect if not authenticated or not a manager
+    if (!isAuthenticated) {
+      navigate("/login");
+      return;
+    }
+
+    if (!isManager()) {
+      message.error("Bạn không có quyền truy cập vào trang này");
+      navigate("/");
+      return;
+    }
+
+    // Fetch detailed user profile from API
+    const fetchUserProfile = async () => {
+      if (!user?.id || !getToken()) return;
+      
+      try {
+        console.log('Fetching detailed manager profile');
+        const detailedProfile = await managerApi.getManagerProfile();
+        console.log('Detailed profile received:', detailedProfile);
+        
+        // Merge basic user info with detailed profile
+        const mergedUserInfo = {
+          ...user,
+          ...detailedProfile,
+          // Ensure critical fields are preserved
+          firstName: detailedProfile?.firstName || user.firstName,
+          lastName: detailedProfile?.lastName || user.lastName,
+          email: detailedProfile?.email || user.email,
+        };
+        
+        console.log('Merged userInfo:', mergedUserInfo);
+        setUserInfo(mergedUserInfo);
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+        // Fallback to basic user info
+        setUserInfo(user);
+      }
+    };
+
+    fetchUserProfile();
+  }, [navigate, isAuthenticated, isManager, user, getToken]);
 
   // Subscribe to restock request notifications
   useEffect(() => {
@@ -298,7 +344,7 @@ const ManagerDashboard = () => {
                 background: "#fff2e8",
               }}
             >
-              {user?.lastName} {user?.firstName}
+              {userInfo?.lastName || user?.lastName} {userInfo?.firstName || user?.firstName}
             </span>
           )}
         </div>
@@ -352,7 +398,7 @@ const ManagerDashboard = () => {
               <UserOutlined style={{ fontSize: 20, color: "#ff4d4f" }} />
             </div>
             <span style={{ fontWeight: 500, fontSize: 16 }}>
-              {user?.lastName} {user?.firstName}
+              {userInfo?.lastName || user?.lastName} {userInfo?.firstName || user?.firstName}
             </span>
           </div>
         </Header>

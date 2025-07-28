@@ -230,8 +230,6 @@ export const createParentProfileConfig = (token) => ({
       address: userAddress,
       jobTitle: userJobTitle,
       dateOfBirth: userDateOfBirth,
-      emergencyContact: data.emergencyContact || data.phone || '',
-      relationship: data.relationship || (data.gender === 'M' ? 'Cha' : 'Mẹ'),
     };
   },
 });

@@ -179,12 +179,29 @@ public class AuthService implements IAuthService {
 
         String jwt = jwtUtil.generateToken(authToken);
 
+        // Get firstName and lastName from user (which may have been updated from Google)
+        String firstName = user.getFirstName();
+        String lastName = user.getLastName();
+        
+        // If user doesn't have firstName/lastName, try to get from Google attributes
+        if ((firstName == null || firstName.isEmpty()) || (lastName == null || lastName.isEmpty())) {
+            String googleFirstName = (String) attributes.get("given_name");
+            String googleLastName = (String) attributes.get("family_name");
+            
+            if (firstName == null || firstName.isEmpty()) {
+                firstName = googleFirstName != null ? googleFirstName : user.getUsername();
+            }
+            if (lastName == null || lastName.isEmpty()) {
+                lastName = googleLastName != null ? googleLastName : "";
+            }
+        }
+
         return new AuthResponse(
                 jwt,
                 user.getId(),
                 user.getUsername(),
-                user.getFirstName(),
-                user.getLastName(),
+                firstName,
+                lastName,
                 user.getEmail(),
                 user.getRole().getRoleName()
         );
@@ -203,6 +220,29 @@ public class AuthService implements IAuthService {
             // Check if user is enabled
             if (!existingUser.isEnabled()) {
                 throw new BadCredentialsException("Account is disabled");
+            }
+
+            // Update user information from Google OAuth2 attributes if available
+            String googleFirstName = (String) attributes.get("given_name");
+            String googleLastName = (String) attributes.get("family_name");
+            String googleName = (String) attributes.get("name");
+            
+            // If Google provides name information and user doesn't have it, update it
+            if ((googleFirstName != null && !googleFirstName.isEmpty() && 
+                 (existingUser.getFirstName() == null || existingUser.getFirstName().isEmpty())) ||
+                (googleLastName != null && !googleLastName.isEmpty() && 
+                 (existingUser.getLastName() == null || existingUser.getLastName().isEmpty()))) {
+                
+                // Update firstName and lastName from Google
+                if (googleFirstName != null && !googleFirstName.isEmpty()) {
+                    existingUser.setFirstName(googleFirstName);
+                }
+                if (googleLastName != null && !googleLastName.isEmpty()) {
+                    existingUser.setLastName(googleLastName);
+                }
+                
+                // Save the updated user to database
+                userRepository.save(existingUser);
             }
 
             // Set attributes in memory (these won't be persisted to DB)

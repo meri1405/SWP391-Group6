@@ -20,6 +20,8 @@ const OAuth2RedirectHandler = () => {
     
     const token = searchParams.get("token");
     const username = searchParams.get("username");
+    const firstName = searchParams.get("firstName");
+    const lastName = searchParams.get("lastName");
     const role = searchParams.get("role");
     const status = searchParams.get("status");
     const error = searchParams.get("error");
@@ -28,6 +30,8 @@ const OAuth2RedirectHandler = () => {
     console.log("OAuth2 params:", {
       hasToken: !!token,
       username,
+      firstName,
+      lastName,
       role,
       status,
       hasError: !!error
@@ -61,8 +65,8 @@ const OAuth2RedirectHandler = () => {
       const userData = {
         token,
         username: username || "User",
-        firstName: username || "User",
-        lastName: "",
+        firstName: firstName || username || "User",
+        lastName: lastName || "",
         email: "",
         roleName: role,
         loginMethod: "oauth2"

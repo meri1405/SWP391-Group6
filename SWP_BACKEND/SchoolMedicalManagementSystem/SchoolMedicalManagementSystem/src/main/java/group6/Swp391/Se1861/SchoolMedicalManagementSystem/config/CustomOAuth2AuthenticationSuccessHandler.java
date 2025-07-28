@@ -87,10 +87,12 @@ public class CustomOAuth2AuthenticationSuccessHandler extends SimpleUrlAuthentic
             // Process normal OAuth2 login through AuthService
             AuthResponse authResponse = authService.processOAuth2Login(oauthToken);
 
-            // Build the frontend redirect URL with token, username, and role
+            // Build the frontend redirect URL with token, username, role, firstName, and lastName
             String redirectUrl = UriComponentsBuilder.fromUriString(frontendRedirectUri)
                     .queryParam("token", authResponse.getToken())
                     .queryParam("username", authResponse.getUsername())
+                    .queryParam("firstName", authResponse.getFirstName())
+                    .queryParam("lastName", authResponse.getLastName())
                     .queryParam("role", authResponse.getRoleName())
                     .queryParam("status", "success")
                     .build().toUriString();

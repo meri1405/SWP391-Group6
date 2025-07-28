@@ -19,6 +19,9 @@ import dayjs from 'dayjs';
 const Profile = ({ userInfo, onProfileUpdate }) => {
   const { getToken } = useAuth();
   
+  // Debug: Log userInfo received
+  console.log('Profile component received userInfo:', userInfo);
+  
   // Use the profile edit logic hook with parent configuration
   const parentConfig = createParentProfileConfig(getToken());
   const {
@@ -107,19 +110,15 @@ const Profile = ({ userInfo, onProfileUpdate }) => {
                 name: true,
                 phone: true,
                 dateOfBirth: true,
-                relationship: true,
                 jobTitle: true,
                 address: true,
-                emergencyContact: true,
               }}
               customLabels={{
                 name: "Họ và tên",
                 phone: "Số điện thoại",
                 dateOfBirth: "Ngày sinh",
-                relationship: "Mối quan hệ",
                 jobTitle: "Nghề nghiệp",
                 address: "Địa chỉ",
-                emergencyContact: "Khẩn cấp",
               }}
               customFormatters={{
                 dateOfBirth: (value) => {

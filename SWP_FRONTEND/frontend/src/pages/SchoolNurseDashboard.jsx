@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Layout,
@@ -51,7 +51,7 @@ const { Header, Sider, Content } = Layout;
 
 const SchoolNurseDashboard = () => {
   const navigate = useNavigate();
-  const { user, isAuthenticated, isSchoolNurse, refreshSession } = useAuth();
+  const { user, isAuthenticated, isSchoolNurse, refreshSession, getToken } = useAuth();
   const [activeSection, setActiveSection] = useState("dashboard");
   const [userInfo, setUserInfoState] = useState(null);
   const [collapsed, setCollapsed] = useState(false);
@@ -84,6 +84,87 @@ const SchoolNurseDashboard = () => {
       setNotificationCount(0);
     }
   }, [user, refreshSession]);
+
+    // Fetch detailed user profile from API
+  const fetchUserProfile = useCallback(async () => {
+    if (!user?.id || !getToken()) return;
+    
+          try {
+        const detailedProfile = await nurseApi.getProfile();
+      
+      // Handle different response formats
+      let profileData = detailedProfile;
+      if (detailedProfile?.data) {
+        profileData = detailedProfile.data;
+      }
+      
+      // Merge basic user info with detailed profile
+      const mergedUserInfo = {
+        ...user,
+        ...profileData,
+        // Ensure critical fields are preserved with fallbacks
+        firstName: profileData?.firstName || user.firstName || user.username || "User",
+        lastName: profileData?.lastName || user.lastName || "",
+        email: profileData?.email || user.email || "",
+      };
+      
+              setUserInfoState(mergedUserInfo);
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      // Fallback to basic user info with better defaults
+      const fallbackUserInfo = {
+        ...user,
+        firstName: user.firstName || user.username || "User",
+        lastName: user.lastName || "",
+        email: user.email || "",
+      };
+              setUserInfoState(fallbackUserInfo);
+    }
+  }, [user, getToken]);
+
+  // Fetch detailed user profile from API
+  useEffect(() => {
+    // Redirect if not authenticated or not a school nurse
+    if (!isAuthenticated) {
+      navigate("/login");
+      return;
+    }
+
+    if (!isSchoolNurse()) {
+      message.error("Bạn không có quyền truy cập vào trang này");
+      navigate("/");
+      return;
+    }
+
+    fetchUserProfile();
+  }, [navigate, isAuthenticated, isSchoolNurse, user, getToken, fetchUserProfile]);
+
+
+
+  // Update userInfo when user changes
+  useEffect(() => {
+    if (user) {
+      setUserInfoState(user);
+    }
+  }, [user]);
+
+
+
+  // Force re-render when userInfo changes
+  const displayName = useMemo(() => {
+    // Use the same logic as UserProfileDetails for consistency
+    const firstName = userInfo?.firstName || user?.firstName;
+    const lastName = userInfo?.lastName || user?.lastName;
+    
+    let name;
+    if (!firstName && !lastName) {
+      name = "Chưa cập nhật";
+    } else {
+      name = `${lastName || ""} ${firstName || ""}`.trim();
+    }
+    
+    return name !== "Chưa cập nhật" ? name : (user?.username || "User");
+  }, [userInfo, user]);
 
   // Subscribe to restock request notifications
   useEffect(() => {
@@ -564,7 +645,7 @@ const SchoolNurseDashboard = () => {
               <UserOutlined style={{ fontSize: 20, color: "#52c41a" }} />
             </div>
             <span style={{ fontWeight: 500, fontSize: 16 }}>
-              {userInfo?.lastName || ""} {userInfo?.firstName || ""}
+              {displayName}
             </span>
           </div>
         </Header>

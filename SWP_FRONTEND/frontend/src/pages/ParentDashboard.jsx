@@ -186,8 +186,35 @@ const ParentDashboard = () => {
       return;
     }
 
-    // Set user info from auth context
-    setUserInfo(user);
+    // Fetch detailed user profile from API
+    const fetchUserProfile = async () => {
+      if (!user?.id || !getToken()) return;
+      
+      try {
+        console.log('Fetching detailed parent profile');
+        const detailedProfile = await parentApi.getParentProfile(getToken());
+        console.log('Detailed profile received:', detailedProfile);
+        
+        // Merge basic user info with detailed profile
+        const mergedUserInfo = {
+          ...user,
+          ...detailedProfile,
+          // Ensure critical fields are preserved
+          firstName: detailedProfile?.firstName || user.firstName,
+          lastName: detailedProfile?.lastName || user.lastName,
+          email: detailedProfile?.email || user.email,
+        };
+        
+        console.log('Merged userInfo:', mergedUserInfo);
+        setUserInfo(mergedUserInfo);
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+        // Fallback to basic user info
+        setUserInfo(user);
+      }
+    };
+
+    fetchUserProfile();
   }, [navigate, isAuthenticated, isParent, user]);
 
   // Separate useEffect to handle URL parameter changes
