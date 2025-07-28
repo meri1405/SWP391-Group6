@@ -22,15 +22,22 @@ public class CustomUserDetailsService implements UserDetailsService {
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         // First try to find by username (for non-parent users)
         Optional<User> userOptional = userRepository.findByUsername(username);
-        
+
         if (userOptional.isPresent()) {
             return userOptional.get();
         }
-        
-        // If not found by username, try to find by phone (for parent users)
+
+        // If not found by username, try to find by email (for school nurses and other staff)
+        userOptional = userRepository.findByEmail(username);
+
+        if (userOptional.isPresent()) {
+            return userOptional.get();
+        }
+
+        // If not found by email, try to find by phone (for parent users)
         // This handles the case where JWT tokens for parents use phone as username
         userOptional = userRepository.findByPhone(username);
-        
+
         if (userOptional.isPresent()) {
             User user = userOptional.get();
             // Verify this is actually a parent user
@@ -38,7 +45,7 @@ public class CustomUserDetailsService implements UserDetailsService {
                 return user;
             }
         }
-        
+
         throw new UsernameNotFoundException("User not found with username: " + username);
     }
 
