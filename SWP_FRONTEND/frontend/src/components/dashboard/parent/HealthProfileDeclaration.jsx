@@ -2245,21 +2245,6 @@ const HealthProfileDeclaration = ({ onProfileCreated }) => {
                           icon={<FileTextOutlined />}
                           onClick={() => handleViewProfileDetail(profile)}
                         />
-                        {profile.status === "PENDING" && (
-                          <Popconfirm
-                            title="Xóa hồ sơ sức khỏe"
-                            description="Bạn có chắc chắn muốn xóa hồ sơ sức khỏe này?"
-                            onConfirm={() => handleProfileDelete(profile.id)}
-                            okText="Có"
-                            cancelText="Không"
-                          >
-                            <Button
-                              type="link"
-                              danger
-                              icon={<DeleteOutlined />}
-                            ></Button>
-                          </Popconfirm>
-                        )}
                       </Space>
                     ),
                   },
